@@ -1,0 +1,187 @@
+name: NVD Cache Refresh & Vulnerability Scan
+
+# Dependency scanning runs on a schedule, not on release.
+#
+# A vulnerability is discovered by someone else, at a time unrelated to anything
+# this repository does. Gating a release on the scan means a CVE published
+# upstream on a Tuesday blocks an unrelated release on a Wednesday, while a
+# release that happens not to occur leaves a known vulnerability unreported
+# indefinitely. The schedule decouples the two: findings arrive on their own
+# cadence, and a release is gated on whether the code is correct.
+#
+# It also makes the scan affordable. dependency-check needs the NVD database, and
+# downloading that per release would be slow and would hammer an API with a rate
+# limit. The first job refreshes one shared cache; every scan after it reuses it.
+
+on:
+  schedule:
+    - cron: '0 7 * * 5'   # Every Friday at 07:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: nvd-cache-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-nvd-cache:
+    name: Refresh Shared NVD Cache
+    permissions:
+      contents: read
+      packages: read
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Compute cache date key
+        id: cache-date
+        run: echo "date_key=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore NVD Database Cache
+        id: nvd-cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-shared-${{ steps.cache-date.outputs.date_key }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-shared-
+
+      - name: Update NVD database
+        id: nvd-update
+        run: |
+          # A project of its own, whose only purpose is to own this download. That
+          # keeps the cache key independent of any real project's build, so a
+          # change to a project cannot invalidate the database every other scan
+          # depends on.
+          cd sedr_utils/nvd-cache-primer
+          OUTFILE="$RUNNER_TEMP/nvd-update-output.txt"
+          timeout 900 ./gradlew dependencyCheckUpdate --no-configuration-cache --no-parallel 2>&1 | tee "$OUTFILE"
+          EXIT_CODE="${PIPESTATUS[0]}"
+
+          # The NVD is frequently unavailable or rate-limited. That is not this
+          # repository's problem to fail over, so a service error warns and the
+          # next run retries with whatever cache survived.
+          if [ "$EXIT_CODE" -eq 124 ]; then
+            echo "::warning title=NVD Database Update Timeout::The NVD update exceeded 15 minutes and was aborted. It will be retried in a later run."
+            echo "nvd_update_timed_out=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [ "$EXIT_CODE" -ne 0 ]; then
+            if grep -qE "NVD Returned Status Code|Error updating the NVD Data|NvdApiException|NVD API request failures" "$OUTFILE"; then
+              echo "::warning title=NVD Service Unavailable::The NVD update failed with a service error. It will be retried in a later run."
+              echo "nvd_update_failed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit "$EXIT_CODE"
+          fi
+        env:
+          NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}
+
+      - name: Save NVD Database Cache
+        if: steps.nvd-update.outputs.nvd_update_failed != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-shared-${{ steps.cache-date.outputs.date_key }}
+
+      - name: Summarize cache refresh
+        if: always()
+        run: |
+          {
+            echo "## NVD Cache Refresh"
+            echo "- Date key: ${{ steps.cache-date.outputs.date_key }}"
+            echo "- Restore cache hit: ${{ steps.nvd-cache.outputs.cache-hit || 'false' }}"
+            echo "- Update timed out: ${{ steps.nvd-update.outputs.nvd_update_timed_out || 'false' }}"
+            echo "- Update failed: ${{ steps.nvd-update.outputs.nvd_update_failed || 'false' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  Read-Version-Api-Only-Subscriber:
+    name: Read API-Only Subscriber Version
+    needs: refresh-nvd-cache
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read-version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Read version
+        id: read-version
+        run: |
+          VERSION=$(grep -E '^\s*version\s*=' api-only-subscriber/gradle.properties | head -1 | sed 's/.*=\s*//' | tr -d ' ')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+  Scan-Api-Only-Subscriber:
+    name: Scan API-Only Subscriber
+    needs: Read-Version-Api-Only-Subscriber
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/security-scan.yml
+    with:
+      project_dir: api-only-subscriber
+      project_name: 'api-only-subscriber'
+      semantic_version: ${{ needs.Read-Version-Api-Only-Subscriber.outputs.version }}
+      fail_on_fatal: true
+      reports_subpath: build/reports
+    secrets:
+      NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}
+
+  Audit-Api-Only-Publisher:
+    name: Audit API-Only Publisher
+    # Independent of the NVD cache: npm audit reads the GitHub Advisory database
+    # directly. It runs here rather than on release for the same reason the
+    # dependency-check scan does -- a finding arrives on the world's schedule, not
+    # on this repository's.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api-only-publisher/package-lock.json
+
+      - name: Install
+        run: npm ci --prefix api-only-publisher
+
+      - name: Audit dependencies
+        id: audit
+        run: npm audit --audit-level=moderate --prefix api-only-publisher
+
+      - name: Report
+        if: failure()
+        run: |
+          {
+            echo "## api-only-publisher dependency audit failed"
+            echo
+            echo "A dependency has a known advisory at moderate severity or above."
+            echo
+            echo "Run \`npm audit --prefix api-only-publisher\` to see it. Pin any fix:"
+            echo "this package's output has to be reproducible, so dependency versions"
+            echo "are exact rather than ranges."
+          } >> "$GITHUB_STEP_SUMMARY"

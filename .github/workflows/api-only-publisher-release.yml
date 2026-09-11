@@ -65,59 +65,9 @@ jobs:
           node api-only-publisher/src/cli.js init "${RUNNER_TEMP}/scaffold"
           node api-only-publisher/src/cli.js build -C "${RUNNER_TEMP}/scaffold" --version 0.0.1
 
-  Security-Scan:
-    name: Scan API-Only Publisher dependencies
-    needs: Calculate-Version
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: api-only-publisher/package-lock.json
-
-      - name: Install
-        run: npm ci --prefix api-only-publisher
-
-      - name: Audit dependencies
-        run: |
-          # npm audit rather than the OWASP dependency-check plugin the Gradle
-          # projects run: that plugin is a Gradle plugin, and this is a Node
-          # package with no Gradle build to hang it from. npm audit reads the same
-          # GitHub Advisory data for the npm ecosystem, needs no API key, and is
-          # the tool a consumer of this package would run themselves.
-          #
-          # Moderate and above fails. This package ships exactly one runtime
-          # dependency, so the noise a low threshold usually brings does not
-          # arise, and a finding here is in something that actually gets published.
-          npm audit --audit-level=moderate --prefix api-only-publisher
-
-      - name: Report
-        if: failure()
-        run: |
-          {
-            echo "## Dependency audit failed"
-            echo
-            echo "A dependency of api-only-publisher has a known advisory at moderate severity or above."
-            echo
-            echo "Run \`npm audit --prefix api-only-publisher\` locally to see it, and"
-            echo "\`npm audit fix\` if a compatible fix exists. Pin the result: this package's"
-            echo "output has to be reproducible, so dependency versions are exact, not ranges."
-          } >> "$GITHUB_STEP_SUMMARY"
-
   Release:
     name: Release API-Only Publisher
-    needs: [Calculate-Version, Build, Security-Scan]
+    needs: [Calculate-Version, Build]
     if: needs.Calculate-Version.outputs.next_version != ''
     permissions:
       contents: write

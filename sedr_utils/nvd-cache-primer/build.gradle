@@ -1,0 +1,19 @@
+plugins {
+    alias(libs.plugins.owasp.dependency.check.iff)
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyCheck {
+    failBuildOnCVSS = 11
+    nvd {
+        apiKey = System.getenv('NVD_APIKEY_SEDR')
+        delay = 800
+    }
+    analyzers {
+        nodeAuditEnabled = false
+        nodeEnabled = false
+    }
+}

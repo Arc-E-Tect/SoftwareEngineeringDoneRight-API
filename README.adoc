@@ -96,6 +96,13 @@ them fail before trusting them to pass.
 |OWASP dependency-check, as the Gradle plugins run it
 |===
 
+Coverage gates a release; dependency scanning does not. A vulnerability is
+discovered by someone else, at a time unrelated to anything this repository does,
+so gating a release on it means an upstream CVE blocks an unrelated release while
+a quiet week leaves a known problem unreported. Both scans run weekly instead, in
+`nvd-cache-refresh.yml`, which first refreshes the shared NVD database that
+dependency-check needs and that would otherwise be downloaded per release.
+
 Neither coverage rule excludes anything. The usual reason to exclude a plugin,
 its extension and its tasks is that TestKit runs them in another process where
 the coverage agent cannot see them, so they report zero however well they are
