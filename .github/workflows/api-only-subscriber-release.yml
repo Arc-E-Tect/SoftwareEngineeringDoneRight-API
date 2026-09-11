@@ -81,7 +81,10 @@ jobs:
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
         run: |
           cd api-only-subscriber
-          ./gradlew publishPlugins
+          # --no-configuration-cache because the Portal plugin is not compatible
+          # with it, and --no-daemon because a publish is the last thing this
+          # runner does. Matches how the sibling Gradle plugins are published.
+          ./gradlew publishPlugins --no-daemon --no-configuration-cache
 
   Release:
     name: Release API-Only Subscriber
