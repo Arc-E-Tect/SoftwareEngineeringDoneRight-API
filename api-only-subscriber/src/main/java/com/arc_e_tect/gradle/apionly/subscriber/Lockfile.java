@@ -29,13 +29,36 @@ import java.util.TreeMap;
  */
 public final class Lockfile {
 
-    /** Bumped only when the file format itself changes. */
+    /** The format this class reads and writes. Bumped only when the format changes. */
     public static final int FORMAT_VERSION = 1;
 
+    /**
+     * What is locked for one target.
+     *
+     * @param target  the contract the entry is for
+     * @param version the version resolved when it was fetched
+     * @param channel the channel it was fetched from
+     * @param files   each document's filename mapped to its SHA-256
+     */
     public record Entry(String target, String version, String channel, Map<String, String> files) {}
 
     private final Map<String, Entry> entries = new TreeMap<>();
 
+    /** Creates an empty lockfile. */
+    public Lockfile() {
+        // Entries are added through put(Entry), or read from disk by read(File).
+    }
+
+    /**
+     * Reads a lockfile, or returns an empty one if it does not exist.
+     *
+     * <p>A missing file is an ordinary first-run state, not an error: a project
+     * that has never fetched anything has nothing locked yet.</p>
+     *
+     * @param file the lockfile to read
+     * @return the parsed lockfile, empty if the file is absent
+     * @throws java.io.UncheckedIOException if the file exists but cannot be read
+     */
     public static Lockfile read(File file) {
         Lockfile lock = new Lockfile();
         if (!file.exists()) {
@@ -83,6 +106,16 @@ public final class Lockfile {
         return lock;
     }
 
+    /**
+     * Writes the lockfile, with targets and their files in sorted order.
+     *
+     * <p>The ordering matters: this file is read in review far more often than by
+     * a machine, and a one-line diff should mean one thing changed rather than a
+     * reordering.</p>
+     *
+     * @param file where to write
+     * @throws java.io.UncheckedIOException if it cannot be written
+     */
     public void write(File file) {
         StringBuilder out = new StringBuilder();
         out.append("# apionly.lock -- the published contracts this project builds against.\n");
@@ -110,18 +143,41 @@ public final class Lockfile {
         }
     }
 
+    /**
+     * The entry for one target.
+     *
+     * @param target the contract to look up
+     * @return its entry, or {@code null} if nothing is locked for it
+     */
     public Entry get(String target) {
         return entries.get(target);
     }
 
+    /**
+     * Adds or replaces the entry for a target.
+     *
+     * @param entry what to record
+     */
     public void put(Entry entry) {
         entries.put(entry.target(), entry);
     }
 
+    /**
+     * Every target with an entry, in sorted order.
+     *
+     * @return the locked target names
+     */
     public List<String> targets() {
         return new ArrayList<>(entries.keySet());
     }
 
+    /**
+     * The SHA-256 of a file, lowercase hexadecimal.
+     *
+     * @param file the file to hash
+     * @return its digest as 64 hexadecimal characters
+     * @throws java.io.UncheckedIOException if the file cannot be read
+     */
     public static String sha256(File file) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

@@ -1,10 +1,15 @@
 = API-Only Publisher
-:toc: macro
+:toc: left
 :toc-title: Contents
+:toclevels: 2
 :icons: font
 :source-highlighter: rouge
 
-toc::[]
+image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
+image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
+image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDoneRight-API?filter=api-only-publisher-v*[GitHub release,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/releases?q=api-only-publisher]
+image:https://img.shields.io/badge/Node-22%2B-339933?logo=node.js[Node 22+,link=https://nodejs.org]
+image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
 == What it is
 
@@ -34,15 +39,37 @@ was a regular expression that silently did nothing when it failed to match.
 Node was never an optional dependency either: `@redocly/cli` and `@asyncapi/cli`
 are Node tools, so a Node runtime was already required to run the pipeline at all.
 
+== Requirements
+
+[cols="1,1",options="header"]
+|===
+| Requirement | Version
+| Node        | 22 +
+| npm         | 10 +
+|===
+
+Nothing else. The bundlers are fetched by `npx` at the versions `apionly.yaml`
+pins, so they need no installation, and the only runtime dependency is `yaml`.
+
 == Installation
+
+As a command, without installing anything:
 
 [source,console]
 ----
-npm install
+npx @arc-e-tect/api-only-publisher build
 ----
 
-The only runtime dependency is `yaml`. The bundlers are fetched by `npx` at the
-pinned versions the configuration names, so they need no installation.
+As a dependency of a specification library:
+
+[source,console]
+----
+npm install --save-dev @arc-e-tect/api-only-publisher
+----
+
+Pin it exactly rather than with a range. This tool's output is expected to be
+reproducible — a specification library's golden fixtures assert it byte for byte
+— and a floating version quietly breaks that guarantee.
 
 == Commands
 
@@ -412,6 +439,39 @@ A specification library should write down its own policy. The one this repositor
 uses is at `usable-suspects/docs/breaking-changes.adoc`, and is a reasonable
 starting point to copy.
 
+== Using it as a library
+
+Everything the CLI does is available programmatically, so a release job that
+wants to decide something for itself does not have to parse console output:
+
+[source,javascript]
+----
+const { loadFrom, prepare, forTargets, changedSince } =
+    require('@arc-e-tect/api-only-publisher');
+
+const config = loadFrom('.');
+prepare(config);
+
+for (const result of changedSince(config, 'origin/main')) {
+    if (result.changed) {
+        console.log(`${result.target} changed: ${result.files.join(', ')}`);
+    }
+}
+----
+
+== Exit codes
+
+[cols="1,3",options="header"]
+|===
+| Code | Meaning
+| `0`  | Success.
+| `1`  | A handled failure: bad configuration, an unresolved placeholder, a
+         document that cannot be stamped, a dangling `$ref`, a channel that
+         refused the artifact. The message says which.
+|===
+
+Anything else is a bug; please report it.
+
 == Tests
 
 [source,console]
@@ -425,3 +485,14 @@ the way in), version stamping, configuration parsing, and the scaffold.
 The end-to-end guarantee lives elsewhere, in the specification library's own
 golden fixtures: they assert that the documents this tool produces are unchanged,
 byte for byte, from the ones the pipeline produced before it existed.
+
+== Relationship to the API-Only Subscriber
+
+This half publishes; link:../api-only-subscriber/README.adoc[the Subscriber]
+fetches and verifies. They share one seam — an archive plus a `manifest.json` —
+and nothing else, which is why they can be versioned independently while living
+in one repository.
+
+== License
+
+MIT. See link:LICENSE[LICENSE].

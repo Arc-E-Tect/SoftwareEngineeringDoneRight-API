@@ -8,13 +8,41 @@ import org.gradle.api.model.ObjectFactory;
 import javax.inject.Inject;
 
 /**
- * apiOnlySubscriber { ... }
+ * The {@code apiOnlySubscriber} block: which contracts this project builds
+ * against, and where they come from.
+ *
+ * <pre>{@code
+ * apiOnlySubscriber {
+ *     channel {
+ *         type = 'maven'
+ *         groupId = 'com.example.contracts'
+ *     }
+ *     subscribe('user-account') {
+ *         version = '2.1.0'
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p>One channel serves every subscription in a project; each subscription
+ * carries its own version, because contracts are versioned independently.</p>
+ *
+ * @see ApiOnlySubscriberPlugin
+ * @see Subscription
+ * @see ChannelSpec
  */
 public abstract class ApiOnlySubscriberExtension {
 
     private final ChannelSpec channel;
     private final NamedDomainObjectContainer<Subscription> subscriptions;
 
+    /**
+     * Creates the extension.
+     *
+     * <p>Gradle instantiates this when the plugin is applied; a build script
+     * configures the instance registered as {@code apiOnlySubscriber}.</p>
+     *
+     * @param objects Gradle's object factory, supplied by injection
+     */
     @Inject
     public ApiOnlySubscriberExtension(ObjectFactory objects) {
         this.channel = objects.newInstance(ChannelSpec.class);
@@ -22,30 +50,90 @@ public abstract class ApiOnlySubscriberExtension {
             Subscription.class, name -> objects.newInstance(Subscription.class, name));
     }
 
+    /**
+     * The channel every subscription in this project resolves through.
+     *
+     * @return the channel specification
+     */
     public ChannelSpec getChannel() {
         return channel;
     }
 
+    /**
+     * Configures the channel.
+     *
+     * <pre>{@code
+     * channel {
+     *     type = 'file'
+     *     directory = "$rootDir/build/publish"
+     * }
+     * }</pre>
+     *
+     * @param action configuration applied to the channel specification
+     */
     public void channel(Action<? super ChannelSpec> action) {
         action.execute(channel);
     }
 
+    /**
+     * Every declared subscription, keyed by target name.
+     *
+     * @return the container of subscriptions
+     */
     public NamedDomainObjectContainer<Subscription> getSubscriptions() {
         return subscriptions;
     }
 
-    /** subscribe('user-account') { version = '2.1.0' } */
+    /**
+     * Declares a subscription and configures it.
+     *
+     * <pre>{@code
+     * subscribe('user-account') {
+     *     version = '2.1.0'
+     * }
+     * }</pre>
+     *
+     * <p>Subscribing to the same target twice configures the existing
+     * subscription rather than creating a second one.</p>
+     *
+     * @param target the contract to subscribe to
+     * @param action configuration applied to the subscription
+     * @return the subscription, so it can be referenced immediately
+     */
     public Subscription subscribe(String target, Action<? super Subscription> action) {
         Subscription subscription = subscriptions.maybeCreate(target);
         action.execute(subscription);
         return subscription;
     }
 
+    /**
+     * Declares a subscription without configuring it.
+     *
+     * <p>Only useful when the version is set later, since a subscription with no
+     * version fails the build when it is resolved.</p>
+     *
+     * @param target the contract to subscribe to
+     * @return the subscription
+     */
     public Subscription subscribe(String target) {
         return subscriptions.maybeCreate(target);
     }
 
-    /** Look one up, so a build file can wire the fetched document into something. */
+    /**
+     * Looks up a declared subscription, so a build file can wire its documents
+     * into whatever consumes them.
+     *
+     * <pre>{@code
+     * apiOnlySuite {
+     *     rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+     * }
+     * }</pre>
+     *
+     * @param target the subscribed contract to look up
+     * @return the subscription for that target
+     * @throws IllegalArgumentException if no such subscription was declared; the
+     *         message lists the targets that were
+     */
     public Subscription subscription(String target) {
         Subscription subscription = subscriptions.findByName(target);
         if (subscription == null) {
@@ -56,9 +144,15 @@ public abstract class ApiOnlySubscriberExtension {
     }
 
     /**
-     * Where the resolved versions and hashes are recorded.
+     * Where the resolved versions and file hashes are recorded.
      *
-     * Committed, and shared by every subscription in the project.
+     * <p>Defaults to {@code apionly.lock} beside the build file. It is shared by
+     * every subscription in the project and is meant to be committed: it is what
+     * {@link VerifyApiSpecTask} checks the fetched documents against, and what
+     * makes "which contract is this project actually building against?" a
+     * question answerable by reading the repository.</p>
+     *
+     * @return the lockfile location
      */
     public abstract RegularFileProperty getLockfile();
 }

@@ -147,6 +147,23 @@ tasks.named('check') {
     dependsOn jacocoTestCoverageVerification
 }
 
+// Javadoc is part of the product, not a by-product.
+//
+// plugin-publish publishes a javadoc jar, so whatever is written here is what a
+// consumer reads in their IDE. Warnings are errors: an undocumented public member
+// fails the build rather than shipping a jar with a blank entry in it.
+tasks.named('javadoc') {
+    options {
+        encoding = 'UTF-8'
+        addBooleanOption('Xdoclint:all', true)
+        addBooleanOption('Xwerror', true)
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('javadoc')
+}
+
 dependencyCheck {
     // Fatal findings fail the build only when the caller asks; otherwise the scan
     // reports and the build continues, so a new CVE in a transitive dependency
