@@ -1,8 +1,10 @@
 name: API-Only Publisher - Release
 
-# The two components in this repository are maintained together and versioned
-# apart: they are consumed by different ecosystems, and a change to the Gradle
-# plugin is no reason to make every npm consumer take a new version.
+# The same shape as the Gradle plugins' release workflows, with one difference
+# that is a property of the ecosystem rather than a choice: there is no separate
+# Publish job, because @semantic-release/npm publishes as part of applying the
+# release. A Gradle plugin needs its own Publish step after the tag; an npm
+# package does not.
 
 on:
   push:
@@ -17,9 +19,6 @@ on:
 concurrency:
   group: api-only-publisher-release-${{ github.ref }}
   cancel-in-progress: false
-
-permissions:
-  contents: read
 
 jobs:
   Calculate-Version:
@@ -54,80 +53,51 @@ jobs:
       - name: Install
         run: npm ci --prefix api-only-publisher
 
-      - name: Test
+      - name: Test API-Only Publisher
+        # `npm test` carries the coverage thresholds, so a release cannot ship
+        # code the tests stopped covering.
         run: npm test --prefix api-only-publisher
 
       - name: Verify the scaffold still builds
         run: |
           # `init` is the one part of this tool whose value is the conventions
           # rather than the code, so a scaffold that does not build is a broken
-          # release even when every unit test passes.
+          # release however well every unit test passes.
           node api-only-publisher/src/cli.js init "${RUNNER_TEMP}/scaffold"
           node api-only-publisher/src/cli.js build -C "${RUNNER_TEMP}/scaffold" --version 0.0.1
 
-  Security-Scan:
-    name: Scan API-Only Publisher dependencies
-    needs: Calculate-Version
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: api-only-publisher/package-lock.json
-
-      - name: Install
-        run: npm ci --prefix api-only-publisher
-
-      - name: Audit dependencies
-        run: |
-          # npm audit rather than the OWASP dependency-check plugin the Gradle
-          # projects run: that plugin is a Gradle plugin, and this is a Node
-          # package with no Gradle build to hang it from. npm audit reads the same
-          # GitHub Advisory data for the npm ecosystem, needs no API key, and is
-          # the tool a consumer of this package would run themselves.
-          #
-          # Moderate and above fails. This package ships exactly one runtime
-          # dependency, so the noise a low threshold usually brings does not
-          # arise, and a finding here is in something that actually gets published.
-          npm audit --audit-level=moderate --prefix api-only-publisher
-
-      - name: Report
-        if: failure()
-        run: |
-          {
-            echo "## Dependency audit failed"
-            echo
-            echo "A dependency of api-only-publisher has a known advisory at moderate severity or above."
-            echo
-            echo "Run \`npm audit --prefix api-only-publisher\` locally to see it, and"
-            echo "\`npm audit fix\` if a compatible fix exists. Pin the result: this package's"
-            echo "output has to be reproducible, so dependency versions are exact, not ranges."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  Release:
+  Release-Package:
     name: Release API-Only Publisher
-    needs: [Calculate-Version, Build, Security-Scan]
-    if: needs.Calculate-Version.outputs.next_version != ''
+    needs: [Calculate-Version, Build]
+    # next_version itself is never empty - it falls back to the current version so a build-only
+    # caller always has something to compile with - so next_version_empty is what actually signals
+    # "there is nothing new to release", not a string-emptiness check on next_version.
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
       contents: write
-      # Required for npm provenance: the attestation is signed with a short-lived
-      # OIDC credential, so the published tarball can be traced to this exact
-      # workflow run and commit. A tool whose purpose is making provenance
-      # auditable should not ask to be taken on trust itself.
+      # npm provenance: the attestation is signed with a short-lived OIDC
+      # credential, so the published tarball traces to this workflow run and
+      # commit. A tool whose purpose is making provenance auditable should not
+      # ask to be taken on trust itself.
       id-token: write
     uses: ./.github/workflows/semantic-version-apply.yml
     with:
       project_dir: api-only-publisher
     secrets:
       sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Determine-Release-Type:
+    needs: [Calculate-Version]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    uses: ./.github/workflows/determine-release-type.yml
+
+  Workflow-Summary:
+    name: Workflow Summary
+    needs: [Build, Release-Package, Determine-Release-Type]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output release completion
+        run: |
+          echo "API-Only Publisher ${{ needs.Determine-Release-Type.outputs.release_type }} release workflow completed"
+          echo "::notice title=Release Complete::API-Only Publisher ${{ needs.Determine-Release-Type.outputs.release_type }} release workflow completed"

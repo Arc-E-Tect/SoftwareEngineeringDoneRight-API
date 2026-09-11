@@ -1,0 +1,77 @@
+name: Determine Release Type
+
+on:
+  workflow_call:
+    outputs:
+      release_type:
+        description: 'The user-friendly release type based on the commit message'
+        value: ${{ jobs.Determine-Release-Type.outputs.release_type }}
+
+jobs:
+  Determine-Release-Type:
+    name: Determine Release Type
+    runs-on: ubuntu-latest
+    outputs:
+      release_type: ${{ steps.get-type.outputs.release_type }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Get commit type and map to release type
+        id: get-type
+        run: |
+          # Get the latest commit message
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "Commit message: $COMMIT_MSG"
+          
+          # Extract the type (everything before the first colon)
+          COMMIT_TYPE=$(echo "$COMMIT_MSG" | sed -n 's/^\([^:]*\):.*/\1/p' | sed 's/(.*//' | xargs)
+          echo "Commit type: $COMMIT_TYPE"
+          
+          # Map commit type to release type
+          case "$COMMIT_TYPE" in
+            feat)
+              RELEASE_TYPE="feature"
+              ;;
+            fix)
+              RELEASE_TYPE="bugfix"
+              ;;
+            maintenance)
+              RELEASE_TYPE="maintenance"
+              ;;
+            perf)
+              RELEASE_TYPE="performance"
+              ;;
+            refactor)
+              RELEASE_TYPE="refactoring"
+              ;;
+            docs)
+              RELEASE_TYPE="documentation"
+              ;;
+            test)
+              RELEASE_TYPE="testing"
+              ;;
+            chore)
+              RELEASE_TYPE="maintenance"
+              ;;
+            build)
+              RELEASE_TYPE="build"
+              ;;
+            ci)
+              RELEASE_TYPE="CI/CD"
+              ;;
+            style)
+              RELEASE_TYPE="style"
+              ;;
+            revert)
+              RELEASE_TYPE="revert"
+              ;;
+            *)
+              RELEASE_TYPE="regular"
+              ;;
+          esac
+          
+          echo "Release type: $RELEASE_TYPE"
+          echo "release_type=$RELEASE_TYPE" >> "$GITHUB_OUTPUT"
