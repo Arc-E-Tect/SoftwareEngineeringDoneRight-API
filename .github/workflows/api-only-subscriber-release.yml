@@ -1,8 +1,9 @@
 name: API-Only Subscriber - Release
 
-# Versioned independently of the publisher it is paired with. They are maintained
-# together because they are one design; they are released apart because they are
-# consumed by different people through different ecosystems.
+# Deliberately the same shape as every other Arc-E-Tect Gradle plugin's release
+# workflow: Calculate-Version, Build, Release-Plugin, Publish, then the release
+# type and a summary. A plugin whose pipeline is arranged differently from its
+# siblings is one that has to be read from scratch every time something breaks.
 
 on:
   push:
@@ -18,9 +19,6 @@ concurrency:
   group: api-only-subscriber-release-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
-
 jobs:
   Calculate-Version:
     uses: ./.github/workflows/semantic-version-calculate.yml
@@ -33,7 +31,7 @@ jobs:
       sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
 
   Build:
-    name: Build API-Only Subscriber
+    name: Build API-Only Subscriber Plugin
     needs: Calculate-Version
     runs-on: ubuntu-latest
 
@@ -53,43 +51,38 @@ jobs:
         uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
         with:
           distribution: 'temurin'
-          java-version: 25
+          java-version: 21
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
-      - name: Stamp the calculated version
-        if: env.VERSION != ''
+      - name: Update version in Gradle property file
         run: |
-          # The build takes its version from gradle.properties. Without this the
-          # plugin would publish as the 0.0.0 seed, forever.
-          echo ===== Before =====
-          cat "${{ env.GRADLE_PROPERTIES_FILE }}"
-          sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" "${{ env.GRADLE_PROPERTIES_FILE }}"
-          echo ===== After =====
-          cat "${{ env.GRADLE_PROPERTIES_FILE }}"
+          sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" ${{ env.GRADLE_PROPERTIES_FILE }}
 
-      - name: Build and test
+      - name: Build and test API-Only Subscriber Plugin
         run: |
           cd api-only-subscriber
-          ./gradlew build
+          chmod +x ./gradlew
+          # `check` rather than `build`: it carries the JaCoCo coverage rule, so a
+          # release cannot ship code the tests stopped covering.
+          ./gradlew build check
 
-      - name: Publish to the Gradle Plugin Portal
-        if: env.VERSION != '' && github.ref_name == 'main'
-        env:
-          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
-          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
-        run: |
-          cd api-only-subscriber
-          # --no-configuration-cache because the Portal plugin is not compatible
-          # with it, and --no-daemon because a publish is the last thing this
-          # runner does. Matches how the sibling Gradle plugins are published.
-          ./gradlew publishPlugins --no-daemon --no-configuration-cache
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-only-subscriber-reports
+          path: api-only-subscriber/build/reports
+          if-no-files-found: warn
 
-  Release:
-    name: Release API-Only Subscriber
+  Release-Plugin:
+    name: Release API-Only Subscriber Plugin
     needs: [Calculate-Version, Build]
-    if: needs.Calculate-Version.outputs.next_version != ''
+    # next_version itself is never empty - it falls back to the current version so a build-only
+    # caller always has something to compile with - so next_version_empty is what actually signals
+    # "there is nothing new to release", not a string-emptiness check on next_version.
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
       contents: write
     uses: ./.github/workflows/semantic-version-apply.yml
@@ -97,3 +90,64 @@ jobs:
       project_dir: api-only-subscriber
     secrets:
       sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Publish:
+    name: Publish API-Only Subscriber Plugin to Gradle Portal
+    # After the release, never before it. Publishing first would mean a failure in
+    # tagging leaves a version on the Portal that no tag in this repository points
+    # at -- and the Portal does not allow a version to be replaced.
+    needs: [Calculate-Version, Release-Plugin]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    runs-on: ubuntu-latest
+
+    env:
+      GRADLE_PROPERTIES_FILE: ./api-only-subscriber/gradle.properties
+      GRADLE_VERSION_REGEX: version\s*=\s*[0-9]\\+\.[0-9]\\+\.[0-9]\\+[a-zA-Z0-9.-]*
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Update version in Gradle property file
+        run: |
+          sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" ${{ env.GRADLE_PROPERTIES_FILE }}
+
+      - name: Publish to Gradle Plugin Portal
+        run: |
+          cd api-only-subscriber
+          chmod +x ./gradlew
+          ./gradlew publishPlugins --no-daemon --no-configuration-cache
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+  Determine-Release-Type:
+    needs: [Calculate-Version]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    uses: ./.github/workflows/determine-release-type.yml
+
+  Workflow-Summary:
+    name: Workflow Summary
+    needs: [Build, Publish, Release-Plugin, Determine-Release-Type]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output release completion
+        run: |
+          echo "API-Only Subscriber Plugin ${{ needs.Determine-Release-Type.outputs.release_type }} release workflow completed"
+          echo "::notice title=Release Complete::API-Only Subscriber Plugin ${{ needs.Determine-Release-Type.outputs.release_type }} release workflow completed"
