@@ -1,0 +1,101 @@
+= Arc-E-Tect API-Only
+:toc: macro
+:toc-title: Contents
+:icons: font
+:source-highlighter: rouge
+
+toc::[]
+
+Tooling for treating an API description as a published artifact rather than a
+file someone copies around.
+
+[cols="1,3", options="header"]
+|===
+|Component |What it is
+
+|link:api-only-publisher/README.adoc[API-Only Publisher]
+|A Node CLI. Builds one self-contained document per target from a library of
+reusable fragments, and publishes it -- to npm, to a Maven repository, or to a
+GitHub release. Published as
+https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-e-tect/api-only-publisher`].
+
+|link:api-only-subscriber/README.adoc[API-Only Subscriber]
+|A Gradle plugin. Fetches a published document into a build, verifies it against
+a committed lockfile, and fails when a contract has drifted. Published to the
+https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal].
+|===
+
+== Why they share a repository
+
+They are one design with two halves, and the seam between them is a single
+artifact: an archive containing the built documents and a `manifest.json`
+describing them. Neither knows anything else about the other.
+
+That seam is the whole point, and it is also exactly the kind of thing that rots
+when its two sides live apart. A field added to the manifest by a producer that
+no consumer reads, or a consumer that starts requiring a field no producer
+writes, is a bug that only exists *between* two repositories and gets noticed by
+neither. Keeping them together means the contract between them is changed in one
+commit, reviewed as one change, and cannot drift silently.
+
+They are nevertheless **versioned independently**. A Gradle consumer and an npm
+consumer are different people with different upgrade cadences, and a change to
+one half is no reason to make the other half's users take a new version. The
+manifest carries a `schemaVersion` so that a producer and a consumer of different
+vintages can still tell whether they understand each other.
+
+== What this is not
+
+The **API-Only Suite** (`com.arc-e-tect.api-only-suite`) is a separate plugin in
+a separate repository. It bundles the Shadow, Mirage and Doppelganger detectors,
+which answer _does this implementation match its contract?_
+
+The Subscriber answers a different question: _where does the contract come from,
+and is it still what we agreed?_ A project can reasonably want either without the
+other, so they are not bundled.
+
+== Development
+
+[source,console]
+----
+# Install the repository's Git hooks first: they check for committed secrets and
+# require actionlint when a workflow changes.
+./scripts/setup-hooks.sh
+
+# Publisher
+npm ci  --prefix api-only-publisher
+npm test --prefix api-only-publisher
+
+# Subscriber
+cd api-only-subscriber && ./gradlew build
+----
+
+== Releasing
+
+Both components release through `semantic-release`, driven by Conventional
+Commits, each with its own tag namespace (`api-only-publisher-v*`,
+`api-only-subscriber-v*`) so their version histories are genuinely independent.
+
+Each is seeded with a `-v0.0.0` tag, and `release/first-release-patch-analyzer.js`
+forces the first real release to be a patch, so a new component starts at
+`0.0.1` rather than semantic-release's default `1.0.0`.
+
+Required repository secrets:
+
+[cols="1,3", options="header"]
+|===
+|Secret |Used for
+
+|`SEMANTIC_RELEASE_TOKEN`
+|Tagging, the release commit, and GitHub releases. Needs a role that can bypass
+the `commit-push-main` ruleset, since a release pushes to a protected branch.
+
+|`GRADLE_PUBLISH_KEY` / `GRADLE_PUBLISH_SECRET`
+|Publishing the Subscriber to the Gradle Plugin Portal.
+|===
+
+The Publisher needs no npm credential: it publishes through npm
+https://docs.npmjs.com/trusted-publishers[trusted publishing], exchanging a
+short-lived OIDC token for publish rights, and attaches a provenance attestation
+tying each tarball to the commit and workflow run that produced it. Nothing
+long-lived is stored.

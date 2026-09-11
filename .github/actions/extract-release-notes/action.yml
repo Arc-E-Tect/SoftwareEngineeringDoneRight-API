@@ -1,0 +1,151 @@
+name: 'Extract Release Notes'
+description: 'Extracts release notes for a specific version from CHANGELOG.md'
+author: 'Arc-E-Tect'
+
+inputs:
+  project_dir:
+    description: 'Project directory containing CHANGELOG.md (optional, defaults to root)'
+    required: false
+    default: '.'
+  max_length:
+    description: 'Maximum length of release notes before truncation'
+    required: false
+    default: '1500'
+
+outputs:
+  release_notes:
+    description: 'Extracted release notes for the version'
+    value: ${{ steps.extract.outputs.notes }}
+  version:
+    description: 'Version extracted from CHANGELOG.md'
+    value: ${{ steps.extract.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract release notes from CHANGELOG
+      id: extract
+      shell: bash
+      run: |
+        cd "${{ inputs.project_dir }}"
+        
+        # Extract the changelog for the current version from CHANGELOG.md
+        if [ -f "CHANGELOG.md" ]; then
+          # Get the latest version from CHANGELOG.md (first ## [version] line)
+          VERSION=$(grep -m 1 '^## \[' CHANGELOG.md | sed 's/^## \[\(.*\)\].*/\1/' || true)
+          
+          if [ -n "$VERSION" ]; then
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            
+            # Extract the section for this version from CHANGELOG.md
+            # Use awk with flag pattern to extract content between version headers
+            # shellcheck disable=SC2086
+            CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+            
+            # Remove leading/trailing blank lines  
+            CHANGELOG_CONTENT=$(printf '%s\n' "$CHANGELOG_CONTENT" | sed '/./,$!d')
+            
+            # Remove release commit lines (e.g., "* **release:** release X.Y.Z...")
+            CHANGELOG_CONTENT=$(printf '%s\n' "$CHANGELOG_CONTENT" | grep -vE '^\* \*\*release:\*\*' || true)
+
+            # Remove '### ' header markers but keep list markers ( '* ' or '- ' )
+            CHANGELOG_CONTENT=$(printf '%s\n' "$CHANGELOG_CONTENT" | sed 's/^###[[:space:]]*//')
+
+            # Remove empty lines at the start
+            CHANGELOG_CONTENT=$(printf '%s\n' "$CHANGELOG_CONTENT" | sed '/./,$!d')
+            
+            # Remove section headers with no content - use a two-pass approach
+            # Pass 1: Identify which lines are headers (emoji-prefixed lines after processing)
+            # Pass 2: Keep headers only if they're followed by non-empty, non-header content
+            CHANGELOG_CONTENT=$(printf '%s\n' "$CHANGELOG_CONTENT" | awk '
+            BEGIN { 
+              header_pattern = "^[🎨✨🐛♻️⚡📋🔧📝💄✅🔨👷⏪🔥]"
+            }
+            {
+              lines[++n] = $0
+            }
+            END {
+              for (i = 1; i <= n; i++) {
+                line = lines[i]
+                
+                # Check if this line is a section header (starts with emoji)
+                if (line ~ header_pattern) {
+                  # Look ahead for content
+                  found_content = 0
+                  for (j = i + 1; j <= n; j++) {
+                    next_line = lines[j]
+                    if (next_line ~ /^[[:space:]]*$/) {
+                      # Skip blank lines
+                      continue
+                    }
+                    if (next_line ~ header_pattern) {
+                      # Found another header, no content for this header
+                      break
+                    }
+                    # Found content
+                    found_content = 1
+                    break
+                  }
+                  
+                  # Only print header if it has content
+                  if (found_content) {
+                    print line
+                  }
+                } else {
+                  # Not a header, always print
+                  print line
+                }
+              }
+            }')
+            
+            # Collapse multiple consecutive blank lines and remove trailing blanks
+            CHANGELOG_CONTENT=$(printf '%s\n' "$CHANGELOG_CONTENT" | cat -s | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+            
+            # Truncate if too long (Discord has message limits)
+            MAX_LENGTH=${{ inputs.max_length }}
+            # Build overflow message using printf to avoid YAML quoting issues
+            OVERFLOW_MESSAGE=$(printf ' ...\n\nMore has changed but due to Discord%ss message size limits it can%st be in this post.' "'" "'")
+            OVERFLOW_LENGTH=${#OVERFLOW_MESSAGE}
+            
+            if [ ${#CHANGELOG_CONTENT} -gt "$MAX_LENGTH" ]; then
+              # Calculate the target length: max length minus overflow message
+              TARGET_LENGTH=$((MAX_LENGTH - OVERFLOW_LENGTH))
+              
+              # Find a good breaking point (space or newline) before target length to avoid cutting mid-word
+              # Look back up to 100 chars for a word boundary
+              TRUNCATE_AT=$TARGET_LENGTH
+              for ((i=TARGET_LENGTH; i>TARGET_LENGTH-100 && i>0; i--)); do
+                char="${CHANGELOG_CONTENT:$i:1}"
+                if [ "$char" = " " ] || [ "$char" = $'\n' ]; then
+                  TRUNCATE_AT=$i
+                  break
+                fi
+              done
+              
+              # Truncate and append overflow message
+              CHANGELOG_CONTENT="${CHANGELOG_CONTENT:0:$TRUNCATE_AT}${OVERFLOW_MESSAGE}"
+            fi
+            
+            # Save to output (handle multiline)
+            {
+              echo "notes<<EOF"
+              echo "$CHANGELOG_CONTENT"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            
+            # Also print extracted release notes to runner console for debugging
+            echo '--- RELEASE NOTES START ---'
+            printf '%s\n' "$CHANGELOG_CONTENT"
+            echo '--- RELEASE NOTES END ---'
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "notes=No version found in changelog" >> "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "version=" >> "$GITHUB_OUTPUT"
+          echo "notes=No changelog available" >> "$GITHUB_OUTPUT"
+        fi
+
+branding:
+  icon: 'book-open'
+  color: 'blue'

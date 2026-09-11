@@ -1,0 +1,96 @@
+name: API-Only Subscriber - Release
+
+# Versioned independently of the publisher it is paired with. They are maintained
+# together because they are one design; they are released apart because they are
+# consumed by different people through different ecosystems.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api-only-subscriber/**'
+      - 'release/**'
+      - '.github/workflows/api-only-subscriber-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: api-only-subscriber-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  Calculate-Version:
+    uses: ./.github/workflows/semantic-version-calculate.yml
+    with:
+      fail_on_empty_version: ${{ github.ref_name == 'main' }}
+      fail_on_existing_tag: ${{ github.ref_name == 'main' }}
+      project_dir: api-only-subscriber
+      DEBUG: true
+    secrets:
+      sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Build:
+    name: Build API-Only Subscriber
+    needs: Calculate-Version
+    runs-on: ubuntu-latest
+
+    env:
+      GRADLE_PROPERTIES_FILE: ./api-only-subscriber/gradle.properties
+      GRADLE_VERSION_REGEX: version\s*=\s*[0-9]\\+\.[0-9]\\+\.[0-9]\\+[a-zA-Z0-9.-]*
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: 'temurin'
+          java-version: 25
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Stamp the calculated version
+        if: env.VERSION != ''
+        run: |
+          # The build takes its version from gradle.properties. Without this the
+          # plugin would publish as the 0.0.0 seed, forever.
+          echo ===== Before =====
+          cat "${{ env.GRADLE_PROPERTIES_FILE }}"
+          sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" "${{ env.GRADLE_PROPERTIES_FILE }}"
+          echo ===== After =====
+          cat "${{ env.GRADLE_PROPERTIES_FILE }}"
+
+      - name: Build and test
+        run: |
+          cd api-only-subscriber
+          ./gradlew build
+
+      - name: Publish to the Gradle Plugin Portal
+        if: env.VERSION != '' && github.ref_name == 'main'
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: |
+          cd api-only-subscriber
+          ./gradlew publishPlugins
+
+  Release:
+    name: Release API-Only Subscriber
+    needs: [Calculate-Version, Build]
+    if: needs.Calculate-Version.outputs.next_version != ''
+    permissions:
+      contents: write
+    uses: ./.github/workflows/semantic-version-apply.yml
+    with:
+      project_dir: api-only-subscriber
+    secrets:
+      sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}

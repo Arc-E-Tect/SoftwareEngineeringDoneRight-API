@@ -1,0 +1,83 @@
+name: API-Only Publisher - Release
+
+# The two components in this repository are maintained together and versioned
+# apart: they are consumed by different ecosystems, and a change to the Gradle
+# plugin is no reason to make every npm consumer take a new version.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api-only-publisher/**'
+      - 'release/**'
+      - '.github/workflows/api-only-publisher-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: api-only-publisher-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  Calculate-Version:
+    uses: ./.github/workflows/semantic-version-calculate.yml
+    with:
+      fail_on_empty_version: ${{ github.ref_name == 'main' }}
+      fail_on_existing_tag: ${{ github.ref_name == 'main' }}
+      project_dir: api-only-publisher
+      DEBUG: true
+    secrets:
+      sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Build:
+    name: Build API-Only Publisher
+    needs: Calculate-Version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api-only-publisher/package-lock.json
+
+      - name: Install
+        run: npm ci --prefix api-only-publisher
+
+      - name: Test
+        run: npm test --prefix api-only-publisher
+
+      - name: Verify the scaffold still builds
+        run: |
+          # `init` is the one part of this tool whose value is the conventions
+          # rather than the code, so a scaffold that does not build is a broken
+          # release even when every unit test passes.
+          node api-only-publisher/src/cli.js init "${RUNNER_TEMP}/scaffold"
+          node api-only-publisher/src/cli.js build -C "${RUNNER_TEMP}/scaffold" --version 0.0.1
+
+  Release:
+    name: Release API-Only Publisher
+    needs: [Calculate-Version, Build]
+    if: needs.Calculate-Version.outputs.next_version != ''
+    permissions:
+      contents: write
+      # Required for npm provenance: the attestation is signed with a short-lived
+      # OIDC credential, so the published tarball can be traced to this exact
+      # workflow run and commit. A tool whose purpose is making provenance
+      # auditable should not ask to be taken on trust itself.
+      id-token: write
+    uses: ./.github/workflows/semantic-version-apply.yml
+    with:
+      project_dir: api-only-publisher
+    secrets:
+      sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}

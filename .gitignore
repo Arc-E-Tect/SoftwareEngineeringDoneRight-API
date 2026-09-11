@@ -12,3 +12,10 @@
 # Local editor and operating-system files
 .vscode/
 .DS_Store
+
+# Node build state
+node_modules/
+
+# Gradle build state
+.gradle/
+build/
