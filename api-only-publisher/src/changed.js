@@ -7,6 +7,7 @@
 // answer it, or a change to one service's context releases every other service
 // too, and the version numbers stop meaning anything.
 
+const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
@@ -19,6 +20,25 @@ function git(args, cwd) {
         return execFileSync("git", args, { cwd, encoding: "utf8" });
     } catch (error) {
         throw new ChangedError(`git ${args.join(" ")} failed: ${(error.stderr || error.message).trim()}`);
+    }
+}
+
+/**
+ * Resolve symlinks before comparing paths.
+ *
+ * `git rev-parse --show-toplevel` answers with the canonical path, while the
+ * configuration's paths are whatever the caller passed. On any checkout reached
+ * through a symlink -- /var on macOS, a home directory behind one, a worktree
+ * under a linked parent -- the two spellings never match, every intersection
+ * comes out empty, and `changed` reports that nothing changed. For a command
+ * whose answer decides what gets released, being silently wrong in the direction
+ * of "release nothing" is the worst available failure.
+ */
+function real(file) {
+    try {
+        return fs.realpathSync(file);
+    } catch {
+        return path.resolve(file);
     }
 }
 
@@ -44,14 +64,14 @@ function toSource(config, stagedFile, kinds) {
  * @returns {Array<{target, changed: boolean, files: string[], closureSha256: string}>}
  */
 function changedSince(config, since, { kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
-    const repoRoot = git(["rev-parse", "--show-toplevel"], config.root).trim();
+    const repoRoot = real(git(["rev-parse", "--show-toplevel"], config.root).trim());
 
     // Everything git says differs between `since` and the working tree.
     const diff = new Set(
         git(["diff", "--name-only", since, "--"], repoRoot)
             .split("\n")
             .filter(Boolean)
-            .map((rel) => path.resolve(repoRoot, rel))
+            .map((rel) => real(path.resolve(repoRoot, rel)))
     );
 
     const closures = forTargets(config, kinds);
@@ -60,7 +80,8 @@ function changedSince(config, since, { kinds = ["openapi", "asyncapi"], log = ()
     for (const [target, entry] of closures) {
         const sources = entry.files
             .map((f) => toSource(config, f, kinds))
-            .filter(Boolean);
+            .filter(Boolean)
+            .map(real);
         // A change to the *shape* of a closure -- a bundle gaining or losing a
         // $ref -- always means editing a file that is already in the closure, so
         // membership changes are caught without diffing membership itself.

@@ -22,14 +22,34 @@ const YAML = require("yaml");
 
 class AggregateError extends Error {}
 
-function mergeSection(into, from, section, member, seen) {
+/**
+ * Merge one section of a member's document into the aggregate.
+ *
+ * `agree` marks sections where members are expected to say the same thing.
+ * Several services publishing to one broker all declare that broker, and that is
+ * the ordinary case rather than a conflict -- so an identical definition merges
+ * silently and only a genuine disagreement is an error.
+ *
+ * Everywhere else a repeated key is an error even when the definitions match,
+ * because it makes ownership ambiguous: two members both defining a channel means
+ * one of them would silently not appear in the aggregate.
+ */
+function mergeSection(into, from, section, member, seen, { agree = false } = {}) {
     if (!from[section]) return;
     for (const [key, value] of Object.entries(from[section])) {
-        if (seen[section] && seen[section][key]) {
-            throw new AggregateError(
-                `aggregate: '${member}' redefines ${section}.${key}, already contributed by ` +
-                `'${seen[section][key]}'. Rename it, or leave it out of the aggregate.`
-            );
+        const previous = seen[section] && seen[section][key];
+        if (previous) {
+            const identical = JSON.stringify(into[section][key]) === JSON.stringify(value);
+            if (!agree || !identical) {
+                throw new AggregateError(
+                    `aggregate: '${member}' ${agree && !identical ? "disagrees about" : "redefines"} ` +
+                    `${section}.${key}, already contributed by '${previous}'. ` +
+                    (agree
+                        ? "Members may share a server, but not define it differently."
+                        : "Rename it, or leave it out of the aggregate.")
+                );
+            }
+            continue;
         }
         into[section] = into[section] || {};
         into[section][key] = value;
@@ -66,7 +86,7 @@ function generateAsyncApi(config, target, { log = () => {} } = {}) {
         const doc = YAML.parse(fs.readFileSync(file, "utf8"));
 
         merged.asyncapi = merged.asyncapi || doc.asyncapi;
-        mergeSection(merged, doc, "servers", member, seen);
+        mergeSection(merged, doc, "servers", member, seen, { agree: true });
         mergeSection(merged, doc, "channels", member, seen);
         mergeSection(merged, doc, "operations", member, seen);
     }

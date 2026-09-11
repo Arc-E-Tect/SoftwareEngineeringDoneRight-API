@@ -35,7 +35,8 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=80 test/*.test.js",
+    "test:quick": "node --test test/*.test.js"
   },
   "dependencies": {
     "yaml": "2.8.0"
