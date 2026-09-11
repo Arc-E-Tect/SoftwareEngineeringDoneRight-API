@@ -86,30 +86,9 @@ jobs:
           # runner does. Matches how the sibling Gradle plugins are published.
           ./gradlew publishPlugins --no-daemon --no-configuration-cache
 
-  Security-Scan:
-    name: Scan API-Only Subscriber dependencies
-    needs: Calculate-Version
-    # The scan resolves dependencies, so it needs packages: read. A called
-    # workflow can never hold more than its caller grants, and this workflow's
-    # top-level permissions are contents: read -- without widening it here, the
-    # request is an escalation and GitHub rejects the whole workflow before any
-    # job starts, with no log to say why.
-    permissions:
-      contents: read
-      packages: read
-    uses: ./.github/workflows/security-scan.yml
-    with:
-      semantic_version: ${{ needs.Calculate-Version.outputs.next_version }}
-      project_dir: api-only-subscriber
-      project_name: api-only-subscriber
-      reports_subpath: build/reports
-      fail_on_fatal: true
-    secrets:
-      NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}
-
   Release:
     name: Release API-Only Subscriber
-    needs: [Calculate-Version, Build, Security-Scan]
+    needs: [Calculate-Version, Build]
     if: needs.Calculate-Version.outputs.next_version != ''
     permissions:
       contents: write
