@@ -39,7 +39,7 @@
     "test:quick": "node --test test/*.test.js"
   },
   "dependencies": {
-    "yaml": "2.8.0"
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^7.0.0",

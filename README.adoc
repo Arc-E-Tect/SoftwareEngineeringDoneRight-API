@@ -70,6 +70,39 @@ npm test --prefix api-only-publisher
 cd api-only-subscriber && ./gradlew build
 ----
 
+== Quality gates
+
+Both components gate their own release, and both gates were checked by making
+them fail before trusting them to pass.
+
+[cols="1,2,2", options="header"]
+|===
+| |Publisher |Subscriber
+
+|Coverage
+|`npm test` enforces 90% of lines and functions, 80% of branches
+|JaCoCo, 0.9 minimum, wired into `check`
+
+|Measured
+|93.1% lines, 95.8% functions
+|96.2% instructions, 91.4% branches
+
+|Exclusions
+|none
+|none
+
+|Dependencies
+|`npm audit`, failing at moderate and above
+|OWASP dependency-check, as the Gradle plugins run it
+|===
+
+Neither coverage rule excludes anything. The usual reason to exclude a plugin,
+its extension and its tasks is that TestKit runs them in another process where
+the coverage agent cannot see them, so they report zero however well they are
+tested -- and the rule is made to look away from precisely the code worth
+measuring. The answer taken here is to test those classes in-process as well, so
+the number means what it says.
+
 == Releasing
 
 Both components release through `semantic-release`, driven by Conventional
