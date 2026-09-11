@@ -1,6 +1,8 @@
 plugins {
     id 'java-gradle-plugin'
     id 'groovy'
+    id 'jacoco'
+    id 'org.owasp.dependencycheck' version '13.0.0'
     // Publishes to the Gradle Plugin Portal. That is the only place this plugin
     // is published: a Gradle consumer already has the portal configured, so
     // nothing about consuming it needs explaining.
@@ -112,8 +114,55 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
     testLogging {
         events 'failed'
         exceptionFormat 'full'
+    }
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    // No exclusions.
+    //
+    // The usual reason to exclude a plugin, its extension and its tasks is that
+    // TestKit runs them in another process, where the coverage agent cannot see
+    // them, so they report zero however well they are tested. The answer taken
+    // here is to test those classes in-process as well -- ProjectBuilder for the
+    // wiring, direct invocation for the task actions -- so the number means what
+    // it says rather than meaning "everything except the interesting parts".
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.9
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn jacocoTestCoverageVerification
+}
+
+dependencyCheck {
+    // Fatal findings fail the build only when the caller asks; otherwise the scan
+    // reports and the build continues, so a new CVE in a transitive dependency
+    // does not block an unrelated release at an arbitrary moment.
+    failBuildOnCVSS = (System.getenv('FAIL_ON_FATAL') == 'true') ? 9 : 11
+    nvd {
+        apiKey = System.getenv('NVD_APIKEY_SEDR')
+    }
+    analyzers {
+        // This is a JVM project. The Node analyzers only slow the scan down and
+        // report on the test fixtures' package-lock.json, which ships nowhere.
+        nodeAuditEnabled = false
+        nodeEnabled = false
     }
 }

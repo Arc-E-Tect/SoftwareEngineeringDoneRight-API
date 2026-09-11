@@ -1,0 +1,191 @@
+name: Security Scan
+on:
+  workflow_call:
+    inputs:
+      semantic_version:
+        description: 'The semantic version of the application being scanned'
+        type: string
+        required: true
+      project_dir:
+        description: 'The directory that contains the project to scan'
+        type: string
+        required: false
+        default: ''
+      project_name:
+        description: 'The name of the project that must be scanned'
+        type: string
+        required: true
+      gradle_version_regex:
+        description: 'The regex pattern to match the version in the Gradle properties file'
+        type: string
+        required: false
+        default: 'version\s*=\s*[0-9]\\+\.[0-9]\\+\.[0-9]\\+[a-zA-Z0-9.-]*'
+      fail_on_fatal:
+        description: 'Fail on a finding of a fatal vulnerability'
+        type: boolean
+        required: false
+        default: false
+      force_nvd_refresh:
+        description: 'Force dependencyCheckUpdate even when the shared NVD cache is restored'
+        type: boolean
+        required: false
+        default: false
+      reports_subpath:
+        description: 'The reports directory relative to the project directory'
+        type: string
+        required: false
+        default: 'app/build/reports'
+      DEBUG:
+        description: 'Run the workflow in debug mode'
+        type: boolean
+        required: false
+        default: false
+    secrets:
+        NVD_APIKEY_SEDR:
+            required: true
+
+jobs:
+
+  vulnerability-scan:
+    name: Vulnerability Scan
+    permissions:
+      contents: read
+      packages: read
+
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ inputs.semantic_version }}
+      PROJECT_NAME: ${{ inputs.project_name }}
+      PROJECT_DIR: ${{ inputs.project_dir || inputs.project_name }}
+      GRADLE_PROPERTIES_FILE: ${{ inputs.project_dir || inputs.project_name }}/gradle.properties
+      GRADLE_VERSION_REGEX: ${{ inputs.gradle_version_regex }}
+      REPORTS_DIR: ${{ inputs.project_dir || inputs.project_name }}/${{ inputs.reports_subpath }}
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Update version in Gradle property file
+        run: |
+          echo ===== Before - ${{ env.GRADLE_PROPERTIES_FILE }} =====
+          cat ${{ env.GRADLE_PROPERTIES_FILE }}
+          sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" ${{ env.GRADLE_PROPERTIES_FILE }}
+          echo ===== After - ${{ env.GRADLE_PROPERTIES_FILE }} =====
+          cat ${{ env.GRADLE_PROPERTIES_FILE }}
+
+      - name: Compute cache date key
+        id: cache-date
+        run: |
+          echo "date_key=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore NVD Database Cache
+        id: nvd-cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-shared-${{ steps.cache-date.outputs.date_key }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-shared-
+
+      - name: Detect restored NVD cache data
+        id: nvd-cache-data
+        run: |
+          if [ -d "$HOME/.gradle/dependency-check-data" ] && [ -n "$(ls -A "$HOME/.gradle/dependency-check-data" 2>/dev/null)" ]; then
+            echo "cache_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cache_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Warn when NVD cache is unavailable
+        if: steps.nvd-cache-data.outputs.cache_available != 'true'
+        run: |
+          echo "Shared NVD cache is unavailable for ${{ env.PROJECT_NAME }}. Skipping dependency check for this run."
+          echo "::warning title=NVD Cache Unavailable::Shared NVD cache is unavailable for ${{ env.PROJECT_NAME }}. Skipping dependency check for this run; the scan will resume on a future run when cache is available."
+
+      - name: Detect dependency-check tasks
+        id: dependency-check-tasks
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          if ./gradlew -q tasks --all | grep -q '^dependencyCheckUpdate'; then
+            echo "dependency_check_available=true" >> "$GITHUB_OUTPUT"
+            echo "Dependency-Check tasks detected for ${{ env.PROJECT_NAME }}."
+          else
+            echo "dependency_check_available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Dependency-Check Tasks Missing::No dependencyCheckUpdate/dependencyCheckAnalyze tasks were found for ${{ env.PROJECT_NAME }}. Vulnerability scanning steps are being skipped for this project."
+          fi
+
+      - name: Update NVD database
+        id: nvd-update
+        if: steps.dependency-check-tasks.outputs.dependency_check_available == 'true' && inputs.force_nvd_refresh == true && steps.nvd-cache-data.outputs.cache_available == 'true'
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          OUTFILE="$RUNNER_TEMP/nvd-update-output.txt"
+          timeout 900 ./gradlew dependencyCheckUpdate --no-configuration-cache --no-parallel 2>&1 | tee "$OUTFILE"
+          EXIT_CODE="${PIPESTATUS[0]}"
+          if [ "$EXIT_CODE" -eq 124 ]; then
+            echo "::warning title=NVD Database Update Timeout::The NVD database update exceeded the 15-minute time limit and was aborted. The vulnerability scan will be skipped. Review the build at a later time."
+            echo "nvd_update_timed_out=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [ "$EXIT_CODE" -ne 0 ]; then
+            if grep -qE "NVD Returned Status Code|Error updating the NVD Data|NvdApiException|NVD API request failures" "$OUTFILE"; then
+              echo "::warning title=NVD Service Unavailable::The NVD database update failed due to an NVD service error (HTTP 503 or similar). The vulnerability scan was not completed. Retry the release when the NVD service is restored."
+              echo "nvd_update_failed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit "$EXIT_CODE"
+          fi
+        env:
+          NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}
+
+      - name: Save NVD Database Cache
+        if: steps.dependency-check-tasks.outputs.dependency_check_available == 'true' && inputs.force_nvd_refresh == true && steps.nvd-cache-data.outputs.cache_available == 'true' && steps.nvd-update.outputs.nvd_update_timed_out != 'true' && steps.nvd-update.outputs.nvd_update_failed != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-shared-${{ steps.cache-date.outputs.date_key }}
+
+      - name: Scan for vulnerabilities
+        id: vulnerability-scan
+        if: steps.dependency-check-tasks.outputs.dependency_check_available == 'true' && steps.nvd-cache-data.outputs.cache_available == 'true' && steps.nvd-update.outputs.nvd_update_timed_out != 'true' && steps.nvd-update.outputs.nvd_update_failed != 'true'
+        run: |
+          cd ${{ env.PROJECT_DIR }}
+          OUTFILE="$RUNNER_TEMP/nvd-scan-output.txt"
+          timeout 900 ./gradlew dependencyCheckAnalyze --no-configuration-cache --no-parallel 2>&1 | tee "$OUTFILE"
+          EXIT_CODE="${PIPESTATUS[0]}"
+          if [ "$EXIT_CODE" -eq 124 ]; then
+            echo "::warning title=Vulnerability Scan Timeout::The vulnerability scan exceeded the 15-minute time limit and was aborted. Review the build at a later time."
+            echo "scan_timed_out=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [ "$EXIT_CODE" -ne 0 ]; then
+            if grep -qE "NVD Returned Status Code|NvdApiException|NVD API request failures" "$OUTFILE"; then
+              echo "::warning title=NVD Service Unavailable::The vulnerability scan failed due to an NVD service error (HTTP 503 or similar). The security scan was not completed. Retry the release when the NVD service is restored."
+              echo "nvd_scan_failed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            exit "$EXIT_CODE"
+          fi
+        env:
+          NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}
+          FAIL_ON_FATAL: ${{ inputs.fail_on_fatal }}
+
+      - name: Upload Vulnerability Test Report
+        if: always() && steps.dependency-check-tasks.outputs.dependency_check_available == 'true' && steps.nvd-cache-data.outputs.cache_available == 'true' && steps.nvd-update.outputs.nvd_update_timed_out != 'true' && steps.nvd-update.outputs.nvd_update_failed != 'true' && steps.vulnerability-scan.outputs.scan_timed_out != 'true' && steps.vulnerability-scan.outputs.nvd_scan_failed != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.PROJECT_NAME}}-reports-vulnerability
+          path: ${{ env.REPORTS_DIR }}/dependency-check-report.html
