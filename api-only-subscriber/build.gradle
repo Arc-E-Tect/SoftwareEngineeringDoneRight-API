@@ -46,6 +46,48 @@ gradlePlugin {
     }
 }
 
+// The published POM is what the Plugin Portal reads to describe this plugin.
+// Without this it carries coordinates and nothing else: no name, no description,
+// and no licence -- so the artifact would claim nothing about its own terms while
+// the repository is plainly MIT.
+publishing {
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            name = 'Arc-E-Tect API-Only Subscriber'
+            description = 'Fetches published API description documents into a build, verifies them against a committed lockfile, and fails when a contract has drifted.'
+            url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-subscriber'
+
+            licenses {
+                license {
+                    name = 'MIT License'
+                    url = 'https://opensource.org/licenses/MIT'
+                    distribution = 'repo'
+                }
+            }
+
+            developers {
+                developer {
+                    id = 'arc-e-tect'
+                    name = 'Arc-E-Tect'
+                }
+            }
+
+            scm {
+                url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API'
+                connection = 'scm:git:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+                developerConnection = 'scm:git:git@github.com:Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+            }
+        }
+    }
+}
+
+// Ship the licence inside the artifact, not only as a claim in its metadata.
+tasks.named('jar') {
+    from(layout.projectDirectory.file('LICENSE')) {
+        into 'META-INF'
+    }
+}
+
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
