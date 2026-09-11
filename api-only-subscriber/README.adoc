@@ -1,0 +1,181 @@
+= API-Only Subscriber
+:toc: macro
+:toc-title: Contents
+:icons: font
+:source-highlighter: rouge
+
+toc::[]
+
+== What it is
+
+A Gradle plugin that fetches published API description documents into a build and
+fails when they drift.
+
+It is the consumer half of a pair. `API-Only Publisher` builds and publishes the
+documents; this fetches and verifies them. The two are coupled only by the
+published artifact and its `manifest.json` — neither knows anything else about
+the other.
+
+Its users are implementation projects: both the provider implementing a contract
+and genuine API clients generating stubs from one.
+
+== What it changes
+
+Before, a contract document was generated into `src/main/resources/` and then
+gitignored there, and the detectors validated against a file whose provenance the
+build could not see.
+
+Now the same document is fetched from the governing repository at a declared
+version, checksum-verified, and put on the classpath from `build/`. The question
+the API-Only Suite answers changes accordingly: not "does this implementation
+match this file?" but "does this implementation match the organisation's
+published contract, at version X?"
+
+== Usage
+
+[source,groovy]
+----
+plugins {
+    id 'com.arc-e-tect.api-only-subscriber'
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('user-account') {
+        version = '2.1.0'
+    }
+}
+----
+
+The version is declared **per target**, not per channel: each contract is
+versioned independently, so a change to one service's fragments must not bump
+every other service.
+
+To wire the fetched document into whatever consumes it:
+
+[source,groovy]
+----
+apiOnlySuite {
+    rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+}
+----
+
+`openapi` and `asyncapi` are providers derived from the fetch task, so anything
+wired to them carries the task dependency automatically. That is deliberate:
+handing out a bare path would let a consumer read the directory before it had
+been populated, which is the class of bug this plugin exists to remove.
+
+== Tasks
+
+[cols="1,3", options="header"]
+|===
+|Task |What it does
+
+|`fetchApiSpec`
+|Resolves and unpacks every subscribed contract, verifies each document against
+the manifest inside its own archive, and records what it unpacked in
+`apionly.lock`.
+
+|`verifyApiSpec`
+|Re-hashes what is on disk and fails when anything no longer matches
+`apionly.lock`. Wired into `check`, so drift is a build failure rather than
+something to remember to look at.
+|===
+
+Per-target tasks (`fetchApiSpecUserAccount`, and so on) exist too, for working on
+one contract at a time.
+
+`verifyApiSpec` is ordered after `fetchApiSpec` but deliberately does **not**
+depend on it. Depending on it would re-fetch before checking, quietly repairing
+exactly the drift the task exists to report: a hand-edited document would be
+silently overwritten and the build would go green.
+
+== Where documents land
+
+`build/api-spec/<target>/`, registered as an additional resources directory.
+
+Not `src/main/resources/`. Generated files inside a source tree show up in IDE
+search, tempt hand-editing, and survive a `clean`. From `build/` they reach the
+classpath identically, `clean` removes them, and nothing gitignored lives under
+`src/`.
+
+Writing into `src/` stays possible for teams whose tooling insists on it — set
+`into` on the subscription — but it is not the default.
+
+== The lockfile
+
+`apionly.lock` is committed, and records per target the resolved version, the
+channel it came from, and the SHA-256 of every fetched file.
+
+This is the verbatim guarantee. It catches both halves of the problem: a document
+edited by hand after it was fetched, and a published version that changed
+underneath a tag that was supposed to be immutable. Run `verifyApiSpec` in CI and
+contract drift becomes a build failure rather than a production surprise.
+
+The format is a small, sorted, line-oriented text file rather than JSON, because
+it is read by people in review far more often than by machines, and a one-line
+diff should mean one thing changed.
+
+=== Why this is not what Gradle already does
+
+Gradle verifies that the *artifact* it downloaded matches its coordinates. The
+lockfile and manifest verify that the *files extracted into the build* still match
+what the producer published. Both are needed, and only the second catches a
+hand-edited document sitting in `build/`.
+
+== Channels
+
+[cols="1,3", options="header"]
+|===
+|Channel |Notes
+
+|`maven`
+|The default. The artifact is declared in a detached configuration and Gradle's
+own dependency resolution does the fetching, caching and up-to-date checking —
+so this plugin carries no HTTP client, no cache and no retry policy of its own.
+
+|`file`
+|A local directory. The escape hatch for iterating on a contract before it is
+published anywhere, and the only channel that reads the filesystem directly.
+|===
+
+Resolving only through channel APIs is also what keeps an accidental path
+dependency on the specification repository from creeping in. In a single
+repository the fragments are always reachable, so such a dependency would not
+fail — it has to be designed out and reviewed for, not tested for.
+
+== Pre-releases
+
+A contract that is not finished must never quietly satisfy a build, so a
+pre-release version is refused outright:
+
+[source]
+----
+subscription 'user-account' resolves the pre-release version 1.1.0-rc.1.
+A contract that is not finished must not quietly satisfy a build. Set
+allowPrerelease = true on this subscription to work against it deliberately,
+and remember to take it off again before release.
+----
+
+Working against one is a deliberate, reviewable line in the build file:
+
+[source,groovy]
+----
+subscribe('user-account') {
+    version = '1.1.0-rc.1'
+    allowPrerelease = true
+}
+----
+
+Both the semver form (`-rc.1`, `-alpha.3`) and Maven's `-SNAPSHOT` spelling count
+as pre-releases, the latter because it is what Maven consumers expect even though
+it is not semver-legal.
+
+== A caution about `mavenLocal()`
+
+The local Maven repository is a convenient test harness, not a faithful model of
+a remote one: its metadata and snapshot-staleness behaviour differ. Confirm
+pre-release semantics against a real remote before relying on them.

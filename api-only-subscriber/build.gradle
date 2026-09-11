@@ -1,0 +1,61 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+    // Publishes to the Gradle Plugin Portal. That is the only place this plugin
+    // is published: a Gradle consumer already has the portal configured, so
+    // nothing about consuming it needs explaining.
+    id 'com.gradle.plugin-publish' version '1.3.1'
+    // Kept for publishToMavenLocal, which is how the plugin is iterated on
+    // locally. No remote Maven repository is configured, deliberately.
+    id 'maven-publish'
+}
+
+group = 'com.arc-e-tect'
+// The version comes from gradle.properties, which the release workflow rewrites
+// with the version semantic-release computed. Setting it here as well would
+// silently win over that, and the plugin would publish as 0.0.0 forever.
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+gradlePlugin {
+    website = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-subscriber'
+    vcsUrl  = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+
+    plugins {
+        apiOnlySubscriber {
+            // A sibling of com.arc-e-tect.api-only-suite, not a part of it. The
+            // suite bundles three detectors that answer "does this implementation
+            // match its contract?". This one answers "where does the contract
+            // come from?", and a project can want either without the other.
+            id                  = 'com.arc-e-tect.api-only-subscriber'
+            implementationClass = 'com.arc_e_tect.gradle.apionly.subscriber.ApiOnlySubscriberPlugin'
+            displayName         = 'Arc-E-Tect API-Only Subscriber'
+            description         = 'Fetches published API description documents into a build, verifies them against a committed lockfile, and fails when a contract has drifted.'
+            tags                = ['openapi', 'asyncapi', 'api-first', 'contract', 'specification']
+        }
+    }
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
+}
