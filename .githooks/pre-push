@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+branch=$(git branch --show-current)
+
+if [[ -z "$branch" || "$branch" == "main" || "$branch" == "maintenance" ]]; then
+  exit 0
+fi
+
+if ! command -v gh >/dev/null 2>&1; then
+  printf 'Warning: GitHub CLI is unavailable; cannot check the pull request state for %s.\n' "$branch" >&2
+  exit 0
+fi
+
+pr_state=$(gh pr view "$branch" --json state --jq .state 2>/dev/null || true)
+
+case "$pr_state" in
+  MERGED|CLOSED)
+    printf 'Error: the pull request for branch %s is %s. Create a new branch before pushing.\n' "$branch" "$pr_state" >&2
+    exit 1
+    ;;
+  *)
+    exit 0
+    ;;
+esac

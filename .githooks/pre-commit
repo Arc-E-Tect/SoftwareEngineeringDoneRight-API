@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+staged_keystores=$(git diff --cached --name-only --diff-filter=ACM | grep -Ei '\.(p12|pfx|jks|keystore)$' || true)
+staged_files=$(git diff --cached --name-only --diff-filter=ACM | grep -Ev '\.(min\.js|lock|sum|jar|class|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|pdf|zip|tar|gz|bz2|xz|7z|rar|exe|dll|so|dylib)$' || true)
+changed_workflows=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\.github/workflows/.*\.ya?ml$' || true)
+failed=0
+
+if [[ -n "$staged_keystores" ]]; then
+  printf 'Error: keystore files must not be committed. Remove these from the stage:\n' >&2
+  printf '%s\n' "$staged_keystores" >&2
+  exit 1
+fi
+
+if [[ -n "$staged_files" ]]; then
+  secret_pattern='(password|passwd|pwd|secret|api[-_]?key|auth[-_]?token|access[-_]?token|private[-_]?key|client[-_]?secret|api[-_]?secret|bearer[-_]?token|oauth[-_]?token|session[-_]?secret|encryption[-_]?key|signing[-_]?key|jwt[-_]?secret)[[:space:]]*[:=][[:space:]]*[^<$#][^$#]{2,}'
+
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    [[ "$file" =~ ^\.githooks/ ]] && continue
+    [[ "$file" =~ copilot-instructions\.md$ ]] && continue
+    [[ "$file" =~ (SECURITY|POLICY|SECRET).*\.(md|adoc)$ ]] && continue
+    [[ "$file" =~ \.(example|sample|template)$ ]] && continue
+
+    matched_secrets=$(git show ":$file" | grep -E "$secret_pattern" || true)
+    if [[ -n "$matched_secrets" ]]; then
+      printf 'Error: potential hardcoded secret detected in %s\n' "$file" >&2
+      printf '%s\n' "$matched_secrets" | head -5 >&2
+      printf 'Use an environment variable or a documented placeholder instead.\n' >&2
+      failed=1
+    fi
+  done <<< "$staged_files"
+fi
+
+if [[ -n "$changed_workflows" ]]; then
+  if ! command -v actionlint >/dev/null 2>&1; then
+    printf 'Error: actionlint is required when GitHub Actions workflows are staged.\n' >&2
+    exit 1
+  fi
+
+  while IFS= read -r workflow; do
+    [[ -z "$workflow" ]] && continue
+    if ! git show ":$workflow" | actionlint -stdin-filename "$workflow" -; then
+      failed=1
+    fi
+  done <<< "$changed_workflows"
+fi
+
+if [[ "$failed" -ne 0 ]]; then
+  printf 'Commit aborted because pre-commit checks failed.\n' >&2
+  exit 1
+fi
