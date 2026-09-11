@@ -81,11 +81,28 @@ jobs:
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
         run: |
           cd api-only-subscriber
-          ./gradlew publishPlugins
+          # --no-configuration-cache because the Portal plugin is not compatible
+          # with it, and --no-daemon because a publish is the last thing this
+          # runner does. Matches how the sibling Gradle plugins are published.
+          ./gradlew publishPlugins --no-daemon --no-configuration-cache
+
+  Security-Scan:
+    name: Scan API-Only Subscriber dependencies
+    needs: Calculate-Version
+    uses: ./.github/workflows/security-scan.yml
+    with:
+      semantic_version: ${{ needs.Calculate-Version.outputs.next_version }}
+      project_name: api-only-subscriber
+      reports_subpath: build/reports
+      # Fatal findings fail only on main, where a release is actually about to
+      # happen. On a branch the scan reports and the build carries on.
+      fail_on_fatal: ${{ github.ref_name == 'main' }}
+    secrets:
+      NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}
 
   Release:
     name: Release API-Only Subscriber
-    needs: [Calculate-Version, Build]
+    needs: [Calculate-Version, Build, Security-Scan]
     if: needs.Calculate-Version.outputs.next_version != ''
     permissions:
       contents: write

@@ -5,11 +5,8 @@ import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -36,12 +33,28 @@ public abstract class VerifyApiSpecTask extends DefaultTask {
     @Input
     public abstract Property<String> getTarget();
 
-    @InputDirectory
-    @PathSensitive(PathSensitivity.RELATIVE)
+    /**
+     * Internal, not @InputDirectory.
+     *
+     * This task has no outputs and is deliberately not cacheable, so it runs every
+     * time regardless -- there is no up-to-date checking for a declared input to
+     * inform. Declaring it as an input would only add Gradle's own existence
+     * check, which fires before this task runs and reports a missing *property*
+     * where what the reader needs to hear is that nothing has been fetched yet.
+     */
+    @Internal
     public abstract DirectoryProperty getInto();
 
-    @InputFile
-    @PathSensitive(PathSensitivity.NONE)
+    /**
+     * Internal for the same reason as {@link #getInto()}.
+     *
+     * A missing lockfile is an ordinary first-run state, not a misconfiguration: a
+     * project that applies the plugin and runs `check` before it has ever fetched
+     * anything has no lockfile yet. As a declared input Gradle refuses the build
+     * with "property 'lockfile' specifies file ... which doesn't exist", and the
+     * person reading that is told about a property rather than about what to do.
+     */
+    @Internal
     public abstract RegularFileProperty getLockfile();
 
     @TaskAction
@@ -49,6 +62,20 @@ public abstract class VerifyApiSpecTask extends DefaultTask {
         String target = getTarget().get();
         File lockfile = getLockfile().get().getAsFile();
         File destination = getInto().get().getAsFile();
+
+        if (!destination.isDirectory()) {
+            throw new GradleException(
+                "nothing has been fetched for '" + target + "' yet, so there is nothing to verify.\n\n"
+                + "Run fetchApiSpec first. It resolves the subscribed contract, unpacks it into "
+                + destination.getName() + ", and records what it unpacked in apionly.lock.");
+        }
+
+        if (!lockfile.isFile()) {
+            throw new GradleException(
+                "there is no " + lockfile.getName() + " in this project, so there is nothing to verify "
+                + "'" + target + "' against.\n\nRun fetchApiSpec to create one, and commit it: it is "
+                + "what records which contract this project actually builds against.");
+        }
 
         Lockfile lock = Lockfile.read(lockfile);
         Lockfile.Entry entry = lock.get(target);
