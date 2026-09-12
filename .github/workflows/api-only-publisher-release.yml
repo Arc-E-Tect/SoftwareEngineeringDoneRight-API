@@ -75,16 +75,70 @@ jobs:
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
       contents: write
-      # npm provenance: the attestation is signed with a short-lived OIDC
-      # credential, so the published tarball traces to this workflow run and
-      # commit. A tool whose purpose is making provenance auditable should not
-      # ask to be taken on trust itself.
-      id-token: write
     uses: ./.github/workflows/semantic-version-apply.yml
     with:
       project_dir: api-only-publisher
     secrets:
       sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Publish:
+    name: Publish API-Only Publisher to npm
+    # After the release, never before it. Publishing first would leave a version
+    # on the registry that no tag points at, and npm does not allow a version to
+    # be replaced.
+    needs: [Calculate-Version, Release-Package]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      # Trusted publishing: npm exchanges this job's OIDC token for short-lived
+      # publish rights, so no npm credential is stored anywhere. The same token
+      # signs the provenance attestation that ties the tarball to this run.
+      id-token: write
+
+    env:
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Stamp the released version
+        run: |
+          # semantic-release commits the changelog but not package.json, so the
+          # checked-out version is still the 0.0.0 seed. The tag is the source of
+          # truth; this puts that version into the tarball about to be published.
+          cd api-only-publisher
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Publish to npm
+        run: |
+          # No NPM_TOKEN: authentication is the OIDC exchange this job's
+          # id-token permission enables. --provenance attaches a signed
+          # attestation tying the tarball to this commit and this workflow run.
+          npm publish ./api-only-publisher --provenance
+
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "## api-only-publisher"
+            echo
+            echo "- Version: \`$VERSION\`"
+            echo "- Registry: https://www.npmjs.com/package/@arc-e-tect/api-only-publisher"
+            echo
+            echo "A newly published version can take a minute to appear through the CDN."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   Determine-Release-Type:
     needs: [Calculate-Version]
@@ -93,7 +147,7 @@ jobs:
 
   Workflow-Summary:
     name: Workflow Summary
-    needs: [Build, Release-Package, Determine-Release-Type]
+    needs: [Build, Publish, Release-Package, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
     steps:

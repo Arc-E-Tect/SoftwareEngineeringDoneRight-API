@@ -33,7 +33,20 @@ module.exports = {
             }
         }],
         ["@semantic-release/npm", {
-            "npmPublish": true,
+            // semantic-release versions, tags and writes the changelog; it does not
+            // publish. The publish happens in its own workflow job afterwards, for
+            // two reasons.
+            //
+            // Trusted publishing exchanges a short-lived OIDC credential whose claim
+            // names the workflow that requested it. Publishing from inside the shared
+            // semantic-version-apply.yml would mean registering *that* workflow as the
+            // trusted publisher -- and it is shared, so every project using it could
+            // then publish this package.
+            //
+            // And verifyConditions demands an npm token whenever npmPublish is not
+            // false, which made computing a version require publish rights it has no
+            // use for.
+            "npmPublish": false,
         }],
         ["@semantic-release/release-notes-generator", {
             preset: 'angular',
