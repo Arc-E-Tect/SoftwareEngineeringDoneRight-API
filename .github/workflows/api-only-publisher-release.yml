@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       republish_version:
-        description: 'Already-released version to publish to npm, e.g. 0.0.1. Use this when a release completed (tag and GitHub Release exist) but the npm upload failed - Calculate-Version would otherwise find nothing new and skip Publish. Leave empty for a normal release run.'
+        description: 'Already-released version to publish to npm, e.g. 0.0.1. Use this when a release completed (tag and GitHub Release exist) but the npm upload failed - Calculate-Version would otherwise find nothing new and skip Publish. Only use it for the HIGHEST released version: npm publish claims the latest dist-tag unconditionally, and moving it back is not possible from here (an OIDC token authorises one publish, so npm dist-tag has no credential). Leave empty for a normal release run.'
         required: false
         type: string
         default: ''
@@ -163,6 +163,12 @@ jobs:
           # No NPM_TOKEN: authentication is the OIDC exchange this job's
           # id-token permission enables. --provenance attaches a signed
           # attestation tying the tarball to this commit and this workflow run.
+          #
+          # This claims the latest dist-tag, which is why republish_version is
+          # only safe for the highest released version. The OIDC token authorises
+          # this one publish and is gone afterwards, so a follow-up npm dist-tag
+          # would need a stored credential - the thing trusted publishing exists
+          # to avoid.
           npm publish ./api-only-publisher --provenance
 
       - name: Summarize
