@@ -1,10 +1,14 @@
 name: API-Only Publisher - Release
 
-# The same shape as the Gradle plugins' release workflows, with one difference
-# that is a property of the ecosystem rather than a choice: there is no separate
-# Publish job, because @semantic-release/npm publishes as part of applying the
-# release. A Gradle plugin needs its own Publish step after the tag; an npm
-# package does not.
+# The same shape as the Gradle plugins' release workflows: Calculate-Version,
+# Build, Release-Package, then a separate Publish job. @semantic-release/npm is
+# configured with npmPublish: false, so the tag and the registry upload are
+# distinct steps here exactly as they are for a Gradle plugin.
+#
+# npm binds a trusted publisher to one repository AND one workflow filename, so
+# unlike the Gradle plugins - which get a sibling *-publish-existing-version.yml -
+# the re-publish path has to live in this file. A second workflow could build the
+# tarball but could never authenticate.
 
 on:
   push:
@@ -15,6 +19,12 @@ on:
       - 'release/**'
       - '.github/workflows/api-only-publisher-release.yml'
   workflow_dispatch:
+    inputs:
+      republish_version:
+        description: 'Already-released version to publish to npm, e.g. 0.0.1. Use this when a release completed (tag and GitHub Release exist) but the npm upload failed - Calculate-Version would otherwise find nothing new and skip Publish. Leave empty for a normal release run.'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: api-only-publisher-release-${{ github.ref }}
@@ -22,6 +32,10 @@ concurrency:
 
 jobs:
   Calculate-Version:
+    # A re-publish has nothing to calculate: the version is given, the tag exists.
+    # Leaving this enabled would fail the run outright, since fail_on_empty_version
+    # is true on main and there is by definition nothing new to release.
+    if: ${{ inputs.republish_version == '' }}
     uses: ./.github/workflows/semantic-version-calculate.yml
     with:
       fail_on_empty_version: ${{ github.ref_name == 'main' }}
@@ -87,7 +101,14 @@ jobs:
     # on the registry that no tag points at, and npm does not allow a version to
     # be replaced.
     needs: [Calculate-Version, Release-Package]
-    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    # always(), because in re-publish mode both upstream jobs are skipped and a
+    # skipped dependency would otherwise skip this job too.
+    if: >-
+      ${{ always() && (
+            inputs.republish_version != ''
+            || (needs.Release-Package.result == 'success'
+                && needs.Calculate-Version.outputs.next_version_empty == 'false')
+          ) }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -98,20 +119,36 @@ jobs:
       id-token: write
 
     env:
-      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+      VERSION: ${{ inputs.republish_version != '' && inputs.republish_version || needs.Calculate-Version.outputs.next_version }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.ref_name }}
+          # A re-publish builds the tarball from the tag it names, not from
+          # whatever main has become since, so the upload matches the release.
+          ref: ${{ inputs.republish_version != '' && format('api-only-publisher-v{0}', inputs.republish_version) || github.ref_name }}
           persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
+          # Deliberately no registry-url. It makes setup-node write an .npmrc
+          # holding //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN} and set
+          # NODE_AUTH_TOKEN to its own placeholder, XXXXX-XXXXX-XXXXX-XXXXX. npm
+          # then sees a credential, skips the OIDC exchange entirely, and
+          # authenticates the PUT with that placeholder - which the registry
+          # rejects as a 404. Provenance still signs, because that talks to
+          # GitHub's OIDC endpoint rather than to npm, which makes the failure
+          # look like a permissions problem on an otherwise healthy run.
+          # npm defaults to registry.npmjs.org regardless, so nothing is lost.
+
+      - name: Ensure npm supports trusted publishing
+        # OIDC token exchange landed in npm 11.5.1. An older npm skips it in
+        # silence, so pin the precondition here instead of inheriting whatever
+        # npm the Node 24 image happens to bundle.
+        run: npm install --global npm@^11.5.1
 
       - name: Stamp the released version
         run: |
