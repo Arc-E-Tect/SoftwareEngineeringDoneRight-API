@@ -33,6 +33,19 @@ public final class Manifest {
     private final Map<String, String> fields = new LinkedHashMap<>();
     private final Map<String, String> files = new LinkedHashMap<>();
 
+    private Manifest() {
+        // Created only by read(File).
+    }
+
+    /**
+     * Reads the manifest from a fetched archive.
+     *
+     * @param file the {@code manifest.json} inside the unpacked archive
+     * @return the parsed manifest
+     * @throws IllegalStateException if the file is absent, lists no files, or
+     *         declares a schema version this class does not understand
+     * @throws java.io.UncheckedIOException if it cannot be read
+     */
     public static Manifest read(File file) {
         if (!file.exists()) {
             throw new IllegalStateException(
@@ -69,19 +82,45 @@ public final class Manifest {
         return manifest;
     }
 
+    /**
+     * The contract this archive holds.
+     *
+     * @return the target name, or {@code null} if the manifest omits it
+     */
     public String target() {
         return fields.get("target");
     }
 
+    /**
+     * The version the producer published this archive as.
+     *
+     * <p>Checked against the version that was resolved, so an archive published
+     * under the wrong coordinates is caught rather than unpacked.</p>
+     *
+     * @return the version, or {@code null} if the manifest omits it
+     */
     public String version() {
         return fields.get("version");
     }
 
+    /**
+     * The content hash of the producer's dependency closure for this target.
+     *
+     * <p>Recorded by the publisher so a later commit can tell whether the
+     * fragments behind a contract actually changed. The subscriber does not act
+     * on it; it is carried so that provenance travels with the artifact.</p>
+     *
+     * @return the closure digest, or {@code null} if the manifest omits it
+     */
     public String closureSha256() {
         return fields.get("closureSha256");
     }
 
-    /** Declared filename to its SHA-256. */
+    /**
+     * Each declared document mapped to its SHA-256.
+     *
+     * @return the declared filenames and digests
+     */
     public Map<String, String> files() {
         return files;
     }

@@ -33,38 +33,105 @@ import java.util.TreeMap;
 @CacheableTask
 public abstract class FetchApiSpecTask extends DefaultTask {
 
+    /** Creates the task. Gradle instantiates this when a subscription is declared. */
+    public FetchApiSpecTask() {
+        // Nothing to do: every input is configured by the plugin.
+    }
+
+    /**
+     * Gradle's archive operations, used to unpack the fetched {@code .tgz}.
+     *
+     * @return the injected archive operations
+     */
     @Inject
     protected abstract ArchiveOperations getArchives();
 
+    /**
+     * Gradle's filesystem operations, used to clear and repopulate the
+     * destination.
+     *
+     * @return the injected filesystem operations
+     */
     @Inject
     protected abstract FileSystemOperations getFiles();
 
     /**
      * The resolved archive.
      *
-     * For the maven channel this is a resolved dependency, so Gradle has already
-     * done the downloading, caching and verification of the artifact itself
-     * before this task runs.
+     * <p>For the {@code maven} channel this is a resolved dependency, so Gradle
+     * has already downloaded, cached and verified the artifact itself before this
+     * task runs. For the {@code file} channel it is a path on disk.</p>
+     *
+     * @return the archive to unpack, as a single-file collection
      */
     @InputFiles
     @PathSensitive(PathSensitivity.NAME_ONLY)
     public abstract ConfigurableFileCollection getArchive();
 
+    /**
+     * The contract being fetched.
+     *
+     * <p>Used to key the lockfile entry and to name the target in any failure.</p>
+     *
+     * @return the target name
+     */
     @Input
     public abstract Property<String> getTarget();
 
+    /**
+     * The version being fetched.
+     *
+     * <p>Checked against the version the archive's own manifest declares, so an
+     * archive published under the wrong coordinates is refused rather than
+     * unpacked.</p>
+     *
+     * @return the version to record in the lockfile
+     */
     @Input
     public abstract Property<String> getVersion();
 
+    /**
+     * Which channel the archive came from.
+     *
+     * <p>Recorded in the lockfile so that a reader can tell where a contract was
+     * resolved from without re-running the build.</p>
+     *
+     * @return the channel name, {@code "maven"} or {@code "file"}
+     */
     @Input
     public abstract Property<String> getChannel();
 
+    /**
+     * Where the documents are unpacked to.
+     *
+     * <p>Declared as an output, so Gradle treats a modified document as making
+     * this task out of date and refetches it.</p>
+     *
+     * @return the destination directory
+     */
     @OutputDirectory
     public abstract DirectoryProperty getInto();
 
+    /**
+     * The lockfile this task records what it unpacked in.
+     *
+     * @return the lockfile location
+     */
     @OutputFile
     public abstract RegularFileProperty getLockfile();
 
+    /**
+     * Unpacks the archive, verifies it against its own manifest, and records the
+     * result in the lockfile.
+     *
+     * <p>Three things are refused rather than unpacked: an archive whose manifest
+     * names a different version, an archive missing a document its manifest
+     * declares, and an archive whose contents do not hash to what its manifest
+     * says. A fourth is refused at the lockfile: a version already locked, coming
+     * back with different bytes — a released version rebuilt, or a tag moved.</p>
+     *
+     * @throws org.gradle.api.GradleException if any of those checks fail
+     */
     @TaskAction
     public void fetch() {
         File archive = getArchive().getSingleFile();

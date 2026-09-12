@@ -2,20 +2,15 @@ plugins {
     id 'java-gradle-plugin'
     id 'groovy'
     id 'jacoco'
-    id 'org.owasp.dependencycheck' version '13.0.0'
+    alias(libs.plugins.owasp.dependency.check)
     // Publishes to the Gradle Plugin Portal. That is the only place this plugin
     // is published: a Gradle consumer already has the portal configured, so
     // nothing about consuming it needs explaining.
-    id 'com.gradle.plugin-publish' version '2.1.1'
+    alias(libs.plugins.plugin.publish)
     // Kept for publishToMavenLocal, which is how the plugin is iterated on
     // locally. No remote Maven repository is configured, deliberately.
     id 'maven-publish'
 }
-
-group = 'com.arc-e-tect'
-// The version comes from gradle.properties, which the release workflow rewrites
-// with the version semantic-release computed. Setting it here as well would
-// silently win over that, and the plugin would publish as 0.0.0 forever.
 
 repositories {
     mavenCentral()
@@ -23,10 +18,12 @@ repositories {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        // 21, as every sibling plugin targets. A Gradle plugin runs inside the
+        // consumer's Gradle JVM, so the bytecode level is a compatibility floor
+        // imposed on them: compiling for 25 would exclude every build not yet on
+        // it, to no benefit this plugin can point at.
+        languageVersion = JavaLanguageVersion.of(21)
     }
-    withSourcesJar()
-    withJavadocJar()
 }
 
 gradlePlugin {
@@ -106,18 +103,17 @@ dependencies {
     // task that never gets registered, or a dependency that Gradle refuses to
     // accept. Those are exactly the failures a consumer meets first.
     testImplementation gradleTestKit()
-    testImplementation platform('org.junit:junit-bom:5.11.4')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.assertj:assertj-core:3.27.3'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation libs.junit.jupiter
+    testImplementation libs.assertj.core
+    testRuntimeOnly    libs.junit.platform.launcher
 }
 
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
     testLogging {
-        events 'failed'
-        exceptionFormat 'full'
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
     }
 }
 
@@ -149,6 +145,23 @@ jacocoTestCoverageVerification {
 
 tasks.named('check') {
     dependsOn jacocoTestCoverageVerification
+}
+
+// Javadoc is part of the product, not a by-product.
+//
+// plugin-publish publishes a javadoc jar, so whatever is written here is what a
+// consumer reads in their IDE. Warnings are errors: an undocumented public member
+// fails the build rather than shipping a jar with a blank entry in it.
+tasks.named('javadoc') {
+    options {
+        encoding = 'UTF-8'
+        addBooleanOption('Xdoclint:all', true)
+        addBooleanOption('Xwerror', true)
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('javadoc')
 }
 
 dependencyCheck {

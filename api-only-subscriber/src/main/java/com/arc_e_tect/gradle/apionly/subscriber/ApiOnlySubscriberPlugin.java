@@ -31,10 +31,26 @@ import java.util.Locale;
  */
 public class ApiOnlySubscriberPlugin implements Plugin<Project> {
 
+    /** The name this plugin's extension is registered under: {@value}. */
     public static final String EXTENSION_NAME = "apiOnlySubscriber";
+
+    /** The aggregate task that fetches every subscribed contract: {@value}. */
     public static final String FETCH_TASK = "fetchApiSpec";
+
+    /** The aggregate task that checks every fetched contract: {@value}. */
     public static final String VERIFY_TASK = "verifyApiSpec";
 
+    /** Creates the plugin. Gradle instantiates this when the plugin is applied. */
+    public ApiOnlySubscriberPlugin() {
+        // Nothing to do: all configuration happens in apply(Project).
+    }
+
+    /**
+     * Registers the {@code apiOnlySubscriber} extension and the tasks that act on
+     * it.
+     *
+     * @param project the project the plugin is applied to
+     */
     @Override
     public void apply(Project project) {
         ApiOnlySubscriberExtension extension =

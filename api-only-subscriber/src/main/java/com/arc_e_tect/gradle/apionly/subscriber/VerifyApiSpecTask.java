@@ -30,33 +30,57 @@ import java.util.Map;
 )
 public abstract class VerifyApiSpecTask extends DefaultTask {
 
+    /** Creates the task. Gradle instantiates this when a subscription is declared. */
+    public VerifyApiSpecTask() {
+        // Nothing to do: every input is configured by the plugin.
+    }
+
+    /**
+     * The contract being checked.
+     *
+     * @return the target name, used to find its entry in the lockfile
+     */
     @Input
     public abstract Property<String> getTarget();
 
     /**
-     * Internal, not @InputDirectory.
+     * Where the fetched documents are, and are checked.
      *
-     * This task has no outputs and is deliberately not cacheable, so it runs every
-     * time regardless -- there is no up-to-date checking for a declared input to
-     * inform. Declaring it as an input would only add Gradle's own existence
-     * check, which fires before this task runs and reports a missing *property*
-     * where what the reader needs to hear is that nothing has been fetched yet.
+     * <p>Deliberately {@code @Internal} rather than {@code @InputDirectory}. This
+     * task has no outputs and is not cacheable, so it runs every time regardless
+     * and there is no up-to-date check for a declared input to inform. Declaring
+     * it would only add Gradle's own existence check, which fires before this task
+     * runs and reports a missing <em>property</em> where the reader needs to be
+     * told that nothing has been fetched yet.</p>
+     *
+     * @return the directory holding the fetched documents
      */
     @Internal
     public abstract DirectoryProperty getInto();
 
     /**
-     * Internal for the same reason as {@link #getInto()}.
+     * The lockfile the fetched documents are checked against.
      *
-     * A missing lockfile is an ordinary first-run state, not a misconfiguration: a
-     * project that applies the plugin and runs `check` before it has ever fetched
-     * anything has no lockfile yet. As a declared input Gradle refuses the build
-     * with "property 'lockfile' specifies file ... which doesn't exist", and the
-     * person reading that is told about a property rather than about what to do.
+     * <p>{@code @Internal} for the same reason as {@link #getInto()}. A missing
+     * lockfile is an ordinary first-run state, not a misconfiguration: a project
+     * that applies the plugin and runs {@code check} before it has ever fetched
+     * anything has no lockfile yet.</p>
+     *
+     * @return the lockfile location
      */
     @Internal
     public abstract RegularFileProperty getLockfile();
 
+    /**
+     * Fails when a fetched contract no longer matches what was locked.
+     *
+     * <p>Every problem found is reported at once rather than the first, since a
+     * contract that has drifted has usually drifted in more than one file.</p>
+     *
+     * @throws org.gradle.api.GradleException if nothing has been fetched, if
+     *         there is no lockfile or no entry for this target, or if any
+     *         document is missing or no longer hashes to what was locked
+     */
     @TaskAction
     public void verify() {
         String target = getTarget().get();
