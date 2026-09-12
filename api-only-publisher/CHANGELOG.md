@@ -1,3 +1,10 @@
+## [0.0.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.1...api-only-publisher-v0.0.2) (2026-09-12)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** authenticate the npm publish over OIDC, not a placeholder token ([#7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/7)) ([3475a2d](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3475a2d3393541d9959987c6f4874c462f489605)), closes [#7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/7)
+
 ## [0.0.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.0...api-only-publisher-v0.0.1) (2026-09-12)
 
 
