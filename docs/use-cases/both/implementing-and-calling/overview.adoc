@@ -1,0 +1,80 @@
+= Implementing one contract and calling other APIs
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+Most services do both: a `billing` service implements the `billing` API, and calls the `orders` and `payments` APIs to do so.
+Each of those contracts matters to its build, but not in the same way.
+
+The project subscribes to the contract it implements with `subscribe`, at `apiContractVersion`, and that contract lands at the root of its classpath.
+It subscribes to each API it calls with `subscribeAsClient`, each at a version of its own, and each lands under `contracts/<target>/`.
+All of them are fetched, checked against their manifests, locked in the project's one `apionly.lock`, and verified on every `check`.
+
+[#fits]
+== When this fits
+
+* Your project implements exactly one API contract, and calls one or more other APIs.
+* You want every one of those contracts pinned and verified by the build.
+
+[#does-not-fit]
+== When it does not
+
+* **The project implements two contracts.**
+Each implemented contract gets a project of its own, as link:../../../reference/run-book.adoc#one-contract-per-project[the run-book →] explains.
+* **The project only implements**, or **only calls**: start from a link:../../../README.adoc[provider or client use case →].
+
+[#combining]
+== How the other use cases combine
+
+The implemented contract and the called APIs can each come from wherever the provider and client use cases describe: the project itself, a library in the same repository, a library in another repository, or a published release.
+One limit applies: **the channel is the project's**.
+Every subscription in one project resolves through one channel type, `file` or `maven`, so a contract from a library in the same repository and an API published elsewhere cannot be mixed in one project yet.
+Publish the library's contracts to the same Maven repository as the others, as link:../../provider/3-specification-library-in-its-own-repository/overview.adoc[provider use case 3 →] does, when you need both.
+
+The link:tutorial.adoc[tutorial →] uses a library in the same repository for all three contracts.
+
+[#what-you-get]
+== What you get
+
+* The implemented contract at `/openapi.yaml`, where a server framework or a contract test expects it.
+* Each called API at `/contracts/<target>/openapi.yaml`, where a client generator or a stub can read it.
+* One `apionly.lock` with an entry per contract, each at its own version.
+* A build that refuses a second implemented contract, and says to use `subscribeAsClient` if the project calls it instead.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Set up where the contracts come from**, as the matching provider and client use cases describe.
+. **Declare the versions**: `apiContractVersion` for the implemented contract, and `<target>ApiVersion` for each API the project calls, in the project's `gradle.properties`.
+. **Write the contract test first**: the implemented contract at the root of the classpath, each called API under `/contracts/<target>/`.
+. **Subscribe**: `subscribe('<implemented>')`, and `subscribeAsClient('<called>') { version = ... }` for each API the project calls.
+. **Commit `apionly.lock`**, and run the same `./gradlew check` in CI.
+
+[#day-to-day]
+== Day to day
+
+* **The implemented contract changes**: raise `apiContractVersion` with the contract's version; the called APIs are unaffected.
+* **A called API releases a new version**: raise its `<target>ApiVersion` when the project is ready for it; nothing else changes.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this setup step by step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant build it in your own repository, starting with the tests.
+* link:../../../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] explains what a client subscription gets, and what it does not.

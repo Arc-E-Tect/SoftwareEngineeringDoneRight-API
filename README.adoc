@@ -42,24 +42,30 @@ Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subsc
 == Documentation
 
 Start at link:docs/README.adoc[the documentation →].
-It helps you pick the one of four use cases that fits your situation, and gives each an overview, a step-by-step tutorial, and prompts that have Claude Code or Codex build it in your project, test first.
+It helps you pick the use case that fits your situation, and gives each an overview, a step-by-step tutorial, and prompts that have Claude Code or Codex build it in your project, test first.
 
-[cols="1,3", options="header"]
+[cols="2,2,2", options="header"]
 |===
-|Use case |When
+|The contract comes from |Your project implements it |Your project calls it
 
-|link:docs/use-cases/1-contract-in-the-implementing-project/overview.adoc[1. The contract lives in the project that implements it →]
-|One project owns its contract.
+|Your own project
+|link:docs/use-cases/provider/1-contract-in-the-implementing-project/overview.adoc[Provider use case 1 →]
+|link:docs/use-cases/client/1-contract-in-the-calling-project/overview.adoc[Client use case 1 →]
 
-|link:docs/use-cases/2-specification-library-in-the-same-repository/overview.adoc[2. A specification library and its projects, in one repository →]
-|Several projects share fragments, in one repository.
+|A specification library in the same repository
+|link:docs/use-cases/provider/2-specification-library-in-the-same-repository/overview.adoc[Provider use case 2 →]
+|link:docs/use-cases/client/2-specification-library-in-the-same-repository/overview.adoc[Client use case 2 →]
 
-|link:docs/use-cases/3-specification-library-in-its-own-repository/overview.adoc[3. A specification library in its own repository →]
-|Contracts are released to projects in other repositories.
+|A specification library in another repository
+|link:docs/use-cases/provider/3-specification-library-in-its-own-repository/overview.adoc[Provider use case 3 →]
+|link:docs/use-cases/client/3-specification-library-in-another-repository/overview.adoc[Client use case 3 →]
 
-|link:docs/use-cases/4-consuming-a-published-contract/overview.adoc[4. Consuming a contract that someone else publishes →]
-|You build against a contract you do not own.
+|A published release, and nothing more
+|link:docs/use-cases/provider/4-implementing-a-published-contract/overview.adoc[Provider use case 4 →]
+|link:docs/use-cases/client/4-calling-a-published-api/overview.adoc[Client use case 4 →]
 |===
+
+A project that implements one contract and calls others combines both columns, as link:docs/use-cases/both/implementing-and-calling/overview.adoc[implementing one contract and calling others →] describes.
 
 link:docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains how the two tools correspond, and where each part lives in the code.
 link:docs/reference/run-book.adoc[The run-book →] says how to operate them, and what to do when something fails.

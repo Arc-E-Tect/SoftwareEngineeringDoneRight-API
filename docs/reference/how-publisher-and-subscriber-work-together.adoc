@@ -91,8 +91,8 @@ Its name is the coordination key across both tools.
 |`channels:` in `apionly.yaml`; `channel { }` in the Subscriber
 
 |Subscription
-|A consuming build's declaration that it builds against a target at a version.
-|`apiOnlySubscriber { subscribe(...) }`
+|A consuming build's declaration that it builds against a target at a version: the one contract it implements, or an API it calls.
+|`apiOnlySubscriber { subscribe(...) }`, `subscribeAsClient(...)`
 
 |Lockfile
 |`apionly.lock`: per subscription, the version, the channel and a SHA-256 per document, as fetched.
@@ -251,11 +251,11 @@ With `publish: false`, the package is only packed into `directory`.
 |On the Publisher side |On the Subscriber side |In between
 
 |A key under `targets:`
-|The argument to `subscribe(...)`; the task suffix in `fetchApiSpec<Target>`
+|The argument to `subscribe(...)` or `subscribeAsClient(...)`; the task suffix in `fetchApiSpec<Target>`
 |`manifest.target`; `target` in `apionly.lock`; the archive's name
 
 |`version` in the target's version file
-|The subscription's `version`, else `apiOnlySubscriber.version`, else the `apiContractVersion` project property
+|The subscription's `version`, else `apiOnlySubscriber.version`, else the `apiContractVersion` project property; for an API the project calls, only the subscription's `version`
 |`info.version` in the documents; `manifest.version`; `version` in `apionly.lock`
 
 |`--pre-release <ids>` on `build` and `publish`
@@ -310,6 +310,8 @@ On the Subscriber side, the version of a subscription is the first of these that
 . `apiOnlySubscriber.version`;
 . the `apiContractVersion` property of the project the plugin is applied to, which includes that project's own `gradle.properties`, `-PapiContractVersion` and `ORG_GRADLE_PROJECT_apiContractVersion`.
 
+A subscription for an API the project calls, declared with `subscribeAsClient`, takes only its own `version`: the other two are the version of the contract the project implements.
+
 [#checks]
 == Every check, and where it lives
 
@@ -337,7 +339,7 @@ On the Subscriber side, the version of a subscription is the first of these that
 |Publisher `src/pipeline.js`; `src/cli.js` for `lint`
 |The linter's own output; `lint failed for <n> document(s)`
 
-|Every YAML file under `sources.root` is reached by some target
+|Every YAML file under `sources.root` is reached by some target, apart from lint tools' configuration files and the lint configurations `apionly.yaml` names
 |`lint` without `--target`
 |Publisher `src/unreferenced.js`, called from `src/cli.js`
 |`<n> fragment(s) not reachable from any target, so nothing lints them`
@@ -352,10 +354,15 @@ On the Subscriber side, the version of a subscription is the first of these that
 |Publisher `src/channels.js`
 |`no credential in $<VAR>, which channels.maven.tokenEnv names`
 
+|A project implements at most one contract, and never both implements and calls the same one
+|Evaluating the build file
+|Subscriber `ApiOnlySubscriberExtension.java`
+|`apiOnlySubscriber already implements '<a>', so it cannot also implement '<b>'`, `implements '<t>', so it cannot also subscribe to it as a client`, `calls '<t>' as a client, so it cannot also implement '<t>'`
+
 |The subscription has a version, and a pre-release is allowed
 |Planning the fetch
 |Subscriber `ApiOnlySubscriberPlugin.java`
-|`subscription '<t>' declares no version`, `resolves the pre-release version <v>`
+|`subscription '<t>' declares no version`, `client subscription '<t>' declares no version`, `resolves the pre-release version <v>`
 
 |The archive exists in a `file` channel
 |`fetchApiSpec<Target>`
@@ -381,12 +388,13 @@ On the Subscriber side, the version of a subscription is the first of these that
 [#gradle-wiring]
 == How a build wires the two together
 
+A project implements at most one contract, and may call any number of APIs.
 The Subscriber registers, for every subscription:
 
-* `fetchApiSpec<Target>`, a cacheable task whose inputs are the resolved archive, the target, the version and the channel, and whose outputs are the unpacked directory and the lockfile;
+* `fetchApiSpec<Target>`, whose inputs are the resolved archive, the target, the version and the channel, and whose output is the unpacked directory; it is up to date only while `apionly.lock` records its target at that version and channel, because the lockfile is shared by every subscription and so is no single fetch's output, which is also why the task is not cacheable; a project's fetches and verifications take turns through the `LockfileAccess` build service, so none reads the lockfile while another writes it;
 * `verifyApiSpec<Target>`, ordered after the fetch but deliberately not depending on it, so that it can report a hand edit instead of repairing it;
 * the aggregates `fetchApiSpec` and `verifyApiSpec`, with `check` depending on `verifyApiSpec`;
-* with the `java` plugin, the unpacked directory as a resources directory, and `processResources` depending on the fetch.
+* with the `java` plugin, `processResources` depending on the fetch, and the documents on the classpath: for the implemented contract, the unpacked directory as a resources directory, so its documents sit at the root; for an API the project calls, a copy under `contracts/<target>/`.
 
 A `file` channel's archive path is resolved while the build is planned, and only checked for when the fetch runs.
 That is what lets a build publish its own contract and fetch it in one invocation: a task that runs the Publisher's `publish` writes the archive, and the fetch task depends on it.
@@ -495,13 +503,13 @@ Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` 
 |Applies the extension, registers the tasks per subscription, resolves a subscription's archive for its channel, and wires resources and `check`.
 
 |`ApiOnlySubscriberExtension`
-|The `apiOnlySubscriber { }` block: `channel`, `lockfile`, `version`, and the subscriptions.
+|The `apiOnlySubscriber { }` block: `channel`, `lockfile`, `version`, `subscribe` for the contract the project implements, refusing a second, and `subscribeAsClient` for each API it calls.
 
 |`ChannelSpec`
 |`channel { }`: `type`, `groupId`, `extension`, `directory`.
 
 |`Subscription`
-|One `subscribe(...)`: `version`, `allowPrerelease`, `groupId`, `artifactId`, `into`, and the `openapi` and `asyncapi` providers.
+|One `subscribe(...)` or `subscribeAsClient(...)`: `version`, `allowPrerelease`, `groupId`, `artifactId`, `into`, whether it `isClient`, and the `openapi` and `asyncapi` providers.
 
 |`FetchApiSpecTask`
 |Resolves, checks, unpacks and locks one subscription.
@@ -514,6 +522,9 @@ Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` 
 
 |`Lockfile`
 |Reads and writes `apionly.lock`, and hashes files.
+
+|`LockfileAccess`
+|A build service, one per project, that lets one fetch or verify task at a time use the project's `apionly.lock`.
 
 |`UpdateApiOnlySubscriberDslTask`, `ApiOnlySubscriberDslSchema`
 |`updateApiOnlySubscriberDSL`: adds defaulted DSL properties to a consumer's `build.gradle`.
@@ -571,6 +582,7 @@ Until 1.0.0, any release may change their interfaces incompatibly.
 These hold across both tools, and a change that breaks one is a change to the design, not a detail.
 
 . **One archive holds one target at one version**, and its manifest says which.
+. **One project implements at most one contract.** It may call any number of APIs, each with every check the implemented contract gets; the Subscriber refuses a second implemented contract.
 . **The manifest is the only thing the tools share.**
 . **A version is never taken from the command line.** It comes from the library, and a pre-release only appends to it.
 . **A version names one set of documents.** The Subscriber never silently re-locks a locked version whose documents changed.

@@ -34,10 +34,10 @@ link:how-publisher-and-subscriber-work-together.adoc[How the Publisher and the S
 |Declares the contract version a project builds against, runs `./gradlew check`, and commits `apionly.lock`.
 
 |The build
-|In use cases 1 and 2, runs the Publisher and the Subscriber in one Gradle build.
+|In provider and client use cases 1 and 2, and the combined use case, runs the Publisher and the Subscriber in one Gradle build.
 
 |The release job
-|In use case 3, publishes every contract whose version is new, and tags it.
+|In provider use case 3, publishes every contract whose version is new, and tags it.
 |===
 
 [#commands]
@@ -69,7 +69,7 @@ Run in the directory that holds `apionly.yaml` and the Publisher's `package.json
 
 |`npm run apionly -- publish [--target <t>] [--channel <c>]`
 |Packs and ships built contracts.
-|From the build (use cases 1, 2) or the release job (use case 3)
+|From the build (provider and client use cases 1 and 2) or the release job (provider use case 3)
 
 |`npm run apionly -- build --target <t> --pre-release <ids>` +
 `npm run apionly -- publish --target <t> --pre-release <ids>`
@@ -94,8 +94,8 @@ Never run `npx api-only-publisher`: that unscoped name is not this package.
 |Task |What it does
 
 |`./gradlew check`
-|In use cases 1 and 2: builds, publishes and lints the contracts, fetches and verifies them, and runs the tests.
-In use case 4: fetches, verifies and tests.
+|In provider and client use cases 1 and 2, and the combined use case: builds, publishes and lints the contracts, fetches and verifies them, and runs the tests.
+In provider use case 4, and client use cases 3 and 4: fetches, verifies and tests.
 
 |`./gradlew fetchApiSpec`
 |Fetches every subscribed contract, and updates `apionly.lock` when a version changed.
@@ -115,10 +115,10 @@ In use case 4: fetches, verifies and tests.
 
 . Edit the fragments.
 . Raise `version` in the contract's `<target>.bundle.properties`: major for a breaking change, minor for an additive one, patch for anything else.
-. In use cases 1 and 2, raise `apiContractVersion` in the implementing project's `gradle.properties` to the same version, and run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
+. In provider use cases 1 and 2, raise `apiContractVersion` in the implementing project's `gradle.properties` to the same version, and run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
 . Commit the fragments, the version changes and the updated `apionly.lock` together.
 
-In use case 3, the pull request changes the fragments and the version file; consumers adopt the release afterwards, as in <<adopting-a-version,Taking a new version §>>.
+In provider use case 3, the pull request changes the fragments and the version file; consumers adopt the release afterwards, as in <<adopting-a-version,Taking a new version §>>.
 
 [#changing-a-shared-fragment]
 === Changing a shared fragment
@@ -127,15 +127,15 @@ A shared fragment changes every contract that reaches it.
 
 . Edit the fragment.
 . List the contracts it reaches: `npm run apionly -- changed --since HEAD --quiet`.
-. Raise the version of each of those contracts, and, in use cases 1 and 2, the `apiContractVersion` of each implementing project.
-. Run `./gradlew check`, or the release check in use case 3, and commit everything together.
+. Raise the version of each of those contracts, and, in provider use cases 1 and 2, the `apiContractVersion` of each implementing project.
+. Run `./gradlew check`, or the release check in provider use case 3, and commit everything together.
 
 [#adding-a-contract]
 === Adding a contract
 
 . Add a bundle root and its `<target>.bundle.properties` to the library.
 . Add the target to `targets:` in `apionly.yaml`.
-. In use case 2, add a project named after the target, with `apiContractVersion`; in use cases 3 and 4, subscribe from the implementing projects after the first release.
+. In provider use case 2, add a project named after the target, with `apiContractVersion`; in provider use cases 3 and 4, and client use cases 3 and 4, subscribe from the projects that implement or call it after the first release.
 . Run `npm run apionly -- build` and `npm run apionly -- lint`.
 
 [#removing-a-fragment]
@@ -147,7 +147,7 @@ A fragment that stays behind unreferenced fails `lint`.
 [#adopting-a-version]
 === Taking a new version
 
-. Change `apiContractVersion` in the project's `gradle.properties`, or the subscription's `version`.
+. Change `apiContractVersion` in the project's `gradle.properties`, or the subscription's `version`; for an API the project calls, the `version` of its `subscribeAsClient` block.
 . Run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
 . Commit the version change and `apionly.lock` together.
 
@@ -159,11 +159,11 @@ A fragment that stays behind unreferenced fails `lint`.
 . At the release: the consumer takes the released version and removes `allowPrerelease`.
 
 [#releasing]
-=== Releasing, in use case 3
+=== Releasing, in provider use case 3
 
 On the main branch, the release job runs `npm ci`, `build`, `lint`, and a script that publishes every contract whose version has no `<target>-v<version>` tag, then tags it and pushes the tags.
 A pull request runs a script that fails when a changed contract's version is already tagged.
-Both scripts are in link:../use-cases/3-specification-library-in-its-own-repository/tutorial.adoc#step-7[use case 3's tutorial →].
+Both scripts are in link:../use-cases/provider/3-specification-library-in-its-own-repository/tutorial.adoc#step-7[provider use case 3's tutorial →].
 
 Never delete or move a release tag, and never republish a released version.
 
@@ -207,43 +207,41 @@ A Subscriber upgrade does not change the contracts, so `apionly.lock` should not
 
 [cols="1,3", options="header"]
 |===
-|Use case |CI
+|Setup |CI
 
-|1, 2
+|Provider and client use cases 1 and 2, and the combined use case
 |Node.js and Java; `./gradlew check`; fail when an `apionly.lock` changed during the build; keep the lint reports.
 
-|3, contracts repository
+|Provider use case 3, contracts repository
 |Pull requests: `npm ci`, `build`, `lint`, the version check.
 The main branch: the same, then the release script and `git push --tags`, with the Maven token.
 
-|3 and 4, implementing projects
+|Provider use cases 3 and 4, and client use cases 3 and 4
 |Java; `./gradlew check` with the repository credentials in `ORG_GRADLE_PROJECT_*`; fail when `apionly.lock` changed during the build.
 |===
 
 [#situations]
 == Situations worth knowing
 
-[#two-subscriptions]
-=== Two contracts in one project
+[#one-contract-per-project]
+=== One implemented contract per project
 
-With the `java` plugin, every subscription's `build/api-spec/<target>/` directory is a resources directory, and each holds a `manifest.json` and usually an `openapi.yaml`.
-With two or more subscriptions, `processResources` fails with `Entry manifest.json is a duplicate`.
-Put each contract in a directory of its own on the classpath, after the `apiOnlySubscriber` block:
+A project implements at most one contract, at the version its `apiContractVersion` declares.
+Two implemented contracts in one project would share one version, one classpath root and one release, so neither could change without the other.
+Put each in a project of its own, in a multi-project build: each project applies the Subscriber, subscribes to its contract, and declares `apiContractVersion` in its own `gradle.properties`.
+link:../../api-only-subscriber/README.adoc#one-contract-per-project[The Subscriber's README →] shows the setup.
 
-[source,groovy]
-----
-// Two subscriptions each bring a manifest.json and an openapi.yaml, which collide
-// at the root of the classpath. Put each contract in a directory of its own there.
-sourceSets.main.resources.setSrcDirs(['src/main/resources'])
-tasks.named('processResources') {
-    ['orders', 'payments'].each { target ->
-        from(apiOnlySubscriber.subscription(target).into) { into "contracts/$target" }
-    }
-}
-----
+Subscriber 0.1.0 accepts a second subscription, and then fails in `processResources` with `Entry manifest.json is a duplicate`.
+Later versions refuse a second implemented contract itself, and suggest `subscribeAsClient` for a contract the project calls instead.
 
-The documents are then at `contracts/orders/openapi.yaml` and `contracts/payments/openapi.yaml` on the classpath.
-List any other resource directories the project uses in `setSrcDirs`.
+[#calling-apis]
+=== Calling other APIs
+
+A project may call any number of APIs, next to the contract it implements.
+It declares each with `subscribeAsClient('<target>') { version = '<version>' }`, which arrives in the Subscriber release after 0.1.0.
+Each gets every check the implemented contract gets: the manifest check, its own entry in `apionly.lock`, the refusal of changed bytes under a locked version, and `verifyApiSpec` as part of `check`.
+Its documents are on the classpath under `contracts/<target>/`, and it sets its own version, because `apiContractVersion` is the implemented contract's.
+link:../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] has the details.
 
 [#hand-edits]
 === A hand-edited fetched document
@@ -255,8 +253,8 @@ Change the contract in the library, never the fetched document.
 [#lint-config]
 === The lint configuration inside the fragments' root
 
-A Redocly configuration file under `sources.root` is a YAML file no contract references, and `lint` reports it as unreferenced.
-Keep it beside `apionly.yaml`.
+Publisher 0.2.0 reports a Redocly configuration file under `sources.root` as an unreferenced fragment, so with that version keep it beside `apionly.yaml`.
+Later versions skip lint tools' configuration files wherever they sit, `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml` and `.spectral.yml`, and the lint configuration `apionly.yaml` names, whatever it is called.
 
 [#failures]
 == When something fails
@@ -293,7 +291,7 @@ Keep it beside `apionly.yaml`.
 
 |`<n> fragment(s) not reachable from any target, so nothing lints them`
 |YAML files under the source root that no contract references.
-|Reference each from a contract, or delete it; move a lint configuration out of the source root.
+|Reference each from a contract, or delete it; with Publisher 0.2.0, move a lint configuration out of the source root.
 
 |`lint failed for <n> document(s): …`
 |Lint errors, listed above that line.
@@ -311,7 +309,7 @@ Keep it beside `apionly.yaml`.
 |The token was rejected.
 |Check the token, and that the repository accepts a bearer token.
 
-|`Contract version not raised` (use case 3's check script)
+|`Contract version not raised` (provider use case 3's check script)
 |A contract changed, but its version is already released.
 |Raise the contract's version in the pull request.
 |===
@@ -366,7 +364,19 @@ Keep it beside `apionly.yaml`.
 |A subscription that was never fetched and committed.
 |`./gradlew fetchApiSpec`, and commit `apionly.lock`.
 
+|`apiOnlySubscriber already implements '<a>', so it cannot also implement '<b>'`
+|A second implemented contract in one project.
+|If the project calls `<b>`, use `subscribeAsClient`; otherwise <<one-contract-per-project,One implemented contract per project §>>.
+
+|`apiOnlySubscriber implements '<t>', so it cannot also subscribe to it as a client`, or `calls '<t>' as a client, so it cannot also implement '<t>'`
+|The same contract declared as implemented and as called.
+|Keep the one that says what the project does with it.
+
+|`client subscription '<t>' declares no version`
+|An API the project calls has no version of its own.
+|Set `version` in its `subscribeAsClient` block; <<calling-apis,Calling other APIs §>>.
+
 |`Entry manifest.json is a duplicate`
-|Two subscriptions in a project with the `java` plugin.
-|<<two-subscriptions,Two contracts in one project §>>.
+|A second contract in one project, with Subscriber 0.1.0 and the `java` plugin.
+|<<one-contract-per-project,One implemented contract per project §>>.
 |===

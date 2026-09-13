@@ -30,20 +30,46 @@ Together they make an API contract something a build depends on at a known versi
 * You design APIs, and you know OpenAPI, and AsyncAPI where you use it.
 * You know what bundling is: resolving a document's `$ref`s into one self-contained file, as https://redocly.com/docs/cli/[Redocly CLI ↗] does.
 The Publisher uses Redocly CLI for OpenAPI and AsyncAPI CLI for AsyncAPI.
-* The projects that implement or consume a contract build with Gradle.
+* The projects that implement or call an API build with Gradle.
 
 [#which-use-case]
 == Which use case is yours?
 
-Answer three questions, in order:
+Answer two questions.
 
-. **Do you only consume a contract that someone else publishes?**
-Yes: use case 4.
-. **Do the projects that build against the contract live in a different repository from the contract?**
-Yes: use case 3.
-. **Does one project own its contract alone, or do several projects share a library of fragments?**
-One project: use case 1.
-Several projects: use case 2.
+. **Does your project implement the API, call it, or both?**
+A project that implements an API is a *provider*; a project that calls one is a *client*.
+Most services are both: they implement one contract, and call other APIs to do so.
+. **Where does the contract come from?**
+
+[cols="2,2,2", options="header"]
+|===
+|The contract comes from |Your project implements it |Your project calls it
+
+|Your own project
+|<<provider,Provider use case 1 §>>
+|<<client,Client use case 1 §>>
+
+|A specification library in the same repository
+|<<provider,Provider use case 2 §>>
+|<<client,Client use case 2 §>>
+
+|A specification library in another repository, one you can check out
+|<<provider,Provider use case 3 §>>
+|<<client,Client use case 3 §>>
+
+|A published release, and nothing more
+|<<provider,Provider use case 4 §>>
+|<<client,Client use case 4 §>>
+|===
+
+A project that implements one contract and calls others combines one row from each column, as <<both,Implementing one contract and calling others §>> describes.
+
+Use cases 1 and 2, on either side, need no registry: everything happens on the file system.
+Use cases 3 and 4 fetch releases from a Maven repository.
+
+[#provider]
+== Provider use cases: your project implements the contract
 
 [cols="1,2,3,1", options="header"]
 |===
@@ -52,46 +78,100 @@ Several projects: use case 2.
 |**1. The contract lives in the project that implements it**
 |One project, one team, one contract, reviewed with the code.
 |Pin the Publisher in the project; put the fragments under `src/main/api/` with a version file; publish to a directory in `build/`; subscribe to it in the same build; write a contract test first; commit `apionly.lock`.
-No registry.
-|link:use-cases/1-contract-in-the-implementing-project/overview.adoc[Overview →] +
-link:use-cases/1-contract-in-the-implementing-project/tutorial.adoc[Tutorial →] +
-link:use-cases/1-contract-in-the-implementing-project/prompt-claude-code.md[Claude Code prompt →] +
-link:use-cases/1-contract-in-the-implementing-project/prompt-codex.md[Codex prompt →]
+|link:use-cases/provider/1-contract-in-the-implementing-project/overview.adoc[Overview →] +
+link:use-cases/provider/1-contract-in-the-implementing-project/tutorial.adoc[Tutorial →] +
+link:use-cases/provider/1-contract-in-the-implementing-project/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/provider/1-contract-in-the-implementing-project/prompt-codex.md[Codex prompt →]
 
-|**2. A specification library and its projects, in one repository**
+|**2. A specification library and the projects that implement it, in one repository**
 |Several projects implement contracts built from shared fragments, each at its own version.
 |Create a library directory that pins the Publisher, holds the fragments and a version file per contract; name each project after its contract and give it `apiContractVersion`; wire every project from the root build to publish to the library's `build/` and subscribe; write contract tests first; commit each `apionly.lock`.
-No registry.
-|link:use-cases/2-specification-library-in-the-same-repository/overview.adoc[Overview →] +
-link:use-cases/2-specification-library-in-the-same-repository/tutorial.adoc[Tutorial →] +
-link:use-cases/2-specification-library-in-the-same-repository/prompt-claude-code.md[Claude Code prompt →] +
-link:use-cases/2-specification-library-in-the-same-repository/prompt-codex.md[Codex prompt →]
+|link:use-cases/provider/2-specification-library-in-the-same-repository/overview.adoc[Overview →] +
+link:use-cases/provider/2-specification-library-in-the-same-repository/tutorial.adoc[Tutorial →] +
+link:use-cases/provider/2-specification-library-in-the-same-repository/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/provider/2-specification-library-in-the-same-repository/prompt-codex.md[Codex prompt →]
 
 |**3. A specification library in its own repository**
 |Contracts released on their own, to projects in other repositories.
 |Create a contracts repository with the fragments, a version file per contract and a `maven` channel; check every pull request for lint and for a new version on every changed contract; release every untagged version from the main branch; subscribe from each implementing project.
-|link:use-cases/3-specification-library-in-its-own-repository/overview.adoc[Overview →] +
-link:use-cases/3-specification-library-in-its-own-repository/tutorial.adoc[Tutorial →] +
-link:use-cases/3-specification-library-in-its-own-repository/prompt-claude-code.md[Claude Code prompt →] +
-link:use-cases/3-specification-library-in-its-own-repository/prompt-codex.md[Codex prompt →]
+|link:use-cases/provider/3-specification-library-in-its-own-repository/overview.adoc[Overview →] +
+link:use-cases/provider/3-specification-library-in-its-own-repository/tutorial.adoc[Tutorial →] +
+link:use-cases/provider/3-specification-library-in-its-own-repository/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/provider/3-specification-library-in-its-own-repository/prompt-codex.md[Codex prompt →]
 
-|**4. Consuming a contract that someone else publishes**
-|You build against a contract you cannot change, from a Maven repository.
-|Get the coordinates from the producer; declare `apiContractVersion`; write a contract test first; apply the Subscriber with the repository and its credentials; commit `apionly.lock`.
-|link:use-cases/4-consuming-a-published-contract/overview.adoc[Overview →] +
-link:use-cases/4-consuming-a-published-contract/tutorial.adoc[Tutorial →] +
-link:use-cases/4-consuming-a-published-contract/prompt-claude-code.md[Claude Code prompt →] +
-link:use-cases/4-consuming-a-published-contract/prompt-codex.md[Codex prompt →]
+|**4. Implementing a contract that someone else publishes**
+|You implement a contract you cannot change, from a Maven repository.
+|Get the coordinates from the producer; declare `apiContractVersion`; write a contract test first; apply the Subscriber with the repository, its credentials and a `subscribe`; commit `apionly.lock`.
+|link:use-cases/provider/4-implementing-a-published-contract/overview.adoc[Overview →] +
+link:use-cases/provider/4-implementing-a-published-contract/tutorial.adoc[Tutorial →] +
+link:use-cases/provider/4-implementing-a-published-contract/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/provider/4-implementing-a-published-contract/prompt-codex.md[Codex prompt →]
 |===
+
+A project implements one contract.
+Its contract is at the root of its classpath, at the version `apiContractVersion` declares.
+
+[#client]
+== Client use cases: your project calls the API
+
+[cols="1,2,3,1", options="header"]
+|===
+|Use case |The situation |Adoption in broad strokes |Documents
+
+|**1. The contract of an API you call lives in your project**
+|You define what you need from the provider, or describe an API that has no published contract.
+|Pin the Publisher in the project; put the fragments under `src/main/api/` with a version file; publish to a directory in `build/`; declare `<target>ApiVersion`; write a contract test first; `subscribeAsClient` with that version; commit `apionly.lock`.
+|link:use-cases/client/1-contract-in-the-calling-project/overview.adoc[Overview →] +
+link:use-cases/client/1-contract-in-the-calling-project/tutorial.adoc[Tutorial →] +
+link:use-cases/client/1-contract-in-the-calling-project/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/client/1-contract-in-the-calling-project/prompt-codex.md[Codex prompt →]
+
+|**2. A specification library in the same repository**
+|A project calls APIs whose contracts are in a library in its own repository.
+|Create the library; build and publish each contract from the root build, by name; declare each API's version in the calling project; write contract tests first; `subscribeAsClient` per API, each fetch depending on its contract's publish task; commit `apionly.lock`.
+|link:use-cases/client/2-specification-library-in-the-same-repository/overview.adoc[Overview →] +
+link:use-cases/client/2-specification-library-in-the-same-repository/tutorial.adoc[Tutorial →] +
+link:use-cases/client/2-specification-library-in-the-same-repository/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/client/2-specification-library-in-the-same-repository/prompt-codex.md[Codex prompt →]
+
+|**3. A specification library in another repository you can access**
+|A project calls APIs released by a library it can check out.
+|`subscribeAsClient` to the library's releases from its Maven repository; to work ahead of a release, publish a pre-release from your checkout to its `file` channel and point the project there temporarily; propose contract changes as pull requests on the library.
+|link:use-cases/client/3-specification-library-in-another-repository/overview.adoc[Overview →] +
+link:use-cases/client/3-specification-library-in-another-repository/tutorial.adoc[Tutorial →] +
+link:use-cases/client/3-specification-library-in-another-repository/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/client/3-specification-library-in-another-repository/prompt-codex.md[Codex prompt →]
+
+|**4. Calling an API that someone else publishes**
+|A project calls APIs whose contracts it only sees as releases.
+|Get the coordinates from each provider; declare each API's version; write contract tests first; apply the Subscriber with the repository, its credentials and a `subscribeAsClient` per API; commit `apionly.lock`.
+|link:use-cases/client/4-calling-a-published-api/overview.adoc[Overview →] +
+link:use-cases/client/4-calling-a-published-api/tutorial.adoc[Tutorial →] +
+link:use-cases/client/4-calling-a-published-api/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/client/4-calling-a-published-api/prompt-codex.md[Codex prompt →]
+|===
+
+A project calls any number of APIs.
+Each has its own version, and its contract is on the classpath under `contracts/<target>/`.
+
+[#both]
+== Implementing one contract and calling others
+
+A project that implements one contract and calls other APIs subscribes to the first with `subscribe` and to each of the others with `subscribeAsClient`, and gets every check for all of them.
+
+link:use-cases/both/implementing-and-calling/overview.adoc[Overview →] +
+link:use-cases/both/implementing-and-calling/tutorial.adoc[Tutorial →] +
+link:use-cases/both/implementing-and-calling/prompt-claude-code.md[Claude Code prompt →] +
+link:use-cases/both/implementing-and-calling/prompt-codex.md[Codex prompt →]
+
+[#documents]
+== What each use case gives you
 
 Every use case has the same four documents, and each stands on its own:
 
 * the **overview** says when the use case fits, what you get, what you do not need, and the adoption in broad strokes;
 * the **tutorial** builds it step by step, with every file, every value and what to consider;
 * the **Claude Code prompt** and the **Codex prompt** have an AI coding assistant build it in your own project, starting with the checks that prove it works.
-
-Use cases 1 and 2 need no registry: everything happens on the file system.
-If you need a registry anyway, for reasons of your own, use case 3 shows how the same setup publishes to one.
 
 [#reference]
 == Reference

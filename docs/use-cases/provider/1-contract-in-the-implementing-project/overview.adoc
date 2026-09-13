@@ -1,4 +1,4 @@
-= Use case 1: the API contract lives in the project that implements it
+= Provider use case 1: the API contract lives in the project that implements it
 :toc: left
 :toc-title: Contents
 :toclevels: 2
@@ -37,13 +37,15 @@ Everything happens on the local file system, in one Gradle build.
 == When it does not
 
 * **Several projects implement contracts built from shared fragments**, in one repository.
-That is use case 2, a specification library in the same repository.
+That is provider use case 2, a specification library in the same repository.
 * **A build in another repository needs the contract.**
-That is use case 3, a specification library in its own repository, published to a registry.
-* **You only consume a contract that someone else publishes.**
-That is use case 4.
+That is provider use case 3, a specification library in its own repository, published to a registry.
+* **You implement a contract that someone else publishes.**
+That is link:../4-implementing-a-published-contract/overview.adoc[provider use case 4 →].
+* **Your project calls the API rather than implementing it.**
+That is a client use case; link:../../../README.adoc[the entry point →] helps you pick one.
 
-link:../../README.adoc[The use-case overview →] compares all four.
+link:../../../README.adoc[The documentation's entry point →] compares every use case.
 
 [#what-you-get]
 == What you get
@@ -60,7 +62,7 @@ A registry.
 The contract never leaves this project, so a directory in `build/` gives the Subscriber everything a registry would: a versioned archive whose content it can verify.
 
 Adding a registry later is an addition to this setup, not a rewrite.
-If another build starts to need the contract, publish to a registry as well, as use case 3 describes, and keep everything else as it is.
+If another build starts to need the contract, publish to a registry as well, as provider use case 3 describes, and keep everything else as it is.
 
 [#adoption]
 == Adoption in broad strokes
@@ -83,12 +85,12 @@ Keep the Redocly lint configuration at the project root, outside the fragments.
 Major is for a breaking change, minor for an additive one, patch for anything else.
 * **Adding a fragment**: reference it from the bundle, or from a fragment the bundle reaches.
 A fragment nothing references fails the lint.
-* **Upgrading the Publisher or a bundler**: see link:../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
+* **Upgrading the Publisher or a bundler**: see link:../../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
 
 [#next]
 == Where to go next
 
 * link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
 * link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant build it in your own project, starting with the tests.
-* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.
+* link:../../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.

@@ -1,4 +1,4 @@
-= Use case 2: a specification library and the projects that implement it, in one repository
+= Provider use case 2: a specification library and the projects that implement it, in one repository
 :toc: left
 :toc-title: Contents
 :toclevels: 2
@@ -37,13 +37,15 @@ Everything happens on the local file system, in one Gradle build.
 == When it does not
 
 * **One project, one contract, nothing shared.**
-That is use case 1, the contract in the project that implements it.
+That is provider use case 1, the contract in the project that implements it.
 * **A build in another repository needs a contract.**
-That is use case 3, a specification library in its own repository, published to a registry.
-* **You only consume a contract that someone else publishes.**
-That is use case 4.
+That is provider use case 3, a specification library in its own repository, published to a registry.
+* **You implement a contract that someone else publishes.**
+That is link:../4-implementing-a-published-contract/overview.adoc[provider use case 4 →].
+* **Your project calls the API rather than implementing it.**
+That is a client use case; link:../../../README.adoc[the entry point →] helps you pick one.
 
-link:../../README.adoc[The use-case overview →] compares all four.
+link:../../../README.adoc[The documentation's entry point →] compares every use case.
 
 [#what-you-get]
 == What you get
@@ -63,7 +65,7 @@ Every project can read the library's `build/` directory, so publishing there giv
 Nothing generated is committed either.
 The contracts are built from the fragments in every build, and the lockfiles are what make that safe: a build that produces different documents under a version that was locked before is refused.
 
-If a build outside the repository ever needs a contract, publish to a registry as well, as use case 3 describes; the projects inside the repository keep working as they do.
+If a build outside the repository ever needs a contract, publish to a registry as well, as provider use case 3 describes; the projects inside the repository keep working as they do.
 
 [#adoption]
 == Adoption in broad strokes
@@ -85,12 +87,12 @@ Major is for a breaking change, minor for an additive one, patch for anything el
 * **Changing a shared fragment**: every contract that reaches it changes.
 `npm run apionly -- changed --since <ref>`, run in `contracts/`, lists them; raise each one's version, and have each project adopt it.
 * **Adding a contract**: a bundle root and a version file in the library, a target in `apionly.yaml`, and a project with the target's name.
-* **Upgrading the Publisher or a bundler**: see link:../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
+* **Upgrading the Publisher or a bundler**: see link:../../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
 
 [#next]
 == Where to go next
 
 * link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
 * link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant build it in your own repository, starting with the tests.
-* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.
+* link:../../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.

@@ -1,4 +1,4 @@
-= Tutorial: consuming a contract that someone else publishes
+= Tutorial: implementing a contract that someone else publishes
 :toc: left
 :toc-title: Contents
 :toclevels: 2
@@ -16,9 +16,9 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 `§`:: *A section of this same file.*
 ====
 
-This tutorial sets up use case 4 from nothing: a Gradle project, `orders-client`, that builds against version 1.1.0 of an `orders` contract another team publishes to a Maven repository.
+This tutorial sets up provider use case 4 from nothing: a Gradle project, `orders-service`, that implements version 1.1.0 of an `orders` contract another team publishes to a Maven repository.
 Every file and every command below was run exactly as shown, with API-Only Subscriber 0.1.0, against archives produced by API-Only Publisher 0.2.0.
-Only the repository URL differs: the run used a Maven repository on disk.
+Only the repository differs: the run used a Maven repository on disk, which takes no credentials.
 
 It assumes you know how to design an API in OpenAPI and how a Gradle project resolves dependencies.
 
@@ -64,12 +64,12 @@ The values used below:
 In the producer's repository, each release of `orders` is three files: `orders-1.1.0.tgz`, the archive; `orders-1.1.0.pom`; and `orders-1.1.0-manifest.json`, a copy of the manifest inside the archive.
 
 [#step-1]
-== Step 1: Declare the version your project uses
+== Step 1: Declare the version your project implements
 
 .gradle.properties
 [source,properties]
 ----
-# The version of the orders contract this project builds against.
+# The version of the orders contract this project implements.
 apiContractVersion=1.1.0
 ----
 
@@ -99,15 +99,15 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
-    // The contract version this project builds against, for ApiContractTest.
+    // The contract version this project implements, for ApiContractTest.
     systemProperty 'apiContractVersion', providers.gradleProperty('apiContractVersion').get()
 }
 ----
 
-.src/test/java/com/example/client/ApiContractTest.java
+.src/test/java/com/example/orders/ApiContractTest.java
 [source,java]
 ----
-package com.example.client;
+package com.example.orders;
 
 import org.junit.jupiter.api.Test;
 
@@ -121,7 +121,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ApiContractTest {
 
     @Test
-    void theContractThisProjectBuildsAgainstIsOnTheClasspath() throws IOException {
+    void theContractThisProjectImplementsIsOnTheClasspath() throws IOException {
         try (InputStream document = getClass().getResourceAsStream("/openapi.yaml")) {
             assertNotNull(document, "openapi.yaml is not on the test classpath");
             String text = new String(document.readAllBytes(), StandardCharsets.UTF_8);
@@ -175,7 +175,7 @@ apiOnlySubscriber {
         type = 'maven'
         groupId = 'com.example.contracts'
     }
-    // At the version apiContractVersion in gradle.properties declares.
+    // The contract this project implements, at the version apiContractVersion declares.
     subscribe('orders')
 }
 ----
@@ -195,7 +195,7 @@ The `name` decides the credential property names: `apiContracts` reads `apiContr
 |The producer's group id.
 
 |`subscribe('orders')`
-|The contract's target name.
+|The contract this project implements, by its target name.
 It is also the artifact id, unless the producer publishes under another name; then set `artifactId` inside the subscription.
 |===
 
@@ -274,10 +274,8 @@ Append a line to `build/api-spec/orders/openapi.yaml`, and run `./gradlew verify
 ----
 > the contract for 'orders' has drifted from apionly.lock:
     - openapi.yaml has changed since it was locked
-        locked:  765043d4f7a114612602cbe43d7919650e46dd4e7d5fcd989ea7a84f4d73d337
-        on disk: 084d7a43966815865adcc19ef733ef1c2b0ca203dbf1542abd20a7fa01d03303
-
-  These documents are fetched, not authored here. Change the contract in the specification library and subscribe to the new version, or re-run fetchApiSpec if the change was intended.
+        locked:  859cc1e470cc508dbae6ed2c60948a5fc4a65506595918974188f98560075952
+        on disk: e37d2a9feba8248cca88d52c908f81c83cda8720c7600a6d0051e327d0c17a16
 ----
 
 `./gradlew fetchApiSpec` restores the document.
@@ -375,8 +373,11 @@ Commit both files together: the lockfile diff is the reviewable record of what c
 * **A released version that comes back with different bytes is refused, not re-locked.**
 `fetchApiSpec` names each document that differs.
 Do not delete `apionly.lock` to make it pass: ask the producer, and take a new version when they release one.
-* **Two contracts in one project** put two `openapi.yaml` and two `manifest.json` files at the classpath root, and `processResources` fails with `Entry manifest.json is a duplicate`.
-link:../../reference/run-book.adoc#two-subscriptions[The run-book →] has the fix, which puts each contract under `contracts/<target>/` on the classpath.
+* **A project implements one contract.**
+A second contract it implements gets a project of its own, in a multi-project build.
+link:../../../reference/run-book.adoc#one-contract-per-project[The run-book →] says why.
+* **An API the project calls is not a second implemented contract.**
+link:../../both/implementing-and-calling/overview.adoc[The use case for implementing one contract and calling others →] covers it.
 * **Publishing is passive.**
 Nothing tells your project a new version exists.
 Renovate and Dependabot do not know that `apiContractVersion` names a Maven artifact; a custom regular-expression manager can teach them, or someone has to watch the producer's releases.
@@ -386,6 +387,6 @@ Confirm pre-release behaviour against the real one.
 [#next]
 == Where to go next
 
-* link:../../reference/run-book.adoc[The run-book →] covers upgrading and troubleshooting this setup.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains what the archive contains and how each check works.
-* link:overview.adoc[The overview of use case 4 →] says when this setup is not the right one.
+* link:../../../reference/run-book.adoc[The run-book →] covers upgrading and troubleshooting this setup.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains what the archive contains and how each check works.
+* link:overview.adoc[The overview of provider use case 4 →] says when this setup is not the right one.

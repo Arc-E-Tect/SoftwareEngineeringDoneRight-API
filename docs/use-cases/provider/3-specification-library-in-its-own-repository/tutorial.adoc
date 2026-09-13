@@ -16,7 +16,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 `§`:: *A section of this same file.*
 ====
 
-This tutorial builds use case 3 from nothing, on both sides.
+This tutorial builds provider use case 3 from nothing, on both sides.
 First a `contracts` repository that releases two contracts, `orders` and `payments`, to a Maven repository; then an implementing project in another repository that builds against one of them.
 Every file, command and script below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0, against a Maven repository on disk.
 What was not run is the part a remote Maven repository adds: the upload with a token in step 8, and resolving with credentials in step 12.
@@ -612,7 +612,7 @@ sha256 d4e72b89678bd50bf764e4c5ddce1ff8ea7e844e900751d4c285e161d99c723d openapi.
 ----
 
 In CI, the credentials come from the environment, as `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.
-link:../4-consuming-a-published-contract/tutorial.adoc[Use case 4's tutorial →] covers the consuming side in full: CI, pre-releases, taking a new version, and each guard.
+link:../4-implementing-a-published-contract/tutorial.adoc[Provider use case 4's tutorial →] covers the implementing side in full, and link:../../client/3-specification-library-in-another-repository/tutorial.adoc[client use case 3's tutorial →] the calling side: CI, pre-releases, taking a new version, and each guard.
 
 [#step-13]
 === Step 13: Before the first release
@@ -694,6 +694,6 @@ Leave released versions in the repository.
 [#next]
 == Where to go next
 
-* link:../../reference/run-book.adoc[The run-book →] covers releasing, upgrading and troubleshooting this setup.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains every setting, command, task and file used here.
-* link:overview.adoc[The overview of use case 3 →] says when this setup is more than you need.
+* link:../../../reference/run-book.adoc[The run-book →] covers releasing, upgrading and troubleshooting this setup.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains every setting, command, task and file used here.
+* link:overview.adoc[The overview of provider use case 3 →] says when this setup is more than you need.

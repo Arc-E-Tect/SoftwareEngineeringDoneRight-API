@@ -106,7 +106,8 @@ There is no registry, there are no credentials, and nothing generated is committ
   `check` depends on `verifyApiSpec`, and `processResources` depends on the fetch.
   The fetch task class, for wiring, is `com.arc_e_tect.gradle.apionly.subscriber.FetchApiSpecTask`.
 - The fetch unpacks the documents and `manifest.json` into the project's `build/api-spec/<target>/`, which is added as a resources directory, so the documents sit at the classpath root.
-  **With two or more subscriptions in one project**, `processResources` fails with `Entry manifest.json is a duplicate`; the fix, after the `apiOnlySubscriber` block, is `sourceSets.main.resources.setSrcDirs(['src/main/resources'])` plus, in `processResources`, `from(apiOnlySubscriber.subscription(target).into) { into "contracts/$target" }` for each target.
+  **A project subscribes to one contract**, the one it is named after.
+  Never add a second subscription to a project: a second contract gets a project of its own.
 - `apionly.lock`, beside each project's build file, records target, version, channel and a SHA-256 per document.
   It is generated and committed.
 - What the Subscriber prints:

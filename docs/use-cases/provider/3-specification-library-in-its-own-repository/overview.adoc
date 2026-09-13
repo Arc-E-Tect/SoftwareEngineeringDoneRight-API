@@ -1,4 +1,4 @@
-= Use case 3: a specification library in its own repository
+= Provider use case 3: a specification library in its own repository
 :toc: left
 :toc-title: Contents
 :toclevels: 2
@@ -37,13 +37,13 @@ The only thing that crosses from one repository to another is the published arch
 == When it does not
 
 * **The contracts and every project that implements them can live in one repository.**
-That is use case 2: the same versioning discipline, with no registry at all.
+That is provider use case 2: the same versioning discipline, with no registry at all.
 * **One project owns its contract, and nothing else uses it.**
-That is use case 1.
-* **You only consume contracts that someone else releases.**
-That is use case 4, and it is the consumer half of this use case on its own.
+That is provider use case 1.
+* **You only build against contracts that someone else releases.**
+That is link:../4-implementing-a-published-contract/overview.adoc[provider use case 4 →] for a project that implements them, and link:../../client/4-calling-a-published-api/overview.adoc[client use case 4 →] for a project that calls them: each is one side of this use case on its own.
 
-link:../../README.adoc[The use-case overview →] compares all four.
+link:../../../README.adoc[The documentation's entry point →] compares every use case.
 
 [#what-you-get]
 == What you get
@@ -56,7 +56,7 @@ link:../../README.adoc[The use-case overview →] compares all four.
 [#what-you-do-not-need]
 == What you do not need
 
-A registry is needed here, because the consumers cannot read the contracts repository's files; that is the one thing this use case adds to use case 2.
+A registry is needed here, because the consumers cannot read the contracts repository's files; that is the one thing this use case adds to provider use case 2.
 Everything else stays as simple as there:
 
 * **No release tooling beyond two short scripts.**
@@ -92,6 +92,6 @@ Merging it releases that contract, and only that one.
 
 * link:tutorial.adoc[The tutorial →] builds both sides step by step: every file, every value, and what to consider at each step.
 * link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant set up the contracts repository in your own environment, starting with the checks.
-* link:../4-consuming-a-published-contract/overview.adoc[Use case 4 →] covers the consuming side on its own.
-* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.
+* link:../4-implementing-a-published-contract/overview.adoc[Provider use case 4 →] covers the implementing side on its own, and link:../../client/3-specification-library-in-another-repository/overview.adoc[client use case 3 →] the calling side.
+* link:../../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.

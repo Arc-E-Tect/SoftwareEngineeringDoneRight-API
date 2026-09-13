@@ -1,4 +1,4 @@
-= Use case 4: consuming a contract that someone else publishes
+= Provider use case 4: implementing a contract that someone else publishes
 :toc: left
 :toc-title: Contents
 :toclevels: 2
@@ -19,11 +19,11 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 [#in-short]
 == In short
 
-Your project implements, or calls, an API whose contract another team or another company publishes.
+Your project implements an API whose contract another team or another company designs and publishes: an architecture team's contract, a partner's specification, an industry standard.
 You did not write the contract, you cannot change it, and it reaches you as an artifact in a Maven repository.
 
-The API-Only Subscriber fetches the contract at the version your project declares, checks every document against the archive's own manifest, records the version and the hashes in a committed lockfile, and puts the documents on the classpath.
-Every `./gradlew check` verifies that what your build uses is still what you locked.
+The API-Only Subscriber fetches the contract at the version your project implements, checks every document against the archive's own manifest, records the version and the hashes in a committed lockfile, and puts the documents at the root of the classpath.
+Every `./gradlew check` verifies that what your build implements is still what you locked.
 
 Nothing in this use case runs the API-Only Publisher: the other side runs it.
 
@@ -31,26 +31,29 @@ Nothing in this use case runs the API-Only Publisher: the other side runs it.
 == When this fits
 
 * Someone else owns the contract, and publishes it as an archive built by the API-Only Publisher to a Maven repository your build can read.
+* Your project implements that contract, and no other.
 * Your project builds with Gradle.
-* You want your build to state exactly which version of that contract it uses, and to fail rather than drift when that contract changes.
+* You want your build to state exactly which version of that contract it implements, and to fail rather than drift when that contract changes.
 
 [#does-not-fit]
 == When it does not
 
+* **Your project calls the API rather than implementing it.**
+That is a client use case: link:../../client/4-calling-a-published-api/overview.adoc[client use case 4 →] is this situation from the calling side.
 * **You own the contract too.**
-If it lives in the project that implements it, that is use case 1; if it is a library shared by projects in one repository, use case 2; if it is in its own repository, use case 3.
+If it lives in the project that implements it, that is provider use case 1; if it is a library shared by projects in one repository, provider use case 2; if it is in its own repository, provider use case 3.
 * **The contract is published only as a plain `openapi.yaml`**, without the Publisher's archive and manifest.
 The Subscriber needs the manifest to verify the documents; an ordinary Gradle dependency is then the honest alternative.
 * **Your project does not build with Gradle.**
 The Subscriber is a Gradle plugin; a producer can also publish to npm or as a GitHub release, which other ecosystems can read.
 
-link:../../README.adoc[The use-case overview →] compares all four.
+link:../../../README.adoc[The documentation's entry point →] compares every use case.
 
 [#what-you-get]
 == What you get
 
-* A build that cannot silently start using a different contract.
-* A committed `apionly.lock` that answers "which version of their contract are we on?" by reading your own repository.
+* A build that cannot silently start implementing a different contract.
+* A committed `apionly.lock` that answers "which version of their contract do we implement?" by reading your own repository.
 * A test that proves the contract reaches your code.
 * A build failure, not a production surprise, when a fetched document is edited or a released version is republished with different bytes.
 * A visible, reviewable line whenever the project works against an unfinished contract.
@@ -64,10 +67,10 @@ The archive is everything your build needs, and the manifest inside it is what m
 [#adoption]
 == Adoption in broad strokes
 
-. **Get the coordinates from the producer**, in one conversation: the Maven repository's URL, the group id, the target name of each contract, and the versions available.
-. **Declare the version your project uses** as `apiContractVersion` in `gradle.properties`.
+. **Get the coordinates from the producer**, in one conversation: the Maven repository's URL, the group id, the contract's target name, and the versions available.
+. **Declare the version your project implements** as `apiContractVersion` in `gradle.properties`.
 . **Write the contract test first**: a test that fails until the contract, at that version, is on the classpath.
-. **Apply the Subscriber**: the Maven repository, with its credentials read from outside the build file, the `maven` channel with the producer's group id, and a subscription to the contract.
+. **Apply the Subscriber**: the Maven repository, with its credentials read from outside the build file, the `maven` channel with the producer's group id, and a `subscribe` to the contract.
 . **Run `./gradlew check`**, and commit `apionly.lock`.
 . **Run the same `./gradlew check` in CI**, with the repository credentials in the environment, and fail the build when the lockfile changed.
 
@@ -78,11 +81,12 @@ The archive is everything your build needs, and the manifest inside it is what m
 * **Working against an unfinished contract**: subscribe to the pre-release and set `allowPrerelease = true`, visibly and temporarily.
 * **Noticing new releases**: publishing is passive, so nothing tells you a new version exists.
 Watch the producer's releases, or configure an update bot to read `apiContractVersion`.
+* **Calling other APIs as well**: see link:../../both/implementing-and-calling/overview.adoc[the use case for a project that implements one contract and calls others →].
 
 [#next]
 == Where to go next
 
 * link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
 * link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant set it up in your own project, starting with the tests.
-* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains what the producer's archive contains and how the Subscriber checks it.
+* link:../../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains what the producer's archive contains and how the Subscriber checks it.

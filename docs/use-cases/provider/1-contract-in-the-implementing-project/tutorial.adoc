@@ -16,7 +16,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 `§`:: *A section of this same file.*
 ====
 
-This tutorial builds use case 1 from nothing: one Gradle project that implements an `orders` API, owns that API's OpenAPI description, and builds against a versioned, verified copy of it.
+This tutorial builds provider use case 1 from nothing: one Gradle project that implements an `orders` API, owns that API's OpenAPI description, and builds against a versioned, verified copy of it.
 Every file and every command below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0.
 
 It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a Gradle project is laid out.
@@ -654,6 +654,6 @@ A release of the service that does not touch the contract does not change the co
 [#next]
 == Where to go next
 
-* link:../../reference/run-book.adoc[The run-book →] covers changing, upgrading and troubleshooting this setup.
-* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains every setting, task and file used here.
-* link:overview.adoc[The overview of use case 1 →] says when this setup stops being the right one.
+* link:../../../reference/run-book.adoc[The run-book →] covers changing, upgrading and troubleshooting this setup.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains every setting, task and file used here.
+* link:overview.adoc[The overview of provider use case 1 →] says when this setup stops being the right one.

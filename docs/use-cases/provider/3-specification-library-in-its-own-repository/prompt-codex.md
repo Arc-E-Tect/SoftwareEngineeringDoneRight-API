@@ -16,12 +16,14 @@ When we are done:
 
 ## How to work
 
-- Start in plan mode.
-  Investigate first, then present a plan that lists every file you will create or change, and wait for my approval before you edit anything.
-- Keep a todo list of the steps below, and update it as you finish each one.
+- Begin with a read-only investigation.
+  Then present a plan that lists every file you will create or change, and do not edit anything until I approve it.
+- Keep your plan updated as you finish each step below.
 - Work test first.
   Make each check fail on purpose before relying on it, and show me the failure.
 - Report a check as passing only after you ran it and saw it pass, and show the relevant output.
+- **Network access**: `npm install` needs it, and so does the Publisher the first time it runs a bundler through `npx`.
+  If the sandbox blocks network access, ask me to approve those commands with network access, or to run them myself, rather than working around the failure.
 - Do not commit, push, create tags on a shared remote, or publish to the real Maven repository.
   Everything you run publishes to a directory inside `build/`.
 - **Never ask me for a credential, and never write one into any file.**
@@ -120,7 +122,7 @@ done
 
 ## Step 1: Investigate and propose
 
-Do not edit anything in this step.
+Read only; do not edit anything in this step.
 Find out and report:
 
 1. Whether this repository is empty, already has an `apionly.yaml`, or holds existing API descriptions, and in what layout.
@@ -171,8 +173,8 @@ Ask before doing this step.
 1. Summarise what changed, and list the files to commit.
 2. List the repository secret to create, by name: `MAVEN_TOKEN`.
 3. List what every consuming project needs, exactly: the Maven repository URL, the group id, each target name, and the first released versions.
-   Tell me that each consuming project can be set up with the use case 4 prompt, "Consume a published API contract in this project, test first".
-4. Offer to add a section like this to `CLAUDE.md`, and write it only if I agree:
+   Tell me that each consuming project can be set up with the provider use case 4 prompt, "Implement a published API contract in this project, test first", and each project that calls them with the client use case 3 prompt, "Call APIs from a specification library in another repository, test first".
+4. Offer to add a section like this to `AGENTS.md`, and write it only if I agree:
 
    ```markdown
    ## Releasing API contracts
@@ -181,4 +183,5 @@ Ask before doing this step.
    - A change to a contract raises `version` in `specs/openapi/bundles/<target>.bundle.properties`, in the same pull request: major for breaking, minor for additive, patch for anything else. `scripts/check-versions.sh` fails a pull request that forgets.
    - Every YAML file under `specs/` must be referenced by a contract, or the lint fails.
    - Merging to the main branch releases every contract whose version has no `<target>-v<version>` tag. Never delete or move a release tag, and never republish a released version.
+   - `npm install`, and the first bundler run, need network access.
    ```
