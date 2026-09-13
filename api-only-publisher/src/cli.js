@@ -15,6 +15,7 @@ const { split, SplitError } = require("./split");
 const { publish, ChannelError } = require("./channels");
 const { VersionError: PolicyError, describe } = require("./version-policy");
 const { versionOf, BundleVersionError } = require("./bundle-version");
+const { unreferenced } = require("./unreferenced");
 
 const USAGE = `api-only-publisher -- build and distribute API description documents
 
@@ -162,26 +163,61 @@ async function main(argv) {
         }
         case "lint": {
             // Lint without rebuilding, for fast local feedback on what is already
-            // in dist/.
+            // in dist/. Every selected document is linted even when one fails, so
+            // one run reports every failure rather than only the first.
             const fs = require("fs");
             const { lint } = require("./pipeline");
+            const failures = [];
             let linted = 0;
             for (const kind of ["openapi", "asyncapi"]) {
                 for (const target of config.targetsFor(kind)) {
                     if (targets && !targets.includes(target)) continue;
                     const file = path.join(config.distDir(target), config.outputName(kind));
                     if (!fs.existsSync(file)) {
-                        throw new BuildError(`${file} does not exist; run 'build' first`);
+                        failures.push(`${target} (${kind}): ${file} does not exist; run 'build' first`);
+                        continue;
                     }
                     log(`=== ${target} (${kind}) ===`);
-                    lint(config, kind, file, log, {
-                        report: true,
-                        reportFile: config.lintReport(target, kind),
-                    });
+                    try {
+                        lint(config, kind, file, log, {
+                            report: true,
+                            reportFile: config.lintReport(target, kind),
+                        });
+                    } catch (error) {
+                        if (!(error instanceof BuildError)) throw error;
+                        console.error(error.message);
+                        failures.push(`${target} (${kind})`);
+                    }
                     linted += 1;
                 }
             }
             log(`\nLinted ${linted} document(s).`);
+
+            // A fragment no target reaches is never linted, so it is looked for
+            // here -- only when every target is linted, since it belongs to none.
+            const mode = config.lintUnreferenced();
+            let orphaned = null;
+            if (!targets && mode !== "off") {
+                prepare(config);
+                const orphans = unreferenced(config);
+                const reportFile = config.unreferencedReport();
+                fs.mkdirSync(path.dirname(reportFile), { recursive: true });
+                fs.writeFileSync(reportFile, orphans.map((file) => `${file}\n`).join(""));
+                if (orphans.length > 0) {
+                    orphaned =
+                        `${orphans.length} fragment(s) not reachable from any target, so nothing lints them:\n` +
+                        orphans.map((file) => `  ${file}`).join("\n") +
+                        "\nReference each one from a target's bundle, or delete it.";
+                    if (mode === "warn") log(orphaned);
+                }
+            }
+
+            const problems = [];
+            if (failures.length > 0) {
+                problems.push(`lint failed for ${failures.length} document(s): ${failures.join("; ")}`);
+            }
+            if (orphaned && mode === "error") problems.push(orphaned);
+            if (problems.length > 0) throw new BuildError(problems.join("\n\n"));
             return 0;
         }
         case "closure": {

@@ -93,6 +93,7 @@ function load(configPath) {
         toolchain: parsed.toolchain || {},
         build: parsed.build || {},
         reports: parsed.reports || {},
+        lint: parsed.lint || {},
         distribution: parsed.distribution || null,
         channels: parsed.channels || {},
         targets,
@@ -125,6 +126,21 @@ function load(configPath) {
         lintReport(target, kind) {
             const reports = this.reports.lint || "build/reports/lint";
             return path.resolve(this.root, reports, target, `${kind}.txt`);
+        },
+        // Where lint lists the fragments no target reaches.
+        unreferencedReport() {
+            const reports = this.reports.lint || "build/reports/lint";
+            return path.resolve(this.root, reports, "unreferenced.txt");
+        },
+        // What lint does about a fragment no target reaches: `error`, the default,
+        // fails the lint; `warn` reports it; `off` does not look.
+        lintUnreferenced() {
+            const configured = this.lint.unreferenced;
+            const mode = configured === undefined ? "error" : configured === false ? "off" : configured;
+            if (!["error", "warn", "off"].includes(mode)) {
+                throw new ConfigError(`lint.unreferenced must be error, warn or off, not ${JSON.stringify(configured)}`);
+            }
+            return mode;
         },
         tool(name) {
             return requireString(this.toolchain[name], `toolchain.${name}`);

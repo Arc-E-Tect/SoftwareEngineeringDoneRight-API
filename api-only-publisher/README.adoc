@@ -138,6 +138,7 @@ stands. This is how the *conventions* become reusable, as opposed to the code.
 
 |`lint`
 |Lint what is already built, without rebuilding, for fast local feedback.
+Without `--target`, it also fails on a fragment no target reaches, as <<unreferenced,A fragment no target reaches fails the lint §>> describes.
 
 |`targets`
 |List the declared targets, what each one builds, and whether it is distributed.
@@ -420,6 +421,8 @@ build:
   dist: dist
 reports:
   lint: build/reports/lint
+lint:
+  unreferenced: error  # a fragment no target reaches: error, warn or off
 
 toolchain:
   redocly: "@redocly/cli@2.52.0"
@@ -472,6 +475,21 @@ The absorbed tool searched downward from the *input file's own directory*, never
 from the directory it was told to use, so a snippet one level up was invisible
 and the workaround was to move the Markdown files. The search now starts at the
 staged source root.
+
+[[unreferenced]]
+=== A fragment no target reaches fails the lint
+
+A linter checks documents, and a fragment reaches a document only through a `$ref`.
+A fragment that no target references is therefore never linted, however wrong it is, until the day a target starts to use it.
+
+So `lint`, run without `--target`, also lists every YAML file under the source root that no target's closure reaches, in `build/reports/lint/unreferenced.txt`, and fails when there is one.
+Every target counts, `publish: false` ones included, because they are linted too.
+That reports a fragment that does not comply before anything uses it, and finds a definition left behind by a change that stopped using it.
+
+`lint.unreferenced` in `apionly.yaml` sets what happens: `error` by default, `warn` to report without failing, or `off` not to look.
+`lint --target` does not look, because an unreferenced fragment belongs to no target.
+
+`lint` lints every document even when one of them fails, and names every failure at the end, so a single run reports all of them.
 
 === Version stamping edits one scalar
 

@@ -14,6 +14,7 @@ module.exports = {
     ...require("./version-policy"),
     ...require("./bundle-version"),
     ...require("./closure"),
+    ...require("./unreferenced"),
     ...require("./aggregate"),
     ...require("./pipeline"),
     ...require("./pack"),

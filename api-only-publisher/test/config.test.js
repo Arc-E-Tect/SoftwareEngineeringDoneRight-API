@@ -136,3 +136,17 @@ targets:
 `);
     assert.strictEqual(load(file).versionFile("events"), path.join(path.dirname(file), "specs/asyncapi/events.bundle.properties"));
 });
+
+test("lint.unreferenced defaults to error, and refuses a mode it does not know", () => {
+    assert.strictEqual(load(write(MINIMAL)).lintUnreferenced(), "error");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  unreferenced: warn\n")).lintUnreferenced(), "warn");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  unreferenced: off\n")).lintUnreferenced(), "off");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  unreferenced: false\n")).lintUnreferenced(), "off");
+    assert.throws(() => load(write(MINIMAL + "lint:\n  unreferenced: loud\n")).lintUnreferenced(),
+        (e) => e instanceof ConfigError && /lint\.unreferenced must be error, warn or off/.test(e.message));
+});
+
+test("the unreferenced-fragment report sits with the lint reports", () => {
+    const file = write(MINIMAL);
+    assert.strictEqual(load(file).unreferencedReport(), path.join(path.dirname(file), "build/reports/lint/unreferenced.txt"));
+});
