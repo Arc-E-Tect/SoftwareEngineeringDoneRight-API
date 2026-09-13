@@ -1,3 +1,11 @@
+# [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.1.0...api-only-subscriber-v0.2.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* client subscriptions, a channel per subscription, and standalone use-case documentation ([#10](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/10)) ([48b4bce](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/48b4bcea411b1763f4926fe1525dd9d84e01d0c2)), closes [#10](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/10)
+* **api-only-publisher:** fail lint on fragments no target reaches ([#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)) ([66fd17e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/66fd17ef899de346ed6913ffb721751e81c60245)), closes [#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)
+
 # [0.1.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.0.2...api-only-subscriber-v0.1.0) (2026-09-13)
 
 
