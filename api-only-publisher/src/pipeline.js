@@ -155,9 +155,12 @@ function prepare(config, { kinds = ["openapi", "asyncapi"], log = () => {} } = {
 /**
  * Build every requested target.
  *
+ * `versionOf(target)` names the version to stamp on a target's documents; a target
+ * it returns nothing for keeps the version its source declares.
+ *
  * @returns {Array<{target, kind, file, distributed}>}
  */
-function build(config, { targets, version, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
+function build(config, { targets, versionOf = () => null, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
     const results = [];
     for (const kind of kinds) {
         const all = config.targetsFor(kind).filter((t) => !targets || targets.includes(t));
@@ -182,6 +185,7 @@ function build(config, { targets, version, kinds = ["openapi", "asyncapi"], log 
             }
             const outFile = path.join(config.distDir(target), config.outputName(kind));
             bundle(config, target, kind, outFile, log);
+            const version = versionOf(target);
             if (version) {
                 log(`-- Stamping version '${version}'`);
                 stampFile(outFile, version);

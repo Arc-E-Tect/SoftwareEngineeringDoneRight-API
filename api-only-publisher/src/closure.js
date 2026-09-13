@@ -92,15 +92,18 @@ function hash(files, root) {
  * Closures for every target that declares a bundle of the given kinds.
  *
  * The staged tree must already exist; callers stage first so that the closure
- * covers substituted content.
+ * covers substituted content. Pass `only` to compute closures for those targets
+ * alone: a target outside it is never read, so its bundle root need not be staged.
  *
+ * @param {string[]|null} only the targets to compute closures for; every target when null
  * @returns {Map<string, {files: string[], sha256: string, byKind: object}>}
  */
-function forTargets(config, kinds = ["openapi", "asyncapi"]) {
+function forTargets(config, kinds = ["openapi", "asyncapi"], only = null) {
     const result = new Map();
 
     for (const kind of kinds) {
         for (const target of config.targetsFor(kind)) {
+            if (only && !only.includes(target)) continue;
             const entry = config.bundlePath(target, kind);
             if (!fs.existsSync(entry)) {
                 throw new ClosureError(

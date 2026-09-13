@@ -14,23 +14,26 @@ const { changedSince, ChangedError } = require("./changed");
 const { split, SplitError } = require("./split");
 const { publish, ChannelError } = require("./channels");
 const { VersionError: PolicyError, describe } = require("./version-policy");
+const { versionOf, BundleVersionError } = require("./bundle-version");
 
 const USAGE = `api-only-publisher -- build and distribute API description documents
 
 Usage:
   api-only-publisher init [dir] [--force]
-  api-only-publisher build [--target <name>]... [--version <v>] [--openapi|--asyncapi]
+  api-only-publisher build [--target <name>]... [--pre-release <ids>] [--openapi|--asyncapi]
   api-only-publisher lint  [--target <name>]...
   api-only-publisher targets
   api-only-publisher closure [--target <name>]...
   api-only-publisher changed --since <ref>
-  api-only-publisher pack --version <v> [--target <name>]... [--out <dir>]
-  api-only-publisher publish --version <v> [--channel <name>]... [--out <dir>]
+  api-only-publisher pack [--pre-release <ids>] [--target <name>]... [--out <dir>]
+  api-only-publisher publish [--pre-release <ids>] [--target <name>]... [--channel <name>]... [--out <dir>]
   api-only-publisher split --out <dir> [--by kind|target]
 
 Options:
   --target <name>   Restrict to one target; repeat for several. Default: all.
-  --version <v>     Stamp info.version on every built document.
+  --pre-release <ids>
+                    build/pack/publish: append pre-release identifiers, such as
+                    rc.1, to each target's version.
   --openapi         Only build OpenAPI documents.
   --asyncapi        Only build AsyncAPI documents.
   --force           init only: overwrite files that already exist.
@@ -43,11 +46,13 @@ Options:
   -h, --help        Show this help.
 
 What gets built, and where each document goes, is declared in apionly.yaml.
+A published target's version is read from its version file:
+<target>.bundle.properties beside its bundle root, or the file its versionFile names.
 `;
 
 function parseArgs(argv) {
     const options = {
-        targets: [], kinds: null, version: null, quiet: false, force: false,
+        targets: [], kinds: null, preRelease: null, quiet: false, force: false,
         dir: process.cwd(), since: null, out: null, channels: null, by: "kind",
     };
     const positional = [];
@@ -60,7 +65,13 @@ function parseArgs(argv) {
         };
         switch (arg) {
             case "--target": options.targets.push(next()); break;
-            case "--version": options.version = next(); break;
+            case "--pre-release": options.preRelease = next(); break;
+            case "--version":
+                throw new ConfigError(
+                    "--version is no longer accepted: each published target's version is read from its version " +
+                    "file, <target>.bundle.properties beside its bundle root. Pass --pre-release <ids> to cut a " +
+                    "pre-release of it."
+                );
             case "--openapi": options.kinds = (options.kinds || []).concat("openapi"); break;
             case "--asyncapi": options.kinds = (options.kinds || []).concat("asyncapi"); break;
             case "--force": options.force = true; break;
@@ -77,6 +88,21 @@ function parseArgs(argv) {
         }
     }
     return { options, positional };
+}
+
+// The targets pack and publish write an archive for: those selected, less any
+// that are never published. Only these need a closure, so only these need to have
+// been staged -- building one target must not depend on every other being staged.
+function shippedTargets(config, targets) {
+    return Object.keys(config.targets)
+        .filter((target) => (!targets || targets.includes(target)) && config.isPublished(target));
+}
+
+// The version of each target in `names`, keyed by target. Every one is resolved
+// before any target is acted on, so a missing or malformed version file stops the
+// command before it has built or shipped anything.
+function versionsOf(config, names, preRelease) {
+    return new Map(names.map((target) => [target, versionOf(config, target, { preRelease })]));
 }
 
 async function main(argv) {
@@ -121,7 +147,16 @@ async function main(argv) {
             return 0;
         }
         case "build": {
-            const results = build(config, { targets, version: options.version, kinds: options.kinds || undefined, log });
+            // A target is stamped only if it is published: a documentation view has no
+            // version of its own, and needs no version file.
+            const kinds = options.kinds || ["openapi", "asyncapi"];
+            const stamped = Object.keys(config.targets).filter((target) =>
+                (!targets || targets.includes(target)) && config.isPublished(target) &&
+                kinds.some((kind) => config.targets[target][kind]));
+            const versions = versionsOf(config, stamped, options.preRelease);
+            const results = build(config, {
+                targets, kinds, log, versionOf: (target) => versions.get(target) || null,
+            });
             log(`\nBuilt ${results.length} document(s).`);
             return 0;
         }
@@ -170,9 +205,10 @@ async function main(argv) {
             return 0;
         }
         case "pack": {
-            if (!options.version) throw new ConfigError("pack requires --version <v>");
             const outDir = path.resolve(options.dir, options.out || "build/packages");
-            const closures = forTargets(config);
+            const shipped = shippedTargets(config, targets);
+            const versions = versionsOf(config, shipped, options.preRelease);
+            const closures = forTargets(config, undefined, shipped);
             let packed = 0;
             for (const target of Object.keys(config.targets)) {
                 if (targets && !targets.includes(target)) continue;
@@ -182,7 +218,7 @@ async function main(argv) {
                 }
                 const closure = closures.get(target);
                 pack(config, target, {
-                    version: options.version,
+                    version: versions.get(target),
                     closureSha256: closure ? closure.sha256 : null,
                     outDir, log,
                 });
@@ -192,14 +228,15 @@ async function main(argv) {
             return 0;
         }
         case "publish": {
-            if (!options.version) throw new ConfigError("publish requires --version <v>");
             const outDir = path.resolve(options.dir, options.out || "build/packages");
             const configured = config.channels || {};
             const names = options.channels || Object.keys(configured);
             if (names.length === 0) {
                 throw new ConfigError("no channels configured; add a `channels:` block or pass --channel");
             }
-            const closures = forTargets(config);
+            const shipped = shippedTargets(config, targets);
+            const versions = versionsOf(config, shipped, options.preRelease);
+            const closures = forTargets(config, undefined, shipped);
             let published = 0;
             for (const target of Object.keys(config.targets)) {
                 if (targets && !targets.includes(target)) continue;
@@ -207,7 +244,7 @@ async function main(argv) {
                 const closure = closures.get(target);
                 // Packed once, then shipped unchanged to every channel.
                 const { archive, manifest } = pack(config, target, {
-                    version: options.version,
+                    version: versions.get(target),
                     closureSha256: closure ? closure.sha256 : null,
                     outDir, log,
                 });
@@ -242,7 +279,8 @@ function report(error) {
         error instanceof PlaceholderError || error instanceof VersionError ||
         error instanceof ClosureError || error instanceof PackError ||
         error instanceof ChangedError || error instanceof SplitError ||
-        error instanceof ChannelError || error instanceof PolicyError) {
+        error instanceof ChannelError || error instanceof PolicyError ||
+        error instanceof BundleVersionError) {
         console.error(`Error: ${error.message}`);
         process.exitCode = 1;
     } else {

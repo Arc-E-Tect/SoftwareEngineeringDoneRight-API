@@ -112,3 +112,27 @@ distribution:
 test("no distribution block means nothing is copied anywhere", () => {
     assert.strictEqual(load(write(MINIMAL)).destinationDir("alpha"), null);
 });
+
+test("a target's version file sits beside its first bundle root, unless the target names its own", () => {
+    const file = write(MINIMAL.replace(
+        "  beta:\n    publish: false\n",
+        "  beta:\n    publish: false\n    versionFile: versions/beta.properties\n"));
+    const config = load(file);
+    const root = path.dirname(file);
+
+    assert.strictEqual(config.versionFile("alpha"), path.join(root, "specs/openapi/bundles/alpha.bundle.properties"));
+    assert.strictEqual(config.versionFile("beta"), path.join(root, "versions/beta.properties"));
+});
+
+test("an AsyncAPI-only target's version file sits beside its AsyncAPI bundle root", () => {
+    const file = write(`schemaVersion: 1
+sources:
+  root: specs
+  asyncapi: asyncapi
+targets:
+  events:
+    asyncapi:
+      bundle: events.yaml
+`);
+    assert.strictEqual(load(file).versionFile("events"), path.join(path.dirname(file), "specs/asyncapi/events.bundle.properties"));
+});

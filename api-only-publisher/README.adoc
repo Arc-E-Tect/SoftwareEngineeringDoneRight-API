@@ -11,6 +11,16 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Node-22%2B-339933?logo=node.js[Node 22+,link=https://nodejs.org]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
+Links say where they go: § jumps to a section of this page, → opens another file in this repository, and ↗ leaves it.
+
+// Remove this notice when 1.0.0 is released.
+[IMPORTANT]
+====
+Until 1.0.0 is released, any release may change the command line, `apionly.yaml` or the published artifacts incompatibly, without a major version bump.
+There are no users to break yet, and the interface is still being settled; 1.0.0 is the first release whose interface is kept stable.
+Pin an exact version, and read the changelog before upgrading.
+====
+
 == What it is
 
 `api-only-publisher` turns a library of small, reusable API description
@@ -53,23 +63,65 @@ pins, so they need no installation, and the only runtime dependency is `yaml`.
 
 == Installation
 
-As a command, without installing anything:
+The Publisher behaves the same however it is started.
+What differs is where its version is pinned, and what checks that pin.
+
+=== As a development dependency
+
+The better fit for a specification library, and for any build that runs the Publisher more than once.
 
 [source,console]
 ----
-npx @arc-e-tect/api-only-publisher build
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher
 ----
 
-As a dependency of a specification library:
+.package.json
+[source,json]
+----
+{
+  "private": true,
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "<version>"
+  }
+}
+----
 
 [source,console]
 ----
-npm install --save-dev @arc-e-tect/api-only-publisher
+npm ci
+npm run apionly -- build
+npm run apionly -- publish --target user-account
 ----
 
-Pin it exactly rather than with a range. This tool's output is expected to be
-reproducible — a specification library's golden fixtures assert it byte for byte
-— and a floating version quietly breaks that guarantee.
+* The version is pinned in one place, `package.json`, and every command and every CI job runs that one.
+* `package-lock.json` records the integrity hash of what was installed, so `npm ci` installs exactly those bytes or fails.
+* A CI job can cache the installation, keyed on `package-lock.json`, instead of resolving the tool on every run.
+* Renovate and Dependabot see the dependency, so an upgrade arrives as a pull request that moves the pin.
+* The cost is a `package.json` and a `package-lock.json` in the library, and an `npm ci` before the first command.
+
+=== With `npx`, installing nothing
+
+The better fit for trying the tool, for scaffolding a library with `init`, and for a one-off command.
+
+[source,console]
+----
+npx @arc-e-tect/api-only-publisher@<version> init my-api-library
+npx @arc-e-tect/api-only-publisher@<version> build -C my-api-library
+----
+
+* Nothing is added to the repository.
+* The version is pinned in every command instead, so each script and CI job that runs the Publisher has to name the same version, and nothing checks that they do.
+* Without a version, `npx` runs whatever it resolves at that moment, which is not reproducible.
+* Nothing records an integrity hash, and nothing notices when a newer version is released.
+
+Either way, pin an exact version rather than a range.
+This tool's output is expected to be reproducible — a specification library's golden fixtures assert it byte for byte — and a floating version quietly breaks that guarantee.
+
+The bundlers are a separate matter.
+However the Publisher itself is started, it fetches them with `npx`, at the versions `toolchain` in `apionly.yaml` pins.
 
 == Commands
 
@@ -82,7 +134,7 @@ reproducible — a specification library's golden fixtures assert it byte for by
 stands. This is how the *conventions* become reusable, as opposed to the code.
 
 |`build`
-|Stage, substitute placeholders, bundle, stamp the version, lint, and distribute.
+|Stage, substitute placeholders, bundle, stamp each published target's version, lint, and distribute.
 
 |`lint`
 |Lint what is already built, without rebuilding, for fast local feedback.
@@ -99,10 +151,10 @@ of their content.
 drives a release: a target whose closure is untouched is not released, however
 much else in the repository moved.
 
-|`pack --version <v>`
-|Archive each built target with a `manifest.json`.
+|`pack`
+|Archive each built, published target with a `manifest.json`, at the version its version file declares.
 
-|`publish --version <v>`
+|`publish`
 |Pack once, then ship those same bytes to every configured channel.
 
 |`split --out <dir>`
@@ -112,13 +164,15 @@ much else in the repository moved.
 [source,console]
 ----
 api-only-publisher init my-api-library
-api-only-publisher build -C my-api-library --version 2.3.1
+api-only-publisher build -C my-api-library
 api-only-publisher build --target user-account --openapi
+api-only-publisher publish --target user-account --pre-release rc.1
 api-only-publisher targets
 ----
 
 `--target` may be repeated. `-C <dir>` runs as if started in `<dir>`; without it
 the configuration is found by walking up from the current directory.
+`--pre-release <ids>` appends pre-release identifiers to each target's version, as <<versions,Versions §>> describes.
 
 == What `build` actually does
 
@@ -139,12 +193,47 @@ indented YAML scalar.
 . **Bundle.** `@redocly/cli bundle` or `@asyncapi/cli bundle` resolves every
 `$ref` into one flat, self-contained document under `dist/<target>/`.
 
-. **Stamp the version**, if `--version` was given, on the *finished* document.
+. **Stamp the version** of each published target on its *finished* document: the version its version file declares, with any `--pre-release` identifiers appended.
+A `publish: false` target keeps the version its source declares.
 
 . **Lint** the finished document, so a broken fragment surfaces against the
 target it actually affects rather than at deploy time.
 
 . **Distribute**, unless the target is `publish: false`.
+
+[[versions]]
+== Versions
+
+Every published target has a version of its own, and it is kept in the library, beside the fragments it describes.
+
+.specs/openapi/bundles/user-account.bundle.properties
+[source,properties]
+----
+# The version of the user-account contract, for every document it builds.
+# Semantic: major for a breaking change, minor for an additive one, patch for
+# anything else. Change it in the same commit as the fragments it describes.
+version=2.1.0
+----
+
+By convention the file is `<target>.bundle.properties`, beside the target's first bundle root: its OpenAPI one, or its AsyncAPI one when it has no OpenAPI document.
+A target that keeps its version elsewhere names the file with `versionFile`, relative to `apionly.yaml`.
+The syntax is that of a Java properties file, so a JVM build can read the same file.
+
+`build`, `pack` and `publish` read the version of every target they act on before they act on any of them.
+A missing file, a file without a `version`, or a version that is not semantic stops the command before anything has been built or shipped.
+A `publish: false` target is never shipped, so it needs no version file.
+
+The version is not a command-line argument, and that is deliberate.
+A version on the command line lets two builds of the same commit publish different versions, and lets through a version nobody reviewed.
+A version in the library changes in the same commit as the fragments it describes, is reviewed with them, and is the same whoever builds that commit.
+
+The file holds a release version.
+A pre-release is that version with identifiers appended when it is built: `publish --pre-release rc.1` publishes `2.1.0-rc.1`.
+Cutting one never means editing the file, and then remembering to edit it back, which is why a version file that declares a pre-release is refused.
+
+A version names one set of documents.
+Publishing different documents under a version that was published before, after editing a fragment without changing the version file, is refused by the API-Only Subscriber in every project that locked the earlier ones.
+Change the version in the same commit as the fragments instead.
 
 == Independent versioning, and the dependency closure
 
@@ -245,9 +334,9 @@ rather than a silent overwrite.
 |Channel |What it is for
 
 |`file`
-|A local directory. Not a distribution mechanism -- it exists so the pipeline is
-testable end to end with no infrastructure, and as a local-iteration escape
-hatch afterwards.
+|A local directory, laid out as `<directory>/<target>/<version>/`.
+Not a distribution mechanism between repositories: it exists so the pipeline is testable end to end with no infrastructure, so a library can share one build with the projects that implement it, and as a local-iteration escape hatch.
+Publishing a version again replaces that version and keeps the others; with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
 
 |`maven`
 |A path publishes into a repository layout on disk; an `http(s)` URL deploys to a
@@ -290,6 +379,7 @@ guarantees.
 
 So a pre-release version is first-class: `2.1.0-rc.1`, or Maven's `-SNAPSHOT`
 spelling, which is not semver-legal but is what Maven consumers expect.
+It is cut from the version in the target's version file: `publish --pre-release rc.1` publishes `2.1.0-rc.1` when the file declares `2.1.0`.
 
 The hard rule is the other half of it. A pre-release must never quietly satisfy a
 production build:
@@ -335,8 +425,15 @@ toolchain:
   redocly: "@redocly/cli@2.52.0"
   asyncapi: "@asyncapi/cli@6.0.2"
 
+channels:
+  file:
+    directory: build/publish
+    clean: true        # keep only the version being published
+
 targets:
   user-account:
+    # versionFile: versions/user-account.properties
+    #              default: user-account.bundle.properties beside the first bundle root
     openapi:
       bundle: bundles/user-account_openapi_structure.yaml
     asyncapi:
@@ -421,6 +518,9 @@ layout. In order of what usually needs changing:
 
 |Where artifacts are published
 |`channels`
+
+|Where a target's version is kept
+|Its version file, or `targets.<target>.versionFile`
 |===
 
 Beyond that: the `common/` versus `<product>/<target>/` split is one convention
@@ -439,6 +539,8 @@ The tool does not police them. `changed` tells a release job which targets a
 commit altered, and every manifest records the closure hash of what was
 published, so the hooks a diff gate would need already exist -- but the gate
 itself is deliberately not built.
+
+A breaking change is declared where it is made: the major version in the target's version file changes in the same commit as the fragments it breaks.
 
 A specification library should write down its own policy. The one this repository
 uses is at `usable-suspects/docs/breaking-changes.adoc`, and is a reasonable
@@ -485,7 +587,7 @@ npm test
 ----
 
 Covers placeholder substitution (including each of the three defects fixed on
-the way in), version stamping, configuration parsing, and the scaffold.
+the way in), version stamping, version files, configuration parsing, every command, and the scaffold.
 
 The end-to-end guarantee lives elsewhere, in the specification library's own
 golden fixtures: they assert that the documents this tool produces are unchanged,

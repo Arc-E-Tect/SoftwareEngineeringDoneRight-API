@@ -76,9 +76,10 @@ jobs:
         run: |
           # `init` is the one part of this tool whose value is the conventions
           # rather than the code, so a scaffold that does not build is a broken
-          # release however well every unit test passes.
+          # release however well every unit test passes. The scaffold declares
+          # its own version, in its version file, as any library does.
           node api-only-publisher/src/cli.js init "${RUNNER_TEMP}/scaffold"
-          node api-only-publisher/src/cli.js build -C "${RUNNER_TEMP}/scaffold" --version 0.0.1
+          node api-only-publisher/src/cli.js build -C "${RUNNER_TEMP}/scaffold"
 
   Release-Package:
     name: Release API-Only Publisher

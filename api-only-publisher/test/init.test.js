@@ -8,6 +8,7 @@ const path = require("node:path");
 
 const { init, FILES } = require("../src/init");
 const { loadFrom } = require("../src/config");
+const { versionOf } = require("../src/bundle-version");
 
 function tmpdir() {
     return fs.mkdtempSync(path.join(os.tmpdir(), "aop-init-"));
@@ -31,6 +32,7 @@ test("the scaffolded configuration parses and declares a buildable target", () =
     assert.deepStrictEqual(config.targetsFor("openapi"), ["example-service"]);
     assert.strictEqual(config.outputName("openapi"), "openapi.yaml");
     assert.ok(fs.existsSync(path.join(dir, config.sources.root, config.sources.openapi, "bundles")));
+    assert.match(versionOf(config, "example-service"), /^\d+\.\d+\.\d+$/);
 });
 
 test("every $ref in the scaffold resolves to a file that exists", () => {

@@ -96,7 +96,8 @@ function pack(config, target, { version, closureSha256, outDir, log = () => {} }
         if (declared !== String(version)) {
             throw new PackError(
                 `target '${target}': ${path.basename(document)} declares info.version '${declared}' ` +
-                `but is being packed as '${version}'. Build with --version ${version} first.`
+                `but is being packed as '${version}'. Build it again first: its version file, or the ` +
+                `--pre-release it was built with, has changed since.`
             );
         }
     }
