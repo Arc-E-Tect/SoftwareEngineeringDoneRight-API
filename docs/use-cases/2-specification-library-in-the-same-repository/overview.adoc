@@ -1,0 +1,96 @@
+= Use case 2: a specification library and the projects that implement it, in one repository
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+One repository holds a library of API description fragments and several projects that implement the contracts built from them.
+A schema, an error response or a path used by more than one contract is written once, in the library, and referenced from every contract that needs it.
+
+Each contract has a version of its own, and each project declares the version of the contract it implements.
+In the project's build, the API-Only Publisher bundles and publishes that project's contract to a directory in the library's `build/` directory, and the API-Only Subscriber fetches it, checks it against the project's committed lockfile, and puts it on the classpath.
+Everything happens on the local file system, in one Gradle build.
+
+[#fits]
+== When this fits
+
+* Several projects share fragments: one error shape, one pagination convention, one set of common schemas.
+* Each project implements its own contract, and each contract should carry its own version.
+* The library and every project live in the same repository, and no build outside it compiles or tests against the contracts.
+
+[#does-not-fit]
+== When it does not
+
+* **One project, one contract, nothing shared.**
+That is use case 1, the contract in the project that implements it.
+* **A build in another repository needs a contract.**
+That is use case 3, a specification library in its own repository, published to a registry.
+* **You only consume a contract that someone else publishes.**
+That is use case 4.
+
+link:../../README.adoc[The use-case overview →] compares all four.
+
+[#what-you-get]
+== What you get
+
+* One place owns every fragment, and a shared fragment is defined once.
+* `./gradlew check` builds, publishes and lints every contract, fails on a fragment that no contract references, and runs each project's tests against its own contract.
+* Each project's `apionly.lock` records exactly which contract version it builds against.
+* A change to a shared fragment fails the build of every project whose contract it changes, until each of those contracts gets a new version and each project adopts it.
+* No registry, no credentials, and nothing generated committed to the repository.
+
+[#what-you-do-not-need]
+== What you do not need
+
+A registry.
+Every project can read the library's `build/` directory, so publishing there gives the Subscriber everything a registry would: versioned archives whose content it can verify.
+
+Nothing generated is committed either.
+The contracts are built from the fragments in every build, and the lockfiles are what make that safe: a build that produces different documents under a version that was locked before is refused.
+
+If a build outside the repository ever needs a contract, publish to a registry as well, as use case 3 describes; the projects inside the repository keep working as they do.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Create the library** in its own directory, `contracts/`, with a `package.json` that pins the Publisher and an `apionly` npm script.
+. **Lay out the fragments** under `contracts/specs/`: one bundle root per contract, shared fragments under `components/common/`, and the Redocly lint configuration beside `apionly.yaml`, outside the fragments.
+. **Give each contract a version** in `<target>.bundle.properties`, beside its bundle root.
+. **Describe the build** in `contracts/apionly.yaml`: the targets, the output directories under `contracts/build/`, the pinned bundler, and a `file` channel that publishes into `contracts/build/`.
+. **Name each project after the contract it implements**, and declare the version it implements as `apiContractVersion` in the project's own `gradle.properties`.
+. **Write the contract test first** in each project: a test that fails until its contract, at that version, is on the classpath.
+. **Wire every project at once** from the root `build.gradle`: tasks that build and publish the project's contract, the Subscriber fetching it, and one lint task for the whole library as part of `check`.
+. **Commit every `apionly.lock`** after the first build, and run the same `./gradlew check` in CI.
+
+[#day-to-day]
+== Day to day
+
+* **Changing a contract**: edit the fragments, raise `version` in its `<target>.bundle.properties` and `apiContractVersion` in the implementing project's `gradle.properties` to the same new version, run `./gradlew check`, and commit the updated `apionly.lock` with the change.
+Major is for a breaking change, minor for an additive one, patch for anything else.
+* **Changing a shared fragment**: every contract that reaches it changes.
+`npm run apionly -- changed --since <ref>`, run in `contracts/`, lists them; raise each one's version, and have each project adopt it.
+* **Adding a contract**: a bundle root and a version file in the library, a target in `apionly.yaml`, and a project with the target's name.
+* **Upgrading the Publisher or a bundler**: see link:../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant build it in your own repository, starting with the tests.
+* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.

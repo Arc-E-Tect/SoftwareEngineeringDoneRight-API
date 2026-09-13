@@ -1,0 +1,94 @@
+= Use case 1: the API contract lives in the project that implements it
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+One project owns an API and the code that implements it.
+The API's OpenAPI description is split into fragments that sit in the same repository, so one pull request changes the contract and the implementation together.
+
+The API-Only Publisher bundles the fragments into a single document, lints it, and publishes it as a versioned archive to a directory inside the project's own `build/` directory.
+The API-Only Subscriber fetches that archive, checks it against a committed lockfile, and puts the document on the classpath.
+Everything happens on the local file system, in one Gradle build.
+
+[#fits]
+== When this fits
+
+* One team owns the contract and the implementation.
+* The contract describes this project, and no other build compiles or tests against it.
+* You want a contract change reviewed in the same pull request as the code that implements it.
+
+[#does-not-fit]
+== When it does not
+
+* **Several projects implement contracts built from shared fragments**, in one repository.
+That is use case 2, a specification library in the same repository.
+* **A build in another repository needs the contract.**
+That is use case 3, a specification library in its own repository, published to a registry.
+* **You only consume a contract that someone else publishes.**
+That is use case 4.
+
+link:../../README.adoc[The use-case overview →] compares all four.
+
+[#what-you-get]
+== What you get
+
+* `./gradlew check` bundles and lints the contract, fails on a fragment that nothing references, and runs your tests against the bundled document.
+* The document on the classpath is exactly the one `apionly.lock` records.
+* A change to a fragment cannot slip through under an old version: the build fails until the contract's version is raised.
+* No registry, no credentials, and nothing generated under `src/`.
+
+[#what-you-do-not-need]
+== What you do not need
+
+A registry.
+The contract never leaves this project, so a directory in `build/` gives the Subscriber everything a registry would: a versioned archive whose content it can verify.
+
+Adding a registry later is an addition to this setup, not a rewrite.
+If another build starts to need the contract, publish to a registry as well, as use case 3 describes, and keep everything else as it is.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Pin the Publisher.**
+Add a `package.json` with the Publisher as an exact dev dependency and an `apionly` npm script that runs it.
+. **Lay out the fragments** under `src/main/api/`, with one bundle root for the contract.
+Keep the Redocly lint configuration at the project root, outside the fragments.
+. **Give the contract a version** in `orders.bundle.properties`, beside its bundle root.
+. **Describe the build** in `apionly.yaml`: where the fragments are, where the output goes inside `build/`, the pinned bundler, and a `file` channel that publishes into `build/`.
+. **Declare the version the project implements** as `apiContractVersion` in `gradle.properties`.
+. **Write the contract test first**: a test that fails until the bundled document, at that version, is on the classpath.
+. **Wire Gradle**: tasks that install the Publisher and build, publish and lint the contract, with the Subscriber fetching what was published and `check` running the lint.
+. **Commit `apionly.lock`** after the first build, and run the same `./gradlew check` in CI.
+
+[#day-to-day]
+== Day to day
+
+* **Changing the contract**: edit the fragments, raise `version` in `orders.bundle.properties` and `apiContractVersion` in `gradle.properties` to the same new version, run `./gradlew check`, and commit the updated `apionly.lock` with the change.
+Major is for a breaking change, minor for an additive one, patch for anything else.
+* **Adding a fragment**: reference it from the bundle, or from a fragment the bundle reaches.
+A fragment nothing references fails the lint.
+* **Upgrading the Publisher or a bundler**: see link:../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant build it in your own project, starting with the tests.
+* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.

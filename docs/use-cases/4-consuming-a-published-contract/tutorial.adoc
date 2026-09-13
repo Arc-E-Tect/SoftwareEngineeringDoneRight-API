@@ -1,0 +1,391 @@
+= Tutorial: consuming a contract that someone else publishes
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial sets up use case 4 from nothing: a Gradle project, `orders-client`, that builds against version 1.1.0 of an `orders` contract another team publishes to a Maven repository.
+Every file and every command below was run exactly as shown, with API-Only Subscriber 0.1.0, against archives produced by API-Only Publisher 0.2.0.
+Only the repository URL differs: the run used a Maven repository on disk.
+
+It assumes you know how to design an API in OpenAPI and how a Gradle project resolves dependencies.
+
+[#before-you-start]
+== Before you start
+
+[cols="1,2", options="header"]
+|===
+|You need |Version or value
+
+|Java
+|21 or newer
+
+|Gradle
+|8 or newer, through the project's wrapper
+
+|From the producer
+|The Maven repository's URL, the group id, the contract's target name, and a released version
+
+|Credentials
+|A user name and a token that can read the Maven repository
+|===
+
+The values used below:
+
+[cols="1,2", options="header"]
+|===
+|What |Example
+
+|Repository URL
+|`https://maven.example.com/repository/contracts`
+
+|Group id
+|`com.example.contracts`
+
+|Target
+|`orders`
+
+|Version
+|`1.1.0`
+|===
+
+In the producer's repository, each release of `orders` is three files: `orders-1.1.0.tgz`, the archive; `orders-1.1.0.pom`; and `orders-1.1.0-manifest.json`, a copy of the manifest inside the archive.
+
+[#step-1]
+== Step 1: Declare the version your project uses
+
+.gradle.properties
+[source,properties]
+----
+# The version of the orders contract this project builds against.
+apiContractVersion=1.1.0
+----
+
+.Considerations
+* **This is the only place the version is written.**
+The Subscriber reads `apiContractVersion` as the version to fetch, and the test in step 2 reads it too.
+
+[#step-2]
+== Step 2: Write the contract test first
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:6.1.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    // The contract version this project builds against, for ApiContractTest.
+    systemProperty 'apiContractVersion', providers.gradleProperty('apiContractVersion').get()
+}
+----
+
+.src/test/java/com/example/client/ApiContractTest.java
+[source,java]
+----
+package com.example.client;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ApiContractTest {
+
+    @Test
+    void theContractThisProjectBuildsAgainstIsOnTheClasspath() throws IOException {
+        try (InputStream document = getClass().getResourceAsStream("/openapi.yaml")) {
+            assertNotNull(document, "openapi.yaml is not on the test classpath");
+            String text = new String(document.readAllBytes(), StandardCharsets.UTF_8);
+            String version = System.getProperty("apiContractVersion");
+            assertTrue(text.contains("version: " + version),
+                "openapi.yaml does not declare version " + version);
+        }
+    }
+}
+----
+
+Run `./gradlew test`, and it fails: `openapi.yaml is not on the test classpath`.
+
+[#step-3]
+== Step 3: Apply the Subscriber
+
+Change `build.gradle`:
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'
+        url = uri('https://maven.example.com/repository/contracts')
+        // Gradle reads apiContractsUsername and apiContractsPassword from
+        // gradle.properties outside this project, or from the environment.
+        credentials(PasswordCredentials)
+    }
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:6.1.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    systemProperty 'apiContractVersion', providers.gradleProperty('apiContractVersion').get()
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    // At the version apiContractVersion in gradle.properties declares.
+    subscribe('orders')
+}
+----
+
+[cols="1,3", options="header"]
+|===
+|Setting |What it says
+
+|`repositories { maven { ... } }`
+|Where the producer publishes.
+The `name` decides the credential property names: `apiContracts` reads `apiContractsUsername` and `apiContractsPassword`.
+
+|`channel.type = 'maven'`
+|Resolve contracts through Gradle's own dependency resolution, as `com.example.contracts:orders:1.1.0@tgz`.
+
+|`channel.groupId`
+|The producer's group id.
+
+|`subscribe('orders')`
+|The contract's target name.
+It is also the artifact id, unless the producer publishes under another name; then set `artifactId` inside the subscription.
+|===
+
+[#step-4]
+== Step 4: Supply the credentials without committing them
+
+On a developer machine, in the Gradle user home, never in the project:
+
+.~/.gradle/gradle.properties
+[source,properties]
+----
+apiContractsUsername=your-user-name
+apiContractsPassword=a-token-that-can-read-the-repository
+----
+
+In CI, the same two properties as environment variables: `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.
+
+[#step-5]
+== Step 5: Fetch, verify and test
+
+[source,console]
+----
+./gradlew check
+----
+
+[source]
+----
+> Task :fetchApiSpecOrders
+Subscribed to orders 1.1.0
+> Task :verifyApiSpecOrders
+> Task :verifyApiSpec
+> Task :processResources
+> Task :test
+> Task :check
+
+BUILD SUCCESSFUL
+----
+
+`ApiContractTest` passes.
+The fetch did four things, in order, and each could have stopped the build:
+
+. Gradle resolved `com.example.contracts:orders:1.1.0@tgz`.
+. The Subscriber checked the version against the pre-release rule.
+. It unpacked the archive into `build/api-spec/orders/`, and checked every document against the archive's `manifest.json`.
+. It recorded the version, the channel and every document's hash in `apionly.lock`.
+
+[#step-6]
+== Step 6: Commit the lockfile
+
+.apionly.lock
+[source]
+----
+# apionly.lock -- the published contracts this project builds against.
+# Generated by the Arc-E-Tect API-Only Subscriber. Commit it; do not edit it.
+# Run `verifyApiSpec` to check that what is on disk still matches.
+format 1
+
+target orders
+version 1.1.0
+channel maven
+sha256 859cc1e470cc508dbae6ed2c60948a5fc4a65506595918974188f98560075952 openapi.yaml
+----
+
+Commit it with `build.gradle` and `gradle.properties`.
+
+[#step-7]
+== Step 7: See the guards fail, once each
+
+Undo each change before the next.
+
+=== A hand-edited fetched document
+
+Append a line to `build/api-spec/orders/openapi.yaml`, and run `./gradlew verifyApiSpec` on its own:
+
+[source]
+----
+> the contract for 'orders' has drifted from apionly.lock:
+    - openapi.yaml has changed since it was locked
+        locked:  765043d4f7a114612602cbe43d7919650e46dd4e7d5fcd989ea7a84f4d73d337
+        on disk: 084d7a43966815865adcc19ef733ef1c2b0ca203dbf1542abd20a7fa01d03303
+
+  These documents are fetched, not authored here. Change the contract in the specification library and subscribe to the new version, or re-run fetchApiSpec if the change was intended.
+----
+
+`./gradlew fetchApiSpec` restores the document.
+`./gradlew check` would have restored it silently, because it fetches again before verifying; `verifyApiSpec` on its own is what reports the edit.
+
+=== A pre-release, without asking for one
+
+Set `apiContractVersion=1.1.0-rc.1`, and run `./gradlew fetchApiSpec`:
+
+[source]
+----
+> subscription 'orders' resolves the pre-release version 1.1.0-rc.1.
+  A contract that is not finished must not quietly satisfy a build. Set allowPrerelease = true on this subscription to work against it deliberately, and remember to take it off again before release.
+----
+
+To work against it deliberately:
+
+.build.gradle
+[source,groovy]
+----
+    subscribe('orders') {
+        allowPrerelease = true
+    }
+----
+
+[source]
+----
+Updated orders from 1.1.0 to 1.1.0-rc.1
+----
+
+Put `apiContractVersion` back to `1.1.0`, remove `allowPrerelease`, and run `./gradlew check` again.
+
+[#step-8]
+== Step 8: Run it in CI
+
+CI needs Java, not Node.js.
+In GitHub Actions:
+
+..github/workflows/build.yml
+[source,yaml]
+----
+name: build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Fetch, verify and test
+        env:
+          ORG_GRADLE_PROJECT_apiContractsUsername: ${{ secrets.API_CONTRACTS_USERNAME }}
+          ORG_GRADLE_PROJECT_apiContractsPassword: ${{ secrets.API_CONTRACTS_TOKEN }}
+        run: ./gradlew check
+      - name: The lockfile is committed
+        run: git diff --exit-code -- apionly.lock
+----
+
+[#step-9]
+== Step 9: Take a new version
+
+When the producer releases `orders` 1.2.0, change one line:
+
+.gradle.properties
+[source,properties]
+----
+apiContractVersion=1.2.0
+----
+
+Run `./gradlew check`.
+It prints `Updated orders from 1.1.0 to 1.2.0`, and `apionly.lock` changes by the version line and the hashes.
+Commit both files together: the lockfile diff is the reviewable record of what changed.
+
+[#what-you-have]
+== What you have now
+
+* A build pinned to one version of someone else's contract, verified on every `check`.
+* A committed record of exactly which version that is.
+* A test that proves the contract reaches the code.
+
+[#watch-for]
+== What to watch for
+
+* **A released version that comes back with different bytes is refused, not re-locked.**
+`fetchApiSpec` names each document that differs.
+Do not delete `apionly.lock` to make it pass: ask the producer, and take a new version when they release one.
+* **Two contracts in one project** put two `openapi.yaml` and two `manifest.json` files at the classpath root, and `processResources` fails with `Entry manifest.json is a duplicate`.
+link:../../reference/run-book.adoc#two-subscriptions[The run-book →] has the fix, which puts each contract under `contracts/<target>/` on the classpath.
+* **Publishing is passive.**
+Nothing tells your project a new version exists.
+Renovate and Dependabot do not know that `apiContractVersion` names a Maven artifact; a custom regular-expression manager can teach them, or someone has to watch the producer's releases.
+* **`mavenLocal()` is not a model of a remote repository.**
+Confirm pre-release behaviour against the real one.
+
+[#next]
+== Where to go next
+
+* link:../../reference/run-book.adoc[The run-book →] covers upgrading and troubleshooting this setup.
+* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains what the archive contains and how each check works.
+* link:overview.adoc[The overview of use case 4 →] says when this setup is not the right one.

@@ -10,54 +10,75 @@ image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher?label=publishe
 image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-subscriber?label=subscriber[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
-Tooling for treating an API description as a published artifact rather than a
-file someone copies around.
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+Tooling for treating an API description as a published artifact rather than a file someone copies around.
 
 [cols="1,3", options="header"]
 |===
 |Component |What it is
 
-|link:api-only-publisher/README.adoc[API-Only Publisher]
-|A Node CLI. Builds one self-contained document per target from a library of
-reusable fragments, and publishes it -- to npm, to a Maven repository, or to a
-GitHub release. Published as
-https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-e-tect/api-only-publisher`].
+|link:api-only-publisher/README.adoc[API-Only Publisher →]
+|A Node.js command-line tool.
+Builds one self-contained, linted document per contract from a library of reusable fragments, stamps it with that contract's own version, and publishes it: to a directory, a Maven repository, npm, or a GitHub release.
+Published as https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-e-tect/api-only-publisher` ↗].
 
-|link:api-only-subscriber/README.adoc[API-Only Subscriber]
-|A Gradle plugin. Fetches a published document into a build, verifies it against
-a committed lockfile, and fails when a contract has drifted. Published to the
-https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal].
+|link:api-only-subscriber/README.adoc[API-Only Subscriber →]
+|A Gradle plugin.
+Fetches a published contract into a build at the version the build declares, verifies it against a committed lockfile, and fails when the contract has drifted.
+Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal ↗].
 |===
 
+[#documentation]
+== Documentation
+
+Start at link:docs/README.adoc[the documentation →].
+It helps you pick the one of four use cases that fits your situation, and gives each an overview, a step-by-step tutorial, and prompts that have Claude Code or Codex build it in your project, test first.
+
+[cols="1,3", options="header"]
+|===
+|Use case |When
+
+|link:docs/use-cases/1-contract-in-the-implementing-project/overview.adoc[1. The contract lives in the project that implements it →]
+|One project owns its contract.
+
+|link:docs/use-cases/2-specification-library-in-the-same-repository/overview.adoc[2. A specification library and its projects, in one repository →]
+|Several projects share fragments, in one repository.
+
+|link:docs/use-cases/3-specification-library-in-its-own-repository/overview.adoc[3. A specification library in its own repository →]
+|Contracts are released to projects in other repositories.
+
+|link:docs/use-cases/4-consuming-a-published-contract/overview.adoc[4. Consuming a contract that someone else publishes →]
+|You build against a contract you do not own.
+|===
+
+link:docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains how the two tools correspond, and where each part lives in the code.
+link:docs/reference/run-book.adoc[The run-book →] says how to operate them, and what to do when something fails.
+
+[#why-one-repository]
 == Why they share a repository
 
-They are one design with two halves, and the seam between them is a single
-artifact: an archive containing the built documents and a `manifest.json`
-describing them. Neither knows anything else about the other.
+They are one design with two halves, and the seam between them is a single artifact: an archive containing the built documents and a `manifest.json` describing them.
+Neither knows anything else about the other.
 
-That seam is the whole point, and it is also exactly the kind of thing that rots
-when its two sides live apart. A field added to the manifest by a producer that
-no consumer reads, or a consumer that starts requiring a field no producer
-writes, is a bug that only exists *between* two repositories and gets noticed by
-neither. Keeping them together means the contract between them is changed in one
-commit, reviewed as one change, and cannot drift silently.
+That seam is the whole point, and it is also exactly the kind of thing that rots when its two sides live apart.
+A field added to the manifest by a producer that no consumer reads, or a consumer that starts requiring a field no producer writes, is a bug that only exists _between_ two repositories and gets noticed by neither.
+Keeping them together means the contract between them is changed in one commit, reviewed as one change, and cannot drift silently.
 
-They are nevertheless **versioned independently**. A Gradle consumer and an npm
-consumer are different people with different upgrade cadences, and a change to
-one half is no reason to make the other half's users take a new version. The
-manifest carries a `schemaVersion` so that a producer and a consumer of different
-vintages can still tell whether they understand each other.
+They are nevertheless **versioned independently**.
+A Gradle consumer and an npm consumer are different people with different upgrade cadences, and a change to one half is no reason to make the other half's users take a new version.
+The manifest carries a `schemaVersion` so that a producer and a consumer of different vintages can still tell whether they understand each other.
 
-== What this is not
-
-The **API-Only Suite** (`com.arc-e-tect.api-only-suite`) is a separate plugin in
-a separate repository. It bundles the Shadow, Mirage and Doppelganger detectors,
-which answer _does this implementation match its contract?_
-
-The Subscriber answers a different question: _where does the contract come from,
-and is it still what we agreed?_ A project can reasonably want either without the
-other, so they are not bundled.
-
+[#development]
 == Development
 
 [source,console]
@@ -74,10 +95,12 @@ npm test --prefix api-only-publisher
 cd api-only-subscriber && ./gradlew build
 ----
 
+To change either tool, read link:docs/reference/how-publisher-and-subscriber-work-together.adoc#extending[Where a change belongs →] first.
+
+[#quality-gates]
 == Quality gates
 
-Both components gate their own release, and both gates were checked by making
-them fail before trusting them to pass.
+Both components gate their own release, and both gates were checked by making them fail before trusting them to pass.
 
 [cols="1,2,2", options="header"]
 |===
@@ -88,8 +111,8 @@ them fail before trusting them to pass.
 |JaCoCo, 0.9 minimum, wired into `check`
 
 |Measured
-|93.1% lines, 95.8% functions
-|96.2% instructions, 91.4% branches
+|94.4% lines, 95.3% functions, 88.0% branches
+|97.1% instructions, 90.8% branches
 
 |Exclusions
 |none
@@ -100,29 +123,20 @@ them fail before trusting them to pass.
 |OWASP dependency-check, as the Gradle plugins run it
 |===
 
-Coverage gates a release; dependency scanning does not. A vulnerability is
-discovered by someone else, at a time unrelated to anything this repository does,
-so gating a release on it means an upstream CVE blocks an unrelated release while
-a quiet week leaves a known problem unreported. Both scans run weekly instead, in
-`nvd-cache-refresh.yml`, which first refreshes the shared NVD database that
-dependency-check needs and that would otherwise be downloaded per release.
+Coverage gates a release; dependency scanning does not.
+A vulnerability is discovered by someone else, at a time unrelated to anything this repository does, so gating a release on it means an upstream CVE blocks an unrelated release while a quiet week leaves a known problem unreported.
+Both scans run weekly instead, in `nvd-cache-refresh.yml`, which first refreshes the shared NVD database that dependency-check needs and that would otherwise be downloaded per release.
 
-Neither coverage rule excludes anything. The usual reason to exclude a plugin,
-its extension and its tasks is that TestKit runs them in another process where
-the coverage agent cannot see them, so they report zero however well they are
-tested -- and the rule is made to look away from precisely the code worth
-measuring. The answer taken here is to test those classes in-process as well, so
-the number means what it says.
+Neither coverage rule excludes anything.
+The usual reason to exclude a plugin, its extension and its tasks is that TestKit runs them in another process where the coverage agent cannot see them, so they report zero however well they are tested, and the rule is made to look away from precisely the code worth measuring.
+The answer taken here is to test those classes in-process as well, so the number means what it says.
 
+[#releasing]
 == Releasing
 
-Both components release through `semantic-release`, driven by Conventional
-Commits, each with its own tag namespace (`api-only-publisher-v*`,
-`api-only-subscriber-v*`) so their version histories are genuinely independent.
+Both components release through `semantic-release`, driven by Conventional Commits, each with its own tag namespace (`api-only-publisher-v*`, `api-only-subscriber-v*`) so their version histories are genuinely independent.
 
-Each is seeded with a `-v0.0.0` tag, and `release/first-release-patch-analyzer.js`
-forces the first real release to be a patch, so a new component starts at
-`0.0.1` rather than semantic-release's default `1.0.0`.
+Each is seeded with a `-v0.0.0` tag, and `release/first-release-patch-analyzer.js` forces the first real release to be a patch, so a new component starts at `0.0.1` rather than semantic-release's default `1.0.0`.
 
 Required repository secrets:
 
@@ -131,15 +145,12 @@ Required repository secrets:
 |Secret |Used for
 
 |`SEMANTIC_RELEASE_TOKEN`
-|Tagging, the release commit, and GitHub releases. Needs a role that can bypass
-the `commit-push-main` ruleset, since a release pushes to a protected branch.
+|Tagging, the release commit, and GitHub releases.
+Needs a role that can bypass the `commit-push-main` ruleset, since a release pushes to a protected branch.
 
 |`GRADLE_PUBLISH_KEY` / `GRADLE_PUBLISH_SECRET`
 |Publishing the Subscriber to the Gradle Plugin Portal.
 |===
 
-The Publisher needs no npm credential: it publishes through npm
-https://docs.npmjs.com/trusted-publishers[trusted publishing], exchanging a
-short-lived OIDC token for publish rights, and attaches a provenance attestation
-tying each tarball to the commit and workflow run that produced it. Nothing
-long-lived is stored.
+The Publisher needs no npm credential: it publishes through npm https://docs.npmjs.com/trusted-publishers[trusted publishing ↗], exchanging a short-lived OIDC token for publish rights, and attaches a provenance attestation tying each tarball to the commit and workflow run that produced it.
+Nothing long-lived is stored.

@@ -1,0 +1,97 @@
+= Use case 3: a specification library in its own repository
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+The API contracts live in a repository of their own, with their own reviewers and their own release history.
+The projects that implement or call those APIs live in other repositories, and have no access to the fragments.
+
+In the contracts repository, the API-Only Publisher builds and lints every contract on every pull request, and releases each contract whose version is new to a Maven repository.
+In each implementing repository, the API-Only Subscriber fetches the contract at the version that project declares, verifies it against a committed lockfile, and puts it on the classpath.
+The only thing that crosses from one repository to another is the published archive.
+
+[#fits]
+== When this fits
+
+* More than one team, or more than one repository, builds against the same contracts.
+* A contract must be releasable without releasing anything that implements it, and the other way round.
+* "Who may change this contract?" has a different answer from "who may change this service?".
+
+[#does-not-fit]
+== When it does not
+
+* **The contracts and every project that implements them can live in one repository.**
+That is use case 2: the same versioning discipline, with no registry at all.
+* **One project owns its contract, and nothing else uses it.**
+That is use case 1.
+* **You only consume contracts that someone else releases.**
+That is use case 4, and it is the consumer half of this use case on its own.
+
+link:../../README.adoc[The use-case overview →] compares all four.
+
+[#what-you-get]
+== What you get
+
+* Contracts released on their own cadence, one contract at a time, each under its own version.
+* A pull request that fails when it changes a contract without giving it a new version, or when a fragment is not referenced by any contract.
+* Consumers that build against exactly the version they declare, verified on every build, and that cannot reach the fragments to "fix" a failing build.
+* A release tag per contract version, so the repository's history says what was released and when.
+
+[#what-you-do-not-need]
+== What you do not need
+
+A registry is needed here, because the consumers cannot read the contracts repository's files; that is the one thing this use case adds to use case 2.
+Everything else stays as simple as there:
+
+* **No release tooling beyond two short scripts.**
+The version is in the library, in a version file per contract, so a release is "publish every contract whose version has no release tag yet".
+* **No versioning bot.**
+The person who changes a contract decides major, minor or patch, in the same pull request.
+* **One channel.**
+`maven` is what Gradle consumers read.
+Add `npm` or a GitHub release only when a consumer without a JVM actually exists.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Create the repository** with a `package.json` that pins the Publisher, the fragments under `specs/`, a version file per contract, the Redocly lint configuration, and an `apionly.yaml` whose channel is your Maven repository.
+. **Prove it locally** by publishing to a Maven repository on disk, before involving a remote.
+. **Add the pull-request check**: build and lint every contract, and fail when a changed contract's version is already released.
+. **Add the release**: on the main branch, publish every contract whose version has no release tag, and tag it.
+Give the job the token for the Maven repository.
+. **Subscribe from each implementing project**: the Maven repository with read credentials, the `maven` channel, `apiContractVersion`, a contract test written first, and a committed `apionly.lock`.
+. **Before the first release**, an implementing project can already build against a contract through the `file` channel, from a local checkout of the contracts repository; switching to the registry later changes only its channel block.
+
+[#day-to-day]
+== Day to day
+
+* **Changing a contract**: a pull request that edits the fragments and raises the contract's version.
+Merging it releases that contract, and only that one.
+* **Changing a shared fragment**: every contract that reaches it needs a new version; `npm run apionly -- changed --since <ref>` lists them, and the pull-request check insists.
+* **Taking a new version in a consumer**: change `apiContractVersion`, run `./gradlew check`, commit the updated `apionly.lock`.
+* **Working against an unfinished contract**: publish a pre-release with `--pre-release rc.1`, and let the consumer opt in with `allowPrerelease = true`.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds both sides step by step: every file, every value, and what to consider at each step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant set up the contracts repository in your own environment, starting with the checks.
+* link:../4-consuming-a-published-contract/overview.adoc[Use case 4 →] covers the consuming side on its own.
+* link:../../reference/run-book.adoc[The run-book →] covers operating the setup, and what each failure means.
+* link:../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism underneath.
