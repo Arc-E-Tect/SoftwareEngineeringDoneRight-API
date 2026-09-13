@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.2.0...api-only-subscriber-v0.2.1) (2026-09-13)
+
+
+### 🐛 Bug Fixes
+
+* document Publisher 0.3.0 and Subscriber 0.2.0 as released ([#11](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/11)) ([af54ca4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/af54ca4576ec346f32b5003b27a783d732182a13)), closes [#11](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/11)
+
 # [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.1.0...api-only-subscriber-v0.2.0) (2026-09-13)
 
 
