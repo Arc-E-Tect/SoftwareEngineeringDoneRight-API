@@ -1,3 +1,10 @@
+# [0.1.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.2...api-only-publisher-v0.1.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* per-bundle contract versions and fetch-time archive checks ([#8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/8)) ([82e5e37](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/82e5e375647f87cd8ee1fedb9bb4dc48faa475c3)), closes [#8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/8)
+
 ## [0.0.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.1...api-only-publisher-v0.0.2) (2026-09-12)
 
 
