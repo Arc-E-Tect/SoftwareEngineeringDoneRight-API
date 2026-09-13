@@ -30,6 +30,8 @@ targets:
     openapi:
       bundle: bundles/example.yaml
 `);
+    fs.mkdirSync(path.join(dir, "specs", "openapi", "bundles"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "specs", "openapi", "bundles", "example.yaml"), "openapi: 3.1.1\npaths: {}\n");
     const output = path.join(dir, "dist", "example", "openapi.yaml");
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, "openapi: 3.1.1\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n");
@@ -77,6 +79,8 @@ targets:
     openapi:
       bundle: bundles/example.yaml
 `);
+    fs.mkdirSync(path.join(dir, "specs", "openapi", "bundles"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "specs", "openapi", "bundles", "example.yaml"), "openapi: 3.1.1\npaths: {}\n");
     const output = path.join(dir, "dist", "example", "openapi.yaml");
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, "openapi: 3.1.1\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n");
@@ -90,7 +94,7 @@ targets:
     const previousPath = process.env.PATH;
     process.env.PATH = `${bin}:${previousPath}`;
     try {
-        await assert.rejects(() => main(["lint", "-C", dir]), /npx .* failed/);
+        await assert.rejects(() => main(["lint", "-C", dir]), /lint failed for 1 document\(s\): example \(openapi\)/);
     } finally {
         process.env.PATH = previousPath;
     }
@@ -496,4 +500,121 @@ test("publish refuses a target with no version file before shipping any target",
 
     await assert.rejects(() => main(["publish", "-C", dir]), /target 'gamma': no version file/);
     assert.ok(!fs.existsSync(path.join(dir, "build", "publish")));
+});
+
+// ------------------------------------------------------ lint, across the library
+//
+// A linter checks documents, and a fragment reaches a document only through a
+// $ref. So lint also looks for fragments no target reaches: nothing else would
+// ever lint them.
+
+const LINTED = {
+    "apionly.yaml": `schemaVersion: 1
+sources:
+  root: specs
+  openapi: openapi
+defaults:
+  openapi:
+    outputName: openapi.yaml
+build:
+  staging: build/staging
+  dist: dist
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+targets:
+  alpha:
+    openapi:
+      bundle: bundles/alpha.yaml
+  beta:
+    publish: false
+    openapi:
+      bundle: bundles/beta.yaml
+`,
+    "specs/openapi/bundles/alpha.yaml": "openapi: 3.1.1\npaths:\n  /a:\n    $ref: '../paths/A.yaml'\n",
+    // Reached only by beta, which is never published but is linted all the same.
+    "specs/openapi/bundles/beta.yaml": "openapi: 3.1.1\npaths:\n  /b:\n    $ref: '../paths/B.yaml'\n",
+    "specs/openapi/paths/A.yaml": "get: {}\n",
+    "specs/openapi/paths/B.yaml": "get: {}\n",
+    "dist/alpha/openapi.yaml": "openapi: 3.1.1\ninfo:\n  title: A\n  version: 1.0.0\npaths: {}\n",
+    "dist/beta/openapi.yaml": "openapi: 3.1.1\ninfo:\n  title: B\n  version: 0.0.0\npaths: {}\n",
+};
+
+const ORPHAN = { "specs/openapi/components/Orphan.yaml": "type: string\n" };
+
+const FAILS_FOR_ALPHA = [
+    "#!/bin/sh",
+    "case \"$*\" in *dist/alpha/*) echo 'alpha is not valid'; exit 1;; esac",
+    "",
+].join("\n");
+
+async function silenced(action) {
+    const previous = console.error;
+    console.error = () => {};
+    try {
+        return await action();
+    } finally {
+        console.error = previous;
+    }
+}
+
+function withLintMode(mode) {
+    return { ...LINTED, "apionly.yaml": LINTED["apionly.yaml"] + `lint:\n  unreferenced: ${mode}\n` };
+}
+
+test("lint lints every document even when one fails, and names every failure", async () => {
+    const dir = library(LINTED);
+
+    await assert.rejects(
+        () => silenced(() => withToolchain(dir, FAILS_FOR_ALPHA, () => main(["lint", "-q", "-C", dir]))),
+        /lint failed for 1 document\(s\): alpha \(openapi\)/);
+
+    assert.match(fs.readFileSync(path.join(dir, "build/reports/lint/alpha/openapi.txt"), "utf8"), /alpha is not valid/);
+    assert.ok(fs.existsSync(path.join(dir, "build/reports/lint/beta/openapi.txt")), "beta is linted after alpha fails");
+});
+
+test("lint fails on a fragment no target reaches, and lists it in a report", async () => {
+    const dir = library({ ...LINTED, ...ORPHAN });
+
+    await assert.rejects(
+        () => silenced(() => withToolchain(dir, FAKE_TOOLCHAIN, () => main(["lint", "-q", "-C", dir]))),
+        /1 fragment\(s\) not reachable from any target, so nothing lints them:\n {2}openapi\/components\/Orphan\.yaml/);
+    assert.strictEqual(
+        fs.readFileSync(path.join(dir, "build/reports/lint/unreferenced.txt"), "utf8"),
+        "openapi/components/Orphan.yaml\n");
+});
+
+test("lint passes a library whose every fragment some target reaches, with an empty report", async () => {
+    const dir = library(LINTED);
+
+    const { code } = await withToolchain(dir, FAKE_TOOLCHAIN, () => run(["lint", "-q", "-C", dir]));
+
+    assert.strictEqual(code, 0);
+    assert.strictEqual(fs.readFileSync(path.join(dir, "build/reports/lint/unreferenced.txt"), "utf8"), "");
+});
+
+test("lint.unreferenced: warn reports a fragment no target reaches without failing", async () => {
+    const dir = library({ ...withLintMode("warn"), ...ORPHAN });
+
+    const { code, printed } = await withToolchain(dir, FAKE_TOOLCHAIN, () => run(["lint", "-C", dir]));
+
+    assert.strictEqual(code, 0);
+    assert.ok(printed.some((line) => /not reachable from any target/.test(line) && /Orphan\.yaml/.test(line)));
+});
+
+test("lint.unreferenced: off does not look for unreferenced fragments", async () => {
+    const dir = library({ ...withLintMode("off"), ...ORPHAN });
+
+    const { code } = await withToolchain(dir, FAKE_TOOLCHAIN, () => run(["lint", "-q", "-C", dir]));
+
+    assert.strictEqual(code, 0);
+    assert.ok(!fs.existsSync(path.join(dir, "build/reports/lint/unreferenced.txt")));
+});
+
+test("lint --target does not look for unreferenced fragments: they belong to no target", async () => {
+    const dir = library({ ...LINTED, ...ORPHAN });
+
+    const { code } = await withToolchain(dir, FAKE_TOOLCHAIN, () => run(["lint", "--target", "alpha", "-q", "-C", dir]));
+
+    assert.strictEqual(code, 0);
+    assert.ok(!fs.existsSync(path.join(dir, "build/reports/lint/unreferenced.txt")));
 });
