@@ -374,7 +374,7 @@ sources:
 
 defaults:
   openapi:
-    lint: .redocly.yaml   # keep it outside sources.root
+    lint: .redocly.yaml
     outputName: openapi.yaml
   asyncapi:
     outputName: asyncapi.yaml
@@ -445,7 +445,10 @@ So `lint`, run without `--target`, also lists every YAML file under the source r
 Every target counts, `publish: false` ones included, because they are linted too.
 That reports a fragment that does not comply before anything uses it, and finds a definition left behind by a change that stopped using it.
 
-Any other YAML file under the source root counts as well, so keep the Redocly configuration beside `apionly.yaml`, outside `sources.root`.
+Configuration is not a fragment, so it may sit anywhere, `sources.root` included.
+The check skips the well-known configuration files of lint tools, wherever they are: `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml`, `.spectral.yml`, and `apionly.yaml`.
+It also skips the lint configurations `defaults.<kind>.lint` names, whatever they are called.
+Any other YAML file under the source root counts.
 
 `lint.unreferenced` in `apionly.yaml` sets what happens: `error` by default, `warn` to report without failing, or `off` not to look.
 `lint --target` does not look, because an unreferenced fragment belongs to no target.
