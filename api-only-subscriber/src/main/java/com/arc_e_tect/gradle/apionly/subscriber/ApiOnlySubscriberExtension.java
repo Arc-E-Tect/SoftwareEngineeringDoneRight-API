@@ -4,6 +4,7 @@ import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
 
 import javax.inject.Inject;
 
@@ -23,8 +24,9 @@ import javax.inject.Inject;
  * }
  * }</pre>
  *
- * <p>One channel serves every subscription in a project; each subscription
- * carries its own version, because contracts are versioned independently.</p>
+ * <p>One channel serves every subscription in a project. Each subscription can
+ * carry its own version, because contracts are versioned independently; one that
+ * does not takes {@link #getVersion()}.</p>
  *
  * @see ApiOnlySubscriberPlugin
  * @see Subscription
@@ -158,4 +160,24 @@ public abstract class ApiOnlySubscriberExtension {
      * @return the lockfile location
      */
     public abstract RegularFileProperty getLockfile();
+
+    /**
+     * The contract version every subscription in this project resolves, unless it
+     * sets its own.
+     *
+     * <p>Defaults to the {@code apiContractVersion} project property, so the version
+     * can live in {@code gradle.properties} -- in a multi-project build, the
+     * subproject's own -- or be given with {@code -PapiContractVersion=...} or
+     * {@code ORG_GRADLE_PROJECT_apiContractVersion}.</p>
+     *
+     * <pre>{@code
+     * apiOnlySubscriber {
+     *     version = '2.1.0'
+     *     subscribe('user-account')
+     * }
+     * }</pre>
+     *
+     * @return the default contract version; unset when the property is not defined
+     */
+    public abstract Property<String> getVersion();
 }

@@ -264,7 +264,9 @@ class ApiOnlySubscriberPluginTest {
             extension().subscribe("account", s -> { });
 
             assertThat(resolving("account"))
-                .hasMessageContaining("subscription 'account' declares no version");
+                .hasMessageContaining("subscription 'account' declares no version")
+                .hasMessageContaining("apiOnlySubscriber")
+                .hasMessageContaining("apiContractVersion");
         }
 
         @Test
@@ -289,15 +291,19 @@ class ApiOnlySubscriberPluginTest {
         }
 
         @Test
-        @DisplayName("the file channel reports the path it looked in")
-        void fileChannelReportsMissingArchive() {
+        @DisplayName("the file channel resolves where the archive belongs, before anything is published there")
+        void fileChannelResolvesPathBeforePublication() {
+            // A build may publish the archive itself, in a task that runs before the
+            // fetch. Planning that build must not require the archive to exist yet:
+            // the fetch checks for it when it runs.
             extension().getChannel().getType().set("file");
             extension().getChannel().getDirectory().set(projectDir.toString());
             subscribe("account", "1.0.0");
 
-            assertThat(resolving("account"))
-                .hasMessageContaining("no archive for 'account' 1.0.0")
-                .hasMessageContaining("account-1.0.0.tgz");
+            assertThat(resolving("account")).isNull();
+            FetchApiSpecTask task = (FetchApiSpecTask) project.getTasks().getByName("fetchApiSpecAccount");
+            assertThat(canonical(task.getArchive().getSingleFile()))
+                .isEqualTo(canonical(projectDir.resolve("account/1.0.0/account-1.0.0.tgz").toFile()));
         }
 
         @Test
@@ -331,6 +337,43 @@ class ApiOnlySubscriberPluginTest {
             // Resolution reaches the repository and fails there, not on configuration:
             // the point is that a groupId was found at all.
             assertThat(resolving("account")).hasMessageNotContaining("requires channel.groupId");
+        }
+    }
+
+    @Nested
+    @DisplayName("the contract version")
+    class Versions {
+
+        @Test
+        @DisplayName("a subscription that sets no version takes the one set on apiOnlySubscriber")
+        void subscriptionTakesTheProjectVersion() {
+            extension().getVersion().set("2.0.0");
+
+            assertThat(extension().subscribe("account").getVersion().get()).isEqualTo("2.0.0");
+        }
+
+        @Test
+        @DisplayName("a subscription's own version wins over the one set on apiOnlySubscriber")
+        void subscriptionVersionWins() {
+            extension().getVersion().set("2.0.0");
+
+            assertThat(subscribe("account", "1.4.0").getVersion().get()).isEqualTo("1.4.0");
+        }
+
+        @Test
+        @DisplayName("apiOnlySubscriber's version defaults to the apiContractVersion project property")
+        void versionDefaultsToProjectProperty() {
+            project.getExtensions().getExtraProperties().set("apiContractVersion", "3.1.0");
+
+            assertThat(extension().getVersion().get()).isEqualTo("3.1.0");
+            assertThat(extension().subscribe("account").getVersion().get()).isEqualTo("3.1.0");
+        }
+
+        @Test
+        @DisplayName("with no version anywhere, a subscription's version stays unset")
+        void noVersionAnywhere() {
+            assertThat(extension().getVersion().isPresent()).isFalse();
+            assertThat(extension().subscribe("account").getVersion().isPresent()).isFalse();
         }
     }
 }

@@ -20,6 +20,8 @@ import org.gradle.api.file.ConfigurableFileCollection;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -32,6 +34,8 @@ import java.util.TreeMap;
  */
 @CacheableTask
 public abstract class FetchApiSpecTask extends DefaultTask {
+
+    private static final String FILE_CHANNEL = "file";
 
     /** Creates the task. Gradle instantiates this when a subscription is declared. */
     public FetchApiSpecTask() {
@@ -60,7 +64,9 @@ public abstract class FetchApiSpecTask extends DefaultTask {
      *
      * <p>For the {@code maven} channel this is a resolved dependency, so Gradle
      * has already downloaded, cached and verified the artifact itself before this
-     * task runs. For the {@code file} channel it is a path on disk.</p>
+     * task runs. For the {@code file} channel it is the path the archive belongs
+     * at, which need not exist before this task runs: a task earlier in the same
+     * build may be the one that publishes it.</p>
      *
      * @return the archive to unpack, as a single-file collection
      */
@@ -124,17 +130,23 @@ public abstract class FetchApiSpecTask extends DefaultTask {
      * Unpacks the archive, verifies it against its own manifest, and records the
      * result in the lockfile.
      *
-     * <p>Three things are refused rather than unpacked: an archive whose manifest
-     * names a different version, an archive missing a document its manifest
-     * declares, and an archive whose contents do not hash to what its manifest
-     * says. A fourth is refused at the lockfile: a version already locked, coming
-     * back with different bytes — a released version rebuilt, or a tag moved.</p>
+     * <p>Four things are refused rather than unpacked: an archive that is not
+     * there, an archive whose manifest names a different version, an archive
+     * missing a document its manifest declares, and an archive whose contents do
+     * not hash to what its manifest says. A fifth is refused at the lockfile: a
+     * version already locked, coming back with different bytes — published to the
+     * file channel again, or, from a repository, a released version rebuilt or a
+     * tag moved.</p>
      *
      * @throws org.gradle.api.GradleException if any of those checks fail
      */
     @TaskAction
     public void fetch() {
         File archive = getArchive().getSingleFile();
+        if (!archive.isFile()) {
+            throw new GradleException(missingArchive(archive));
+        }
+        boolean fileChannel = FILE_CHANNEL.equals(getChannel().get());
         File destination = getInto().get().getAsFile();
 
         getFiles().delete(spec -> spec.delete(destination));
@@ -149,8 +161,11 @@ public abstract class FetchApiSpecTask extends DefaultTask {
         if (manifest.version() != null && !manifest.version().equals(declaredVersion)) {
             throw new GradleException(
                 "the archive for '" + getTarget().get() + "' declares version " + manifest.version()
-                + " but was resolved as " + declaredVersion
-                + ". A published version was rebuilt, or a tag was moved.");
+                + " but was resolved as " + declaredVersion + ". "
+                + (fileChannel
+                    ? "The file channel keeps every version in a directory of its own, so this archive "
+                      + "was copied or renamed there by hand."
+                    : "A published version was rebuilt, or a tag was moved."));
         }
 
         // Verify on the way in, not only in verifyApiSpec: an archive whose
@@ -177,11 +192,11 @@ public abstract class FetchApiSpecTask extends DefaultTask {
         Lockfile.Entry previous = lock.get(getTarget().get());
 
         // A lock that is rewritten on every fetch locks nothing. When the same
-        // version comes back with different bytes, that is a published version
-        // having changed underneath a coordinate that was supposed to be
-        // immutable -- a moved tag, or a rebuild republished over itself. Record
-        // it silently and the build would go on claiming to honour a contract it
-        // no longer has.
+        // version comes back with different bytes, the contract changed underneath
+        // a version that was supposed to name it -- published to the file channel
+        // again, or, from a repository, a moved tag or a rebuild republished over
+        // itself. Record it silently and the build would go on claiming to honour a
+        // contract it no longer has.
         if (previous != null && previous.version().equals(declaredVersion)
             && !previous.files().equals(hashes)) {
 
@@ -202,12 +217,18 @@ public abstract class FetchApiSpecTask extends DefaultTask {
                 }
             }
 
+            String cause = fileChannel
+                ? "\n\n" + declaredVersion + " was published to the file channel again, with different "
+                  + "content. Find out why before accepting this: if the change was intended, publish it "
+                  + "as a new version and subscribe to that; if it was not, publish the specifications "
+                  + "the locked contract came from again. Delete the entry from apionly.lock only to "
+                  + "re-lock deliberately."
+                : "\n\nA released version was rebuilt, or a tag was moved. Find out which before "
+                  + "accepting this: subscribe to a new version if the change was intended, or delete "
+                  + "the entry from apionly.lock to re-lock deliberately.";
             throw new GradleException(
                 "the published contract for '" + getTarget().get() + "' " + declaredVersion
-                + " is not the one recorded in apionly.lock:" + detail
-                + "\n\nA released version was rebuilt, or a tag was moved. Find out which before "
-                + "accepting this: subscribe to a new version if the change was intended, or delete "
-                + "the entry from apionly.lock to re-lock deliberately.");
+                + " is not the one recorded in apionly.lock:" + detail + cause);
         }
 
         lock.put(new Lockfile.Entry(getTarget().get(), declaredVersion, getChannel().get(), hashes));
@@ -219,5 +240,58 @@ public abstract class FetchApiSpecTask extends DefaultTask {
             getLogger().lifecycle("Updated {} from {} to {}",
                 getTarget().get(), previous.version(), declaredVersion);
         }
+    }
+
+    /*
+     * Why there is nothing to unpack, and, for the file channel, what there is
+     * instead. That channel lays archives out as
+     * <directory>/<target>/<version>/<artifactId>-<version>.tgz, so the versions
+     * published for a target are the directories beside this one holding an archive.
+     */
+    private String missingArchive(File archive) {
+        String target = getTarget().get();
+        String version = getVersion().get();
+        String message = "no archive for '" + target + "' " + version + " at " + archive + ".";
+        if (!FILE_CHANNEL.equals(getChannel().get())) {
+            return message;
+        }
+        File targetDirectory = archive.getParentFile().getParentFile();
+        List<String> published = publishedVersions(targetDirectory);
+        return message + "\n"
+            + (published.isEmpty()
+                ? "Nothing is published for '" + target + "' in " + targetDirectory + "."
+                : "Published versions of '" + target + "': " + String.join(", ", published) + ".")
+            + "\nPublish " + version + " first, or subscribe to a version that is published.";
+    }
+
+    private static List<String> publishedVersions(File targetDirectory) {
+        File[] versions = targetDirectory.listFiles(File::isDirectory);
+        if (versions == null) {
+            return List.of();
+        }
+        return Arrays.stream(versions)
+            .filter(directory -> {
+                File[] archives = directory.listFiles((dir, name) -> name.endsWith(".tgz"));
+                return archives != null && archives.length > 0;
+            })
+            .map(File::getName)
+            .sorted(FetchApiSpecTask::compareVersions)
+            .toList();
+    }
+
+    /* Numeric parts compare as numbers, so 1.10.0 is listed after 1.9.0. */
+    private static int compareVersions(String left, String right) {
+        String[] a = left.split("[.-]");
+        String[] b = right.split("[.-]");
+        for (int i = 0; i < Math.min(a.length, b.length); i++) {
+            boolean numeric = a[i].matches("\\d+") && b[i].matches("\\d+");
+            int order = numeric && a[i].length() != b[i].length()
+                ? Integer.compare(a[i].length(), b[i].length())
+                : a[i].compareTo(b[i]);
+            if (order != 0) {
+                return order;
+            }
+        }
+        return Integer.compare(a.length, b.length);
     }
 }

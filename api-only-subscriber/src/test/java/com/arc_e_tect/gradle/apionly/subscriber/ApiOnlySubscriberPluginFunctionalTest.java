@@ -151,7 +151,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
             BuildResult result = runner("updateApiOnlySubscriberDSL").build();
 
-            assertThat(result.getOutput()).contains("added 1 missing property");
+            assertThat(result.getOutput()).contains("added 2 missing properties");
             assertThat(projectDir.resolve("build.gradle.bak")).exists();
             assertThat(Files.readString(projectDir.resolve("build.gradle")))
                 .contains("lockfile = layout.projectDirectory.file('apionly.lock')");
@@ -164,7 +164,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
             BuildResult result = runner("fetchApiSpec").buildAndFail();
 
-            assertThat(result.getOutput()).contains("declares no version");
+            assertThat(result.getOutput()).contains("declares no version").contains("apiContractVersion");
         }
 
         @Test
@@ -301,21 +301,97 @@ class ApiOnlySubscriberPluginFunctionalTest {
         }
 
         @Test
-        @DisplayName("refuses to re-lock when a released version comes back with different bytes")
-        void aMovedTagIsRefused() throws Exception {
+        @DisplayName("refuses to re-lock when a version is republished with different bytes")
+        void aRepublishedVersionIsRefused() throws Exception {
             publish("user-account", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
 
-            // The same coordinates, republished with different content: a rebuilt
-            // release, or a tag moved under the build's feet.
+            // The same version, published to the file channel again with different content.
             publish("user-account", "1.0.0", OPENAPI + "# a server added after 1.0.0\n");
 
             BuildResult result = runner("fetchApiSpec", "--rerun-tasks").buildAndFail();
 
             assertThat(result.getOutput())
                 .contains("is not the one recorded in apionly.lock")
-                .contains("A released version was rebuilt, or a tag was moved");
+                .contains("1.0.0 was published to the file channel again, with different content")
+                .doesNotContain("tag was moved");
+        }
+
+        @Test
+        @DisplayName("a project's gradle.properties sets the version its subscriptions default to, and -P overrides it")
+        void versionFromProjectProperty() throws Exception {
+            // A subproject declaring its own version, as a service in a multi-project
+            // build does. Its gradle.properties is visible to that project only:
+            // providers.gradleProperty(...) does not see it, which is what this proves
+            // the plugin does not rely on.
+            publish("user-account", "1.0.0", OPENAPI);
+            publish("user-account", "2.0.0", OPENAPI.replace("version: 1.0.0", "version: 2.0.0"));
+            Files.writeString(projectDir.resolve("settings.gradle"), "rootProject.name = 'consumer'\ninclude 'svc'\n");
+            Path svc = Files.createDirectories(projectDir.resolve("svc"));
+            Files.writeString(svc.resolve("gradle.properties"), "apiContractVersion=1.0.0\n");
+            Files.writeString(svc.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'com.arc-e-tect.api-only-subscriber'
+                }
+
+                apiOnlySubscriber {
+                    channel {
+                        type = 'file'
+                        directory = '%s'
+                    }
+                    subscribe('user-account')
+                }
+                """.formatted(channelDir.toString().replace("\\", "\\\\")));
+
+            runner(":svc:fetchApiSpec", "--configuration-cache").build();
+            assertThat(Files.readString(svc.resolve("apionly.lock"))).contains("version 1.0.0");
+
+            BuildResult upgraded =
+                runner(":svc:fetchApiSpec", "--configuration-cache", "-PapiContractVersion=2.0.0").build();
+            assertThat(upgraded.getOutput()).contains("Updated user-account from 1.0.0 to 2.0.0");
+        }
+
+        @Test
+        @DisplayName("fetches an archive that a task in the same build publishes first")
+        void fetchesWhatTheSameBuildPublishes() throws Exception {
+            // A library and its consumers can share one build: a task publishes to the
+            // file channel, and the fetch depends on it. Planning must not require the
+            // archive before that task has run.
+            publish("user-account", "1.0.0", OPENAPI);
+            Path staged = Files.createTempDirectory("api-only-staged");
+            Files.move(channelDir.resolve("user-account"), staged.resolve("user-account"));
+            buildFile(subscribingBuild("1.0.0", "") + """
+
+                def publishContract = tasks.register('publishContract', Copy) {
+                    from '%s'
+                    into '%s'
+                }
+                tasks.named('fetchApiSpecUserAccount') { dependsOn publishContract }
+                """.formatted(
+                    staged.toString().replace("\\", "\\\\"),
+                    channelDir.toString().replace("\\", "\\\\")));
+
+            BuildResult result = runner("fetchApiSpec", "--configuration-cache").build();
+
+            assertThat(result.task(":publishContract").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(lockfile()).contains("user-account");
+        }
+
+        @Test
+        @DisplayName("a version the file channel does not hold fails the fetch, naming the versions it does")
+        void missingVersionNamesPublishedOnes() throws Exception {
+            publish("user-account", "1.0.0", OPENAPI);
+            buildFile(subscribingBuild("2.0.0", ""));
+
+            BuildResult result = runner("fetchApiSpec").buildAndFail();
+
+            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.FAILED);
+            assertThat(result.getOutput())
+                .contains("no archive for 'user-account' 2.0.0")
+                .contains("Published versions of 'user-account': 1.0.0.");
         }
 
         @Test

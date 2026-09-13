@@ -83,10 +83,12 @@ public abstract class Subscription {
     /**
      * The version of this target's contract to build against.
      *
-     * <p>Required. A pre-release version is refused unless
+     * <p>Defaults to {@link ApiOnlySubscriberExtension#getVersion()}, which in turn
+     * defaults to the {@code apiContractVersion} project property; one of the three
+     * must be set. A pre-release version is refused unless
      * {@link #getAllowPrerelease()} is set.</p>
      *
-     * @return the version to resolve, with no default
+     * @return the version to resolve
      */
     public abstract Property<String> getVersion();
 
