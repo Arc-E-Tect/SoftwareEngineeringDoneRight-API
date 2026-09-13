@@ -8,10 +8,12 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
+import org.gradle.language.jvm.tasks.ProcessResources;
 
 import java.io.File;
 import java.util.Locale;
@@ -45,6 +47,12 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
 
     /** The project property {@code apiOnlySubscriber.version} defaults to: {@value}. */
     public static final String CONTRACT_VERSION_PROPERTY = "apiContractVersion";
+
+    /**
+     * The classpath directory the documents of an API a project calls are copied
+     * under, followed by the target name: {@value}.
+     */
+    public static final String CLIENT_RESOURCES = "contracts";
 
     /** Creates the plugin. Gradle instantiates this when the plugin is applied. */
     public ApiOnlySubscriberPlugin() {
@@ -84,8 +92,14 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
             task.setDescription("Fails when a fetched API description has drifted from apionly.lock.");
         });
 
+        // Every fetch and verification in this project reads or writes the one lockfile,
+        // and Gradle may run a project's tasks in parallel. They take turns.
+        Provider<LockfileAccess> lockfileAccess = project.getGradle().getSharedServices().registerIfAbsent(
+            "apiOnlySubscriberLockfile" + project.getPath(), LockfileAccess.class,
+            spec -> spec.getMaxParallelUsages().set(1));
+
         extension.getSubscriptions().all(subscription ->
-            configureSubscription(project, extension, subscription, fetchAll, verifyAll));
+            configureSubscription(project, extension, subscription, fetchAll, verifyAll, lockfileAccess));
 
         // Drift is a build failure, not something to remember to check.
         project.getPlugins().withType(LifecycleBasePlugin.class, plugin ->
@@ -97,14 +111,19 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         ApiOnlySubscriberExtension extension,
         Subscription subscription,
         TaskProvider<?> fetchAll,
-        TaskProvider<?> verifyAll
+        TaskProvider<?> verifyAll,
+        Provider<LockfileAccess> lockfileAccess
     ) {
         String target = subscription.getTarget();
         String suffix = capitalize(target);
 
         subscription.getInto().convention(
             project.getLayout().getBuildDirectory().dir("api-spec/" + target));
-        subscription.getVersion().convention(extension.getVersion());
+        // apiOnlySubscriber.version, and apiContractVersion behind it, are the version
+        // of the contract this project implements. An API it calls sets its own.
+        if (!subscription.isClient()) {
+            subscription.getVersion().convention(extension.getVersion());
+        }
 
         ConfigurableFileCollection archive = project.getObjects().fileCollection();
         archive.from(project.provider(() -> resolveArchive(project, extension, subscription)));
@@ -119,6 +138,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
                 task.getChannel().set(extension.getChannel().getType());
                 task.getInto().set(subscription.getInto());
                 task.getLockfile().set(extension.getLockfile());
+                task.usesService(lockfileAccess);
             });
 
         subscription.fetchedBy(fetch);
@@ -135,15 +155,26 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
                 task.getTarget().set(target);
                 task.getInto().set(subscription.getInto());
                 task.getLockfile().set(extension.getLockfile());
+                task.usesService(lockfileAccess);
             });
 
         fetchAll.configure(task -> task.dependsOn(fetch));
         verifyAll.configure(task -> task.dependsOn(verify));
 
-        // The fetched directory becomes a resource directory, so the document
-        // reaches the classpath exactly as it did when it was generated into
-        // src/main/resources -- without anything generated living under src/.
+        // The implemented contract's directory becomes a resource directory, so its
+        // documents reach the classpath root exactly as they did when generated into
+        // src/main/resources -- without anything generated living under src/. An API
+        // the project calls is copied under contracts/<target>/ instead: any number of
+        // them fit there side by side, and the root stays the implemented contract's.
         project.getPlugins().withType(JavaPlugin.class, plugin -> {
+            if (subscription.isClient()) {
+                project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources.class, task -> {
+                    task.dependsOn(fetch);
+                    task.from(fetch.flatMap(FetchApiSpecTask::getInto),
+                        spec -> spec.into(CLIENT_RESOURCES + "/" + target));
+                });
+                return;
+            }
             SourceSetContainer sourceSets =
                 project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets();
             sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME, main ->
@@ -168,6 +199,12 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         String type = extension.getChannel().getType().getOrElse("maven");
         String target = subscription.getTarget();
         String version = subscription.getVersion().getOrElse(null);
+        if (version == null && subscription.isClient()) {
+            throw new GradleException("client subscription '" + target + "' declares no version. Set version on "
+                + "the subscription: an API this project calls sets its own, because apiOnlySubscriber.version and "
+                + "the " + CONTRACT_VERSION_PROPERTY + " project property are the version of the contract this "
+                + "project implements.");
+        }
         if (version == null) {
             throw new GradleException("subscription '" + target + "' declares no version. Set version on the "
                 + "subscription, set version on apiOnlySubscriber for every subscription, or define the "

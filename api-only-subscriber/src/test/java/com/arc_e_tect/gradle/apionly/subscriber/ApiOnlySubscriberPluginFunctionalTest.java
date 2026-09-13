@@ -46,6 +46,19 @@ class ApiOnlySubscriberPluginFunctionalTest {
             paths: {}
             """;
 
+    /** Two APIs the project calls, next to the contract subscribingBuild implements. */
+    private static final String CALLS_TWO_APIS = """
+
+            apiOnlySubscriber {
+                subscribeAsClient('order-payments') {
+                    version = '1.4.0'
+                }
+                subscribeAsClient('billing-api') {
+                    version = '2.0.0'
+                }
+            }
+            """;
+
     @BeforeEach
     void seedProject() throws IOException {
         Files.writeString(projectDir.resolve("settings.gradle"), "rootProject.name = 'consumer'\n");
@@ -130,6 +143,78 @@ class ApiOnlySubscriberPluginFunctionalTest {
     @Nested
     @DisplayName("the DSL and the task graph")
     class Wiring {
+
+        @Test
+        @DisplayName("a second contract in one project fails the build, saying why and where to read more")
+        void aSecondContractFailsTheBuild() throws IOException {
+            buildFile(subscribingBuild("1.0.0", "") + """
+
+                apiOnlySubscriber {
+                    subscribe('order-payments') {
+                        version = '1.0.0'
+                    }
+                }
+                """);
+
+            BuildResult result = runner("help").buildAndFail();
+
+            assertThat(result.getOutput())
+                .contains("apiOnlySubscriber already implements 'customer-orders', so it cannot also implement 'order-payments'.")
+                .contains("declare it with subscribeAsClient('order-payments') instead")
+                .contains("api-only-subscriber/README.adoc#one-contract-per-project");
+        }
+
+        @Test
+        @DisplayName("a project implementing one contract and calling two APIs fetches, locks and verifies all three")
+        void clientsNextToTheImplementedContract() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("order-payments", "1.4.0", OPENAPI.replace("title: Example", "title: Payments"));
+            publish("billing-api", "2.0.0", OPENAPI.replace("title: Example", "title: Billing"));
+            buildFile(subscribingBuild("1.0.0", "") + CALLS_TWO_APIS);
+
+            BuildResult first = runner("check", "--configuration-cache").build();
+
+            assertThat(first.task(":verifyApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(first.task(":verifyApiSpecOrderPayments").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(first.task(":verifyApiSpecBillingApi").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(lockfile())
+                .contains("target customer-orders\nversion 1.0.0")
+                .contains("target order-payments\nversion 1.4.0")
+                .contains("target billing-api\nversion 2.0.0");
+            // The implemented contract at the classpath root; each called API under contracts/<target>/.
+            Path resources = projectDir.resolve("build/resources/main");
+            assertThat(Files.readString(resources.resolve("openapi.yaml"))).contains("title: Example");
+            assertThat(Files.readString(resources.resolve("contracts/order-payments/openapi.yaml")))
+                .contains("title: Payments");
+            assertThat(resources.resolve("contracts/order-payments/manifest.json")).exists();
+            assertThat(Files.readString(resources.resolve("contracts/billing-api/openapi.yaml")))
+                .contains("title: Billing");
+
+            BuildResult second = runner("check", "--configuration-cache").build();
+
+            assertThat(second.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+            assertThat(second.task(":fetchApiSpecOrderPayments").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+            assertThat(second.task(":fetchApiSpecBillingApi").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+        }
+
+        @Test
+        @DisplayName("a called API gets every guard: a hand edit fails verification, and changed bytes under a locked version are refused")
+        void clientsGetEveryGuard() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("order-payments", "1.4.0", OPENAPI.replace("title: Example", "title: Payments"));
+            publish("billing-api", "2.0.0", OPENAPI.replace("title: Example", "title: Billing"));
+            buildFile(subscribingBuild("1.0.0", "") + CALLS_TWO_APIS);
+            runner("fetchApiSpec").build();
+
+            Path payments = projectDir.resolve("build/api-spec/order-payments/openapi.yaml");
+            Files.writeString(payments, Files.readString(payments) + "# edited by hand\n");
+            assertThat(runner("verifyApiSpec").buildAndFail().getOutput())
+                .contains("the contract for 'order-payments' has drifted from apionly.lock");
+
+            publish("order-payments", "1.4.0", OPENAPI.replace("title: Example", "title: Payments, rebuilt"));
+            assertThat(runner("fetchApiSpec").buildAndFail().getOutput())
+                .contains("the published contract for 'order-payments' 1.4.0 is not the one recorded in apionly.lock");
+        }
 
         @Test
         @DisplayName("registers an aggregate task and a per-target task for each subscription")
@@ -251,6 +336,20 @@ class ApiOnlySubscriberPluginFunctionalTest {
             BuildResult second = runner("fetchApiSpec").build();
 
             assertThat(second.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+        }
+
+        @Test
+        @DisplayName("fetches again when its entry is gone from apionly.lock, and records it")
+        void refetchesWhenTheLockEntryIsGone() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            buildFile(subscribingBuild("1.0.0", ""));
+            runner("fetchApiSpec").build();
+            Files.delete(projectDir.resolve("apionly.lock"));
+
+            BuildResult again = runner("fetchApiSpec").build();
+
+            assertThat(again.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(lockfile()).contains("target customer-orders");
         }
 
         @Test

@@ -8,14 +8,16 @@ import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.CacheableTask;
+import org.gradle.api.Task;
+import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 import org.gradle.api.file.ConfigurableFileCollection;
 
 import javax.inject.Inject;
@@ -28,18 +30,25 @@ import java.util.TreeMap;
 /**
  * Unpacks a subscribed contract into the build, and records what it unpacked.
  *
- * Declared inputs and outputs, so it is up-to-date-checked and cacheable, and so
- * the build depends on it rather than relying on somebody remembering to run a
- * script first.
+ * Declared inputs and outputs, so it is up-to-date-checked, and so the build
+ * depends on it rather than relying on somebody remembering to run a script first.
+ *
+ * The lockfile is shared by every subscription in a project, so it is not an
+ * output of any one fetch: if it were, each fetch recording its own entry would
+ * change the others' outputs, and they would never be up to date. A fetch is up to
+ * date only while the lockfile still records what it fetched. For the same reason
+ * the task is not cacheable: restoring one fetch from the build cache would restore
+ * a whole lockfile over the other subscriptions' entries.
  */
-@CacheableTask
+@DisableCachingByDefault(because = "Records its entry in apionly.lock, a file every subscription in the project shares; "
+    + "restoring one fetch from the build cache would overwrite the others' entries")
 public abstract class FetchApiSpecTask extends DefaultTask {
 
     private static final String FILE_CHANNEL = "file";
 
     /** Creates the task. Gradle instantiates this when a subscription is declared. */
     public FetchApiSpecTask() {
-        // Nothing to do: every input is configured by the plugin.
+        getOutputs().upToDateWhen(new LockRecordsThisFetch());
     }
 
     /**
@@ -121,10 +130,42 @@ public abstract class FetchApiSpecTask extends DefaultTask {
     /**
      * The lockfile this task records what it unpacked in.
      *
+     * <p>{@code @Internal}: every subscription in the project records its entry in
+     * this one file, so it is no single fetch's output. Whether this fetch is up to
+     * date depends on {@link #lockRecordsThisFetch()} instead.</p>
+     *
      * @return the lockfile location
      */
-    @OutputFile
+    @Internal
     public abstract RegularFileProperty getLockfile();
+
+    /**
+     * Whether the lockfile still records this fetch: an entry for this target, at
+     * this version, from this channel.
+     *
+     * <p>A fetch whose entry has gone, or records another version or channel, is
+     * out of date, so it runs again and records it.</p>
+     *
+     * @return {@code true} if the lockfile has that entry
+     */
+    boolean lockRecordsThisFetch() {
+        File lockfile = getLockfile().get().getAsFile();
+        if (!lockfile.isFile()) {
+            return false;
+        }
+        Lockfile.Entry entry = Lockfile.read(lockfile).get(getTarget().get());
+        return entry != null
+            && entry.version().equals(getVersion().get())
+            && entry.channel().equals(getChannel().get());
+    }
+
+    // A class rather than a lambda, so the configuration cache can store it.
+    private static final class LockRecordsThisFetch implements Spec<Task> {
+        @Override
+        public boolean isSatisfiedBy(Task task) {
+            return ((FetchApiSpecTask) task).lockRecordsThisFetch();
+        }
+    }
 
     /**
      * Unpacks the archive, verifies it against its own manifest, and records the

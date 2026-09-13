@@ -124,7 +124,7 @@ apiOnlySubscriber {
     // Default: apionly.lock, beside the build file
     // lockfile = layout.projectDirectory.file('apionly.lock')
 
-    // The contract version every subscription resolves unless it sets its own.
+    // The version of the contract this project implements, unless its subscription sets its own.
     // Default: the apiContractVersion project property; unset when that is not defined
     // version = findProperty('apiContractVersion')
 
@@ -149,6 +149,7 @@ apiOnlySubscriber {
         // directory = "$rootDir/build/publish"
     }
 
+    // The contract this project implements. At most one.
     subscribe('orders') {
         // The version of this target's contract to build against.
         // Default: apiOnlySubscriber.version
@@ -170,6 +171,12 @@ apiOnlySubscriber {
         // Where this subscription's documents land.
         // Default: build/api-spec/<target>
         // into = layout.buildDirectory.dir('api-spec/orders')
+    }
+
+    // An API this project calls, rather than implements. Any number of them.
+    // Every property above applies, except that version has no default.
+    subscribeAsClient('payments') {
+        version = '1.4.0'
     }
 }
 ----
@@ -216,6 +223,8 @@ apiOnlySubscriber {
 ----
 
 A subscription that gets a version from none of them fails the build, and the message names all three.
+
+A subscription for an API the project calls takes only its own `version`, as <<api-clients,Calling other APIs §>> explains.
 
 [#channels]
 === Channels
@@ -332,7 +341,9 @@ Gradle rejects that outright, which is the class of bug these providers exist to
 [#where-documents-land]
 == Where documents land
 
-`build/api-spec/<target>/`, registered as an additional resources directory, so each document is at the root of the classpath: `/openapi.yaml`, `/asyncapi.yaml`, and the archive's `/manifest.json`.
+`build/api-spec/<target>/`.
+For the contract the project implements, that directory is registered as an additional resources directory, so each document is at the root of the classpath: `/openapi.yaml`, `/asyncapi.yaml`, and the archive's `/manifest.json`.
+For an API the project calls, its contents are copied to `/contracts/<target>/` on the classpath instead, as <<api-clients,Calling other APIs §>> explains.
 
 Not `src/main/resources`.
 Generated files inside a source tree show up in IDE search, tempt hand-editing, and survive a `clean`.
@@ -340,27 +351,127 @@ From `build/` they reach the classpath identically, `clean` removes them, and no
 
 Writing into `src/` stays possible for teams whose tooling insists on it (set `into` on the subscription), but it is not the default.
 
-[#two-subscriptions]
-=== Two or more subscriptions in one project
+[#one-contract-per-project]
+== One implemented contract per project
 
-Every subscription lands at the root of the classpath, so with the `java` plugin two subscriptions collide there, and `processResources` fails with `Entry manifest.json is a duplicate`.
-Put each contract in a directory of its own on the classpath instead:
+A project implements at most one contract, and may call any number of APIs.
+
+A project implements one API contract: its build, its tests and its release answer to that contract, at the version its `apiContractVersion` declares.
+Two implemented contracts in one project would share that one version, one classpath root and one release, so neither could change without the other, and a build could not say which of them it was checking.
+So a second `subscribe` to a different contract fails the build, at the line that declares it:
+
+[source]
+----
+apiOnlySubscriber already implements 'orders', so it cannot also implement 'payments'.
+A project implements one API contract: two in one project would share one version, one classpath root and one release, so neither could change without the other.
+If this project calls 'payments' rather than implementing it, declare it with subscribeAsClient('payments') instead.
+If it implements both, put each contract in a project of its own, in a multi-project build, with its own apiOnlySubscriber block and apiContractVersion.
+See https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-subscriber/README.adoc#one-contract-per-project
+----
+
+Subscribing to the same contract twice is not a second contract: the second `subscribe` configures the first.
+A project that calls `payments` rather than implementing it declares it with `subscribeAsClient`, as <<api-clients,Calling other APIs §>> describes.
+
+When a project really implements two contracts, put each in a project of its own, in a multi-project build.
+Each project applies the Subscriber, subscribes to its own contract, and declares that contract's version in its own `gradle.properties`:
+
+.settings.gradle
+[source,groovy]
+----
+rootProject.name = 'shop'
+include 'orders', 'payments'
+----
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0' apply false
+}
+----
+
+.orders/build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber'
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('orders')
+}
+----
+
+.orders/gradle.properties
+[source,properties]
+----
+# The version of the orders contract this project implements.
+apiContractVersion=2.1.0
+----
+
+`payments/build.gradle` and `payments/gradle.properties` are the same, with `payments` and its own version.
+Each project then has its own `apionly.lock`, its own `fetchApiSpec` and `verifyApiSpec` tasks, and its contract at the root of its own classpath, as `/openapi.yaml`.
+Code both projects share, such as a domain model, goes in a third project that both depend on.
+
+[#api-clients]
+== Calling other APIs
+
+A project that calls other APIs subscribes to each of them with `subscribeAsClient`, next to the one contract it implements, if it implements one:
 
 .Groovy DSL
 [source,groovy]
 ----
-// Two subscriptions each bring a manifest.json and an openapi.yaml, which collide
-// at the root of the classpath. Put each contract in a directory of its own there.
-sourceSets.main.resources.setSrcDirs(['src/main/resources'])
-tasks.named('processResources') {
-    ['orders', 'payments'].each { target ->
-        from(apiOnlySubscriber.subscription(target).into) { into "contracts/$target" }
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+
+    // The contract this project implements, at apiContractVersion.
+    subscribe('billing')
+
+    // The APIs it calls, each at its own version.
+    subscribeAsClient('orders') {
+        version = '2.1.0'
+    }
+    subscribeAsClient('payments') {
+        version = '1.4.0'
+        groupId = 'com.example.payments'   // published by another provider
     }
 }
 ----
 
-The documents are then at `/contracts/orders/openapi.yaml` and `/contracts/payments/openapi.yaml`.
-List any other resource directories the project uses in `setSrcDirs`.
+A project that implements no contract of its own has only `subscribeAsClient` subscriptions.
+A contract is either implemented or called: subscribing to the same target with both `subscribe` and `subscribeAsClient` fails the build.
+
+[#what-a-client-gets]
+=== What a client subscription gets
+
+Every check the implemented contract gets:
+
+* the fetch at exactly the version it declares, and a refusal of a pre-release unless it sets `allowPrerelease = true`;
+* every document checked against the archive's own `manifest.json`;
+* its own entry in `apionly.lock`, and a refusal when a locked version comes back with different bytes, so the build keeps the bundle it locked;
+* `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the verification part of `check`, failing when a fetched document has drifted;
+* the `openapi` and `asyncapi` providers, to generate a client from, carrying the dependency on the fetch.
+
+[#what-a-client-does-not-get]
+=== What a client subscription does not get
+
+* **A place at the classpath root.**
+The root is the implemented contract's.
+With the `java` plugin, the documents of an API the project calls are copied to `/contracts/<target>/`, so any number of them fit side by side: `/contracts/orders/openapi.yaml`, `/contracts/payments/openapi.yaml`.
+* **A shared version.**
+`apiContractVersion` and `apiOnlySubscriber.version` are the version of the contract the project implements.
+Each called API sets its own `version`, because its provider releases it on its own schedule; without one, the build fails with `client subscription '<target>' declares no version`.
+* **A channel of its own.**
+The channel type is the project's.
+Set `groupId` on a subscription whose provider publishes under another group, and add that provider's Maven repository to `repositories`.
 
 [#lockfile]
 == The lockfile
@@ -463,7 +574,7 @@ Confirm pre-release semantics against a real remote before relying on them.
 == Where to go next
 
 * link:../docs/README.adoc[The documentation →] helps you pick the use case that fits, with a tutorial and AI prompts for each.
-If a contract simply arrives at your build as an artifact, link:../docs/use-cases/4-consuming-a-published-contract/overview.adoc[use case 4, consuming a published contract →] is this plugin on its own, start to finish.
+If a contract simply arrives at your build as an artifact, link:../docs/use-cases/provider/4-implementing-a-published-contract/overview.adoc[provider use case 4 →] and link:../docs/use-cases/client/4-calling-a-published-api/overview.adoc[client use case 4 →] are this plugin on its own, start to finish.
 * link:../docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] maps every setting, task and check across the two tools, and says where a change to either belongs.
 * link:../docs/reference/run-book.adoc[The run-book →] covers operating both, and lists every failure message with what to do.
 

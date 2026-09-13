@@ -38,6 +38,7 @@ import javax.inject.Inject;
 public abstract class Subscription {
 
     private final String target;
+    private boolean client;
     private TaskProvider<FetchApiSpecTask> fetch;
 
     /**
@@ -81,12 +82,36 @@ public abstract class Subscription {
     }
 
     /**
+     * Whether this subscription is for an API the project calls, rather than for
+     * the contract it implements.
+     *
+     * <p>Fixed when the subscription is declared: by
+     * {@link ApiOnlySubscriberExtension#subscribeAsClient(String, org.gradle.api.Action)}
+     * for an API the project calls, and by
+     * {@link ApiOnlySubscriberExtension#subscribe(String, org.gradle.api.Action)} for
+     * the contract it implements.</p>
+     *
+     * @return {@code true} for an API this project calls
+     */
+    public boolean isClient() {
+        return client;
+    }
+
+    /** Marks this subscription as one for an API the project calls, before it is added to its container. */
+    void markClient() {
+        this.client = true;
+    }
+
+    /**
      * The version of this target's contract to build against.
      *
      * <p>Defaults to {@link ApiOnlySubscriberExtension#getVersion()}, which in turn
      * defaults to the {@code apiContractVersion} project property; one of the three
      * must be set. A pre-release version is refused unless
      * {@link #getAllowPrerelease()} is set.</p>
+     *
+     * <p>A subscription for an API the project calls has no default, and sets its
+     * own: those two are the version of the contract the project implements.</p>
      *
      * @return the version to resolve
      */
@@ -142,6 +167,10 @@ public abstract class Subscription {
      *
      * <p>Writing into {@code src/} remains possible for teams whose tooling
      * insists on it; it is simply not the default.</p>
+     *
+     * <p>For an API the project calls, the directory is not a resources directory
+     * itself: its contents are copied to {@code contracts/<target>/} on the
+     * classpath, so that the root stays the implemented contract's.</p>
      *
      * @return the directory fetched documents are unpacked into
      */

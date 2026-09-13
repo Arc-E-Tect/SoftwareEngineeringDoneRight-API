@@ -118,6 +118,26 @@ class FetchApiSpecTaskTest {
     }
 
     @Test
+    @DisplayName("is up to date only while the shared lockfile records its target, at its version, from its channel")
+    void upToDateOnlyWhileTheLockRecordsThisFetch() throws Exception {
+        Map<String, String> documents = oneDocument();
+        Path tgz = archive("svc", "1.0.0", documents, manifestFor("svc", "1.0.0", null, documents));
+        FetchApiSpecTask fetch = task("svc", "1.0.0", tgz);
+
+        assertThat(fetch.lockRecordsThisFetch()).as("no lockfile yet").isFalse();
+
+        fetch.fetch();
+        assertThat(fetch.lockRecordsThisFetch()).as("after fetching").isTrue();
+
+        fetch.getVersion().set("1.1.0");
+        assertThat(fetch.lockRecordsThisFetch()).as("another version").isFalse();
+
+        fetch.getVersion().set("1.0.0");
+        fetch.getChannel().set("maven");
+        assertThat(fetch.lockRecordsThisFetch()).as("another channel").isFalse();
+    }
+
+    @Test
     @DisplayName("records every document the manifest declares")
     void locksEveryDocument() throws Exception {
         Map<String, String> documents = oneDocument();
