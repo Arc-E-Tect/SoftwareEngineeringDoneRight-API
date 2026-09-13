@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.1.0...api-only-publisher-v0.2.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** fail lint on fragments no target reaches ([#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)) ([66fd17e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/66fd17ef899de346ed6913ffb721751e81c60245)), closes [#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)
+
 # [0.1.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.2...api-only-publisher-v0.1.0) (2026-09-13)
 
 
