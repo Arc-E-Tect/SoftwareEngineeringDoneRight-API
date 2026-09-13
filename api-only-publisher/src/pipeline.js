@@ -55,12 +55,8 @@ function stage(config, kind, log) {
 /**
  * Substitute placeholders across the staged tree, in place.
  *
- * Every YAML file is visited rather than only the bundle roots and info.yaml.
- * The tool this replaces read only the one file it was handed, which is why the
- * shared info block had to be preprocessed as a separate up-front step and why
- * bundles had to $ref a generated merged_info.yaml instead of the file they
- * meant. Visiting the staged tree removes that special case: a placeholder works
- * wherever it is written.
+ * Every YAML file is visited, not only the bundle roots, so a placeholder works
+ * wherever it is written, and no file has to be preprocessed separately first.
  */
 function substituteTree(config, kind, log) {
     const stagingRoot = config.stagingRoot(kind);

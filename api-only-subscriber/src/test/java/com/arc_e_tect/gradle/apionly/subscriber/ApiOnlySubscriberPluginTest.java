@@ -97,7 +97,7 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("registers no per-target task until something is subscribed")
         void noSubscriptionsNoTasks() {
-            assertThat(project.getTasks().findByName("fetchApiSpecUserAccount")).isNull();
+            assertThat(project.getTasks().findByName("fetchApiSpecCustomerOrders")).isNull();
         }
     }
 
@@ -108,80 +108,80 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("registers a fetch and a verify task named after the target")
         void registersPerTargetTasks() {
-            subscribe("user-account", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
 
-            assertThat(project.getTasks().findByName("fetchApiSpecUserAccount")).isNotNull();
-            assertThat(project.getTasks().findByName("verifyApiSpecUserAccount")).isNotNull();
+            assertThat(project.getTasks().findByName("fetchApiSpecCustomerOrders")).isNotNull();
+            assertThat(project.getTasks().findByName("verifyApiSpecCustomerOrders")).isNotNull();
         }
 
         @Test
         @DisplayName("turns every separator in a target name into a camel-case task suffix")
         void capitalizesAcrossSeparators() {
-            subscribe("user-account", "1.0.0");
-            subscribe("auth_server", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
+            subscribe("order_payments", "1.0.0");
             subscribe("billing.api", "1.0.0");
 
-            assertThat(project.getTasks().findByName("fetchApiSpecUserAccount")).isNotNull();
-            assertThat(project.getTasks().findByName("fetchApiSpecAuthServer")).isNotNull();
+            assertThat(project.getTasks().findByName("fetchApiSpecCustomerOrders")).isNotNull();
+            assertThat(project.getTasks().findByName("fetchApiSpecOrderPayments")).isNotNull();
             assertThat(project.getTasks().findByName("fetchApiSpecBillingApi")).isNotNull();
         }
 
         @Test
         @DisplayName("lands in build/, not in src/")
         void fetchDestinationConvention() {
-            Subscription subscription = subscribe("user-account", "1.0.0");
+            Subscription subscription = subscribe("customer-orders", "1.0.0");
 
             assertThat(canonical(subscription.getInto().get().getAsFile()))
-                .isEqualTo(canonical(new File(projectDir.toFile(), "build/api-spec/user-account")));
+                .isEqualTo(canonical(new File(projectDir.toFile(), "build/api-spec/customer-orders")));
         }
 
         @Test
         @DisplayName("defaults its artifact name to the target name")
         void artifactIdConvention() {
-            assertThat(subscribe("user-account", "1.0.0").getArtifactId().get()).isEqualTo("user-account");
+            assertThat(subscribe("customer-orders", "1.0.0").getArtifactId().get()).isEqualTo("customer-orders");
         }
 
         @Test
         @DisplayName("refuses pre-releases unless asked otherwise")
         void prereleaseConvention() {
-            assertThat(subscribe("user-account", "1.0.0").getAllowPrerelease().get()).isFalse();
+            assertThat(subscribe("customer-orders", "1.0.0").getAllowPrerelease().get()).isFalse();
         }
 
         @Test
         @DisplayName("is retrievable by name, and an unknown name lists what does exist")
         void lookup() {
-            subscribe("user-account", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
 
-            assertThat(extension().subscription("user-account").getTarget()).isEqualTo("user-account");
+            assertThat(extension().subscription("customer-orders").getTarget()).isEqualTo("customer-orders");
             assertThatThrownBy(() -> extension().subscription("nope"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("no subscription for 'nope'")
-                .hasMessageContaining("user-account");
+                .hasMessageContaining("customer-orders");
         }
 
         @Test
         @DisplayName("subscribing the same target twice configures one subscription, not two")
         void subscribingIsIdempotent() {
-            extension().subscribe("user-account", s -> s.getVersion().set("1.0.0"));
-            extension().subscribe("user-account", s -> s.getVersion().set("2.0.0"));
+            extension().subscribe("customer-orders", s -> s.getVersion().set("1.0.0"));
+            extension().subscribe("customer-orders", s -> s.getVersion().set("2.0.0"));
 
             assertThat(extension().getSubscriptions()).hasSize(1);
-            assertThat(extension().subscription("user-account").getVersion().get()).isEqualTo("2.0.0");
+            assertThat(extension().subscription("customer-orders").getVersion().get()).isEqualTo("2.0.0");
         }
 
         @Test
         @DisplayName("can be created without configuring it")
         void subscribeWithoutAction() {
-            Subscription subscription = extension().subscribe("user-account");
+            Subscription subscription = extension().subscribe("customer-orders");
 
-            assertThat(subscription.getName()).isEqualTo("user-account");
-            assertThat(subscription.getTarget()).isEqualTo("user-account");
+            assertThat(subscription.getName()).isEqualTo("customer-orders");
+            assertThat(subscription.getTarget()).isEqualTo("customer-orders");
         }
 
         @Test
         @DisplayName("exposes the documents it will fetch, as providers")
         void exposesDocuments() {
-            Subscription subscription = subscribe("user-account", "1.0.0");
+            Subscription subscription = subscribe("customer-orders", "1.0.0");
 
             assertThat(subscription.getOpenapi().get().getAsFile().getName()).isEqualTo("openapi.yaml");
             assertThat(subscription.getAsyncapi().get().getAsFile().getName()).isEqualTo("asyncapi.yaml");
@@ -190,13 +190,13 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("the aggregate tasks depend on every per-target task")
         void aggregatesDependOnEachTarget() {
-            subscribe("user-account", "1.0.0");
-            subscribe("auth-server", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
+            subscribe("order-payments", "1.0.0");
 
             assertThat(dependencyNamesOf("fetchApiSpec"))
-                .contains("fetchApiSpecUserAccount", "fetchApiSpecAuthServer");
+                .contains("fetchApiSpecCustomerOrders", "fetchApiSpecOrderPayments");
             assertThat(dependencyNamesOf("verifyApiSpec"))
-                .contains("verifyApiSpecUserAccount", "verifyApiSpecAuthServer");
+                .contains("verifyApiSpecCustomerOrders", "verifyApiSpecOrderPayments");
         }
     }
 
@@ -208,7 +208,7 @@ class ApiOnlySubscriberPluginTest {
         @DisplayName("the fetched directory becomes a resource directory when java is applied")
         void registersResourceDirectory() {
             project.getPlugins().apply("java");
-            Subscription subscription = subscribe("user-account", "1.0.0");
+            Subscription subscription = subscribe("customer-orders", "1.0.0");
 
             SourceSet main = project.getExtensions().getByType(JavaPluginExtension.class)
                 .getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
@@ -221,16 +221,16 @@ class ApiOnlySubscriberPluginTest {
         @DisplayName("processResources waits for the fetch")
         void processResourcesDependsOnFetch() {
             project.getPlugins().apply("java");
-            subscribe("user-account", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
 
-            assertThat(dependencyNamesOf("processResources")).contains("fetchApiSpecUserAccount");
+            assertThat(dependencyNamesOf("processResources")).contains("fetchApiSpecCustomerOrders");
         }
 
         @Test
         @DisplayName("check fails the build on drift, without anyone remembering to ask")
         void checkDependsOnVerify() {
             project.getPlugins().apply("base");
-            subscribe("user-account", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
 
             assertThat(dependencyNamesOf("check")).contains("verifyApiSpec");
         }
@@ -238,9 +238,9 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("works without the java plugin at all")
         void javaIsOptional() {
-            subscribe("user-account", "1.0.0");
+            subscribe("customer-orders", "1.0.0");
 
-            assertThat(project.getTasks().findByName("fetchApiSpecUserAccount")).isNotNull();
+            assertThat(project.getTasks().findByName("fetchApiSpecCustomerOrders")).isNotNull();
             assertThat(project.getPlugins().hasPlugin("java")).isFalse();
         }
     }

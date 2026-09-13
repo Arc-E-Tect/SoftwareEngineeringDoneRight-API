@@ -4,10 +4,10 @@
 //
 // The problem it solves is real and easy to miss. A fragment library is one $ref
 // graph, and that graph does not respect the directory boundaries a repository
-// split would follow. In this library the AsyncAPI event schemas reuse
-// `openapi/components/common/schemas/UsernameV1.yaml`, so a username means the
-// same thing over Kafka as over HTTP. Move the two trees into separate
-// repositories as they stand and every one of those references dangles.
+// split would follow. An AsyncAPI event schema that reuses an OpenAPI common
+// schema -- a username, say -- means the same thing over a message broker as over
+// HTTP, and that reuse is a reference across the two trees. Move the trees into
+// separate repositories as they stand and every such reference dangles.
 //
 // `split` resolves each part's dependency closure and materialises it whole:
 // each part gets its own subtree *plus* a copy of every foreign file it reaches,

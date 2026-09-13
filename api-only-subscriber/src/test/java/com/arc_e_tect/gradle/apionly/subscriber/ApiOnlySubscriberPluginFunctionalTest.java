@@ -80,7 +80,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
                     type = 'file'
                     directory = '%s'
                 }
-                subscribe('user-account') {
+                subscribe('customer-orders') {
                     version = '%s'
                     %s
                 }
@@ -118,7 +118,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
     }
 
     private Path fetched(String name) {
-        return projectDir.resolve("build/api-spec/user-account").resolve(name);
+        return projectDir.resolve("build/api-spec/customer-orders").resolve(name);
     }
 
     private String lockfile() throws IOException {
@@ -134,14 +134,14 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("registers an aggregate task and a per-target task for each subscription")
         void registersTasks() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
 
             BuildResult result = runner("tasks", "--group", "api-only").build();
 
             assertThat(result.getOutput())
                 .contains("fetchApiSpec")
-                .contains("fetchApiSpecUserAccount");
+                .contains("fetchApiSpecCustomerOrders");
         }
 
         @Test
@@ -170,20 +170,20 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("verifyApiSpec is wired into check, so drift fails an ordinary build")
         void verifyRunsAsPartOfCheck() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
 
             BuildResult result = runner("check").build();
 
-            assertThat(result.task(":verifyApiSpecUserAccount")).isNotNull();
-            assertThat(result.task(":verifyApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(result.task(":verifyApiSpecCustomerOrders")).isNotNull();
+            assertThat(result.task(":verifyApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         }
 
         @Test
         @DisplayName("the fetched document reaches the classpath without living under src/")
         void fetchedDocumentIsAResource() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
 
             runner("processResources").build();
@@ -199,7 +199,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
             // read the directory before anything has populated it. Gradle rejects
             // that outright, which is the whole reason the documents are exposed as
             // providers derived from the fetch task.
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", "") + """
 
                 abstract class ConsumeContract extends DefaultTask {
@@ -208,13 +208,13 @@ class ApiOnlySubscriberPluginFunctionalTest {
                 }
 
                 tasks.register('consumeContract', ConsumeContract) {
-                    contract = apiOnlySubscriber.subscription('user-account').openapi
+                    contract = apiOnlySubscriber.subscription('customer-orders').openapi
                 }
                 """);
 
             BuildResult result = runner("consumeContract").build();
 
-            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(result.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
             assertThat(result.getOutput()).contains("read openapi.yaml");
         }
     }
@@ -226,16 +226,16 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("unpacks into build/, and records what it unpacked")
         void fetchWritesDocumentsAndLockfile() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
 
             BuildResult result = runner("fetchApiSpec").build();
 
-            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(result.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
             assertThat(fetched("openapi.yaml")).exists();
             assertThat(fetched("manifest.json")).exists();
             assertThat(lockfile())
-                .contains("target user-account")
+                .contains("target customer-orders")
                 .contains("version 1.0.0")
                 .contains("channel file")
                 .contains("openapi.yaml");
@@ -244,19 +244,19 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("is up to date on a second run")
         void fetchIsUpToDate() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
 
             BuildResult second = runner("fetchApiSpec").build();
 
-            assertThat(second.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+            assertThat(second.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
         }
 
         @Test
         @DisplayName("refuses a pre-release version unless the subscription opts in")
         void prereleaseIsRefusedByDefault() throws Exception {
-            publish("user-account", "1.1.0-rc.1", OPENAPI);
+            publish("customer-orders", "1.1.0-rc.1", OPENAPI);
             buildFile(subscribingBuild("1.1.0-rc.1", ""));
 
             BuildResult result = runner("fetchApiSpec").buildAndFail();
@@ -269,27 +269,27 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("accepts a pre-release when the subscription opts in")
         void prereleaseIsAllowedWhenOptedIn() throws Exception {
-            publish("user-account", "1.1.0-rc.1", OPENAPI);
+            publish("customer-orders", "1.1.0-rc.1", OPENAPI);
             buildFile(subscribingBuild("1.1.0-rc.1", "allowPrerelease = true"));
 
             BuildResult result = runner("fetchApiSpec").build();
 
-            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(result.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         }
 
         @Test
         @DisplayName("refuses an archive whose contents do not match its own manifest")
         void archiveMustMatchItsOwnManifest() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             // Repack the archive with a document the manifest no longer describes.
             Path tampered = Files.createTempDirectory("tampered");
             Process untar = new ProcessBuilder("tar", "-xzf",
-                channelDir.resolve("user-account/1.0.0/user-account-1.0.0.tgz").toString())
+                channelDir.resolve("customer-orders/1.0.0/customer-orders-1.0.0.tgz").toString())
                 .directory(tampered.toFile()).inheritIO().start();
             assertThat(untar.waitFor()).isZero();
             Files.writeString(tampered.resolve("openapi.yaml"), OPENAPI + "# tampered\n");
             Process retar = new ProcessBuilder("tar", "-czf",
-                channelDir.resolve("user-account/1.0.0/user-account-1.0.0.tgz").toString(),
+                channelDir.resolve("customer-orders/1.0.0/customer-orders-1.0.0.tgz").toString(),
                 "openapi.yaml", "manifest.json")
                 .directory(tampered.toFile()).inheritIO().start();
             assertThat(retar.waitFor()).isZero();
@@ -303,12 +303,12 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("refuses to re-lock when a version is republished with different bytes")
         void aRepublishedVersionIsRefused() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
 
             // The same version, published to the file channel again with different content.
-            publish("user-account", "1.0.0", OPENAPI + "# a server added after 1.0.0\n");
+            publish("customer-orders", "1.0.0", OPENAPI + "# a server added after 1.0.0\n");
 
             BuildResult result = runner("fetchApiSpec", "--rerun-tasks").buildAndFail();
 
@@ -325,8 +325,8 @@ class ApiOnlySubscriberPluginFunctionalTest {
             // build does. Its gradle.properties is visible to that project only:
             // providers.gradleProperty(...) does not see it, which is what this proves
             // the plugin does not rely on.
-            publish("user-account", "1.0.0", OPENAPI);
-            publish("user-account", "2.0.0", OPENAPI.replace("version: 1.0.0", "version: 2.0.0"));
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("customer-orders", "2.0.0", OPENAPI.replace("version: 1.0.0", "version: 2.0.0"));
             Files.writeString(projectDir.resolve("settings.gradle"), "rootProject.name = 'consumer'\ninclude 'svc'\n");
             Path svc = Files.createDirectories(projectDir.resolve("svc"));
             Files.writeString(svc.resolve("gradle.properties"), "apiContractVersion=1.0.0\n");
@@ -341,7 +341,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
                         type = 'file'
                         directory = '%s'
                     }
-                    subscribe('user-account')
+                    subscribe('customer-orders')
                 }
                 """.formatted(channelDir.toString().replace("\\", "\\\\")));
 
@@ -350,7 +350,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
             BuildResult upgraded =
                 runner(":svc:fetchApiSpec", "--configuration-cache", "-PapiContractVersion=2.0.0").build();
-            assertThat(upgraded.getOutput()).contains("Updated user-account from 1.0.0 to 2.0.0");
+            assertThat(upgraded.getOutput()).contains("Updated customer-orders from 1.0.0 to 2.0.0");
         }
 
         @Test
@@ -359,16 +359,16 @@ class ApiOnlySubscriberPluginFunctionalTest {
             // A library and its consumers can share one build: a task publishes to the
             // file channel, and the fetch depends on it. Planning must not require the
             // archive before that task has run.
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             Path staged = Files.createTempDirectory("api-only-staged");
-            Files.move(channelDir.resolve("user-account"), staged.resolve("user-account"));
+            Files.move(channelDir.resolve("customer-orders"), staged.resolve("customer-orders"));
             buildFile(subscribingBuild("1.0.0", "") + """
 
                 def publishContract = tasks.register('publishContract', Copy) {
                     from '%s'
                     into '%s'
                 }
-                tasks.named('fetchApiSpecUserAccount') { dependsOn publishContract }
+                tasks.named('fetchApiSpecCustomerOrders') { dependsOn publishContract }
                 """.formatted(
                     staged.toString().replace("\\", "\\\\"),
                     channelDir.toString().replace("\\", "\\\\")));
@@ -376,36 +376,36 @@ class ApiOnlySubscriberPluginFunctionalTest {
             BuildResult result = runner("fetchApiSpec", "--configuration-cache").build();
 
             assertThat(result.task(":publishContract").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-            assertThat(lockfile()).contains("user-account");
+            assertThat(result.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(lockfile()).contains("customer-orders");
         }
 
         @Test
         @DisplayName("a version the file channel does not hold fails the fetch, naming the versions it does")
         void missingVersionNamesPublishedOnes() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("2.0.0", ""));
 
             BuildResult result = runner("fetchApiSpec").buildAndFail();
 
-            assertThat(result.task(":fetchApiSpecUserAccount").getOutcome()).isEqualTo(TaskOutcome.FAILED);
+            assertThat(result.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.FAILED);
             assertThat(result.getOutput())
-                .contains("no archive for 'user-account' 2.0.0")
-                .contains("Published versions of 'user-account': 1.0.0.");
+                .contains("no archive for 'customer-orders' 2.0.0")
+                .contains("Published versions of 'customer-orders': 1.0.0.");
         }
 
         @Test
         @DisplayName("a deliberate upgrade updates the lock rather than failing")
         void upgradingVersionRelocks() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
 
-            publish("user-account", "1.1.0", OPENAPI + "# genuinely new\n");
+            publish("customer-orders", "1.1.0", OPENAPI + "# genuinely new\n");
             buildFile(subscribingBuild("1.1.0", ""));
             BuildResult result = runner("fetchApiSpec").build();
 
-            assertThat(result.getOutput()).contains("Updated user-account from 1.0.0 to 1.1.0");
+            assertThat(result.getOutput()).contains("Updated customer-orders from 1.0.0 to 1.1.0");
             assertThat(lockfile()).contains("version 1.1.0");
         }
     }
@@ -417,7 +417,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("fails when a fetched document is edited by hand")
         void handEditIsCaught() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
 
@@ -436,14 +436,14 @@ class ApiOnlySubscriberPluginFunctionalTest {
             // If verify depended on fetch, the edit above would be overwritten
             // before the check ran and the build would go green -- hiding exactly
             // the drift the task exists to report.
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
             Files.writeString(fetched("openapi.yaml"), OPENAPI + "# somebody edited this\n");
 
             BuildResult result = runner("verifyApiSpec").buildAndFail();
 
-            assertThat(result.task(":fetchApiSpecUserAccount"))
+            assertThat(result.task(":fetchApiSpecCustomerOrders"))
                 .as("verify must not drag fetch into the graph")
                 .isNull();
         }
@@ -451,20 +451,20 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("says what to do when nothing has been fetched yet")
         void verifyBeforeAnyFetch() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
 
             BuildResult result = runner("verifyApiSpec").buildAndFail();
 
             assertThat(result.getOutput())
-                .contains("nothing has been fetched for 'user-account' yet")
+                .contains("nothing has been fetched for 'customer-orders' yet")
                 .contains("Run fetchApiSpec first");
         }
 
         @Test
         @DisplayName("says what to do when there is no lockfile at all")
         void missingLockEntryIsCaught() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
             runner("fetchApiSpec").build();
             Files.delete(projectDir.resolve("apionly.lock"));
@@ -484,7 +484,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("works with the configuration cache")
         void configurationCacheIsSupported() throws Exception {
-            publish("user-account", "1.0.0", OPENAPI);
+            publish("customer-orders", "1.0.0", OPENAPI);
             buildFile(subscribingBuild("1.0.0", ""));
 
             runner("fetchApiSpec", "--configuration-cache").build();

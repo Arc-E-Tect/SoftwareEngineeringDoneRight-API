@@ -2,9 +2,9 @@
 
 [plugins]
 
-owasp-dependency-check-iff = { id = "org.owasp.dependencycheck", version.ref = "owasp-dependency-check-iff" }
+owasp-dependency-check = { id = "org.owasp.dependencycheck", version.ref = "owasp-dependency-check" }
 
 [versions]
 
-owasp-dependency-check-iff = "13.0.0"
+owasp-dependency-check = "13.0.0"
 

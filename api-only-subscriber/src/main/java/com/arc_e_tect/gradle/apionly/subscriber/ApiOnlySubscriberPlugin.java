@@ -24,7 +24,7 @@ import java.util.Locale;
  * classpath -- without the project holding a copy of anything the specification
  * library owns.
  *
- * The question the API-Only Suite answers changes as a result. It stops being
+ * The question an implementation's build answers changes as a result. It stops being
  * "does this implementation match this file that happens to sit in src/?" and
  * becomes "does this implementation match the organisation's published contract,
  * at version X?"

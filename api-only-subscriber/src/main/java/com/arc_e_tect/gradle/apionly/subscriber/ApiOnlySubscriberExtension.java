@@ -18,7 +18,7 @@ import javax.inject.Inject;
  *         type = 'maven'
  *         groupId = 'com.example.contracts'
  *     }
- *     subscribe('user-account') {
+ *     subscribe('customer-orders') {
  *         version = '2.1.0'
  *     }
  * }
@@ -93,7 +93,7 @@ public abstract class ApiOnlySubscriberExtension {
      * Declares a subscription and configures it.
      *
      * <pre>{@code
-     * subscribe('user-account') {
+     * subscribe('customer-orders') {
      *     version = '2.1.0'
      * }
      * }</pre>
@@ -129,8 +129,8 @@ public abstract class ApiOnlySubscriberExtension {
      * into whatever consumes them.
      *
      * <pre>{@code
-     * apiOnlySuite {
-     *     rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+     * openApiGenerate {
+     *     inputSpec = apiOnlySubscriber.subscription('customer-orders').openapi.map { it.asFile.path }
      * }
      * }</pre>
      *
@@ -173,7 +173,7 @@ public abstract class ApiOnlySubscriberExtension {
      * <pre>{@code
      * apiOnlySubscriber {
      *     version = '2.1.0'
-     *     subscribe('user-account')
+     *     subscribe('customer-orders')
      * }
      * }</pre>
      *

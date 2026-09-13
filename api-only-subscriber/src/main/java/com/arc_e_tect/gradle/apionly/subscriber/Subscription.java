@@ -17,7 +17,7 @@ import javax.inject.Inject;
  *
  * <pre>{@code
  * apiOnlySubscriber {
- *     subscribe('user-account') {
+ *     subscribe('customer-orders') {
  *         version = '2.1.0'
  *     }
  * }
@@ -118,7 +118,7 @@ public abstract class Subscription {
      * one. Opting in is a visible, reviewable line in a build file:</p>
      *
      * <pre>{@code
-     * subscribe('user-account') {
+     * subscribe('customer-orders') {
      *     version = '2.1.0-rc.1'
      *     allowPrerelease = true
      * }
@@ -177,8 +177,8 @@ public abstract class Subscription {
      * dependency on the fetch travels with it:</p>
      *
      * <pre>{@code
-     * apiOnlySuite {
-     *     rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+     * openApiGenerate {
+     *     inputSpec = apiOnlySubscriber.subscription('customer-orders').openapi.map { it.asFile.path }
      * }
      * }</pre>
      *

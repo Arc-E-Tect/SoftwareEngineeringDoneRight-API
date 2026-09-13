@@ -2,21 +2,17 @@
 
 // Placeholder substitution.
 //
-// Absorbed from sedr_utils/openapi/prep_openapi's preprocess_openapi.js, with
-// three defects fixed rather than inherited:
+// A {{token}} in a staged YAML file is replaced by the contents of <token>.md.
+// Three choices here are deliberate:
 //
-//   1. Search scope. The original searched for <placeholder>.md recursively
-//      downward from the *input file's own directory*, never from the -d
-//      argument the caller passed. The workaround was to move the Markdown
-//      files next to whatever referenced them, and the gotcha had to be
-//      documented. The search root is now a parameter, defaulting to the source
-//      root the caller actually named.
-//   2. Failure mode. A missing Markdown file produced a warning and the literal
-//      string *MISSING CONTENT* in the output, so a broken document shipped from
-//      a green build. Unresolved placeholders are now an error by default.
-//   3. Token grammar. The pattern \{\{(\w+)\}\} silently excluded '-' and '.'
-//      from placeholder names, so {{status-codes}} was left in the output rather
-//      than reported. The grammar now admits them.
+//   1. Search scope. <token>.md is searched for from the root the caller names,
+//      the staged source root by default, not from the directory of the file
+//      holding the token, so a snippet can live anywhere under that root.
+//   2. Failure mode. An unresolved placeholder is an error by default. Leaving a
+//      marker in the document and carrying on would let a broken contract ship
+//      from a green build.
+//   3. Token grammar. Names may contain '-' and '.', so {{status-codes}} is a
+//      placeholder like any other, never text silently left in the output.
 
 const fs = require("fs");
 const path = require("path");
@@ -103,9 +99,8 @@ function substitute(text, { searchRoot, strict = true, describeAs = "input" } = 
 }
 
 /**
- * Substitute a file in place. Unlike the tool this replaces, nothing named
- * merged_* is left behind: the file is rewritten where it stands, which is safe
- * because it is always a staged copy.
+ * Substitute a file in place. The file is rewritten where it stands and nothing
+ * is written beside it, which is safe because it is always a staged copy.
  */
 function substituteFile(file, options) {
     const before = fs.readFileSync(file, "utf8");
