@@ -76,7 +76,7 @@ The plugin is compatible with Gradle's configuration cache.
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 ----
 
@@ -85,7 +85,7 @@ plugins {
 ----
 plugins {
     java
-    id("com.arc-e-tect.api-only-subscriber") version "0.1.0"
+    id("com.arc-e-tect.api-only-subscriber") version "0.2.0"
 }
 ----
 
@@ -418,7 +418,7 @@ include 'orders', 'payments'
 [source,groovy]
 ----
 plugins {
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0' apply false
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0' apply false
 }
 ----
 
@@ -560,7 +560,7 @@ Both are needed, and only the second catches a hand-edited document sitting in `
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 
 repositories {

@@ -20,7 +20,7 @@ This document explains how the two tools fit together: which of their settings, 
 It is written to be read front to back by a person, and to be looked up section by section by a person or an AI assistant working on either tool.
 Every correspondence between the two tools, every Subscriber task and every check is listed; the tools' READMEs list each tool's remaining options.
 
-It describes API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0.
+It describes API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
 
 [#at-a-glance]
 == At a glance

@@ -19,7 +19,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 This tutorial sets up client use case 3 from nothing: a Gradle project, `storefront`, in its own repository, that calls the `orders` API released by a `contracts` repository you can check out.
 The `contracts` repository is the one link:../../provider/3-specification-library-in-its-own-repository/tutorial.adoc[provider use case 3's tutorial →] builds; this tutorial uses it as that tutorial leaves it, with `orders` 1.1.0 released and a `file` channel added in its step 13.
 
-Every file and every command below was run exactly as shown, with API-Only Subscriber 0.2.0 and API-Only Publisher 0.2.0.
+Every file and every command below was run exactly as shown, with API-Only Subscriber 0.2.0 and API-Only Publisher 0.3.0.
 Only the repository differs: the run used the `contracts` repository's Maven repository on disk, which takes no credentials.
 
 [#before-you-start]

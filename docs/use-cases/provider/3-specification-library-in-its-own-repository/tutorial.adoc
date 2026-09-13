@@ -18,7 +18,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 
 This tutorial builds provider use case 3 from nothing, on both sides.
 First a `contracts` repository that releases two contracts, `orders` and `payments`, to a Maven repository; then an implementing project in another repository that builds against one of them.
-Every file, command and script below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0, against a Maven repository on disk.
+Every file, command and script below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0, against a Maven repository on disk.
 What was not run is the part a remote Maven repository adds: the upload with a token in step 8, and resolving with credentials in step 12.
 Step 8 says what to check there.
 
@@ -80,7 +80,7 @@ The values used below:
 
 [source,console]
 ----
-npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
 ----
 
 Add `node_modules/` and `build/` to `.gitignore`, and commit `package.json` and `package-lock.json`.
@@ -151,7 +151,7 @@ extends:
   - recommended
 ----
 
-Keep it outside `specs/`: the lint also fails on any YAML file under the fragments' root that no contract references, and a Redocly configuration there is exactly such a file.
+The lint also fails on any YAML file under `specs/` that no contract references; a lint tool's configuration file is not such a fragment, and is skipped wherever it sits.
 
 [#step-4]
 === Step 4: Give each contract a version
@@ -558,7 +558,7 @@ Add the plugin, the repository and the subscription to `build.gradle`:
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 
 repositories {

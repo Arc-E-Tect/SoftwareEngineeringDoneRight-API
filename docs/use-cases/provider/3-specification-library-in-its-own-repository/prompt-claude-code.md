@@ -38,13 +38,13 @@ When we are done:
 - **Credentials come only from the environment.** `apionly.yaml` names the variable, never its value.
 - **Pin everything**: the Publisher, and the bundler versions under `toolchain`.
 
-## Facts: API-Only Publisher 0.2.0
+## Facts: API-Only Publisher 0.3.0
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.2.0`.
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`.
   It needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`, and npm.
 - Install it as an exact dev dependency with an npm script:
   - `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`;
-  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0`;
+  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`;
   - commit `package-lock.json`, and ignore `node_modules/` and `build/`.
 - Run it **only** as `npm run apionly -- <command>`, and as `npm run --silent apionly -- <command>` whenever the output is captured.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
@@ -68,7 +68,7 @@ When we are done:
 - Commands:
   - `build [--target <t>] [--pre-release <ids>]`: stage, substitute `{{placeholders}}`, bundle, stamp the version, and lint.
   - `lint`: lint every built document, write a report per document, and fail on any YAML file under `sources.root` that no target references.
-    **So the Redocly configuration must live outside `sources.root`.**
+    Lint tools' configuration files, such as `.redocly.yaml`, and the lint configuration `apionly.yaml` names are not fragments, and are skipped wherever they sit.
   - `publish [--target <t>] [--pre-release <ids>] [--channel <c>]`: pack each built target with a `manifest.json` and ship the same bytes to every configured channel, or only to `--channel`.
     To a Maven repository it writes `<groupId path>/<artifactId>/<version>/<artifactId>-<version>.tgz`, `.pom` and `-manifest.json`.
   - `changed --since <git ref> --quiet`: the targets whose fragments changed since that ref, one per line.
@@ -137,7 +137,7 @@ Then present the plan and wait for my approval.
 1. Create `package.json`, install the Publisher, and ignore `node_modules/` and `build/`.
 2. Put the fragments under `specs/openapi/`: one bundle root per contract in `bundles/<target>.yaml`, shared fragments under `components/common/`.
    Every bundle root's `info` block needs a `version`.
-3. Create `.redocly.yaml` at the root, **not** under `specs/`, with `extends: [recommended]` unless there are existing rules.
+3. Create `.redocly.yaml` at the root, with `extends: [recommended]` unless there are existing rules.
 4. Create `specs/openapi/bundles/<target>.bundle.properties` for every contract.
 5. Create `apionly.yaml` with the targets, the pinned `toolchain`, and, **for now**, `channels.maven` with the agreed `groupId` and `repository: build/maven-repository`.
 

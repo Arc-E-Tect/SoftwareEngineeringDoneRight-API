@@ -71,7 +71,7 @@ If a build outside the repository ever needs a contract, publish to a registry a
 == Adoption in broad strokes
 
 . **Create the library** in its own directory, `contracts/`, with a `package.json` that pins the Publisher and an `apionly` npm script.
-. **Lay out the fragments** under `contracts/specs/`: one bundle root per contract, shared fragments under `components/common/`, and the Redocly lint configuration beside `apionly.yaml`, outside the fragments.
+. **Lay out the fragments** under `contracts/specs/`: one bundle root per contract, shared fragments under `components/common/`, and the Redocly lint configuration beside `apionly.yaml`.
 . **Give each contract a version** in `<target>.bundle.properties`, beside its bundle root.
 . **Describe the build** in `contracts/apionly.yaml`: the targets, the output directories under `contracts/build/`, the pinned bundler, and a `file` channel that publishes into `contracts/build/`.
 . **Name each project after the contract it implements**, and declare the version it implements as `apiContractVersion` in the project's own `gradle.properties`.

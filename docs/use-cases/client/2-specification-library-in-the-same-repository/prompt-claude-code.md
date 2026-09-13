@@ -36,9 +36,9 @@ When we are done, `./gradlew check`:
 - **Nothing generated is committed**, and fetched documents are never edited or copied.
 - **Pin everything**: the Publisher exactly, and the bundler under `toolchain`.
 
-## Facts: API-Only Publisher 0.2.0
+## Facts: API-Only Publisher 0.3.0
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.2.0`, installed in `contracts/` with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0`, with `"scripts": { "apionly": "api-only-publisher" }` in `contracts/package.json`.
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`, installed in `contracts/` with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`, with `"scripts": { "apionly": "api-only-publisher" }` in `contracts/package.json`.
 - Run it only as `npm run apionly -- <command>` in `contracts/`; never `npx api-only-publisher`.
 - `contracts/apionly.yaml`: `sources.root: specs`, `sources.openapi: openapi`, `defaults.openapi.lint: .redocly.yaml` (the file beside `apionly.yaml`), `defaults.openapi.outputName: openapi.yaml`, `build.staging: build/staging`, `build.dist: build/dist`, `reports.lint: build/reports/lint`, `toolchain.redocly: "@redocly/cli@2.52.0"`, `channels.file.directory: build/publish` with `clean: true`, and `targets.<name>.openapi.bundle: bundles/<name>.yaml`.
 - Each contract's version is in `contracts/specs/openapi/bundles/<name>.bundle.properties` as `version=1.0.0`; the bundle root needs `info.version: 0.0.0`.

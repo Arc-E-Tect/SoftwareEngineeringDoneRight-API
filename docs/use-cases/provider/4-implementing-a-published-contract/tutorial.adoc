@@ -17,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial sets up provider use case 4 from nothing: a Gradle project, `orders-service`, that implements version 1.1.0 of an `orders` contract another team publishes to a Maven repository.
-Every file and every command below was run exactly as shown, with API-Only Subscriber 0.1.0, against archives produced by API-Only Publisher 0.2.0.
+Every file and every command below was run exactly as shown, with API-Only Subscriber 0.2.0, against archives produced by the API-Only Publisher.
 Only the repository differs: the run used a Maven repository on disk, which takes no credentials.
 
 It assumes you know how to design an API in OpenAPI and how a Gradle project resolves dependencies.
@@ -145,7 +145,7 @@ Change `build.gradle`:
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 
 repositories {
@@ -225,10 +225,10 @@ In CI, the same two properties as environment variables: `ORG_GRADLE_PROJECT_api
 ----
 > Task :fetchApiSpecOrders
 Subscribed to orders 1.1.0
-> Task :verifyApiSpecOrders
-> Task :verifyApiSpec
 > Task :processResources
 > Task :test
+> Task :verifyApiSpecOrders
+> Task :verifyApiSpec
 > Task :check
 
 BUILD SUCCESSFUL
