@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,11 +83,15 @@ class FetchApiSpecTaskTest {
     }
 
     private FetchApiSpecTask task(String target, String version, Path archive) {
+        return task(target, version, archive, "file");
+    }
+
+    private FetchApiSpecTask task(String target, String version, Path archive, String channel) {
         FetchApiSpecTask task = project.getTasks().create("fetch" + target, FetchApiSpecTask.class);
         task.getArchive().setFrom(archive.toFile());
         task.getTarget().set(target);
         task.getVersion().set(version);
-        task.getChannel().set("file");
+        task.getChannel().set(channel);
         task.getInto().set(projectDir.resolve("build/api-spec/" + target).toFile());
         task.getLockfile().set(projectDir.resolve("apionly.lock").toFile());
         return task;
@@ -125,7 +130,7 @@ class FetchApiSpecTaskTest {
     }
 
     @Test
-    @DisplayName("refuses an archive whose manifest names a different version")
+    @DisplayName("refuses a file-channel archive whose manifest names a different version, as a hand edit")
     void versionMismatch() throws Exception {
         Map<String, String> documents = oneDocument();
         Path tgz = archive("svc", "1.0.0", documents, manifestFor("svc", "2.0.0", null, documents));
@@ -133,7 +138,64 @@ class FetchApiSpecTaskTest {
         assertThatThrownBy(() -> task("svc", "1.0.0", tgz).fetch())
             .isInstanceOf(GradleException.class)
             .hasMessageContaining("declares version 2.0.0")
+            .hasMessageContaining("copied or renamed there by hand")
+            .hasMessageNotContaining("tag was moved");
+    }
+
+    @Test
+    @DisplayName("refuses a maven-channel archive whose manifest names a different version, as a moved release")
+    void versionMismatchOverMaven() throws Exception {
+        Map<String, String> documents = oneDocument();
+        Path tgz = archive("svc", "1.0.0", documents, manifestFor("svc", "2.0.0", null, documents));
+
+        assertThatThrownBy(() -> task("svc", "1.0.0", tgz, "maven").fetch())
+            .isInstanceOf(GradleException.class)
+            .hasMessageContaining("declares version 2.0.0")
             .hasMessageContaining("A published version was rebuilt, or a tag was moved");
+    }
+
+    @Test
+    @DisplayName("a file-channel archive that is not there fails the fetch, naming the versions that are")
+    void missingArchiveNamesPublishedVersions() throws Exception {
+        Path channel = archives.resolve("channel");
+        for (String published : List.of("0.9.0", "1.10.0", "1.9.0")) {
+            Path dir = Files.createDirectories(channel.resolve("svc").resolve(published));
+            Files.writeString(dir.resolve("svc-" + published + ".tgz"), "never unpacked");
+        }
+        // Neither is a published version: a directory holding no archive, and a stray file.
+        Files.createDirectories(channel.resolve("svc/2.0.0"));
+        Files.writeString(channel.resolve("svc/README"), "not a version");
+        Path missing = channel.resolve("svc/1.0.0/svc-1.0.0.tgz");
+
+        assertThatThrownBy(() -> task("svc", "1.0.0", missing).fetch())
+            .isInstanceOf(GradleException.class)
+            .hasMessageContaining("no archive for 'svc' 1.0.0 at ")
+            .hasMessageContaining("svc-1.0.0.tgz")
+            .hasMessageContaining("Published versions of 'svc': 0.9.0, 1.9.0, 1.10.0.");
+        assertThat(projectDir.resolve("apionly.lock")).doesNotExist();
+    }
+
+    @Test
+    @DisplayName("a file-channel archive for a target nothing was published for says so")
+    void missingArchiveNothingPublished() {
+        Path missing = archives.resolve("channel/svc/1.0.0/svc-1.0.0.tgz");
+
+        assertThatThrownBy(() -> task("svc", "1.0.0", missing).fetch())
+            .isInstanceOf(GradleException.class)
+            .hasMessageContaining("no archive for 'svc' 1.0.0 at ")
+            .hasMessageContaining("Nothing is published for 'svc' in ");
+    }
+
+    @Test
+    @DisplayName("a missing archive from another channel is reported without a listing")
+    void missingArchiveOverMaven() {
+        Path missing = archives.resolve("cache/svc-1.0.0.tgz");
+
+        assertThatThrownBy(() -> task("svc", "1.0.0", missing, "maven").fetch())
+            .isInstanceOf(GradleException.class)
+            .hasMessageContaining("no archive for 'svc' 1.0.0 at ")
+            .hasMessageNotContaining("Published versions")
+            .hasMessageNotContaining("Nothing is published");
     }
 
     @Test
@@ -163,7 +225,7 @@ class FetchApiSpecTaskTest {
     }
 
     @Test
-    @DisplayName("refuses a released version that comes back with different bytes")
+    @DisplayName("refuses a file-channel version republished with different bytes, saying how to resolve it")
     void relockRefused() throws Exception {
         Map<String, String> first = oneDocument();
         task("svc", "1.0.0", archive("svc", "1.0.0", first, manifestFor("svc", "1.0.0", null, first))).fetch();
@@ -176,7 +238,28 @@ class FetchApiSpecTaskTest {
         assertThatThrownBy(() -> task("svc", "1.0.0", tampered).fetch())
             .isInstanceOf(GradleException.class)
             .hasMessageContaining("is not the one recorded in apionly.lock")
-            .hasMessageContaining("openapi.yaml differs");
+            .hasMessageContaining("openapi.yaml differs")
+            .hasMessageContaining("1.0.0 was published to the file channel again, with different content")
+            .hasMessageContaining("publish it as a new version")
+            .hasMessageNotContaining("tag was moved");
+    }
+
+    @Test
+    @DisplayName("refuses a maven-channel release that comes back with different bytes, as a moved release")
+    void relockRefusedOverMaven() throws Exception {
+        Map<String, String> first = oneDocument();
+        task("svc", "1.0.0", archive("svc", "1.0.0", first, manifestFor("svc", "1.0.0", null, first)), "maven")
+            .fetch();
+
+        Map<String, String> changed = new LinkedHashMap<>();
+        changed.put("openapi.yaml", OPENAPI + "# republished\n");
+        Path tampered = archive("svc", "1.0.0", changed, manifestFor("svc", "1.0.0", null, changed));
+
+        project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        assertThatThrownBy(() -> task("svc", "1.0.0", tampered, "maven").fetch())
+            .isInstanceOf(GradleException.class)
+            .hasMessageContaining("is not the one recorded in apionly.lock")
+            .hasMessageContaining("A released version was rebuilt, or a tag was moved");
     }
 
     @Test

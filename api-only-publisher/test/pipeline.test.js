@@ -12,7 +12,7 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const { load } = require("../src/config");
-const { forTargets } = require("../src/closure");
+const { forTargets, ClosureError } = require("../src/closure");
 const { prepare } = require("../src/pipeline");
 const { pack, manifest } = require("../src/pack");
 const { publish } = require("../src/channels");
@@ -140,6 +140,17 @@ test("a change to a fragment only one target reaches moves only that target's ha
     assert.strictEqual(before.get("beta").sha256, after.get("beta").sha256);
 });
 
+test("a closure restricted to some targets never reads the others' bundle roots", () => {
+    // pack and publish hash only what they ship, so a build of one target must not
+    // depend on every other target having been staged.
+    const config = library();
+    prepare(config, { kinds: ["openapi"] });
+    fs.rmSync(config.bundlePath("beta", "openapi"));
+
+    assert.throws(() => forTargets(config, ["openapi"]), (e) => e instanceof ClosureError);
+    assert.deepStrictEqual([...forTargets(config, ["openapi"], ["alpha"]).keys()], ["alpha"]);
+});
+
 // --------------------------------------------------------------- stamping
 
 test("stamping a file rewrites info.version and nothing else", () => {
@@ -237,6 +248,25 @@ test("the file channel lays out target and version directories", () => {
 
     assert.ok(published.location.endsWith(path.join("alpha", "1.0.0", "alpha-1.0.0.tgz")));
     assert.ok(fs.existsSync(path.join(path.dirname(published.location), "manifest.json")));
+});
+
+test("the file channel keeps a target's other versions, unless asked to clean them", () => {
+    const config = library();
+    const publishAs = (version, options) => {
+        built(config, "alpha", version);
+        const result = pack(config, "alpha", {
+            version, closureSha256: "x", outDir: path.join(config.root, "build/packages"),
+        });
+        return publish(result.archive, result.manifest, "file", { ...config.channels.file, ...options, baseDir: config.root });
+    };
+    const versions = () => fs.readdirSync(path.join(config.root, "build/publish/alpha")).sort();
+
+    publishAs("1.0.0", {});
+    publishAs("1.1.0", {});
+    assert.deepStrictEqual(versions(), ["1.0.0", "1.1.0"]);
+
+    publishAs("1.2.0", { clean: true });
+    assert.deepStrictEqual(versions(), ["1.2.0"]);
 });
 
 test("the maven channel writes a layout a resolver can read", () => {

@@ -40,6 +40,12 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
     /** The aggregate task that checks every fetched contract: {@value}. */
     public static final String VERIFY_TASK = "verifyApiSpec";
 
+    /** The DSL-updating task registered by this plugin. */
+    public static final String UPDATE_DSL_TASK = "updateApiOnlySubscriberDSL";
+
+    /** The project property {@code apiOnlySubscriber.version} defaults to: {@value}. */
+    public static final String CONTRACT_VERSION_PROPERTY = "apiContractVersion";
+
     /** Creates the plugin. Gradle instantiates this when the plugin is applied. */
     public ApiOnlySubscriberPlugin() {
         // Nothing to do: all configuration happens in apply(Project).
@@ -57,6 +63,17 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
             project.getExtensions().create(EXTENSION_NAME, ApiOnlySubscriberExtension.class);
 
         extension.getLockfile().convention(project.getLayout().getProjectDirectory().file("apionly.lock"));
+
+        // Read through the project, not providers.gradleProperty(...): that does not
+        // see a subproject's own gradle.properties, which is exactly where a service
+        // in a multi-project build keeps its version.
+        extension.getVersion().convention(project.provider(() -> {
+            Object version = project.findProperty(CONTRACT_VERSION_PROPERTY);
+            return version == null ? null : version.toString();
+        }));
+
+        project.getTasks().register(UPDATE_DSL_TASK, UpdateApiOnlySubscriberDslTask.class, task ->
+            task.getBuildFile().set(project.getLayout().file(project.provider(project::getBuildFile))));
 
         TaskProvider<?> fetchAll = project.getTasks().register(FETCH_TASK, task -> {
             task.setGroup("api-only");
@@ -87,6 +104,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
 
         subscription.getInto().convention(
             project.getLayout().getBuildDirectory().dir("api-spec/" + target));
+        subscription.getVersion().convention(extension.getVersion());
 
         ConfigurableFileCollection archive = project.getObjects().fileCollection();
         archive.from(project.provider(() -> resolveArchive(project, extension, subscription)));
@@ -151,7 +169,9 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         String target = subscription.getTarget();
         String version = subscription.getVersion().getOrElse(null);
         if (version == null) {
-            throw new GradleException("subscription '" + target + "' declares no version");
+            throw new GradleException("subscription '" + target + "' declares no version. Set version on the "
+                + "subscription, set version on apiOnlySubscriber for every subscription, or define the "
+                + CONTRACT_VERSION_PROPERTY + " project property.");
         }
         if (isPrerelease(version) && !subscription.getAllowPrerelease().get()) {
             throw new GradleException(
@@ -166,18 +186,17 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
             if (directory == null) {
                 throw new GradleException("the file channel requires channel.directory");
             }
+            // Where the archive belongs, not a check that it is there. This runs while
+            // the build is still being planned, and the same build may publish the
+            // archive in a task that runs before the fetch; FetchApiSpecTask checks for
+            // it when it runs.
             String artifactId = subscription.getArtifactId().getOrElse(target);
-            File archive = project.file(directory)
+            return project.file(directory)
                 .toPath()
                 .resolve(target)
                 .resolve(version)
                 .resolve(artifactId + "-" + version + ".tgz")
                 .toFile();
-            if (!archive.isFile()) {
-                throw new GradleException(
-                    "no archive for '" + target + "' " + version + " at " + archive);
-            }
-            return archive;
         }
 
         if (!"maven".equals(type)) {

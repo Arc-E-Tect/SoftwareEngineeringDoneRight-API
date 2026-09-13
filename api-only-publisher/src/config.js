@@ -92,6 +92,7 @@ function load(configPath) {
         defaults: parsed.defaults || {},
         toolchain: parsed.toolchain || {},
         build: parsed.build || {},
+        reports: parsed.reports || {},
         distribution: parsed.distribution || null,
         channels: parsed.channels || {},
         targets,
@@ -121,6 +122,10 @@ function load(configPath) {
             const lint = (this.defaults[kind] || {}).lint;
             return lint ? path.resolve(this.root, lint) : null;
         },
+        lintReport(target, kind) {
+            const reports = this.reports.lint || "build/reports/lint";
+            return path.resolve(this.root, reports, target, `${kind}.txt`);
+        },
         tool(name) {
             return requireString(this.toolchain[name], `toolchain.${name}`);
         },
@@ -135,6 +140,20 @@ function load(configPath) {
         },
         bundlePath(target, kind) {
             return path.join(this.stagingDir(kind), this.targets[target][kind].bundle);
+        },
+        // The file a target's version is read from: the target's own `versionFile`,
+        // relative to this configuration, or else <target>.bundle.properties beside
+        // the target's first bundle root in the hand-authored tree -- so a version
+        // sits with the fragments it describes, and changes in the same commit.
+        versionFile(target) {
+            const spec = this.targets[target];
+            if (spec.versionFile !== undefined) {
+                return path.resolve(this.root, requireString(spec.versionFile, `targets.${target}.versionFile`));
+            }
+            const kind = ["openapi", "asyncapi"].find((k) => spec[k]);
+            const bundleRoot = path.join(
+                this.sourceRoot(), requireString(this.sources[kind], `sources.${kind}`), spec[kind].bundle);
+            return path.join(path.dirname(bundleRoot), `${target}.bundle.properties`);
         },
         // Where a distributed document is copied to, from the transitional
         // `distribution` block. Null once that block is gone.

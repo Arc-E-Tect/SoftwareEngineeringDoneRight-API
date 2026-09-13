@@ -147,6 +147,12 @@ dist/
 node_modules/
 `;
 
+const VERSION = `# The version of the example-service contract, for every document it builds.
+# Semantic: major for a breaking change, minor for an additive one, patch for
+# anything else. Change it in the same commit as the fragments it describes.
+version=0.1.0
+`;
+
 const FILES = {
     "apionly.yaml": CONFIG,
     ".redocly.yaml": REDOCLY,
@@ -155,6 +161,7 @@ const FILES = {
     "specs/openapi/shared/conventions.md": CONVENTIONS,
     "specs/openapi/shared/servers.yaml": SERVERS,
     "specs/openapi/bundles/example-service_openapi_structure.yaml": BUNDLE,
+    "specs/openapi/bundles/example-service.bundle.properties": VERSION,
     "specs/openapi/paths/example/ExamplesV1.yaml": PATH_FRAGMENT,
     "specs/openapi/components/common/security/BearerAuth.yaml": SECURITY_SCHEME,
     "specs/openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml": PROBLEM,

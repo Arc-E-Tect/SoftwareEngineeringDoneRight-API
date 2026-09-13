@@ -27,6 +27,12 @@ function publishFile(archive, manifest, options, log) {
     // Relative to the library root, not to wherever the CLI happened to be run.
     const dir = path.resolve(options.baseDir || ".", options.directory || "publish");
     const targetDir = path.join(dir, manifest.target, manifest.version);
+    // `clean: true` keeps only the version being published. Used where the
+    // directory is a build output rather than a record of releases: an older
+    // version is published again from the commit that declared it.
+    if (options.clean === true) {
+        fs.rmSync(path.join(dir, manifest.target), { recursive: true, force: true });
+    }
     fs.mkdirSync(targetDir, { recursive: true });
 
     const archiveDest = path.join(targetDir, path.basename(archive));
