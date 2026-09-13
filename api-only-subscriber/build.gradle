@@ -97,6 +97,8 @@ tasks.named('jar') {
 }
 
 dependencies {
+    implementation libs.dsl.updater.core
+
     // TestKit runs the plugin through a real Gradle build. The unit tests below it
     // cover the pure logic -- hashing, the lockfile format, manifest parsing -- but
     // none of them apply the plugin, so none of them would notice a broken DSL, a

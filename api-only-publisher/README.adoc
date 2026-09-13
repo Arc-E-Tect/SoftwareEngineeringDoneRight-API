@@ -328,6 +328,8 @@ defaults:
 build:
   staging: build/staging
   dist: dist
+reports:
+  lint: build/reports/lint
 
 toolchain:
   redocly: "@redocly/cli@2.52.0"
@@ -411,6 +413,9 @@ layout. In order of what usually needs changing:
 |The lint rules
 |`defaults.openapi.lint`
 
+|Where lint reports go
+|`reports.lint`, defaulting to `build/reports/lint/<target>/<kind>.txt`
+
 |Where built documents go
 |`build.dist`, and `distribution` while it still exists
 
@@ -492,6 +497,18 @@ This half publishes; link:../api-only-subscriber/README.adoc[the Subscriber]
 fetches and verifies. They share one seam — an archive plus a `manifest.json` —
 and nothing else, which is why they can be versioned independently while living
 in one repository.
+
+This document is a reference for this half alone. For how the two are put
+together in a real project, see link:../docs/README.adoc[the manuals], which are
+organised by where the API descriptions live relative to the code that implements
+them: link:../docs/in-the-implementation-project.adoc[in the implementation
+project], link:../docs/elsewhere-in-the-repository.adoc[elsewhere in the same
+repository], link:../docs/in-its-own-repository.adoc[in a repository of their
+own]. The first uses only `build` and reads the result directly; the second
+publishes to the `file` channel, and the third to a registry. If you are
+replacing a script that copies a document into `src/main/resources`, start at
+link:../docs/migrating-a-checked-in-document.adoc[Migrating a checked-in
+document].
 
 == License
 

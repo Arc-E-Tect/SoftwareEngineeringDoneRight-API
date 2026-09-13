@@ -40,6 +40,9 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
     /** The aggregate task that checks every fetched contract: {@value}. */
     public static final String VERIFY_TASK = "verifyApiSpec";
 
+    /** The DSL-updating task registered by this plugin. */
+    public static final String UPDATE_DSL_TASK = "updateApiOnlySubscriberDSL";
+
     /** Creates the plugin. Gradle instantiates this when the plugin is applied. */
     public ApiOnlySubscriberPlugin() {
         // Nothing to do: all configuration happens in apply(Project).
@@ -57,6 +60,9 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
             project.getExtensions().create(EXTENSION_NAME, ApiOnlySubscriberExtension.class);
 
         extension.getLockfile().convention(project.getLayout().getProjectDirectory().file("apionly.lock"));
+
+        project.getTasks().register(UPDATE_DSL_TASK, UpdateApiOnlySubscriberDslTask.class, task ->
+            task.getBuildFile().set(project.getLayout().file(project.provider(project::getBuildFile))));
 
         TaskProvider<?> fetchAll = project.getTasks().register(FETCH_TASK, task -> {
             task.setGroup("api-only");

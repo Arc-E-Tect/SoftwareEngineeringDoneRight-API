@@ -200,11 +200,19 @@ Both the SemVer spelling (`-rc.1`, `-alpha.3`) and Maven's `-SNAPSHOT` count as 
 | `fetchApiSpec<Target>`       | api-only      | Fetches one subscribed contract, verifies it against the manifest inside its own archive, and records it in `apionly.lock`.
 | `verifyApiSpec`              | verification  | Checks every fetched contract against the lockfile. Aggregate over the per-target tasks.
 | `verifyApiSpec<Target>`      | verification  | Checks one fetched contract against the lockfile.
+| `updateApiOnlySubscriberDSL` | api only subscriber | Adds missing `apiOnlySubscriber` properties with their defaults to `build.gradle`.
 |===
 
 `<Target>` is the target name in camel case: `user-account` gives `fetchApiSpecUserAccount`.
 
 `verifyApiSpec` **is** wired into `check`, so contract drift fails an ordinary build rather than waiting for someone to look. `processResources` depends on the fetch, so a build that packages resources fetches them first.
+
+After upgrading the plugin, run `./gradlew updateApiOnlySubscriberDSL` to add any
+new defaulted properties to the existing `apiOnlySubscriber {}` block. The task
+backs up the original file as `build.gradle.bak`. If the block is absent, it
+leaves the file unchanged unless run with
+`--generateApiOnlySubscriberDSL`. Subscription targets and versions are never
+invented by the task.
 
 Running them explicitly:
 
@@ -339,6 +347,19 @@ apiOnlySuite {
 == A caution about `mavenLocal()`
 
 The local Maven repository is a convenient test harness, not a faithful model of a remote one: its metadata and snapshot-staleness behaviour differ. Confirm pre-release semantics against a real remote before relying on them.
+
+== Where to go next
+
+This document is a reference for this half alone. link:../docs/README.adoc[The
+manuals] cover using it together with the
+link:../api-only-publisher/README.adoc[Publisher], organised by where the API
+descriptions live.
+
+If a contract simply arrives at your build as an artifact and your only job is to
+consume it well, link:../docs/consuming-a-published-contract.adoc[Consuming a
+contract you do not own] is the one to read: it is this plugin on its own, start
+to finish. link:../docs/troubleshooting.adoc[Troubleshooting] lists the failures
+worth recognising on sight.
 
 == Relationship to the API-Only Suite
 

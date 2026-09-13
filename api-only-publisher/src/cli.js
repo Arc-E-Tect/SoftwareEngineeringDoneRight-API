@@ -139,7 +139,10 @@ async function main(argv) {
                         throw new BuildError(`${file} does not exist; run 'build' first`);
                     }
                     log(`=== ${target} (${kind}) ===`);
-                    lint(config, kind, file, log);
+                    lint(config, kind, file, log, {
+                        report: true,
+                        reportFile: config.lintReport(target, kind),
+                    });
                     linted += 1;
                 }
             }

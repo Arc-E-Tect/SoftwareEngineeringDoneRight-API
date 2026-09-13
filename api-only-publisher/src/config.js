@@ -92,6 +92,7 @@ function load(configPath) {
         defaults: parsed.defaults || {},
         toolchain: parsed.toolchain || {},
         build: parsed.build || {},
+        reports: parsed.reports || {},
         distribution: parsed.distribution || null,
         channels: parsed.channels || {},
         targets,
@@ -120,6 +121,10 @@ function load(configPath) {
         lintConfig(kind) {
             const lint = (this.defaults[kind] || {}).lint;
             return lint ? path.resolve(this.root, lint) : null;
+        },
+        lintReport(target, kind) {
+            const reports = this.reports.lint || "build/reports/lint";
+            return path.resolve(this.root, reports, target, `${kind}.txt`);
         },
         tool(name) {
             return requireString(this.toolchain[name], `toolchain.${name}`);

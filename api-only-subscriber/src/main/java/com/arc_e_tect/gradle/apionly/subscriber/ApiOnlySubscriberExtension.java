@@ -32,6 +32,9 @@ import javax.inject.Inject;
  */
 public abstract class ApiOnlySubscriberExtension {
 
+    /** The name used to register this extension in a consumer build. */
+    public static final String NAME = "apiOnlySubscriber";
+
     private final ChannelSpec channel;
     private final NamedDomainObjectContainer<Subscription> subscriptions;
 

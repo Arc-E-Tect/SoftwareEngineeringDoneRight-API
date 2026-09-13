@@ -12,11 +12,20 @@ const { generateAsyncApi, isAggregate } = require("./aggregate");
 
 class BuildError extends Error {}
 
-function run(command, args, { quiet }) {
+function run(command, args, { quiet, reportFile = null } = {}) {
     try {
         const out = execFileSync(command, args, { encoding: "utf8", stdio: quiet ? "pipe" : "inherit" });
+        if (reportFile) {
+            fs.mkdirSync(path.dirname(reportFile), { recursive: true });
+            fs.writeFileSync(reportFile, out);
+        }
         return out;
     } catch (error) {
+        const output = (error.stdout || "") + (error.stderr || "");
+        if (reportFile) {
+            fs.mkdirSync(path.dirname(reportFile), { recursive: true });
+            fs.writeFileSync(reportFile, output);
+        }
         throw new BuildError(
             `${command} ${args.join(" ")} failed` + (error.stdout ? `\n${error.stdout}` : "") +
             (error.stderr ? `\n${error.stderr}` : "")
@@ -91,13 +100,14 @@ function bundle(config, target, kind, outFile, log) {
     }
 }
 
-function lint(config, kind, file, log) {
+function lint(config, kind, file, log, { report = false, reportFile = null } = {}) {
     const tool = kind === "openapi" ? config.tool("redocly") : config.tool("asyncapi");
     const args = kind === "openapi"
         ? ["--yes", tool, "lint"].concat(config.lintConfig("openapi") ? ["--config", config.lintConfig("openapi")] : []).concat([file])
         : ["--yes", tool, "validate", file];
     log(`-- Validating ${path.basename(file)}`);
-    run("npx", args, { quiet: true });
+    const output = run("npx", args, { quiet: true, reportFile });
+    if (report && output.trim()) log(output.trimEnd());
 }
 
 /**

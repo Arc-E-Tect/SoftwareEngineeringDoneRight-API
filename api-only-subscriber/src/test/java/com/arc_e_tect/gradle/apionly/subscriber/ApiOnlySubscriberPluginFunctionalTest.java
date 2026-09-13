@@ -145,6 +145,19 @@ class ApiOnlySubscriberPluginFunctionalTest {
         }
 
         @Test
+        @DisplayName("updates missing defaulted DSL properties and keeps a backup")
+        void updatesDsl() throws Exception {
+            buildFile(subscribingBuild("1.0.0", ""));
+
+            BuildResult result = runner("updateApiOnlySubscriberDSL").build();
+
+            assertThat(result.getOutput()).contains("added 1 missing property");
+            assertThat(projectDir.resolve("build.gradle.bak")).exists();
+            assertThat(Files.readString(projectDir.resolve("build.gradle")))
+                .contains("lockfile = layout.projectDirectory.file('apionly.lock')");
+        }
+
+        @Test
         @DisplayName("a subscription with no version is refused, naming the subscription")
         void versionIsRequired() throws Exception {
             buildFile(subscribingBuild("1.0.0", "").replace("version = '1.0.0'", ""));
