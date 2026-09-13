@@ -2,9 +2,8 @@
 
 // Reading and validating apionly.yaml.
 //
-// The configuration is the single source of truth for what this library builds:
-// it replaced the per-script SERVICES arrays, and the `apis:` map that said an
-// overlapping thing under a different name.
+// The configuration is the single source of truth for what a library builds:
+// which targets exist, where their fragments live, and where each document goes.
 
 const fs = require("fs");
 const path = require("path");

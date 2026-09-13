@@ -73,3 +73,32 @@ test("Markdown snippets and version files are not fragments", () => {
     });
     assert.deepStrictEqual(unreferenced(config), []);
 });
+
+// apionly.yaml naming a lint configuration for each kind, both under the source root.
+const LINT_CONFIGS = CONFIG
+    .replace("    outputName: openapi.yaml\n", "    outputName: openapi.yaml\n    lint: specs/.redocly.yaml\n")
+    .replace("    outputName: asyncapi.yaml\n", "    outputName: asyncapi.yaml\n    lint: specs/asyncapi/lint.yml\n");
+
+test("the lint configurations apionly.yaml names are the Publisher's own files, not fragments, even under the source root", () => {
+    const config = library({
+        ...FILES,
+        "apionly.yaml": LINT_CONFIGS,
+        "specs/.redocly.yaml": "extends:\n  - recommended\n",
+        "specs/asyncapi/lint.yml": "rules: {}\n",
+    });
+    assert.deepStrictEqual(unreferenced(config), []);
+});
+
+test("lint tools' configuration files are not fragments, even when apionly.yaml does not name them", () => {
+    const config = library({
+        ...FILES,
+        "specs/redocly.yaml": "extends:\n  - recommended\n",
+        "specs/openapi/.redocly.yaml": "extends:\n  - recommended\n",
+        "specs/openapi/.redocly.lint-ignore.yaml": "{}\n",
+        "specs/asyncapi/.spectral.yaml": "extends: spectral:asyncapi\n",
+        "specs/.spectral.yml": "extends: spectral:oas\n",
+        // Recognised by name, not by resemblance: this one is a fragment nobody uses.
+        "specs/openapi/components/redocly-rules.yaml": "type: string\n",
+    });
+    assert.deepStrictEqual(unreferenced(config), ["openapi/components/redocly-rules.yaml"]);
+});

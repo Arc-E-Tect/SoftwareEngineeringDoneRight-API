@@ -2,12 +2,10 @@
 
 // Setting info.version on a bundled document.
 //
-// This replaces two different sed expressions, which between them differed per
-// specification type (OpenAPI quoted the version, AsyncAPI did not), did nothing
-// at all when the pattern missed, and could match a `version:` field elsewhere in
-// the document.
-//
-// The field is located structurally and only that one scalar is spliced. It is
+// A pattern-based substitution would have to differ per specification type,
+// would silently do nothing when its pattern missed, and could match a
+// `version:` field elsewhere in the document. So the field is located
+// structurally, and only that one scalar is spliced. It is
 // deliberately not a re-serialisation: re-emitting the document reformats
 // everything around the edit, because the AsyncAPI CLI wraps long descriptions at
 // a width no YAML emitter reproduces. Splicing keeps every other byte exactly as

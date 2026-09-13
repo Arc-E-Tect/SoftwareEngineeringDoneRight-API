@@ -26,11 +26,11 @@ class LockfileTest {
     void roundTripsAnEntry(@TempDir Path dir) {
         File file = dir.resolve("apionly.lock").toFile();
         Lockfile written = new Lockfile();
-        written.put(new Lockfile.Entry("user-account", "2.1.0", "maven",
+        written.put(new Lockfile.Entry("customer-orders", "2.1.0", "maven",
             files("openapi.yaml", "a".repeat(64), "asyncapi.yaml", "b".repeat(64))));
         written.write(file);
 
-        Lockfile.Entry read = Lockfile.read(file).get("user-account");
+        Lockfile.Entry read = Lockfile.read(file).get("customer-orders");
         assertNotNull(read);
         assertEquals("2.1.0", read.version());
         assertEquals("maven", read.channel());

@@ -1,0 +1,592 @@
+= How the API-Only Publisher and the API-Only Subscriber work together
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This document explains how the two tools fit together: which of their settings, commands, tasks and files correspond, what each check guarantees, and where in the code each part lives.
+It is written to be read front to back by a person, and to be looked up section by section by a person or an AI assistant working on either tool.
+Every correspondence between the two tools, every Subscriber task and every check is listed; the tools' READMEs list each tool's remaining options.
+
+It describes API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0.
+
+[#at-a-glance]
+== At a glance
+
+The Publisher turns a library of API description fragments into one bundled document per contract, stamps the contract's version into it, and ships it as an archive with a manifest of hashes.
+The Subscriber, in a consuming Gradle build, fetches that archive at the version the build declares, checks it against the manifest, records what it fetched in a lockfile, and verifies the documents against that lockfile afterwards.
+
+The two tools share exactly one thing: the archive and its manifest.
+Neither reads the other's configuration, and either can be replaced by anything that produces or reads the same archive.
+
+[source]
+----
+ Publisher (Node.js)                                    Subscriber (Gradle)
+ ──────────────────                                     ───────────────────
+ fragments + apionly.yaml + version file
+        │ build: stage, substitute, bundle, stamp, lint
+        ▼
+ bundled document(s)
+        │ publish: pack with manifest.json, ship to a channel
+        ▼
+ <target>-<version>.tgz  ─────── channel ───────▶  fetchApiSpec<Target>: resolve, check manifest, unpack, lock
+                          (a directory, or a                    │
+                           Maven repository)                    ▼
+                                                  build/api-spec/<target>/ + apionly.lock
+                                                                │ verifyApiSpec<Target>
+                                                                ▼
+                                                  documents still match the lock
+----
+
+[#vocabulary]
+== Vocabulary
+
+[cols="1,3,2", options="header"]
+|===
+|Term |Meaning |Where it appears
+
+|Fragment
+|A YAML file holding part of an API description: a path, a schema, a response.
+|Under `sources.root`
+
+|Bundle root
+|The fragment that is a contract's table of contents, `$ref`ing the rest.
+|`targets.<name>.openapi.bundle`, `targets.<name>.asyncapi.bundle`
+
+|Target
+|A contract: whatever gets its own bundled document and its own version.
+Its name is the coordination key across both tools.
+|`targets:` keys; `subscribe('<target>')`; archive and task names
+
+|Closure
+|Every file a target's bundle root reaches through `$ref`, transitively.
+|`closure`, `changed`, `lint`; `closureSha256` in the manifest
+
+|Version file
+|The file holding a target's release version.
+|`<target>.bundle.properties`, or `targets.<name>.versionFile`
+
+|Archive
+|`<target>-<version>.tgz`: the bundled documents plus `manifest.json`.
+|Written by `publish`, read by the fetch
+
+|Manifest
+|`manifest.json`: which target and version the archive holds, where it came from, and a SHA-256 per document.
+|Inside the archive, and beside it in a channel
+
+|Channel
+|Where archives are shipped to and fetched from.
+|`channels:` in `apionly.yaml`; `channel { }` in the Subscriber
+
+|Subscription
+|A consuming build's declaration that it builds against a target at a version: the one contract it implements, or an API it calls.
+|`apiOnlySubscriber { subscribe(...) }`, `subscribeAsClient(...)`
+
+|Lockfile
+|`apionly.lock`: per subscription, the version, the channel and a SHA-256 per document, as fetched.
+|Beside the consuming build file, committed
+|===
+
+[#lifecycle]
+== The lifecycle of a contract version
+
+[cols="1,1,2,2,2", options="header"]
+|===
+|Stage |Tool |What happens |Reads |Writes
+
+|1. Author
+|--
+|Someone edits fragments and raises the target's version.
+|--
+|Fragments, version file
+
+|2. Build
+|Publisher `build`
+|Copies the source root to a staging directory, substitutes `{{token}}` placeholders, bundles each target with Redocly CLI or AsyncAPI CLI, stamps the version into `info.version`, and lints the result.
+|`apionly.yaml`, fragments, version files, `toolchain`
+|`<build.staging>/`, `<build.dist>/<target>/`
+
+|3. Lint
+|Publisher `lint`
+|Lints every built document again, writes a report per document, and fails on fragments no target reaches.
+|`<build.dist>/`, `<sources.root>/`
+|`<reports.lint>/<target>/<kind>.txt`, `<reports.lint>/unreferenced.txt`
+
+|4. Pack
+|Publisher `pack`, or `publish`
+|Checks that each document's `info.version` is the version being packed, writes `manifest.json`, and archives the documents with it.
+|`<build.dist>/<target>/`
+|`<target>-<version>.tgz`, in `build/packages/`
+
+|5. Publish
+|Publisher `publish`
+|Ships the same archive to every configured channel, or to `--channel`.
+|The archive
+|The channel's layout
+
+|6. Fetch
+|Subscriber `fetchApiSpec<Target>`
+|Resolves the archive at the subscription's version, checks the pre-release rule, unpacks it, checks every document against the manifest, refuses a locked version whose bytes changed, and records the result.
+|The channel, `apionly.lock`
+|`build/api-spec/<target>/`, `apionly.lock`
+
+|7. Verify
+|Subscriber `verifyApiSpec<Target>`
+|Hashes the documents on disk and compares them with `apionly.lock`.
+|`build/api-spec/<target>/`, `apionly.lock`
+|--
+|===
+
+[#the-archive]
+== The archive and its manifest
+
+[source]
+----
+orders-1.1.0.tgz
+├── openapi.yaml          the bundled OpenAPI document, if the target has one
+├── asyncapi.yaml         the bundled AsyncAPI document, if the target has one
+└── manifest.json
+----
+
+.manifest.json
+[source,json]
+----
+{
+  "schemaVersion": 1,
+  "target": "orders",
+  "version": "1.1.0",
+  "producedAt": "2026-09-13T12:00:00Z",
+  "closureSha256": "…",
+  "source": {
+    "repository": "git@example.com:example/contracts.git",
+    "commit": "…"
+  },
+  "files": [
+    { "path": "openapi.yaml", "sha256": "…" }
+  ]
+}
+----
+
+[cols="1,3,2", options="header"]
+|===
+|Field |Meaning |Used by
+
+|`schemaVersion`
+|The manifest format, `1`.
+A reader that does not understand a version must refuse the archive.
+|Subscriber
+
+|`target`, `version`
+|What the archive holds.
+|Subscriber: a `version` different from the resolved one is refused
+
+|`producedAt`
+|When the archive was packed, in UTC.
+|People
+
+|`closureSha256`
+|A hash over the target's closure after placeholder substitution.
+|People and release tooling comparing what was published
+
+|`source.repository`, `source.commit`
+|The git remote and commit the archive was built from; `null` outside a git checkout.
+|People
+
+|`files[].path`, `files[].sha256`
+|Every document in the archive, and its SHA-256.
+|Subscriber: every listed file must exist and match
+|===
+
+The manifest is the entire coupling between the two tools.
+Changing its shape means changing the Publisher's `src/pack.js` and the Subscriber's `Manifest.java` together, and raising `schemaVersion` whenever an older reader could misread the new shape.
+
+[#channels]
+== Channels
+
+[cols="1,2,2,1", options="header"]
+|===
+|Channel |Publisher writes |Subscriber reads |Configured with
+
+|`file`
+|`<directory>/<target>/<version>/<target>-<version>.tgz` and `manifest.json` beside it.
+With `clean: true`, the target's other versions are removed first.
+|The same path, with `channel.type = 'file'` and `channel.directory`.
+A missing version fails the fetch and lists the versions that exist.
+|`channels.file.directory`, `channels.file.clean`
+
+|`maven`
+|`<groupId as path>/<artifactId>/<version>/<artifactId>-<version>.<extension>`, `.pom` and `-manifest.json`, into a directory, or uploaded with HTTP `PUT` and a bearer token to a URL.
+|`<groupId>:<artifactId>:<version>@<extension>`, resolved by Gradle from the build's `repositories`, with `channel.type = 'maven'`.
+|`channels.maven.groupId`, `repository`, `tokenEnv`, `artifactId`, `extension`
+
+|`npm`
+|A package `<scope>/<target>`, or `<namePrefix><target>` without a scope, holding the archive's contents, published under the `next` dist-tag for a pre-release and `latest` otherwise.
+With `publish: false`, the package is only packed into `directory`.
+|Not read.
+|`channels.npm.scope`, `namePrefix`, `license`, `access`, `registry`, `provenance`, `publish`, `directory`
+
+|`github-release`
+|The archive, attached to a release tagged `<target>-v<version>`, marked as a pre-release where it is one.
+|Not read.
+|`channels.github-release.repository`, `tagFormat`
+|===
+
+[#settings-map]
+== How the settings correspond
+
+[cols="2,2,2", options="header"]
+|===
+|On the Publisher side |On the Subscriber side |In between
+
+|A key under `targets:`
+|The argument to `subscribe(...)` or `subscribeAsClient(...)`; the task suffix in `fetchApiSpec<Target>`
+|`manifest.target`; `target` in `apionly.lock`; the archive's name
+
+|`version` in the target's version file
+|The subscription's `version`, else `apiOnlySubscriber.version`, else the `apiContractVersion` project property; for an API the project calls, only the subscription's `version`
+|`info.version` in the documents; `manifest.version`; `version` in `apionly.lock`
+
+|`--pre-release <ids>` on `build` and `publish`
+|`allowPrerelease = true` on the subscription
+|A version with a `-` suffix, or ending in `-SNAPSHOT`
+
+|`channels.file.directory`
+|`channel.type = 'file'`, `channel.directory`, on the project or in a subscription's own `channel { }`
+|The directory layout in <<channels,Channels §>>
+
+|`channels.maven.groupId`, `artifactId`, `extension`
+|`channel.groupId`, `channel.extension`, on the project or in a subscription's own `channel { }`, and a subscription's `groupId` or `artifactId` where they differ
+|The Maven coordinates
+
+|`channels.maven.repository`
+|An entry in the build's `repositories`
+|The Maven repository
+
+|`channels.maven.tokenEnv`
+|Credentials on the repository entry, such as `credentials(PasswordCredentials)`
+|--
+
+|`defaults.openapi.outputName`, `defaults.asyncapi.outputName`
+|`subscription('<target>').openapi` and `.asyncapi`, which look for `openapi.yaml` and `asyncapi.yaml`
+|Document names in the archive and in `manifest.files`
+
+|--
+|`apiOnlySubscriber.lockfile`
+|`apionly.lock`, beside the build file by default
+
+|--
+|A subscription's `into`
+|`build/api-spec/<target>/` by default
+|===
+
+[#version-resolution]
+== Where a version comes from
+
+On the Publisher side, the version of a target is read, by `build`, `pack` and `publish`, from one place:
+
+. `targets.<name>.versionFile`, relative to `apionly.yaml`, when it is set;
+. otherwise `<target>.bundle.properties`, in the directory of the target's first bundle root, OpenAPI before AsyncAPI.
+
+The file uses Java properties syntax, and its `version` must be a semantic release version.
+`--pre-release <ids>` appends `-<ids>` to it.
+Every version a command needs is resolved before the command builds or ships anything.
+A `publish: false` target needs no version file.
+
+On the Subscriber side, the version of a subscription is the first of these that is set:
+
+. the subscription's own `version`;
+. `apiOnlySubscriber.version`;
+. the `apiContractVersion` property of the project the plugin is applied to, which includes that project's own `gradle.properties`, `-PapiContractVersion` and `ORG_GRADLE_PROJECT_apiContractVersion`.
+
+A subscription for an API the project calls, declared with `subscribeAsClient`, takes only its own `version`: the other two are the version of the contract the project implements.
+
+[#checks]
+== Every check, and where it lives
+
+[cols="2,1,2,2", options="header"]
+|===
+|What is checked |When |Where in the code |What it prints
+
+|A target's version file exists, has a `version`, is semantic, and is not a pre-release
+|`build`, `pack`, `publish`
+|Publisher `src/bundle-version.js`
+|`target '<t>': no version file at <path>`, `declares no version`, `declares '<v>', but a version file holds a release version`
+
+|Every `{{token}}` has a Markdown file
+|`build`
+|Publisher `src/placeholders.js`
+|`no Markdown file found for {{<token>}}`
+
+|Each bundle root exists, and every `$ref` resolves
+|`build`, `closure`, `changed`, `lint`
+|Publisher `src/pipeline.js`, `src/closure.js`
+|`bundle root not found at`, `$ref target does not exist`
+
+|The document lints with Redocly CLI or AsyncAPI CLI
+|`build`, `lint`
+|Publisher `src/pipeline.js`; `src/cli.js` for `lint`
+|The linter's own output; `lint failed for <n> document(s)`
+
+|Every YAML file under `sources.root` is reached by some target, apart from lint tools' configuration files and the lint configurations `apionly.yaml` names
+|`lint` without `--target`
+|Publisher `src/unreferenced.js`, called from `src/cli.js`
+|`<n> fragment(s) not reachable from any target, so nothing lints them`
+
+|Each document's `info.version` is the version being packed
+|`pack`, `publish`
+|Publisher `src/pack.js`
+|`declares info.version '<a>' but is being packed as '<b>'`
+
+|A credential exists for a remote Maven upload
+|`publish`
+|Publisher `src/channels.js`
+|`no credential in $<VAR>, which channels.maven.tokenEnv names`
+
+|A project implements at most one contract, and never both implements and calls the same one
+|Evaluating the build file
+|Subscriber `ApiOnlySubscriberExtension.java`
+|`apiOnlySubscriber already implements '<a>', so it cannot also implement '<b>'`, `implements '<t>', so it cannot also subscribe to it as a client`, `calls '<t>' as a client, so it cannot also implement '<t>'`
+
+|The subscription has a version, and a pre-release is allowed
+|Planning the fetch
+|Subscriber `ApiOnlySubscriberPlugin.java`
+|`subscription '<t>' declares no version`, `client subscription '<t>' declares no version`, `resolves the pre-release version <v>`
+
+|The archive exists in a `file` channel
+|`fetchApiSpec<Target>`
+|Subscriber `FetchApiSpecTask.java`
+|`no archive for '<t>' <v> at <path>. Published versions of '<t>': …`
+
+|The archive's manifest names the resolved version, and lists only files it contains, with matching hashes
+|`fetchApiSpec<Target>`
+|Subscriber `FetchApiSpecTask.java`, `Manifest.java`
+|`declares version <a> but was resolved as <b>`, `declares <file> but does not contain it`, `does not match the hash its own manifest declares`
+
+|A locked version's documents are the ones locked
+|`fetchApiSpec<Target>`
+|Subscriber `FetchApiSpecTask.java`, `Lockfile.java`
+|`the published contract for '<t>' <v> is not the one recorded in apionly.lock`
+
+|The documents on disk match the lockfile
+|`verifyApiSpec<Target>`, part of `check`
+|Subscriber `VerifyApiSpecTask.java`
+|`the contract for '<t>' has drifted from apionly.lock`, `nothing has been fetched for '<t>' yet`, `apionly.lock has no entry for '<t>'`
+|===
+
+[#gradle-wiring]
+== How a build wires the two together
+
+A project implements at most one contract, and may call any number of APIs.
+The Subscriber registers, for every subscription:
+
+* `fetchApiSpec<Target>`, whose inputs are the resolved archive, the target, the version and the channel, and whose output is the unpacked directory; it is up to date only while `apionly.lock` records its target at that version and channel, because the lockfile is shared by every subscription and so is no single fetch's output, which is also why the task is not cacheable; a project's fetches and verifications take turns through the `LockfileAccess` build service, so none reads the lockfile while another writes it;
+* `verifyApiSpec<Target>`, ordered after the fetch but deliberately not depending on it, so that it can report a hand edit instead of repairing it;
+* the aggregates `fetchApiSpec` and `verifyApiSpec`, with `check` depending on `verifyApiSpec`;
+* with the `java` plugin, `processResources` depending on the fetch, and the documents on the classpath: for the implemented contract, the unpacked directory as a resources directory, so its documents sit at the root; for an API the project calls, a copy under `contracts/<target>/`.
+
+A `file` channel's archive path is resolved while the build is planned, and only checked for when the fetch runs.
+That is what lets a build publish its own contract and fetch it in one invocation: a task that runs the Publisher's `publish` writes the archive, and the fetch task depends on it.
+The use-case tutorials wire it with Gradle `Exec` tasks:
+
+[source]
+----
+installApiOnlyPublisher  (npm ci)
+        │
+buildApiContract         (npm run apionly -- build --target <t>)
+        │
+publishApiContract       (npm run apionly -- publish --target <t> --channel file)
+        │
+fetchApiSpec<Target>     ── processResources ── test
+        │
+verifyApiSpec<Target>    ── check ── lintApiContract (npm run apionly -- lint)
+----
+
+Because `verifyApiSpec` runs after the fetch in such a build, a hand-edited fetched document is restored by the fetch before it is verified; `verifyApiSpec` on its own reports it.
+Every Publisher run rebuilds its staging directory, so builds that run the Publisher for several targets serialise those runs with a shared Gradle build service.
+
+[#publisher-inside]
+== Inside the Publisher
+
+`api-only-publisher/`, a Node.js package with one runtime dependency, `yaml`.
+`src/cli.js` parses the command line and dispatches; everything it does is also exported from `src/index.js`.
+
+[cols="1,3,2", options="header"]
+|===
+|Module |Responsibility |Main exports
+
+|`src/cli.js`
+|The command line: options, usage text, one case per command, error reporting and exit codes.
+|`main`, `parseArgs`
+
+|`src/config.js`
+|Loads and validates `apionly.yaml`, and derives every path from it: staging, dist, reports, bundle roots, version files, lint settings.
+|`load`, `loadFrom`, `ConfigError`
+
+|`src/pipeline.js`
+|Stage, substitute, bundle, stamp, lint and distribute; `prepare` stages without bundling.
+|`build`, `prepare`, `lint`, `BuildError`
+
+|`src/placeholders.js`
+|`{{token}}` substitution.
+|`substitute`, `substituteFile`, `PlaceholderError`
+
+|`src/aggregate.js`
+|Generated AsyncAPI aggregate bundle roots.
+|`generateAsyncApi`, `isAggregate`
+
+|`src/version.js`
+|Splices `info.version` into a bundled document.
+|`stamp`, `stampFile`
+
+|`src/version-policy.js`
+|Semantic versions and pre-release rules.
+|`parse`, `isPrerelease`, `npmDistTag`
+
+|`src/bundle-version.js`
+|Reads a target's version file, and applies `--pre-release`.
+|`versionOf`, `BundleVersionError`
+
+|`src/closure.js`
+|Resolves `$ref` closures and hashes them.
+|`resolve`, `hash`, `forTargets`
+
+|`src/changed.js`
+|Which targets a git ref-to-working-tree change reaches.
+|`changedSince`
+
+|`src/unreferenced.js`
+|YAML files under the source root that no target reaches.
+|`unreferenced`
+
+|`src/pack.js`
+|The manifest and the archive.
+|`pack`, `manifest`, `MANIFEST_SCHEMA_VERSION`
+
+|`src/channels.js`
+|One function per channel, and the dispatcher.
+|`publish`, `CHANNELS`, `ChannelError`
+
+|`src/split.js`
+|Splits a library into self-contained parts.
+|`split`
+
+|`src/init.js`
+|Scaffolds a library that builds as it stands.
+|`init`, `FILES`
+|===
+
+Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` for every command and `build.e2e.test.js` against the real bundlers.
+`npm test` enforces 90% of lines and functions and 80% of branches.
+
+[#subscriber-inside]
+== Inside the Subscriber
+
+`api-only-subscriber/`, a Gradle plugin in Java 21, package `com.arc_e_tect.gradle.apionly.subscriber`.
+
+[cols="1,3", options="header"]
+|===
+|Class |Responsibility
+
+|`ApiOnlySubscriberPlugin`
+|Applies the extension, registers the tasks per subscription, resolves a subscription's archive for its channel, and wires resources and `check`.
+
+|`ApiOnlySubscriberExtension`
+|The `apiOnlySubscriber { }` block: `channel`, `lockfile`, `version`, `subscribe` for the contract the project implements, refusing a second, and `subscribeAsClient` for each API it calls.
+
+|`ChannelSpec`
+|`channel { }`, on the project and in each subscription, where every setting a subscription leaves out comes from the project's: `type`, `groupId`, `extension`, `directory`.
+
+|`Subscription`
+|One `subscribe(...)` or `subscribeAsClient(...)`: `version`, `allowPrerelease`, `groupId`, `artifactId`, `into`, its own `channel`, whether it `isClient`, and the `openapi` and `asyncapi` providers.
+
+|`FetchApiSpecTask`
+|Resolves, checks, unpacks and locks one subscription.
+
+|`VerifyApiSpecTask`
+|Checks one subscription's documents against the lockfile.
+
+|`Manifest`
+|Reads `manifest.json`, without a JSON library.
+
+|`Lockfile`
+|Reads and writes `apionly.lock`, and hashes files.
+
+|`LockfileAccess`
+|A build service, one per project, that lets one fetch or verify task at a time use the project's `apionly.lock`.
+
+|`UpdateApiOnlySubscriberDslTask`, `ApiOnlySubscriberDslSchema`
+|`updateApiOnlySubscriberDSL`: adds defaulted DSL properties to a consumer's `build.gradle`.
+|===
+
+Tests are in `api-only-subscriber/src/test/java/`: in-process tests per class, and `ApiOnlySubscriberPluginFunctionalTest` running real builds with TestKit.
+`./gradlew check` enforces 90% instruction coverage with JaCoCo, and Javadoc with every warning as an error.
+
+[#extending]
+== Where a change belongs
+
+[cols="2,3,2", options="header"]
+|===
+|Change |Where |Also update
+
+|A new Publisher command
+|`src/cli.js`: `USAGE`, `parseArgs` for new options, a `case` in `main`, and the error class in `report`; the logic in its own module, exported from `src/index.js`
+|`test/cli.test.js` and a module test; the Publisher README's command table
+
+|A new `apionly.yaml` key
+|`src/config.js`: validation in `load`, and an accessor on the returned object; read it where it is used
+|`test/config.test.js`; the Publisher README's configuration section; this document if it relates to the Subscriber
+
+|A new check in `lint`
+|The logic in its own module; the `lint` case in `src/cli.js` collects failures and reports them together
+|`test/cli.test.js`; <<checks,Every check §>>
+
+|A new Publisher channel
+|`src/channels.js`: a `publish<Name>` function and an entry in `CHANNELS`; its options come from `channels.<name>`
+|`test/pipeline.test.js`; <<channels,Channels §>>
+
+|A new channel the Subscriber reads
+|`ApiOnlySubscriberPlugin.resolveArchive`, `ChannelSpec`, and the messages in `FetchApiSpecTask`
+|Plugin and functional tests; `ApiOnlySubscriberDslSchema` if it has defaults; <<channels,Channels §>>
+
+|A new field in the manifest
+|`src/pack.js` `manifest` and `Manifest.java` together, and `schemaVersion` if an older reader could misread it
+|`test/pack.test.js`, `ManifestTest`; <<the-archive,The archive §>>
+
+|A new Subscriber DSL property
+|`ApiOnlySubscriberExtension`, `ChannelSpec` or `Subscription`, with its convention set in `ApiOnlySubscriberPlugin`
+|`ApiOnlySubscriberDslSchema` if it has a default; the Subscriber README's configuration block
+
+|A new Subscriber task
+|A task class, registered in `ApiOnlySubscriberPlugin`
+|An in-process test of the task action, and a functional test
+|===
+
+Both tools release independently with semantic-release, from Conventional Commits scoped `api-only-publisher` or `api-only-subscriber`.
+Until 1.0.0, any release may change their interfaces incompatibly.
+
+[#invariants]
+== Invariants
+
+These hold across both tools, and a change that breaks one is a change to the design, not a detail.
+
+. **One archive holds one target at one version**, and its manifest says which.
+. **One project implements at most one contract.** It may call any number of APIs, each with every check the implemented contract gets; the Subscriber refuses a second implemented contract.
+. **The manifest is the only thing the tools share.**
+. **A version is never taken from the command line.** It comes from the library, and a pre-release only appends to it.
+. **A version names one set of documents.** The Subscriber never silently re-locks a locked version whose documents changed.
+. **`verifyApiSpec` never fetches.**
+. **Nothing either tool generates is written under `src/`.**
+. **Credentials are read from the environment**, never from a committed file.
+. **Every channel ships the same packed bytes.** Nothing is rebuilt per channel.

@@ -1,5 +1,6 @@
 package com.arc_e_tect.gradle.apionly.subscriber;
 
+import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.model.ObjectFactory;
@@ -17,7 +18,7 @@ import javax.inject.Inject;
  *
  * <pre>{@code
  * apiOnlySubscriber {
- *     subscribe('user-account') {
+ *     subscribe('customer-orders') {
  *         version = '2.1.0'
  *     }
  * }
@@ -38,6 +39,8 @@ import javax.inject.Inject;
 public abstract class Subscription {
 
     private final String target;
+    private final ChannelSpec channel;
+    private boolean client;
     private TaskProvider<FetchApiSpecTask> fetch;
 
     /**
@@ -54,6 +57,7 @@ public abstract class Subscription {
     @Inject
     public Subscription(String target, ObjectFactory objects) {
         this.target = target;
+        this.channel = objects.newInstance(ChannelSpec.class);
         getGroupId().convention((String) null);
         getArtifactId().convention(target);
         getAllowPrerelease().convention(false);
@@ -81,12 +85,36 @@ public abstract class Subscription {
     }
 
     /**
+     * Whether this subscription is for an API the project calls, rather than for
+     * the contract it implements.
+     *
+     * <p>Fixed when the subscription is declared: by
+     * {@link ApiOnlySubscriberExtension#subscribeAsClient(String, org.gradle.api.Action)}
+     * for an API the project calls, and by
+     * {@link ApiOnlySubscriberExtension#subscribe(String, org.gradle.api.Action)} for
+     * the contract it implements.</p>
+     *
+     * @return {@code true} for an API this project calls
+     */
+    public boolean isClient() {
+        return client;
+    }
+
+    /** Marks this subscription as one for an API the project calls, before it is added to its container. */
+    void markClient() {
+        this.client = true;
+    }
+
+    /**
      * The version of this target's contract to build against.
      *
      * <p>Defaults to {@link ApiOnlySubscriberExtension#getVersion()}, which in turn
      * defaults to the {@code apiContractVersion} project property; one of the three
      * must be set. A pre-release version is refused unless
      * {@link #getAllowPrerelease()} is set.</p>
+     *
+     * <p>A subscription for an API the project calls has no default, and sets its
+     * own: those two are the version of the contract the project implements.</p>
      *
      * @return the version to resolve
      */
@@ -118,7 +146,7 @@ public abstract class Subscription {
      * one. Opting in is a visible, reviewable line in a build file:</p>
      *
      * <pre>{@code
-     * subscribe('user-account') {
+     * subscribe('customer-orders') {
      *     version = '2.1.0-rc.1'
      *     allowPrerelease = true
      * }
@@ -143,9 +171,47 @@ public abstract class Subscription {
      * <p>Writing into {@code src/} remains possible for teams whose tooling
      * insists on it; it is simply not the default.</p>
      *
+     * <p>For an API the project calls, the directory is not a resources directory
+     * itself: its contents are copied to {@code contracts/<target>/} on the
+     * classpath, so that the root stays the implemented contract's.</p>
+     *
      * @return the directory fetched documents are unpacked into
      */
     public abstract DirectoryProperty getInto();
+
+    /**
+     * The channel this subscription resolves through.
+     *
+     * <p>Every setting this subscription does not set comes from the project's
+     * {@link ApiOnlySubscriberExtension#getChannel() channel}, so a subscription
+     * states only what differs: an API the project calls, published to a Maven
+     * repository, next to a contract the project takes from a {@code file}
+     * channel, or the other way round.</p>
+     *
+     * @return this subscription's channel specification
+     */
+    public ChannelSpec getChannel() {
+        return channel;
+    }
+
+    /**
+     * Configures a channel of this subscription's own.
+     *
+     * <pre>{@code
+     * subscribeAsClient('order-payments') {
+     *     version = '1.4.0'
+     *     channel {
+     *         type = 'maven'
+     *         groupId = 'com.example.payments'
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param action configuration applied to this subscription's channel
+     */
+    public void channel(Action<? super ChannelSpec> action) {
+        action.execute(channel);
+    }
 
     /**
      * Records the fetch task that populates this subscription.
@@ -177,8 +243,8 @@ public abstract class Subscription {
      * dependency on the fetch travels with it:</p>
      *
      * <pre>{@code
-     * apiOnlySuite {
-     *     rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+     * openApiGenerate {
+     *     inputSpec = apiOnlySubscriber.subscription('customer-orders').openapi.map { it.asFile.path }
      * }
      * }</pre>
      *

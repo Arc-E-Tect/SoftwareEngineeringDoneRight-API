@@ -15,7 +15,7 @@ class ManifestTest {
     private static final String VALID = """
         {
           "schemaVersion": 1,
-          "target": "user-account",
+          "target": "customer-orders",
           "version": "2.1.0",
           "producedAt": "2026-09-11T12:00:00Z",
           "closureSha256": "%s",
@@ -36,7 +36,7 @@ class ManifestTest {
     @Test
     void readsTheFieldsTheSubscriberActsOn(@TempDir Path dir) throws IOException {
         Manifest manifest = Manifest.read(write(dir, VALID));
-        assertEquals("user-account", manifest.target());
+        assertEquals("customer-orders", manifest.target());
         assertEquals("2.1.0", manifest.version());
         assertEquals("c".repeat(64), manifest.closureSha256());
         assertEquals(2, manifest.files().size());
