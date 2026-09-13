@@ -72,7 +72,7 @@ When we are done, `./gradlew check`:
 
 - A client subscription sets its own `version`; it does not read `apiContractVersion`, which is the version of a contract the project implements.
   Without one, the build fails with `client subscription '<target>' declares no version`.
-- The `maven` channel resolves `<groupId>:<artifactId>:<version>@tgz` through the project's `repositories`; one channel type serves every subscription in the project.
+- The `maven` channel resolves `<groupId>:<artifactId>:<version>@tgz` through the project's `repositories`; a subscription can set a `channel { }` of its own, and every setting it leaves out comes from the project's channel.
 - A named repository with `credentials(PasswordCredentials)` reads `<name>Username` and `<name>Password` as Gradle properties.
 - Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>` (target in camel case), and the aggregates `fetchApiSpec` and `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetches.
 - Each fetch unpacks into `build/api-spec/<target>/`, and, with the `java` plugin, `processResources` copies the documents to `contracts/<target>/` on the classpath.

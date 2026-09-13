@@ -217,6 +217,56 @@ class ApiOnlySubscriberPluginFunctionalTest {
         }
 
         @Test
+        @DisplayName("each subscription can resolve through a channel of its own: the implemented contract from a directory, a called API from a Maven repository")
+        void channelPerSubscription() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("order-payments", "1.4.0", OPENAPI.replace("title: Example", "title: Payments"));
+            Path maven = Files.createTempDirectory("api-only-maven");
+            Path release = Files.createDirectories(maven.resolve("com/example/contracts/order-payments/1.4.0"));
+            Files.move(channelDir.resolve("order-payments/1.4.0/order-payments-1.4.0.tgz"),
+                release.resolve("order-payments-1.4.0.tgz"));
+            Files.writeString(release.resolve("order-payments-1.4.0.pom"), """
+                <project xmlns="http://maven.apache.org/POM/4.0.0">
+                  <modelVersion>4.0.0</modelVersion>
+                  <groupId>com.example.contracts</groupId>
+                  <artifactId>order-payments</artifactId>
+                  <version>1.4.0</version>
+                  <packaging>tgz</packaging>
+                </project>
+                """);
+            buildFile(subscribingBuild("1.0.0", "") + """
+
+                repositories {
+                    maven { url = uri('%s') }
+                }
+
+                apiOnlySubscriber {
+                    subscribeAsClient('order-payments') {
+                        version = '1.4.0'
+                        channel {
+                            type = 'maven'
+                            groupId = 'com.example.contracts'
+                        }
+                    }
+                }
+                """.formatted(maven.toUri()));
+
+            BuildResult first = runner("check", "--configuration-cache").build();
+
+            assertThat(first.task(":verifyApiSpecOrderPayments").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+            assertThat(lockfile())
+                .contains("target customer-orders\nversion 1.0.0\nchannel file")
+                .contains("target order-payments\nversion 1.4.0\nchannel maven");
+            assertThat(Files.readString(projectDir.resolve("build/resources/main/contracts/order-payments/openapi.yaml")))
+                .contains("title: Payments");
+
+            BuildResult second = runner("check", "--configuration-cache").build();
+
+            assertThat(second.task(":fetchApiSpecCustomerOrders").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+            assertThat(second.task(":fetchApiSpecOrderPayments").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+        }
+
+        @Test
         @DisplayName("registers an aggregate task and a per-target task for each subscription")
         void registersTasks() throws Exception {
             publish("customer-orders", "1.0.0", OPENAPI);

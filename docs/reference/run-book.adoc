@@ -241,6 +241,7 @@ A project may call any number of APIs, next to the contract it implements.
 It declares each with `subscribeAsClient('<target>') { version = '<version>' }`, which arrives in the Subscriber release after 0.1.0.
 Each gets every check the implemented contract gets: the manifest check, its own entry in `apionly.lock`, the refusal of changed bytes under a locked version, and `verifyApiSpec` as part of `check`.
 Its documents are on the classpath under `contracts/<target>/`, and it sets its own version, because `apiContractVersion` is the implemented contract's.
+When its provider publishes somewhere else than the project's other contracts, it sets a `channel { }` of its own; every setting it leaves out comes from the project's channel.
 link:../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] has the details.
 
 [#hand-edits]

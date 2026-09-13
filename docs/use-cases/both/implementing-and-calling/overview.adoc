@@ -43,9 +43,28 @@ Each implemented contract gets a project of its own, as link:../../../reference/
 == How the other use cases combine
 
 The implemented contract and the called APIs can each come from wherever the provider and client use cases describe: the project itself, a library in the same repository, a library in another repository, or a published release.
-One limit applies: **the channel is the project's**.
-Every subscription in one project resolves through one channel type, `file` or `maven`, so a contract from a library in the same repository and an API published elsewhere cannot be mixed in one project yet.
-Publish the library's contracts to the same Maven repository as the others, as link:../../provider/3-specification-library-in-its-own-repository/overview.adoc[provider use case 3 →] does, when you need both.
+They mix freely: each subscription can resolve through a `channel { }` of its own, and every setting it leaves out comes from the project's channel.
+A contract implemented from a library in the same repository, next to an API published to a Maven repository, looks like this:
+
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = rootProject.file('contracts/build/publish').path
+    }
+    subscribe('billing')
+    subscribeAsClient('orders') {
+        version = findProperty('ordersApiVersion')
+        channel {
+            type = 'maven'
+            groupId = 'com.example.contracts'
+        }
+    }
+}
+----
+
+The Maven repository goes in `repositories`, as in link:../../client/4-calling-a-published-api/tutorial.adoc#step-3[client use case 4's tutorial →].
 
 The link:tutorial.adoc[tutorial →] uses a library in the same repository for all three contracts.
 

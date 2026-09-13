@@ -62,8 +62,8 @@ When we are done:
   }
   ```
 
-- Working ahead of a release, temporarily: `channel { type = 'file'; directory = '../<library checkout>/build/publish' }`, `<target>ApiVersion` set to the pre-release, and `allowPrerelease = true` on the subscription.
-  The channel type is the project's, so every subscription reads the checkout while it is set.
+- Working ahead of a release, temporarily, on one subscription: a `channel { type = 'file'; directory = '../<library checkout>/build/publish' }` inside that `subscribeAsClient` block, `<target>ApiVersion` set to the pre-release, and `allowPrerelease = true`.
+  Every setting a subscription's own channel leaves out comes from the project's channel, and the other subscriptions keep resolving through the project's channel.
 - A client subscription sets its own `version`; it does not read `apiContractVersion`.
 - Tasks: `fetchApiSpec<Target>`, `verifyApiSpec<Target>`, `fetchApiSpec`, `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetches, which copies each contract to `contracts/<target>/` on the classpath.
 - `apionly.lock` records target, version, channel (`maven` or `file`) and a SHA-256 per document.
@@ -105,9 +105,9 @@ Then present the plan and wait for my approval.
 Ask before this step, and undo all of it at the end.
 
 1. In the library's checkout, run `npm ci`, then `build` and `publish` for one target with `--pre-release rc.1 --channel file`, and show the directory it wrote.
-2. In this project, switch the channel to the checkout's `file` directory, set that target's version to the pre-release, and add `allowPrerelease = true` with a comment saying it is temporary.
+2. In this project, give that target's subscription a `channel { }` of its own on the checkout's `file` directory, set its version to the pre-release, and add `allowPrerelease = true` with a comment saying it is temporary.
 3. Run `./gradlew check`, and show `Updated <target> from <released> to <pre-release>` and `channel file` in `apionly.lock`.
-4. Restore the `maven` channel, the released version and the lockfile, run `./gradlew check`, and show it green.
+4. Remove the subscription's own channel and `allowPrerelease`, restore the released version and the lockfile, run `./gradlew check`, and show it green.
 
 ## Hand over
 
@@ -120,6 +120,6 @@ Ask before this step, and undo all of it at the end.
 
    - Their contracts are released by the specification library in <library repository>, and fetched by the API-Only Subscriber. Never edit `build/api-spec/` or `apionly.lock`.
    - A contract change is a pull request on the library, raising the contract's version, never an edit here.
-   - Working ahead of a release switches the channel to a checkout of the library, with `allowPrerelease`; never commit or push that.
+   - Working ahead of a release gives one subscription a `channel { }` on a checkout of the library, with `allowPrerelease`; never commit or push that.
    - To take a release, change `<target>ApiVersion`, run `./gradlew check`, and commit the updated `apionly.lock`.
    ```

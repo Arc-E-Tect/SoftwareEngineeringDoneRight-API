@@ -442,6 +442,42 @@ class ApiOnlySubscriberPluginTest {
             // the point is that a groupId was found at all.
             assertThat(resolving("account")).hasMessageNotContaining("requires channel.groupId");
         }
+
+        @Test
+        @DisplayName("a subscription's own channel overrides the project's")
+        void subscriptionChannelWins() {
+            extension().getChannel().getGroupId().set("com.example.all");
+            extension().subscribe("account", s -> {
+                s.getVersion().set("1.0.0");
+                s.channel(c -> {
+                    c.getType().set("file");
+                    c.getDirectory().set(projectDir.toString());
+                });
+            });
+
+            assertThat(resolving("account")).isNull();
+            FetchApiSpecTask task = (FetchApiSpecTask) project.getTasks().getByName("fetchApiSpecAccount");
+            assertThat(canonical(task.getArchive().getSingleFile()))
+                .isEqualTo(canonical(projectDir.resolve("account/1.0.0/account-1.0.0.tgz").toFile()));
+            assertThat(task.getChannel().get()).isEqualTo("file");
+        }
+
+        @Test
+        @DisplayName("every setting a subscription's channel leaves out comes from the project's")
+        void subscriptionChannelFallsBackToTheProjects() {
+            extension().getChannel().getType().set("file");
+            extension().getChannel().getDirectory().set(projectDir.toString());
+            Subscription account = subscribe("account", "1.0.0");
+            Subscription payments = extension().subscribeAsClient("payments", s -> {
+                s.getVersion().set("1.0.0");
+                s.channel(c -> c.getGroupId().set("com.example.payments"));
+            });
+
+            assertThat(account.getChannel().getType().get()).isEqualTo("file");
+            assertThat(account.getChannel().getDirectory().get()).isEqualTo(projectDir.toString());
+            assertThat(payments.getChannel().getType().get()).isEqualTo("file");
+            assertThat(payments.getChannel().getGroupId().get()).isEqualTo("com.example.payments");
+        }
     }
 
     @Nested

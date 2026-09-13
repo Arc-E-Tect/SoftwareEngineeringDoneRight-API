@@ -381,8 +381,7 @@ Commit both files together.
 == What to watch for
 
 * **Generate clients from the fetched documents, not from copies**: wire a generator to `apiOnlySubscriber.subscription('orders').openapi`, which carries the dependency on the fetch.
-* **The channel is the project's.**
-All client subscriptions in the project resolve through one channel type.
+* **An API published somewhere else**, such as a directory or another provider's repository, gets a `channel { }` of its own inside its `subscribeAsClient` block; every setting it leaves out comes from the project's channel.
 * **Publishing is passive.**
 Nothing tells your project a new version exists; watch the providers' releases, or teach an update bot to read the version properties.
 

@@ -5,13 +5,21 @@ import org.gradle.api.provider.Property;
 /**
  * Where subscribed contracts are fetched from.
  *
- * <p>Configured once per project, inside the {@code apiOnlySubscriber} block:</p>
+ * <p>Configured for the project inside the {@code apiOnlySubscriber} block, and
+ * optionally again inside a subscription, whose channel takes every setting it
+ * leaves out from the project's:</p>
  *
  * <pre>{@code
  * apiOnlySubscriber {
  *     channel {
  *         type = 'maven'
  *         groupId = 'com.example.contracts'
+ *     }
+ *     subscribeAsClient('order-payments') {
+ *         version = '1.4.0'
+ *         channel {
+ *             groupId = 'com.example.payments'
+ *         }
  *     }
  * }
  * }</pre>
@@ -26,7 +34,7 @@ import org.gradle.api.provider.Property;
  * contract before it is published anywhere, and is the only channel that touches
  * the filesystem directly.</p>
  *
- * @see Subscription
+ * @see Subscription#channel(org.gradle.api.Action)
  * @see ApiOnlySubscriberExtension#channel(org.gradle.api.Action)
  */
 public abstract class ChannelSpec {

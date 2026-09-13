@@ -355,8 +355,8 @@ The CI job is the one from link:../../client/2-specification-library-in-the-same
 [#watch-for]
 == What to watch for
 
-* **One channel per project.**
-Every subscription in `billing` resolves through the `file` channel here; a project that implements a contract from this repository and calls an API published elsewhere cannot mix channel types yet.
+* **Contracts from elsewhere.**
+Every subscription in `billing` resolves through the project's `file` channel here; an API published to a Maven repository gets a `channel { }` of its own inside its `subscribeAsClient` block, as link:overview.adoc#combining[the overview →] shows.
 * **A server framework that serves `/openapi.yaml`** serves the implemented contract only; the called APIs stay under `/contracts/`.
 
 [#next]

@@ -263,11 +263,11 @@ With `publish: false`, the package is only packed into `directory`.
 |A version with a `-` suffix, or ending in `-SNAPSHOT`
 
 |`channels.file.directory`
-|`channel.type = 'file'`, `channel.directory`
+|`channel.type = 'file'`, `channel.directory`, on the project or in a subscription's own `channel { }`
 |The directory layout in <<channels,Channels §>>
 
 |`channels.maven.groupId`, `artifactId`, `extension`
-|`channel.groupId`, `channel.extension`, and a subscription's `groupId` or `artifactId` where they differ
+|`channel.groupId`, `channel.extension`, on the project or in a subscription's own `channel { }`, and a subscription's `groupId` or `artifactId` where they differ
 |The Maven coordinates
 
 |`channels.maven.repository`
@@ -506,10 +506,10 @@ Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` 
 |The `apiOnlySubscriber { }` block: `channel`, `lockfile`, `version`, `subscribe` for the contract the project implements, refusing a second, and `subscribeAsClient` for each API it calls.
 
 |`ChannelSpec`
-|`channel { }`: `type`, `groupId`, `extension`, `directory`.
+|`channel { }`, on the project and in each subscription, where every setting a subscription leaves out comes from the project's: `type`, `groupId`, `extension`, `directory`.
 
 |`Subscription`
-|One `subscribe(...)` or `subscribeAsClient(...)`: `version`, `allowPrerelease`, `groupId`, `artifactId`, `into`, whether it `isClient`, and the `openapi` and `asyncapi` providers.
+|One `subscribe(...)` or `subscribeAsClient(...)`: `version`, `allowPrerelease`, `groupId`, `artifactId`, `into`, its own `channel`, whether it `isClient`, and the `openapi` and `asyncapi` providers.
 
 |`FetchApiSpecTask`
 |Resolves, checks, unpacks and locks one subscription.

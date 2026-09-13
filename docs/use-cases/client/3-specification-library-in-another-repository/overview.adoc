@@ -69,14 +69,14 @@ The project subscribes to released archives; the checkout is only for working ah
 . **Write the contract test first**: it fails until each contract is on the classpath under `/contracts/<target>/`.
 . **Apply the Subscriber** with the Maven repository, the `maven` channel, and a `subscribeAsClient` per API.
 . **Run `./gradlew check`**, commit `apionly.lock`, and run the same in CI with the repository credentials.
-. **To work ahead of a release**: check the library out beside your project, publish a pre-release there to its `file` channel, and switch your project's channel to that directory, with `allowPrerelease` on the subscription, until the release.
+. **To work ahead of a release**: check the library out beside your project, publish a pre-release there to its `file` channel, and give that subscription a channel of its own on that directory, with `allowPrerelease`, until the release.
 
 [#day-to-day]
 == Day to day
 
 * **Taking a new release**: change `<target>ApiVersion`, run `./gradlew check`, and commit the updated `apionly.lock`.
 * **Needing a contract change**: open a pull request on the library, raising the contract's version; try it from your checkout as a pre-release while it is reviewed; take the release once it is out.
-* **Before pushing**: switch the channel back to `maven` and remove `allowPrerelease`, because CI has neither your checkout nor your pre-releases.
+* **Before pushing**: remove the subscription's own `channel { }` and `allowPrerelease`, because CI has neither your checkout nor your pre-releases.
 
 [#next]
 == Where to go next

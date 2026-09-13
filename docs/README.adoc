@@ -136,7 +136,7 @@ link:use-cases/client/2-specification-library-in-the-same-repository/prompt-code
 
 |**3. A specification library in another repository you can access**
 |A project calls APIs released by a library it can check out.
-|`subscribeAsClient` to the library's releases from its Maven repository; to work ahead of a release, publish a pre-release from your checkout to its `file` channel and point the project there temporarily; propose contract changes as pull requests on the library.
+|`subscribeAsClient` to the library's releases from its Maven repository; to work ahead of a release, publish a pre-release from your checkout to its `file` channel and point that one subscription there temporarily, with a channel of its own; propose contract changes as pull requests on the library.
 |link:use-cases/client/3-specification-library-in-another-repository/overview.adoc[Overview →] +
 link:use-cases/client/3-specification-library-in-another-repository/tutorial.adoc[Tutorial →] +
 link:use-cases/client/3-specification-library-in-another-repository/prompt-claude-code.md[Claude Code prompt →] +

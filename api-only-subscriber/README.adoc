@@ -171,6 +171,14 @@ apiOnlySubscriber {
         // Where this subscription's documents land.
         // Default: build/api-spec/<target>
         // into = layout.buildDirectory.dir('api-spec/orders')
+
+        // A channel of this subscription's own. Every setting it leaves out
+        // comes from the project's channel above.
+        // Default: the project's channel
+        // channel {
+        //     type = 'file'
+        //     directory = "$rootDir/contracts/build/publish"
+        // }
     }
 
     // An API this project calls, rather than implements. Any number of them.
@@ -245,6 +253,30 @@ A version the directory does not hold fails the fetch, which lists the versions 
 |===
 
 Resolving only through channels is also what keeps an accidental path dependency on the specification library from creeping in: in a single repository the fragments are always reachable, so such a dependency would never fail.
+
+A subscription can resolve through a channel of its own, and every setting its `channel { }` leaves out comes from the project's.
+That is how one project takes the contract it implements from a library in its own repository, and calls an API published to a Maven repository:
+
+.Groovy DSL
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = "$rootDir/contracts/build/publish"
+    }
+    subscribe('billing')
+    subscribeAsClient('orders') {
+        version = '2.1.0'
+        channel {
+            type = 'maven'
+            groupId = 'com.example.contracts'
+        }
+    }
+}
+----
+
+The Maven repository goes in `repositories`, as for any `maven` channel.
 
 [#pre-releases]
 === Pre-releases
@@ -458,7 +490,8 @@ Every check the implemented contract gets:
 * every document checked against the archive's own `manifest.json`;
 * its own entry in `apionly.lock`, and a refusal when a locked version comes back with different bytes, so the build keeps the bundle it locked;
 * `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the verification part of `check`, failing when a fetched document has drifted;
-* the `openapi` and `asyncapi` providers, to generate a client from, carrying the dependency on the fetch.
+* the `openapi` and `asyncapi` providers, to generate a client from, carrying the dependency on the fetch;
+* a `channel { }` of its own when its provider publishes somewhere else, with every setting it leaves out taken from the project's channel.
 
 [#what-a-client-does-not-get]
 === What a client subscription does not get
@@ -469,10 +502,6 @@ With the `java` plugin, the documents of an API the project calls are copied to 
 * **A shared version.**
 `apiContractVersion` and `apiOnlySubscriber.version` are the version of the contract the project implements.
 Each called API sets its own `version`, because its provider releases it on its own schedule; without one, the build fails with `client subscription '<target>' declares no version`.
-* **A channel of its own.**
-The channel type is the project's.
-Set `groupId` on a subscription whose provider publishes under another group, and add that provider's Maven repository to `repositories`.
-
 [#lockfile]
 == The lockfile
 

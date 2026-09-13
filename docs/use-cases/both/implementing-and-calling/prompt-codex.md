@@ -34,7 +34,7 @@ When we are done, `./gradlew check`:
 
 - **One implemented contract per project.** If the project implements two, stop and tell me: each needs a project of its own.
 - **Every called API has its own version**, in `gradle.properties` as `<target>ApiVersion`.
-- **One channel type per project.** If the implemented contract and a called API come from different kinds of channel, `file` and `maven`, stop and tell me.
+- **A contract that comes from somewhere else than the others gets a `channel { }` of its own** in its subscription; every setting it leaves out comes from the project's channel.
 - **Fetched documents and `apionly.lock` are never edited by hand.**
 
 ## Facts: API-Only Subscriber 0.2.0
@@ -45,7 +45,7 @@ When we are done, `./gradlew check`:
   ```groovy
   apiOnlySubscriber {
       channel {
-          type = 'file'                                 // or 'maven', with groupId; one type per project
+          type = 'file'                                 // or 'maven', with groupId; the project's default
           directory = rootProject.file('contracts/build/publish').path
       }
 
@@ -55,6 +55,10 @@ When we are done, `./gradlew check`:
       // The APIs it calls, each at its own version; version is required.
       subscribeAsClient('<called>') {
           version = findProperty('<called>ApiVersion')
+          // channel {                                  // only when this API comes from elsewhere;
+          //     type = 'maven'                         // unset settings come from the project's channel
+          //     groupId = '<group>'
+          // }
       }
   }
   ```
@@ -72,7 +76,7 @@ This prompt does not set up the sources themselves.
 For each contract, find out where it comes from, and follow the matching setup:
 
 - a specification library in this repository, published to `contracts/build/publish` by root build tasks `publishApiContract<Target>`: the fetch depends on that task, `tasks.named('fetchApiSpec<Target>') { dependsOn ':publishApiContract<Target>' }`;
-- a Maven repository: a `repositories { maven { name = '<name>'; url = uri('<url>'); credentials(PasswordCredentials) } }` entry, and `channel { type = 'maven'; groupId = '<group>' }`.
+- a Maven repository: a `repositories { maven { name = '<name>'; url = uri('<url>'); credentials(PasswordCredentials) } }` entry, and `channel { type = 'maven'; groupId = '<group>' }`, on the project or inside that one subscription.
 
 If a source is not set up yet, stop and tell me which provider or client use case applies.
 
@@ -83,7 +87,7 @@ Find out and report:
 
 1. The Gradle version, the DSL, the projects, the configuration cache and the test framework.
 2. The contract this project implements, and every API it calls: target names, where each comes from, and versions.
-3. Whether all of them resolve through the same channel type.
+3. Which channel each of them resolves through, and so which subscriptions need a `channel { }` of their own.
 4. How the project uses those descriptions today, and the CI system.
 
 Then present the plan and wait for my approval.

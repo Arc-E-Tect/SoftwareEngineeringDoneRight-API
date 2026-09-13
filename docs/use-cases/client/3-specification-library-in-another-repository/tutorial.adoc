@@ -192,7 +192,7 @@ npm run apionly -- publish --target orders --pre-release rc.1 --channel file
 
 That writes `contracts/build/publish/orders/<version>-rc.1/`.
 
-In `storefront`, subscribe to that pre-release from the checkout: set `ordersApiVersion` to the pre-release version, point the channel at the directory, and allow the pre-release on the subscription.
+In `storefront`, subscribe to that pre-release from the checkout: set `ordersApiVersion` to the pre-release version, give that subscription a `channel { }` of its own on the directory, and allow the pre-release on it.
 With `1.1.0` in the version file when this was run, that is `1.1.0-rc.1`:
 
 .gradle.properties (while working ahead)
@@ -206,14 +206,18 @@ ordersApiVersion=1.1.0-rc.1
 ----
 apiOnlySubscriber {
     channel {
-        type = 'file'
-        directory = '../contracts/build/publish'
+        type = 'maven'
+        groupId = 'com.example.contracts'
     }
     // The orders API this project calls, at the version gradle.properties declares.
     subscribeAsClient('orders') {
         version = providers.gradleProperty('ordersApiVersion')
         // Deliberate and temporary: remove at the release.
         allowPrerelease = true
+        channel {
+            type = 'file'
+            directory = '../contracts/build/publish'
+        }
     }
 }
 ----
@@ -237,12 +241,13 @@ sha256 30c1da10387d16285331c54ea3aad615522621ecb9822a5b6499ab8cc9ae11f5 openapi.
 .Considerations
 * **Do not push this.**
 CI has neither your checkout nor your pre-release.
-* **The channel is the project's**, so every client subscription in `storefront` reads the checkout while you work ahead; publish each of them to the `file` channel, or work ahead on one API at a time.
+* **Only this subscription reads the checkout.**
+Every other API `storefront` calls keeps resolving through the project's `maven` channel.
 
 [#step-7]
 == Step 7: Take the release
 
-Once `contracts` releases the change, put the channel back to `maven`, remove `allowPrerelease`, set `ordersApiVersion` to the released version, run `./gradlew check`, and commit `build.gradle`, `gradle.properties` and `apionly.lock` together.
+Once `contracts` releases the change, remove the subscription's own `channel { }` and `allowPrerelease`, set `ordersApiVersion` to the released version, run `./gradlew check`, and commit `build.gradle`, `gradle.properties` and `apionly.lock` together.
 
 [#what-you-have]
 == What you have now

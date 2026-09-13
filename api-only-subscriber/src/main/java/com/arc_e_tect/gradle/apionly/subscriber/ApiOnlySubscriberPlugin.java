@@ -125,6 +125,14 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
             subscription.getVersion().convention(extension.getVersion());
         }
 
+        // A subscription's own channel states only what differs from the project's.
+        ChannelSpec projectChannel = extension.getChannel();
+        ChannelSpec channel = subscription.getChannel();
+        channel.getType().convention(projectChannel.getType());
+        channel.getGroupId().convention(projectChannel.getGroupId());
+        channel.getExtension().convention(projectChannel.getExtension());
+        channel.getDirectory().convention(projectChannel.getDirectory());
+
         ConfigurableFileCollection archive = project.getObjects().fileCollection();
         archive.from(project.provider(() -> resolveArchive(project, extension, subscription)));
 
@@ -135,7 +143,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
                 task.getArchive().from(archive);
                 task.getTarget().set(target);
                 task.getVersion().set(subscription.getVersion());
-                task.getChannel().set(extension.getChannel().getType());
+                task.getChannel().set(subscription.getChannel().getType());
                 task.getInto().set(subscription.getInto());
                 task.getLockfile().set(extension.getLockfile());
                 task.usesService(lockfileAccess);
@@ -196,7 +204,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         ApiOnlySubscriberExtension extension,
         Subscription subscription
     ) {
-        String type = extension.getChannel().getType().getOrElse("maven");
+        String type = subscription.getChannel().getType().getOrElse("maven");
         String target = subscription.getTarget();
         String version = subscription.getVersion().getOrElse(null);
         if (version == null && subscription.isClient()) {
@@ -219,7 +227,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         }
 
         if ("file".equals(type)) {
-            String directory = extension.getChannel().getDirectory().getOrNull();
+            String directory = subscription.getChannel().getDirectory().getOrNull();
             if (directory == null) {
                 throw new GradleException("the file channel requires channel.directory");
             }
@@ -242,12 +250,12 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         }
 
         String groupId = subscription.getGroupId().getOrElse(
-            extension.getChannel().getGroupId().getOrNull());
+            subscription.getChannel().getGroupId().getOrNull());
         if (groupId == null) {
             throw new GradleException("the maven channel requires channel.groupId");
         }
         String artifactId = subscription.getArtifactId().getOrElse(target);
-        String extensionName = extension.getChannel().getExtension().getOrElse("tgz");
+        String extensionName = subscription.getChannel().getExtension().getOrElse("tgz");
 
         Dependency dependency = project.getDependencies().create(
             groupId + ":" + artifactId + ":" + version + "@" + extensionName);

@@ -1,5 +1,6 @@
 package com.arc_e_tect.gradle.apionly.subscriber;
 
+import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.model.ObjectFactory;
@@ -38,6 +39,7 @@ import javax.inject.Inject;
 public abstract class Subscription {
 
     private final String target;
+    private final ChannelSpec channel;
     private boolean client;
     private TaskProvider<FetchApiSpecTask> fetch;
 
@@ -55,6 +57,7 @@ public abstract class Subscription {
     @Inject
     public Subscription(String target, ObjectFactory objects) {
         this.target = target;
+        this.channel = objects.newInstance(ChannelSpec.class);
         getGroupId().convention((String) null);
         getArtifactId().convention(target);
         getAllowPrerelease().convention(false);
@@ -175,6 +178,40 @@ public abstract class Subscription {
      * @return the directory fetched documents are unpacked into
      */
     public abstract DirectoryProperty getInto();
+
+    /**
+     * The channel this subscription resolves through.
+     *
+     * <p>Every setting this subscription does not set comes from the project's
+     * {@link ApiOnlySubscriberExtension#getChannel() channel}, so a subscription
+     * states only what differs: an API the project calls, published to a Maven
+     * repository, next to a contract the project takes from a {@code file}
+     * channel, or the other way round.</p>
+     *
+     * @return this subscription's channel specification
+     */
+    public ChannelSpec getChannel() {
+        return channel;
+    }
+
+    /**
+     * Configures a channel of this subscription's own.
+     *
+     * <pre>{@code
+     * subscribeAsClient('order-payments') {
+     *     version = '1.4.0'
+     *     channel {
+     *         type = 'maven'
+     *         groupId = 'com.example.payments'
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param action configuration applied to this subscription's channel
+     */
+    public void channel(Action<? super ChannelSpec> action) {
+        action.execute(channel);
+    }
 
     /**
      * Records the fetch task that populates this subscription.
