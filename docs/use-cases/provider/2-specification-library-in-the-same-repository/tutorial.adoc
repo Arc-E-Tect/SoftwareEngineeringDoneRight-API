@@ -17,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial builds provider use case 2 from nothing: a repository with a library of API description fragments and two projects, `orders` and `payments`, each implementing its own contract, sharing one fragment, and each building against a versioned, verified copy of its contract.
-Every file and every command below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0.
+Every file and every command below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
 
 It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a multi-project Gradle build is laid out.
 
@@ -91,7 +91,7 @@ shop/
 [source,console]
 ----
 cd contracts
-npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
 ----
 
 Add `node_modules/` and `build/` to the repository's `.gitignore`, and commit `package.json` and `package-lock.json`.
@@ -171,8 +171,8 @@ extends:
 ----
 
 .Considerations
-* **Keep this file outside `contracts/specs/`.**
-The lint also checks that every YAML file under the fragments' root is referenced by some contract, and a Redocly configuration inside that root is a YAML file nothing references.
+* **The lint also checks that every YAML file under `contracts/specs/` is referenced by some contract.**
+A lint tool's configuration file is not a fragment, and is skipped wherever it sits.
 
 [#step-4]
 == Step 4: Give each contract a version
@@ -355,7 +355,7 @@ import org.gradle.api.services.BuildServiceParameters
 
 plugins {
     id 'base'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0' apply false
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0' apply false
 }
 
 // ---------------------------------------------------------------------------
@@ -490,17 +490,17 @@ Run the build:
 > Task :installApiOnlyPublisher
 > Task :orders:buildApiContract
 > Task :payments:buildApiContract
+> Task :lintApiContracts
 > Task :orders:publishApiContract
 > Task :orders:fetchApiSpecOrders
 Subscribed to orders 1.0.0
-> Task :orders:verifyApiSpecOrders
 > Task :orders:test
-> Task :lintApiContracts
+> Task :orders:verifyApiSpecOrders
 > Task :payments:publishApiContract
 > Task :payments:fetchApiSpecPayments
 Subscribed to payments 1.0.0
-> Task :payments:verifyApiSpecPayments
 > Task :payments:test
+> Task :payments:verifyApiSpecPayments
 
 BUILD SUCCESSFUL
 ----
@@ -540,7 +540,7 @@ Undo each change before the next.
 
 === A change to a shared fragment
 
-Change `BadRequest.yaml`, commit nothing, and ask the Publisher which contracts that change reaches, from `contracts/`:
+Commit everything, then change `BadRequest.yaml` to `description: The request was not valid, and says why.`, and ask the Publisher which contracts that change reaches, from `contracts/`:
 
 [source,console]
 ----
@@ -590,12 +590,13 @@ Reference each one from a target's bundle, or delete it.
 
 === Only one of the two versions raised
 
-Raise only a project's `apiContractVersion`, or only its contract's `version`, and its fetch fails naming the version it looked for and the version that is published:
+Raise only a project's `apiContractVersion`, or only its contract's `version`, and its fetch fails naming the version it looked for and the version that is published.
+With `orders` at `1.0.1` from the section before, raising only `apiContractVersion` in `orders/gradle.properties` to `1.2.0` gives:
 
 [source]
 ----
 > no archive for 'orders' 1.2.0 at .../contracts/build/publish/orders/1.2.0/orders-1.2.0.tgz.
-  Published versions of 'orders': 1.1.0.
+  Published versions of 'orders': 1.0.1.
   Publish 1.2.0 first, or subscribe to a version that is published.
 ----
 

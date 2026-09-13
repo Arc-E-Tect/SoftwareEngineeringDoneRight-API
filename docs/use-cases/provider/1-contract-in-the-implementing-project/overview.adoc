@@ -70,7 +70,7 @@ If another build starts to need the contract, publish to a registry as well, as 
 . **Pin the Publisher.**
 Add a `package.json` with the Publisher as an exact dev dependency and an `apionly` npm script that runs it.
 . **Lay out the fragments** under `src/main/api/`, with one bundle root for the contract.
-Keep the Redocly lint configuration at the project root, outside the fragments.
+Put the Redocly lint configuration beside `apionly.yaml`.
 . **Give the contract a version** in `orders.bundle.properties`, beside its bundle root.
 . **Describe the build** in `apionly.yaml`: where the fragments are, where the output goes inside `build/`, the pinned bundler, and a `file` channel that publishes into `build/`.
 . **Declare the version the project implements** as `apiContractVersion` in `gradle.properties`.

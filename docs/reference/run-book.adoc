@@ -17,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This run-book says how to invoke both tools in normal operation, once a setup from one of the use cases exists, and what to do when something fails.
-It describes API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0.
+It describes API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
 link:how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism behind every step.
 
 [#roles]
@@ -231,14 +231,13 @@ Two implemented contracts in one project would share one version, one classpath 
 Put each in a project of its own, in a multi-project build: each project applies the Subscriber, subscribes to its contract, and declares `apiContractVersion` in its own `gradle.properties`.
 link:../../api-only-subscriber/README.adoc#one-contract-per-project[The Subscriber's README →] shows the setup.
 
-Subscriber 0.1.0 accepts a second subscription, and then fails in `processResources` with `Entry manifest.json is a duplicate`.
-Later versions refuse a second implemented contract itself, and suggest `subscribeAsClient` for a contract the project calls instead.
+A second `subscribe` to a different contract fails the build, and the message suggests `subscribeAsClient` for a contract the project calls instead.
 
 [#calling-apis]
 === Calling other APIs
 
 A project may call any number of APIs, next to the contract it implements.
-It declares each with `subscribeAsClient('<target>') { version = '<version>' }`, which arrives in the Subscriber release after 0.1.0.
+It declares each with `subscribeAsClient('<target>') { version = '<version>' }`.
 Each gets every check the implemented contract gets: the manifest check, its own entry in `apionly.lock`, the refusal of changed bytes under a locked version, and `verifyApiSpec` as part of `check`.
 Its documents are on the classpath under `contracts/<target>/`, and it sets its own version, because `apiContractVersion` is the implemented contract's.
 When its provider publishes somewhere else than the project's other contracts, it sets a `channel { }` of its own; every setting it leaves out comes from the project's channel.
@@ -254,8 +253,7 @@ Change the contract in the library, never the fetched document.
 [#lint-config]
 === The lint configuration inside the fragments' root
 
-Publisher 0.2.0 reports a Redocly configuration file under `sources.root` as an unreferenced fragment, so with that version keep it beside `apionly.yaml`.
-Later versions skip lint tools' configuration files wherever they sit, `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml` and `.spectral.yml`, and the lint configuration `apionly.yaml` names, whatever it is called.
+The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml` and `.spectral.yml`, and the lint configuration `apionly.yaml` names, whatever it is called.
 
 [#failures]
 == When something fails
@@ -292,7 +290,7 @@ Later versions skip lint tools' configuration files wherever they sit, `redocly.
 
 |`<n> fragment(s) not reachable from any target, so nothing lints them`
 |YAML files under the source root that no contract references.
-|Reference each from a contract, or delete it; with Publisher 0.2.0, move a lint configuration out of the source root.
+|Reference each from a contract, or delete it.
 
 |`lint failed for <n> document(s): …`
 |Lint errors, listed above that line.
@@ -376,8 +374,4 @@ Later versions skip lint tools' configuration files wherever they sit, `redocly.
 |`client subscription '<t>' declares no version`
 |An API the project calls has no version of its own.
 |Set `version` in its `subscribeAsClient` block; <<calling-apis,Calling other APIs §>>.
-
-|`Entry manifest.json is a duplicate`
-|A second contract in one project, with Subscriber 0.1.0 and the `java` plugin.
-|<<one-contract-per-project,One implemented contract per project §>>.
 |===

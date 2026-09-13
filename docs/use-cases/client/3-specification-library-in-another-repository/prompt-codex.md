@@ -71,7 +71,7 @@ When we are done:
 - `apionly.lock` records target, version, channel (`maven` or `file`) and a SHA-256 per document.
 - It prints `Subscribed to <target> <version>`, `Updated <target> from <old> to <new>`, and refuses a pre-release without `allowPrerelease` with `subscription '<target>' resolves the pre-release version <version>.`.
 
-## Facts: API-Only Publisher 0.2.0, in the library's checkout
+## Facts: API-Only Publisher 0.3.0, in the library's checkout
 
 - Run it only as `npm run apionly -- <command>` after `npm ci`; never `npx api-only-publisher`.
 - `build --target <t> --pre-release rc.1` and `publish --target <t> --pre-release rc.1 --channel file` publish `<version>-rc.1`, for the version in the contract's version file, to the library's `file` channel directory, `build/publish` when its `apionly.yaml` has `channels.file.directory: build/publish`.

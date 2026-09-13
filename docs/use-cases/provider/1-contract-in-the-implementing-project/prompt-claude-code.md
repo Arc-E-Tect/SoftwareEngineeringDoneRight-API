@@ -40,13 +40,13 @@ There is no registry and there are no credentials.
 - **Never edit a fetched document** under `build/api-spec/`, and never edit `apionly.lock` by hand.
 - **If another project in this repository, or a build in another repository, needs this contract, stop and tell me.** That calls for a different setup.
 
-## Facts: API-Only Publisher 0.2.0
+## Facts: API-Only Publisher 0.3.0
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.2.0`.
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`.
   It needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`, and npm.
 - Install it as an exact dev dependency with an npm script:
   - `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`;
-  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0`;
+  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`;
   - commit `package-lock.json`, and ignore `node_modules/`.
 - Run it **only** as `npm run apionly -- <command>`, and as `npm run --silent apionly -- <command>` from Gradle or whenever the output is captured.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
@@ -70,16 +70,16 @@ There is no registry and there are no credentials.
   - `build [--target <t>]`: stage, substitute `{{placeholders}}`, bundle, stamp the version, and lint.
   - `lint [--target <t>]`: lint every built document and write a report per document.
     Without `--target`, it also fails on any YAML file under `sources.root` that no target references.
-    **So the Redocly configuration must live outside `sources.root`.**
+    Lint tools' configuration files, such as `.redocly.yaml`, and the lint configuration `apionly.yaml` names are not fragments, and are skipped wherever they sit.
   - `publish --target <t> --channel file`: write `<directory>/<t>/<version>/<t>-<version>.tgz` and `manifest.json`.
     With `clean: true`, the target's other versions are removed first.
   - `targets`, and `changed --since <git ref>`.
 - `{{token}}` in a fragment is replaced by the contents of `<token>.md`, found under the source root.
   An unresolved token fails the build.
 
-## Facts: API-Only Subscriber 0.1.0
+## Facts: API-Only Subscriber 0.2.0
 
-- Gradle plugin `id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'`, from the Gradle Plugin Portal.
+- Gradle plugin `id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'`, from the Gradle Plugin Portal.
   It needs Gradle 8 or newer and Java 21 or newer, and supports the configuration cache.
 - Configuration:
 
@@ -161,7 +161,7 @@ Then present the plan and wait for my approval.
 2. Put the fragments under `src/main/api/openapi/`, with one bundle root in `bundles/<target>.yaml`.
    An existing single document can become the bundle root unchanged.
    Make sure its `info` block has a `version`.
-3. Create `.redocly.yaml` at the project root, **not** under `src/main/api/`, with `extends: [recommended]` unless the project already has lint rules.
+3. Create `.redocly.yaml` at the project root, with `extends: [recommended]` unless the project already has lint rules.
 4. Create `src/main/api/openapi/bundles/<target>.bundle.properties` with `version=<the version from step 2>`, and a comment saying major is for breaking, minor for additive and patch for anything else.
 5. Create `apionly.yaml`:
 

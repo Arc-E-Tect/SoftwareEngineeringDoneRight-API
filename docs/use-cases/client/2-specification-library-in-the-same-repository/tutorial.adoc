@@ -17,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial builds client use case 2 from nothing: a repository, `shop`, with a library of API description fragments for an `orders` and a `payments` API, sharing one fragment, and a project, `storefront`, that calls both APIs and builds against a versioned, verified copy of each contract.
-Every file and every command below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.2.0.
+Every file and every command below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
 
 It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a multi-project Gradle build is laid out.
 
@@ -84,7 +84,7 @@ shop/
 [source,console]
 ----
 cd contracts
-npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
 ----
 
 Add `node_modules/`, `build/` and `.gradle/` to the repository's `.gitignore`.

@@ -17,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial builds a repository, `shop`, with a library of API description fragments for three APIs, `billing`, `orders` and `payments`, and a project, `billing`, that implements the `billing` API and calls the other two.
-Every file and every command below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.2.0.
+Every file and every command below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
 
 It assumes you know how to design an API in OpenAPI and how a multi-project Gradle build is laid out.
 

@@ -39,9 +39,9 @@ When we are done, `./gradlew check`:
 - **If this project, or this repository, owns the contract, stop and tell me.** That calls for a different setup.
 - **If this project calls the API rather than implementing it, stop and tell me.** That calls for a client subscription, which is a different setup.
 
-## Facts: API-Only Subscriber 0.1.0
+## Facts: API-Only Subscriber 0.2.0
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.1.0`, from the Gradle Plugin Portal.
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`, from the Gradle Plugin Portal.
   It needs Gradle 8 or newer and Java 21 or newer, and supports the configuration cache.
 - Configuration:
 
@@ -81,7 +81,7 @@ When we are done, `./gradlew check`:
 - The fetch unpacks the documents (`openapi.yaml`, `asyncapi.yaml`) and `manifest.json` into `build/api-spec/<target>/`, which is added as a resources directory, so they sit at the classpath root.
 - **A project implements one contract.**
   A second contract it implements belongs in a project of its own, in a multi-project build.
-  Subscriber 0.1.0 accepts a second subscription, and then fails in `processResources` with `Entry manifest.json is a duplicate`.
+  A second `subscribe` to a different contract fails the build with `apiOnlySubscriber already implements '<a>', so it cannot also implement '<b>'`.
 - Gradle tasks that need a document read it through `apiOnlySubscriber.subscription('<target>').openapi` (or `.asyncapi`), which carries the dependency on the fetch.
 - `apionly.lock`, beside `build.gradle`, records target, version, channel and a SHA-256 per document.
   It is generated and committed.

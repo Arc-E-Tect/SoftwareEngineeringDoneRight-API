@@ -17,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial builds provider use case 1 from nothing: one Gradle project that implements an `orders` API, owns that API's OpenAPI description, and builds against a versioned, verified copy of it.
-Every file and every command below was run exactly as shown, with API-Only Publisher 0.2.0 and API-Only Subscriber 0.1.0.
+Every file and every command below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
 
 It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a Gradle project is laid out.
 
@@ -88,7 +88,7 @@ Install the Publisher as an exact dev dependency:
 
 [source,console]
 ----
-npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
 ----
 
 Add `node_modules/` and `build/` to `.gitignore`, and commit `package.json` and `package-lock.json`.
@@ -172,9 +172,8 @@ The Publisher lints every document it builds with this file, using Redocly CLI.
 `recommended` is Redocly's own baseline; narrow or widen it as you would for any Redocly project.
 
 .Considerations
-* **Keep this file outside `src/main/api/`.**
-The lint also checks that every YAML file under the fragments' root is referenced by the contract, because a fragment nothing references is never linted.
-A Redocly configuration inside that root is a YAML file nothing references, and the lint reports it.
+* **The lint also checks that every YAML file under `src/main/api/` is referenced by the contract**, because a fragment nothing references is never linted.
+A lint tool's configuration file is not a fragment, and is skipped wherever it sits.
 
 [#step-4]
 == Step 4: Give the contract a version
@@ -305,7 +304,7 @@ It passes only when the bundled document is on the classpath, at the version the
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.1.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 
 repositories {
@@ -478,14 +477,14 @@ Run the build:
 ----
 > Task :installApiOnlyPublisher
 > Task :buildApiContract
+> Task :lintApiContract
 > Task :publishApiContract
 > Task :fetchApiSpecOrders
 Subscribed to orders 1.0.0
-> Task :verifyApiSpecOrders
-> Task :verifyApiSpec
 > Task :processResources
 > Task :test
-> Task :lintApiContract
+> Task :verifyApiSpecOrders
+> Task :verifyApiSpec
 > Task :check
 
 BUILD SUCCESSFUL
@@ -541,7 +540,7 @@ Reference each one from a target's bundle, or delete it.
 
 === A fragment that changed under an unchanged version
 
-Change `summary: List the orders.` in `Orders.yaml`, change no version, and run `./gradlew check`:
+Change `summary: List the orders.` in `Orders.yaml` to `summary: List every order.`, change no version, and run `./gradlew check`:
 
 [source]
 ----

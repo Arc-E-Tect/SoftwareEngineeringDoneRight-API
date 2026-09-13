@@ -35,10 +35,10 @@ When we are done, `./gradlew check`:
 - **Nothing generated lives under `src/`**, and fetched documents are never edited or copied.
 - **Pin everything**: the Publisher exactly, and the bundler under `toolchain`.
 
-## Facts: API-Only Publisher 0.2.0
+## Facts: API-Only Publisher 0.3.0
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.2.0`; it needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`.
-- `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`; install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0`; ignore `node_modules/` and `build/`.
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`; it needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`.
+- `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`; install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`; ignore `node_modules/` and `build/`.
 - Run it **only** as `npm run apionly -- <command>`, or `npm run --silent apionly -- <command>` from Gradle.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
 - `apionly.yaml`, at the project root:
@@ -50,7 +50,7 @@ When we are done, `./gradlew check`:
     openapi: openapi
   defaults:
     openapi:
-      lint: .redocly.yaml          # at the project root, outside src/main/api
+      lint: .redocly.yaml          # beside apionly.yaml
       outputName: openapi.yaml     # the Subscriber looks for exactly this name
   build:
     staging: build/api-only/staging

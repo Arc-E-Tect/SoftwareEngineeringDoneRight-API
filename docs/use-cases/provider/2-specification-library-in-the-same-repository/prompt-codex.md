@@ -44,13 +44,13 @@ There is no registry, there are no credentials, and nothing generated is committ
 - **Never edit a fetched document** under a project's `build/api-spec/`, and never edit an `apionly.lock` by hand.
 - **If a build outside this repository needs a contract, stop and tell me.** That calls for a registry, which is a different setup.
 
-## Facts: API-Only Publisher 0.2.0
+## Facts: API-Only Publisher 0.3.0
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.2.0`.
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`.
   It needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`, and npm.
 - Install it in the library directory as an exact dev dependency with an npm script:
   - the library's `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`;
-  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.2.0`;
+  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`;
   - commit `package-lock.json`, and ignore `node_modules/`.
 - Run it **only** as `npm run apionly -- <command>` in the library directory, and as `npm run --silent apionly -- <command>` from Gradle or whenever the output is captured.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
@@ -76,7 +76,7 @@ There is no registry, there are no credentials, and nothing generated is committ
     Every run rebuilds the same staging directory, so two runs must never overlap.
   - `lint [--target <t>]`: lint every built document and write a report per document.
     Without `--target`, it also fails on any YAML file under `sources.root` that no target references, and it needs every target built first.
-    **So the Redocly configuration must live outside `sources.root`.**
+    Lint tools' configuration files, such as `.redocly.yaml`, and the lint configuration `apionly.yaml` names are not fragments, and are skipped wherever they sit.
   - `publish --target <t> --channel file`: write `<directory>/<t>/<version>/<t>-<version>.tgz` and `manifest.json`.
     With `clean: true`, the target's other versions are removed first.
   - `changed --since <git ref> [--quiet]`: list the targets whose fragments changed since that ref, one per line with `--quiet`.
@@ -84,9 +84,9 @@ There is no registry, there are no credentials, and nothing generated is committ
 - `{{token}}` in a fragment is replaced by the contents of `<token>.md`, found under the source root.
   An unresolved token fails the build.
 
-## Facts: API-Only Subscriber 0.1.0
+## Facts: API-Only Subscriber 0.2.0
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.1.0`, from the Gradle Plugin Portal.
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`, from the Gradle Plugin Portal.
   It needs Gradle 8 or newer and Java 21 or newer, and supports the configuration cache.
 - In each project:
 
@@ -161,7 +161,7 @@ Then present the plan and wait for my approval.
 1. Create the library directory with its `package.json`, install the Publisher, and ignore `node_modules/` and `build/`.
 2. Put the fragments under `<library>/specs/openapi/`: one bundle root per contract in `bundles/<target>.yaml`, and shared fragments under `components/common/`.
    Every bundle root's `info` block must have a `version`.
-3. Create `<library>/.redocly.yaml`, **not** under `specs/`, with `extends: [recommended]` unless the repository already has lint rules.
+3. Create `<library>/.redocly.yaml`, beside `apionly.yaml`, with `extends: [recommended]` unless the repository already has lint rules.
 4. Create `bundles/<target>.bundle.properties` for every contract, with `version=<starting version>`.
 5. Create `<library>/apionly.yaml`:
 
@@ -211,7 +211,7 @@ Then present the plan and wait for my approval.
 
    plugins {
        id 'base'
-       id 'com.arc-e-tect.api-only-subscriber' version '0.1.0' apply false
+       id 'com.arc-e-tect.api-only-subscriber' version '0.2.0' apply false
    }
 
    def contracts = file('contracts')
