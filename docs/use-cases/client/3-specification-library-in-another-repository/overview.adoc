@@ -1,0 +1,87 @@
+= Client use case 3: calling APIs whose specification library is in another repository you can access
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+Your project calls APIs whose contracts come from a specification library in another repository, one your organisation owns and you can check out.
+That library releases each contract to a Maven repository, as link:../../provider/3-specification-library-in-its-own-repository/overview.adoc[provider use case 3 →] describes.
+
+Your project subscribes to those releases as a client, exactly like a project that implements them does.
+Because you can check out the library, you can also build against a contract before it is released: publish a pre-release from your checkout to its `file` channel, and point your project there while you work.
+And when your project needs a change to a contract, you propose it to the library, in a pull request.
+
+[#fits]
+== When this fits
+
+* Your project calls APIs; it does not implement them.
+* Their contracts are in a specification library in another repository that you can check out.
+* The library releases the contracts to a Maven repository your build can read.
+* You want to try your code against a contract change before the library releases it.
+
+[#does-not-fit]
+== When it does not
+
+* **Your project implements the API.**
+That is the implementing side of link:../../provider/3-specification-library-in-its-own-repository/overview.adoc[provider use case 3 →].
+* **You have no access to the library's repository.**
+That is link:../4-calling-a-published-api/overview.adoc[client use case 4 →].
+* **The library is in your own repository.**
+That is link:../2-specification-library-in-the-same-repository/overview.adoc[client use case 2 →].
+* **Your project also implements a contract.**
+See link:../../both/implementing-and-calling/overview.adoc[implementing one contract and calling others →].
+
+link:../../../README.adoc[The documentation's entry point →] compares every use case.
+
+[#what-you-get]
+== What you get
+
+* A build that calls a stated, released version of each API, verified against a committed lockfile on every `check`.
+* A way to build against an unreleased contract change, deliberately and visibly, without publishing it for anyone else.
+* A contract change proposed where contracts are reviewed: in the library.
+
+[#what-you-do-not-need]
+== What you do not need
+
+A second copy of the fragments, or a dependency on the library's source.
+The project subscribes to released archives; the checkout is only for working ahead of a release.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Get the coordinates** of the library's releases: the Maven repository's URL, the group id, and the target name of each API.
+. **Declare the version of each API the project calls** in `gradle.properties`, as `<target>ApiVersion`.
+. **Write the contract test first**: it fails until each contract is on the classpath under `/contracts/<target>/`.
+. **Apply the Subscriber** with the Maven repository, the `maven` channel, and a `subscribeAsClient` per API.
+. **Run `./gradlew check`**, commit `apionly.lock`, and run the same in CI with the repository credentials.
+. **To work ahead of a release**: check the library out beside your project, publish a pre-release there to its `file` channel, and give that subscription a channel of its own on that directory, with `allowPrerelease`, until the release.
+
+[#day-to-day]
+== Day to day
+
+* **Taking a new release**: change `<target>ApiVersion`, run `./gradlew check`, and commit the updated `apionly.lock`.
+* **Needing a contract change**: open a pull request on the library, raising the contract's version; try it from your checkout as a pre-release while it is reviewed; take the release once it is out.
+* **Before pushing**: remove the subscription's own `channel { }` and `allowPrerelease`, because CI has neither your checkout nor your pre-releases.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant set it up in your own project, starting with the tests.
+* link:../../../reference/run-book.adoc#calling-apis[The run-book →] covers operating the setup, and what each failure means.
+* link:../../../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] explains what a client subscription gets, and what it does not.

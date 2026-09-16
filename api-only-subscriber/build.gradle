@@ -32,10 +32,9 @@ gradlePlugin {
 
     plugins {
         apiOnlySubscriber {
-            // A sibling of com.arc-e-tect.api-only-suite, not a part of it. The
-            // suite bundles three detectors that answer "does this implementation
-            // match its contract?". This one answers "where does the contract
-            // come from?", and a project can want either without the other.
+            // Answers "where does this build's contract come from, and is it still
+            // what we agreed?". Whether an implementation matches its contract is a
+            // different question, for the tools that validate implementations.
             id                  = 'com.arc-e-tect.api-only-subscriber'
             implementationClass = 'com.arc_e_tect.gradle.apionly.subscriber.ApiOnlySubscriberPlugin'
             displayName         = 'Arc-E-Tect API-Only Subscriber'

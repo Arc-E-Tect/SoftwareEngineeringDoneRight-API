@@ -1,3 +1,24 @@
+# [0.3.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.2.0...api-only-publisher-v0.3.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* client subscriptions, a channel per subscription, and standalone use-case documentation ([#10](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/10)) ([48b4bce](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/48b4bcea411b1763f4926fe1525dd9d84e01d0c2)), closes [#10](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/10)
+
+# [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.1.0...api-only-publisher-v0.2.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** fail lint on fragments no target reaches ([#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)) ([66fd17e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/66fd17ef899de346ed6913ffb721751e81c60245)), closes [#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)
+
+# [0.1.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.2...api-only-publisher-v0.1.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* per-bundle contract versions and fetch-time archive checks ([#8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/8)) ([82e5e37](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/82e5e375647f87cd8ee1fedb9bb4dc48faa475c3)), closes [#8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/8)
+
 ## [0.0.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.0.1...api-only-publisher-v0.0.2) (2026-09-12)
 
 

@@ -1,0 +1,699 @@
+= Tutorial: a specification library in its own repository
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial builds provider use case 3 from nothing, on both sides.
+First a `contracts` repository that releases two contracts, `orders` and `payments`, to a Maven repository; then an implementing project in another repository that builds against one of them.
+Every file, command and script below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0, against a Maven repository on disk.
+What was not run is the part a remote Maven repository adds: the upload with a token in step 8, and resolving with credentials in step 12.
+Step 8 says what to check there.
+
+It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a Gradle project resolves dependencies.
+
+[#before-you-start]
+== Before you start
+
+[cols="1,2", options="header"]
+|===
+|You need |Version or value
+
+|Node.js and npm, for the contracts repository
+|Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`
+
+|Java and Gradle, for the implementing project
+|Java 21 or newer, Gradle 8 or newer
+
+|A Maven repository
+|One your consumers can read, and your release job can upload to with a token
+
+|Git
+|The release history is kept as tags
+|===
+
+The values used below:
+
+[cols="1,2", options="header"]
+|===
+|What |Example
+
+|Maven repository URL
+|`https://maven.example.com/repository/contracts`
+
+|Group id
+|`com.example.contracts`
+
+|Targets
+|`orders`, `payments`
+|===
+
+[#producer]
+== The contracts repository
+
+[#step-1]
+=== Step 1: Pin the Publisher
+
+.package.json
+[source,json]
+----
+{
+  "name": "contracts",
+  "private": true,
+  "scripts": {
+    "apionly": "api-only-publisher"
+  }
+}
+----
+
+[source,console]
+----
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
+----
+
+Add `node_modules/` and `build/` to `.gitignore`, and commit `package.json` and `package-lock.json`.
+
+.Considerations
+* **Run the Publisher only through the script**: `npm run apionly -- <command>`.
+It runs the version `package-lock.json` pins, and nothing else.
+`npx api-only-publisher` is not this package; npx would look that unscoped name up on the public registry.
+
+[#step-2]
+=== Step 2: Write the fragments
+
+.specs/openapi/bundles/orders.yaml
+[source,yaml]
+----
+openapi: 3.1.1
+info:
+  title: Orders API
+  version: 0.0.0
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://api.orders.test
+security: []
+paths:
+  /orders:
+    $ref: ../paths/Orders.yaml
+----
+
+.specs/openapi/paths/Orders.yaml
+[source,yaml]
+----
+get:
+  operationId: listOrders
+  summary: List the orders.
+  responses:
+    '200':
+      description: The orders.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+    '400':
+      $ref: ../components/common/BadRequest.yaml
+----
+
+.specs/openapi/components/common/BadRequest.yaml
+[source,yaml]
+----
+description: The request was not valid.
+----
+
+`payments.yaml` and `Payments.yaml` follow the same pattern, with `Payments API`, `https://api.payments.test`, `/payments` and `listPayments`, and reference the same `BadRequest.yaml`.
+
+.Considerations
+* **`info.version` is a placeholder**: the build overwrites it with the contract's version, so `0.0.0` is conventional, and it has to be present.
+
+[#step-3]
+=== Step 3: Choose the lint rules
+
+.`.redocly.yaml`, at the repository root
+[source,yaml]
+----
+extends:
+  - recommended
+----
+
+The lint also fails on any YAML file under `specs/` that no contract references; a lint tool's configuration file is not such a fragment, and is skipped wherever it sits.
+
+[#step-4]
+=== Step 4: Give each contract a version
+
+.specs/openapi/bundles/orders.bundle.properties
+[source,properties]
+----
+# The version of the orders contract.
+version=1.0.0
+----
+
+.specs/openapi/bundles/payments.bundle.properties
+[source,properties]
+----
+# The version of the payments contract.
+version=1.0.0
+----
+
+.Considerations
+* **Each contract is versioned on its own.** Major for a breaking change, minor for an additive one, patch for anything else.
+* **The version is the release.** Step 7 releases a contract exactly when its version has no release tag yet.
+
+[#step-5]
+=== Step 5: Describe the build, publishing to a directory first
+
+.apionly.yaml
+[source,yaml]
+----
+schemaVersion: 1
+
+sources:
+  root: specs
+  openapi: openapi
+
+defaults:
+  openapi:
+    lint: .redocly.yaml
+    outputName: openapi.yaml
+
+build:
+  staging: build/staging
+  dist: build/dist
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: build/maven-repository
+
+targets:
+  orders:
+    openapi:
+      bundle: bundles/orders.yaml
+  payments:
+    openapi:
+      bundle: bundles/payments.yaml
+----
+
+`channels.maven.repository` is a directory for now.
+The Publisher writes the same layout a remote Maven repository has, so everything up to step 8 works without one.
+
+[#step-6]
+=== Step 6: Build, lint and publish locally
+
+[source,console]
+----
+npm run apionly -- build
+npm run apionly -- lint
+npm run apionly -- publish
+----
+
+[source]
+----
+-- Packed orders-1.0.0.tgz (1 document(s))
+-- Published com.example.contracts:orders:1.0.0 to .../build/maven-repository
+-- Packed payments-1.0.0.tgz (1 document(s))
+-- Published com.example.contracts:payments:1.0.0 to .../build/maven-repository
+
+Published 2 artifact(s).
+----
+
+[source]
+----
+build/maven-repository/com/example/contracts/orders/1.0.0/orders-1.0.0-manifest.json
+build/maven-repository/com/example/contracts/orders/1.0.0/orders-1.0.0.pom
+build/maven-repository/com/example/contracts/orders/1.0.0/orders-1.0.0.tgz
+build/maven-repository/com/example/contracts/payments/1.0.0/...
+----
+
+The `.tgz` is the archive: the bundled document plus a `manifest.json` of its SHA-256 hashes.
+The `-manifest.json` beside it is a copy, so the provenance can be read without unpacking anything.
+
+Delete `build/` before going on; the release in step 7 publishes afresh.
+
+[#step-7]
+=== Step 7: The two release scripts
+
+Two checks decide what a release does: a changed contract must have a new version, and a version is released once.
+Git tags record what was released, one per contract version, named `<target>-v<version>`.
+
+.scripts/check-versions.sh
+[source,bash]
+----
+#!/usr/bin/env bash
+# Fails when a contract changed since <ref> but its version is already released.
+set -euo pipefail
+since="$1"
+
+status=0
+for target in $(npm run --silent apionly -- changed --since "$since" --quiet); do
+  version="$(sed -n 's/^version=//p' "specs/openapi/bundles/$target.bundle.properties")"
+  if git rev-parse --quiet --verify "refs/tags/$target-v$version" > /dev/null; then
+    echo "::error title=Contract version not raised::$target changed, but $target $version is already released. Raise its version."
+    status=1
+  fi
+done
+exit "$status"
+----
+
+.scripts/release.sh
+[source,bash]
+----
+#!/usr/bin/env bash
+# Publishes every contract whose current version has no release tag yet, and tags it.
+# Run after `npm run apionly -- build`.
+set -euo pipefail
+
+for target in $(npm run --silent apionly -- targets | grep -v '(publish: false)' | awk '{print $1}'); do
+  version="$(sed -n 's/^version=//p' "specs/openapi/bundles/$target.bundle.properties")"
+  tag="$target-v$version"
+  if git rev-parse --quiet --verify "refs/tags/$tag" > /dev/null; then
+    continue
+  fi
+  npm run --silent apionly -- publish --target "$target"
+  git tag "$tag"
+  echo "Released $target $version"
+done
+----
+
+Make both executable, commit, and try them.
+
+The first release publishes everything, because nothing is tagged yet:
+
+[source,console]
+----
+npm run apionly -- build
+./scripts/release.sh
+----
+
+[source]
+----
+Released orders 1.0.0
+Released payments 1.0.0
+----
+
+A second run releases nothing.
+
+Now change the `orders` contract without raising its version.
+Add a description to the operation in `Orders.yaml`, below its `summary`:
+
+.specs/openapi/paths/Orders.yaml (addition)
+[source,yaml]
+----
+  description: Lists every order, newest first.
+----
+
+Commit, and check against the commit before the change:
+
+[source,console]
+----
+./scripts/check-versions.sh HEAD~1
+----
+
+[source]
+----
+::error title=Contract version not raised::orders changed, but orders 1.0.0 is already released. Raise its version.
+----
+
+Raise `version` in `orders.bundle.properties` to `1.1.0`, and commit.
+The check against the commit before the change, now `HEAD~2`, passes:
+
+[source,console]
+----
+./scripts/check-versions.sh HEAD~2
+----
+
+In a pull request, that commit is the base branch, which is what the workflow in step 9 passes.
+The next release publishes `orders` 1.1.0 and tags `orders-v1.1.0`, and leaves `payments` alone:
+
+[source,console]
+----
+npm run apionly -- build
+./scripts/release.sh
+----
+
+[source]
+----
+Released orders 1.1.0
+----
+
+.Considerations
+* **Why tags, and not "whatever changed in the last commit".**
+A release job that publishes the untagged versions recovers by itself from a failed run, and releases exactly what the version files say.
+* **The version file path in the scripts** assumes each contract's version sits beside an OpenAPI bundle root in `specs/openapi/bundles/`.
+Adjust the path if a contract has only an AsyncAPI document, or a `versionFile` of its own.
+* **A shared fragment** changes every contract that reaches it, so `check-versions.sh` asks for each of them to get a new version.
+
+[#step-8]
+=== Step 8: Point the channel at the Maven repository
+
+.apionly.yaml (channels)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.example.com/repository/contracts
+    tokenEnv: MAVEN_TOKEN
+----
+
+For a URL, the Publisher uploads each file with an HTTP `PUT`, and sends the token from the environment variable `tokenEnv` names as a bearer token: `Authorization: Bearer <token>`.
+The token is never written in `apionly.yaml`, which is committed.
+
+.Considerations
+* **Check that your repository accepts that upload** before the first real release: publish a throwaway version of a throwaway target from a local shell, with `MAVEN_TOKEN` set, and delete it again.
+A `401` or `403` names the variable to check.
+* **A remote repository usually refuses to overwrite a released version**; a directory does not.
+The release script never republishes a tagged version, so neither case arises in normal operation.
+
+[#step-9]
+=== Step 9: Run it in CI
+
+A pull request builds, lints and checks the versions:
+
+..github/workflows/check.yml
+[source,yaml]
+----
+name: check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Build and lint every contract
+        run: |
+          npm run apionly -- build
+          npm run apionly -- lint
+      - name: Every changed contract has a new version
+        run: ./scripts/check-versions.sh "origin/$GITHUB_BASE_REF"
+      - name: Upload the lint reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-lint-reports
+          path: build/reports/lint/
+----
+
+The main branch releases:
+
+..github/workflows/release.yml
+[source,yaml]
+----
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Build and lint every contract
+        run: |
+          npm run apionly -- build
+          npm run apionly -- lint
+      - name: Publish every contract whose version is not released yet
+        env:
+          MAVEN_TOKEN: ${{ secrets.MAVEN_TOKEN }}
+        run: ./scripts/release.sh
+      - name: Push the release tags
+        run: git push origin --tags
+----
+
+.Considerations
+* **`fetch-depth: 0`** gives both jobs the history and the tags the scripts read.
+* **`MAVEN_TOKEN`** is a repository secret holding a token that can upload to the Maven repository.
+
+[#step-10]
+=== Step 10: Pre-releases
+
+An implementation usually starts before a contract is finished.
+Publish a pre-release of the version the contract is heading for, without editing its version file:
+
+[source,console]
+----
+npm run apionly -- build --target orders --pre-release rc.1
+npm run apionly -- publish --target orders --pre-release rc.1
+----
+
+With `version=1.1.0` in `orders.bundle.properties`, that publishes `orders` `1.1.0-rc.1`.
+A consumer builds against it only when its subscription sets `allowPrerelease = true`, so an unfinished contract never satisfies a build by accident.
+
+[#consumer]
+== An implementing project, in another repository
+
+[#step-11]
+=== Step 11: Declare the version, and write the contract test first
+
+.gradle.properties
+[source,properties]
+----
+# The version of the orders contract this project implements.
+apiContractVersion=1.1.0
+----
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:6.1.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    // The contract version this project implements, for ApiContractTest.
+    systemProperty 'apiContractVersion', providers.gradleProperty('apiContractVersion').get()
+}
+----
+
+.src/test/java/com/example/orders/ApiContractTest.java
+[source,java]
+----
+package com.example.orders;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ApiContractTest {
+
+    @Test
+    void theContractThisProjectImplementsIsOnTheClasspath() throws IOException {
+        try (InputStream document = getClass().getResourceAsStream("/openapi.yaml")) {
+            assertNotNull(document, "openapi.yaml is not on the test classpath");
+            String text = new String(document.readAllBytes(), StandardCharsets.UTF_8);
+            String version = System.getProperty("apiContractVersion");
+            assertTrue(text.contains("version: " + version),
+                "openapi.yaml does not declare version " + version);
+        }
+    }
+}
+----
+
+`./gradlew test` fails, and the test report says why: `openapi.yaml is not on the test classpath`.
+
+[#step-12]
+=== Step 12: Subscribe
+
+Add the plugin, the repository and the subscription to `build.gradle`:
+
+.build.gradle (additions)
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'
+        url = uri('https://maven.example.com/repository/contracts')
+        // Gradle reads apiContractsUsername and apiContractsPassword from
+        // gradle.properties outside this project, or from the environment.
+        credentials(PasswordCredentials)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    // At the version apiContractVersion in gradle.properties declares.
+    subscribe('orders')
+}
+----
+
+Put `apiContractsUsername` and `apiContractsPassword` in `~/.gradle/gradle.properties`, never in the project, and run `./gradlew check`:
+
+[source]
+----
+> Task :fetchApiSpecOrders
+Subscribed to orders 1.1.0
+> Task :test
+> Task :verifyApiSpecOrders
+
+BUILD SUCCESSFUL
+----
+
+`ApiContractTest` passes.
+Commit `apionly.lock`:
+
+.apionly.lock
+[source]
+----
+# apionly.lock -- the published contracts this project builds against.
+# Generated by the Arc-E-Tect API-Only Subscriber. Commit it; do not edit it.
+# Run `verifyApiSpec` to check that what is on disk still matches.
+format 1
+
+target orders
+version 1.1.0
+channel maven
+sha256 d4e72b89678bd50bf764e4c5ddce1ff8ea7e844e900751d4c285e161d99c723d openapi.yaml
+----
+
+In CI, the credentials come from the environment, as `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.
+link:../4-implementing-a-published-contract/tutorial.adoc[Provider use case 4's tutorial →] covers the implementing side in full, and link:../../client/3-specification-library-in-another-repository/tutorial.adoc[client use case 3's tutorial →] the calling side: CI, pre-releases, taking a new version, and each guard.
+
+[#step-13]
+=== Step 13: Before the first release
+
+An implementing project can start before anything is released, from a local checkout of the contracts repository, through the `file` channel.
+
+In the contracts repository, add a `file` channel beside `maven`, and publish a pre-release to it:
+
+.apionly.yaml (channels)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.example.com/repository/contracts
+    tokenEnv: MAVEN_TOKEN
+  file:
+    directory: build/publish
+----
+
+[source,console]
+----
+npm run apionly -- build --target orders --pre-release rc.1
+npm run apionly -- publish --target orders --pre-release rc.1 --channel file
+----
+
+In the implementing project, read that directory instead of the Maven repository, and allow the pre-release:
+
+.build.gradle (temporary)
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = '../contracts/build/publish'
+    }
+    subscribe('orders') {
+        // Deliberate and temporary: remove at the first release.
+        allowPrerelease = true
+    }
+}
+----
+
+with `apiContractVersion=1.1.0-rc.1`.
+`./gradlew check` now takes the pre-release from the directory:
+
+[source]
+----
+> Task :fetchApiSpecOrders
+Updated orders from 1.1.0 to 1.1.0-rc.1
+----
+
+At the first release, the channel block goes back to `maven`, `allowPrerelease` goes, and the version becomes the released one.
+In the contracts repository, remove the `file` channel again, or the release job publishes to it as well.
+
+.Considerations
+* **This works only while both repositories are checked out side by side.**
+CI has neither your checkout nor your pre-releases, so release early and switch.
+
+[#what-you-have]
+== What you have now
+
+* A contracts repository that releases each contract on its own, exactly when its version is new.
+* Pull requests that fail on a changed contract under a released version, and on a fragment no contract references.
+* A tag per released contract version.
+* Implementing projects that build against the version they declare, verified against their own lockfiles.
+
+[#watch-for]
+== What to watch for
+
+* **Publishing is passive.**
+Nothing tells a consumer that a new version exists.
+Tell your consumers, or have them configure an update bot that reads `apiContractVersion`.
+* **The fragments are unreachable for consumers**, which is the point.
+Make the documents readable somewhere, such as a documentation site built from `build/dist/`, so nobody asks for read access to the fragments instead.
+* **Deleting a released version** breaks every consumer that locked it.
+Leave released versions in the repository.
+
+[#next]
+== Where to go next
+
+* link:../../../reference/run-book.adoc[The run-book →] covers releasing, upgrading and troubleshooting this setup.
+* link:../../../reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains every setting, command, task and file used here.
+* link:overview.adoc[The overview of provider use case 3 →] says when this setup is more than you need.

@@ -75,8 +75,8 @@ jobs:
 
           # Single-quoted so bash does not try to expand the literal "${version}" placeholder
           # itself - a plain double-quoted assignment silently evaluates it as an (unset, so
-          # empty) shell variable, truncating e.g. "api-only-suite-v${version}" down to just
-          # "api-only-suite-v" before any of the logic below ever runs.
+          # empty) shell variable, truncating e.g. "api-only-publisher-v${version}" down to just
+          # "api-only-publisher-v" before any of the logic below ever runs.
           TAG_FORMAT='${{ inputs.tag_format }}'
           TAG_PREFIX="${TAG_FORMAT%%\$\{version\}*}"
 
@@ -104,7 +104,7 @@ jobs:
           # Extract version information using multiple patterns for compatibility.
           # "Found git tag <tag> associated with version X.Y.Z" is semantic-release's own phrasing
           # of the bare semver regardless of the tag's own project-namespaced prefix (e.g.
-          # "api-only-suite-v3.3.1") - matching on "associated with version" rather than assuming
+          # "api-only-publisher-v0.2.0") - matching on "associated with version" rather than assuming
           # the version immediately follows "Found git tag" (optionally prefixed by a bare "v")
           # is what makes this work for a monorepo's per-project tag formats, not just the
           # unscoped "v${version}" default.

@@ -1,0 +1,366 @@
+= Tutorial: implementing one contract and calling other APIs
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial builds a repository, `shop`, with a library of API description fragments for three APIs, `billing`, `orders` and `payments`, and a project, `billing`, that implements the `billing` API and calls the other two.
+Every file and every command below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
+
+It assumes you know how to design an API in OpenAPI and how a multi-project Gradle build is laid out.
+
+[#before-you-start]
+== Before you start
+
+[cols="1,2", options="header"]
+|===
+|You need |Version
+
+|Node.js and npm
+|Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`
+
+|Java
+|21 or newer
+
+|Gradle
+|8 or newer, through the repository's wrapper
+|===
+
+[#what-you-build]
+== What you will build
+
+[source]
+----
+shop/
+├── settings.gradle
+├── build.gradle                           Builds, publishes and lints every contract
+├── contracts/                             The specification library
+│   ├── package.json, package-lock.json, apionly.yaml, .redocly.yaml
+│   └── specs/openapi/
+│       ├── bundles/billing.yaml, billing.bundle.properties
+│       ├── bundles/orders.yaml, orders.bundle.properties
+│       ├── bundles/payments.yaml, payments.bundle.properties
+│       ├── paths/Billing.yaml, Orders.yaml, Payments.yaml
+│       └── components/common/BadRequest.yaml
+└── billing/
+    ├── build.gradle                       Implements billing, calls orders and payments
+    ├── gradle.properties                  The version of each
+    ├── apionly.lock
+    └── src/test/java/com/example/billing/ApiContractTest.java
+----
+
+[#step-1]
+== Step 1: The library
+
+Create `contracts/` exactly as link:../../client/2-specification-library-in-the-same-repository/tutorial.adoc#step-1[step 1 of client use case 2's tutorial →] does, with a third contract, `billing`, beside `orders` and `payments`:
+
+.contracts/specs/openapi/bundles/billing.yaml
+[source,yaml]
+----
+openapi: 3.1.1
+info:
+  title: Billing API
+  version: 0.0.0
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://api.billing.test
+security: []
+paths:
+  /billing:
+    $ref: ../paths/Billing.yaml
+----
+
+.contracts/specs/openapi/paths/Billing.yaml
+[source,yaml]
+----
+get:
+  operationId: listBilling
+  summary: List the billing.
+  responses:
+    '200':
+      description: The billing.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+    '400':
+      $ref: ../components/common/BadRequest.yaml
+----
+
+.contracts/specs/openapi/bundles/billing.bundle.properties
+[source,properties]
+----
+# The version of the billing contract.
+version=1.0.0
+----
+
+and a third target in `contracts/apionly.yaml`:
+
+[source,yaml]
+----
+targets:
+  billing:
+    openapi:
+      bundle: bundles/billing.yaml
+  orders:
+    openapi:
+      bundle: bundles/orders.yaml
+  payments:
+    openapi:
+      bundle: bundles/payments.yaml
+----
+
+[#step-2]
+== Step 2: The root build
+
+.settings.gradle
+[source,groovy]
+----
+rootProject.name = 'shop'
+include 'billing'
+----
+
+The root `build.gradle` is link:../../client/2-specification-library-in-the-same-repository/tutorial.adoc#step-2[the one from client use case 2 →], with all three contracts in its list:
+
+[source,groovy]
+----
+def apiContracts = ['billing', 'orders', 'payments']
+----
+
+It registers `buildApiContract<Target>` and `publishApiContract<Target>` for each, and `lintApiContracts` for the whole library.
+
+[#step-3]
+== Step 3: Declare the versions
+
+.billing/gradle.properties
+[source,properties]
+----
+# The version of the billing contract this project implements.
+apiContractVersion=1.0.0
+
+# The versions of the APIs this project calls.
+ordersApiVersion=1.0.0
+paymentsApiVersion=1.0.0
+----
+
+.Considerations
+* **Two kinds of version.**
+`apiContractVersion` is the contract the project implements, and the Subscriber reads it for `subscribe`.
+Each `<target>ApiVersion` is an API it calls, which the build file passes to `subscribeAsClient` itself.
+
+[#step-4]
+== Step 4: Write the contract test first
+
+.billing/src/test/java/com/example/billing/ApiContractTest.java
+[source,java]
+----
+package com.example.billing;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ApiContractTest {
+
+    @Test
+    void theContractThisProjectImplementsIsAtTheRootOfTheClasspath() throws IOException {
+        assertOnTheClasspath("/openapi.yaml", System.getProperty("apiContractVersion"));
+    }
+
+    @Test
+    void theOrdersApiThisProjectCallsIsOnTheClasspath() throws IOException {
+        assertOnTheClasspath("/contracts/orders/openapi.yaml", System.getProperty("ordersApiVersion"));
+    }
+
+    @Test
+    void thePaymentsApiThisProjectCallsIsOnTheClasspath() throws IOException {
+        assertOnTheClasspath("/contracts/payments/openapi.yaml", System.getProperty("paymentsApiVersion"));
+    }
+
+    private void assertOnTheClasspath(String path, String version) throws IOException {
+        try (InputStream document = getClass().getResourceAsStream(path)) {
+            assertNotNull(document, path + " is not on the test classpath");
+            String text = new String(document.readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(text.contains("version: " + version), path + " does not declare version " + version);
+        }
+    }
+}
+----
+
+[#step-5]
+== Step 5: Subscribe to all three
+
+.billing/build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:6.1.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    // The contract this project implements, and the APIs it calls, for ApiContractTest.
+    systemProperty 'apiContractVersion', findProperty('apiContractVersion')
+    systemProperty 'ordersApiVersion', findProperty('ordersApiVersion')
+    systemProperty 'paymentsApiVersion', findProperty('paymentsApiVersion')
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = rootProject.file('contracts/build/publish').path
+    }
+
+    // The contract this project implements, at apiContractVersion.
+    subscribe('billing')
+
+    // The APIs it calls, each at its own version.
+    subscribeAsClient('orders') {
+        version = findProperty('ordersApiVersion')
+    }
+    subscribeAsClient('payments') {
+        version = findProperty('paymentsApiVersion')
+    }
+}
+
+// Each fetch reads what the root build publishes.
+tasks.named('fetchApiSpecBilling') { dependsOn ':publishApiContractBilling' }
+tasks.named('fetchApiSpecOrders') { dependsOn ':publishApiContractOrders' }
+tasks.named('fetchApiSpecPayments') { dependsOn ':publishApiContractPayments' }
+----
+
+[source,console]
+----
+./gradlew check
+----
+
+[source]
+----
+Subscribed to billing 1.0.0
+Subscribed to orders 1.0.0
+Subscribed to payments 1.0.0
+> Task :billing:test
+
+BUILD SUCCESSFUL
+----
+
+All three tests pass, and the classpath shows the two roles:
+
+[source]
+----
+billing/build/resources/main/contracts/orders/manifest.json
+billing/build/resources/main/contracts/orders/openapi.yaml
+billing/build/resources/main/contracts/payments/manifest.json
+billing/build/resources/main/contracts/payments/openapi.yaml
+billing/build/resources/main/manifest.json
+billing/build/resources/main/openapi.yaml
+----
+
+Run `./gradlew check --configuration-cache` twice, and on the second run all three fetches are `UP-TO-DATE`.
+
+[#step-6]
+== Step 6: Commit the lockfile
+
+.billing/apionly.lock
+[source]
+----
+# apionly.lock -- the published contracts this project builds against.
+# Generated by the Arc-E-Tect API-Only Subscriber. Commit it; do not edit it.
+# Run `verifyApiSpec` to check that what is on disk still matches.
+format 1
+
+target billing
+version 1.0.0
+channel file
+sha256 3c9e3fe518f28dae5b6a7016254943acde7a9196df75cd76d986e51f6562e52c openapi.yaml
+
+target orders
+version 1.0.0
+channel file
+sha256 266f7c64549d9eebb5c410eda00bb489d19eab5f22e78a49f2cd2f36585476b1 openapi.yaml
+
+target payments
+version 1.0.0
+channel file
+sha256 f36c4659bc427ec6c37ae0d728142cc9dbe7710f676e7f8ec8f999a2ee368626 openapi.yaml
+----
+
+[#step-7]
+== Step 7: See how the roles differ
+
+=== The implemented contract changes on its own
+
+Change `summary: List the billing.` in `Billing.yaml` to `summary: List every invoice.`, raise `version` in `billing.bundle.properties` and `apiContractVersion` to `1.1.0`, and run `./gradlew check`:
+
+[source]
+----
+Updated billing from 1.0.0 to 1.1.0
+BUILD SUCCESSFUL
+----
+
+`orders` and `payments` stay at `1.0.0`.
+
+=== A called API declared as implemented
+
+Change `subscribeAsClient('orders') {` to `subscribe('orders') {`, and run any task:
+
+[source]
+----
+> apiOnlySubscriber already implements 'billing', so it cannot also implement 'orders'.
+  A project implements one API contract: two in one project would share one version, one classpath root and one release, so neither could change without the other.
+  If this project calls 'orders' rather than implementing it, declare it with subscribeAsClient('orders') instead.
+  If it implements both, put each contract in a project of its own, in a multi-project build, with its own apiOnlySubscriber block and apiContractVersion.
+  See https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-subscriber/README.adoc#one-contract-per-project
+----
+
+Put `subscribeAsClient` back.
+
+[#step-8]
+== Step 8: Run it in CI
+
+The CI job is the one from link:../../client/2-specification-library-in-the-same-repository/tutorial.adoc#step-8[client use case 2's tutorial →]: Node.js and Java, `./gradlew check --parallel`, and a check that every `apionly.lock` is committed.
+
+[#watch-for]
+== What to watch for
+
+* **Contracts from elsewhere.**
+Every subscription in `billing` resolves through the project's `file` channel here; an API published to a Maven repository gets a `channel { }` of its own inside its `subscribeAsClient` block, as link:overview.adoc#combining[the overview →] shows.
+* **A server framework that serves `/openapi.yaml`** serves the implemented contract only; the called APIs stay under `/contracts/`.
+
+[#next]
+== Where to go next
+
+* link:overview.adoc[The overview →] says how the other use cases combine.
+* link:../../../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] explains what a client subscription gets, and what it does not.

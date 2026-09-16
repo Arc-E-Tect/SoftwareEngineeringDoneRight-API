@@ -1,3 +1,31 @@
+## [0.2.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.2.0...api-only-subscriber-v0.2.1) (2026-09-13)
+
+
+### 🐛 Bug Fixes
+
+* document Publisher 0.3.0 and Subscriber 0.2.0 as released ([#11](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/11)) ([af54ca4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/af54ca4576ec346f32b5003b27a783d732182a13)), closes [#11](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/11)
+
+# [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.1.0...api-only-subscriber-v0.2.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* client subscriptions, a channel per subscription, and standalone use-case documentation ([#10](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/10)) ([48b4bce](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/48b4bcea411b1763f4926fe1525dd9d84e01d0c2)), closes [#10](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/10)
+* **api-only-publisher:** fail lint on fragments no target reaches ([#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)) ([66fd17e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/66fd17ef899de346ed6913ffb721751e81c60245)), closes [#9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/9)
+
+# [0.1.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.0.2...api-only-subscriber-v0.1.0) (2026-09-13)
+
+
+### ✨ New and updated features
+
+* per-bundle contract versions and fetch-time archive checks ([#8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/8)) ([82e5e37](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/82e5e375647f87cd8ee1fedb9bb4dc48faa475c3)), closes [#8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/8)
+
+
+### 🐛 Bug Fixes
+
+* **ci:** authenticate the npm publish over OIDC, not a placeholder token ([#7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/7)) ([3475a2d](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3475a2d3393541d9959987c6f4874c462f489605)), closes [#7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/7)
+* **ci:** publish to npm from its own job, over trusted publishing ([#6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/6)) ([d208467](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/d208467abafa0fc1efa12b6a250883fda153a3f5)), closes [#6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/6)
+
 ## [0.0.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.0.1...api-only-subscriber-v0.0.2) (2026-09-12)
 
 

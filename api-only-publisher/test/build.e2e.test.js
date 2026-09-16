@@ -26,7 +26,7 @@ function scaffold() {
 test("a scaffolded library builds, lints and stamps a real document", { timeout: 300000 }, () => {
     const config = scaffold();
 
-    const results = build(config, { version: "1.2.3" });
+    const results = build(config, { versionOf: () => "1.2.3" });
 
     assert.strictEqual(results.length, 1);
     const document = fs.readFileSync(results[0].file, "utf8");
@@ -48,7 +48,7 @@ test("a target with no distribution configured is built but copied nowhere", { t
     // library ends up with once its consumers subscribe rather than receive.
     const config = scaffold();
 
-    const results = build(config, { version: "1.0.0" });
+    const results = build(config, { versionOf: () => "1.0.0" });
 
     assert.strictEqual(results[0].distributed, null);
     assert.ok(fs.existsSync(results[0].file));
@@ -59,12 +59,12 @@ test("an unresolved placeholder fails the build rather than shipping a marker", 
     const info = path.join(config.sourceRoot(), "openapi/shared/info.yaml");
     fs.writeFileSync(info, fs.readFileSync(info, "utf8").replace("{{conventions}}", "{{nowhere}}"));
 
-    assert.throws(() => build(config, { version: "1.0.0" }), /no Markdown file found for \{\{nowhere\}\}/);
+    assert.throws(() => build(config, { versionOf: () => "1.0.0" }), /no Markdown file found for \{\{nowhere\}\}/);
 });
 
 test("a bundle root that does not exist is reported against its target", { timeout: 300000 }, () => {
     const config = scaffold();
     fs.rmSync(path.join(config.sourceRoot(), "openapi/bundles/example-service_openapi_structure.yaml"));
 
-    assert.throws(() => build(config, { version: "1.0.0" }), /bundle root not found/);
+    assert.throws(() => build(config, { versionOf: () => "1.0.0" }), /bundle root not found/);
 });

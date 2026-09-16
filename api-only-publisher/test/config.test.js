@@ -112,3 +112,41 @@ distribution:
 test("no distribution block means nothing is copied anywhere", () => {
     assert.strictEqual(load(write(MINIMAL)).destinationDir("alpha"), null);
 });
+
+test("a target's version file sits beside its first bundle root, unless the target names its own", () => {
+    const file = write(MINIMAL.replace(
+        "  beta:\n    publish: false\n",
+        "  beta:\n    publish: false\n    versionFile: versions/beta.properties\n"));
+    const config = load(file);
+    const root = path.dirname(file);
+
+    assert.strictEqual(config.versionFile("alpha"), path.join(root, "specs/openapi/bundles/alpha.bundle.properties"));
+    assert.strictEqual(config.versionFile("beta"), path.join(root, "versions/beta.properties"));
+});
+
+test("an AsyncAPI-only target's version file sits beside its AsyncAPI bundle root", () => {
+    const file = write(`schemaVersion: 1
+sources:
+  root: specs
+  asyncapi: asyncapi
+targets:
+  events:
+    asyncapi:
+      bundle: events.yaml
+`);
+    assert.strictEqual(load(file).versionFile("events"), path.join(path.dirname(file), "specs/asyncapi/events.bundle.properties"));
+});
+
+test("lint.unreferenced defaults to error, and refuses a mode it does not know", () => {
+    assert.strictEqual(load(write(MINIMAL)).lintUnreferenced(), "error");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  unreferenced: warn\n")).lintUnreferenced(), "warn");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  unreferenced: off\n")).lintUnreferenced(), "off");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  unreferenced: false\n")).lintUnreferenced(), "off");
+    assert.throws(() => load(write(MINIMAL + "lint:\n  unreferenced: loud\n")).lintUnreferenced(),
+        (e) => e instanceof ConfigError && /lint\.unreferenced must be error, warn or off/.test(e.message));
+});
+
+test("the unreferenced-fragment report sits with the lint reports", () => {
+    const file = write(MINIMAL);
+    assert.strictEqual(load(file).unreferencedReport(), path.join(path.dirname(file), "build/reports/lint/unreferenced.txt"));
+});

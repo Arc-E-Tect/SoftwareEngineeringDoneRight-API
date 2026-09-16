@@ -2,9 +2,8 @@
 
 // Reading and validating apionly.yaml.
 //
-// The configuration is the single source of truth for what this library builds:
-// it replaced the per-script SERVICES arrays, and the `apis:` map that said an
-// overlapping thing under a different name.
+// The configuration is the single source of truth for what a library builds:
+// which targets exist, where their fragments live, and where each document goes.
 
 const fs = require("fs");
 const path = require("path");
@@ -93,6 +92,7 @@ function load(configPath) {
         toolchain: parsed.toolchain || {},
         build: parsed.build || {},
         reports: parsed.reports || {},
+        lint: parsed.lint || {},
         distribution: parsed.distribution || null,
         channels: parsed.channels || {},
         targets,
@@ -126,6 +126,21 @@ function load(configPath) {
             const reports = this.reports.lint || "build/reports/lint";
             return path.resolve(this.root, reports, target, `${kind}.txt`);
         },
+        // Where lint lists the fragments no target reaches.
+        unreferencedReport() {
+            const reports = this.reports.lint || "build/reports/lint";
+            return path.resolve(this.root, reports, "unreferenced.txt");
+        },
+        // What lint does about a fragment no target reaches: `error`, the default,
+        // fails the lint; `warn` reports it; `off` does not look.
+        lintUnreferenced() {
+            const configured = this.lint.unreferenced;
+            const mode = configured === undefined ? "error" : configured === false ? "off" : configured;
+            if (!["error", "warn", "off"].includes(mode)) {
+                throw new ConfigError(`lint.unreferenced must be error, warn or off, not ${JSON.stringify(configured)}`);
+            }
+            return mode;
+        },
         tool(name) {
             return requireString(this.toolchain[name], `toolchain.${name}`);
         },
@@ -140,6 +155,20 @@ function load(configPath) {
         },
         bundlePath(target, kind) {
             return path.join(this.stagingDir(kind), this.targets[target][kind].bundle);
+        },
+        // The file a target's version is read from: the target's own `versionFile`,
+        // relative to this configuration, or else <target>.bundle.properties beside
+        // the target's first bundle root in the hand-authored tree -- so a version
+        // sits with the fragments it describes, and changes in the same commit.
+        versionFile(target) {
+            const spec = this.targets[target];
+            if (spec.versionFile !== undefined) {
+                return path.resolve(this.root, requireString(spec.versionFile, `targets.${target}.versionFile`));
+            }
+            const kind = ["openapi", "asyncapi"].find((k) => spec[k]);
+            const bundleRoot = path.join(
+                this.sourceRoot(), requireString(this.sources[kind], `sources.${kind}`), spec[kind].bundle);
+            return path.join(path.dirname(bundleRoot), `${target}.bundle.properties`);
         },
         // Where a distributed document is copied to, from the transitional
         // `distribution` block. Null once that block is gone.

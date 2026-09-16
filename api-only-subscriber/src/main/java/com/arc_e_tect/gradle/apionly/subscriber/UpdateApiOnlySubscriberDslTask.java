@@ -42,11 +42,19 @@ public abstract class UpdateApiOnlySubscriberDslTask extends DefaultTask {
         getCleanupDsl().convention(false);
     }
 
-    /** The consumer project's {@code build.gradle}. */
+    /**
+     * The consumer project's {@code build.gradle}.
+     *
+     * @return the build file this task rewrites
+     */
     @Internal
     public abstract RegularFileProperty getBuildFile();
 
-    /** Whether to generate a missing outer DSL block. */
+    /**
+     * Whether to generate a missing outer DSL block.
+     *
+     * @return whether an absent {@code apiOnlySubscriber} block is generated
+     */
     @Internal
     public abstract Property<Boolean> getGenerateDsl();
 
@@ -61,7 +69,11 @@ public abstract class UpdateApiOnlySubscriberDslTask extends DefaultTask {
         getGenerateDsl().set(value);
     }
 
-    /** Whether to remove managed comments from the DSL block. */
+    /**
+     * Whether to remove managed comments from the DSL block.
+     *
+     * @return whether comments are stripped from the managed block
+     */
     @Internal
     public abstract Property<Boolean> getCleanupDsl();
 

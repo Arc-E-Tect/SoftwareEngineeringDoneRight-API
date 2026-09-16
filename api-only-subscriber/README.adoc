@@ -11,9 +11,30 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Java-21%2B-blue[Java 21+,link=https://adoptium.net]
 image:https://img.shields.io/badge/Gradle-8.x%2B-02303A?logo=gradle[Gradle 8+,link=https://gradle.org]
 
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+// Remove this notice when 1.0.0 is released.
+[IMPORTANT]
+====
+Until 1.0.0 is released, any release may change the `apiOnlySubscriber` DSL, the tasks or the lockfile incompatibly, without a major version bump.
+The interface is still being settled; 1.0.0 is the first release whose interface is kept stable.
+Pin an exact version, and read the changelog before upgrading.
+====
+
 A Gradle plugin that fetches published API description documents into a build, verifies them against a committed lockfile, and fails when a contract has drifted.
 
-It is the consumer half of a pair. The link:../api-only-publisher/README.adoc[API-Only Publisher] builds and publishes the documents; this fetches and verifies them. The two are coupled only by the published artifact and its `manifest.json`, and neither knows anything else about the other.
+It is the consumer half of a pair.
+The link:../api-only-publisher/README.adoc[API-Only Publisher →] builds and publishes the documents; this fetches and verifies them.
+The two are coupled only by the published artifact and its `manifest.json`, and neither knows anything else about the other.
 
 Its users are implementation projects: both the provider implementing a contract, and genuine API clients generating stubs from one.
 
@@ -21,9 +42,13 @@ Its users are implementation projects: both the provider implementing a contract
 ====
 The question this plugin changes is which one your build is answering.
 Before: _does this implementation match this file that happens to sit in `src/`?_
-After: _does this implementation match the organisation's published contract, at version X?_
+After: _does this implementation match the published contract, at version X?_
 ====
 
+This document is the reference for the Subscriber alone.
+To set it up for your situation, start at link:../docs/README.adoc[the documentation →].
+
+[#plugin-id]
 == Plugin ID
 
 [source]
@@ -31,6 +56,7 @@ After: _does this implementation match the organisation's published contract, at
 com.arc-e-tect.api-only-subscriber
 ----
 
+[#requirements]
 == Requirements
 
 [cols="1,1",options="header"]
@@ -42,16 +68,15 @@ com.arc-e-tect.api-only-subscriber
 
 The plugin is compatible with Gradle's configuration cache.
 
-== Applying the Plugin
-
-=== Using the `plugins` block (recommended)
+[#applying]
+== Applying the plugin
 
 .Groovy DSL
 [source,groovy]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.0.1'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 ----
 
@@ -60,22 +85,30 @@ plugins {
 ----
 plugins {
     java
-    id("com.arc-e-tect.api-only-subscriber") version "0.0.1"
+    id("com.arc-e-tect.api-only-subscriber") version "0.2.0"
 }
 ----
 
-The `java` plugin is optional. Applied alongside it, the fetched documents are added to the main resources so they reach the classpath; without it, they are still fetched and verified, just not packaged.
+The `java` plugin is optional.
+Applied alongside it, the fetched documents are added to the main resources so they reach the classpath; without it, they are still fetched and verified, just not packaged.
 
+[#how-it-works]
 == How it works
 
-. **Resolve.** Each subscription names a target and a version. The `maven` channel turns that into a dependency and lets Gradle resolve it; the `file` channel reads a directory.
+. **Resolve.** Each subscription names a target and a version.
+The `maven` channel turns that into a dependency and lets Gradle resolve it; the `file` channel reads a directory.
+The `file` channel only works out where the archive belongs while the build is being planned, and checks that it is there when the fetch runs, so a task earlier in the same build can be the one that publishes it.
 . **Unpack.** The archive is extracted into `build/api-spec/<target>/`.
-. **Check against the archive's own manifest.** Every document the manifest declares must be present and must hash to what the manifest says. An archive that disagrees with itself never reaches the build.
+. **Check against the archive's own manifest.** Every document the manifest declares must be present and must hash to what the manifest says.
+An archive that disagrees with itself never reaches the build.
 . **Lock.** The resolved version, the channel, and each document's SHA-256 are written to `apionly.lock`, which is meant to be committed.
 . **Verify.** `verifyApiSpec` re-hashes what is on disk and fails when it no longer matches the lockfile.
 
-A version that is already locked, coming back with *different* bytes, is refused rather than silently re-locked. That is a released version rebuilt, or a tag moved, and a lockfile that quietly accepts it locks nothing.
+A version that is already locked, coming back with *different* bytes, is refused rather than silently re-locked.
+From the `file` channel, that is a version published again with different content; from a repository, a released version rebuilt or a tag moved.
+A lockfile that quietly accepted either would lock nothing, so the refusal names the documents that differ and says how to resolve it.
 
+[#configuration]
 == Configuration
 
 The plugin registers an `apiOnlySubscriber` extension.
@@ -90,6 +123,10 @@ apiOnlySubscriber {
     // this project building against?" answerable by reading the repository.
     // Default: apionly.lock, beside the build file
     // lockfile = layout.projectDirectory.file('apionly.lock')
+
+    // The version of the contract this project implements, unless its subscription sets its own.
+    // Default: the apiContractVersion project property; unset when that is not defined
+    // version = findProperty('apiContractVersion')
 
     channel {
         // Which kind of channel to resolve through: 'maven' or 'file'.
@@ -112,8 +149,10 @@ apiOnlySubscriber {
         // directory = "$rootDir/build/publish"
     }
 
-    subscribe('user-account') {
-        // The version of this target's contract to build against. Required.
+    // The contract this project implements. At most one.
+    subscribe('orders') {
+        // The version of this target's contract to build against.
+        // Default: apiOnlySubscriber.version
         version = '2.1.0'
 
         // Whether this subscription may resolve a pre-release contract.
@@ -127,11 +166,25 @@ apiOnlySubscriber {
 
         // Overrides the artifact name this target is published under.
         // Default: the target name
-        // artifactId = 'user-account'
+        // artifactId = 'orders'
 
         // Where this subscription's documents land.
         // Default: build/api-spec/<target>
-        // into = layout.buildDirectory.dir('api-spec/user-account')
+        // into = layout.buildDirectory.dir('api-spec/orders')
+
+        // A channel of this subscription's own. Every setting it leaves out
+        // comes from the project's channel above.
+        // Default: the project's channel
+        // channel {
+        //     type = 'file'
+        //     directory = "$rootDir/contracts/build/publish"
+        // }
+    }
+
+    // An API this project calls, rather than implements. Any number of them.
+    // Every property above applies, except that version has no default.
+    subscribeAsClient('payments') {
+        version = '1.4.0'
     }
 }
 ----
@@ -144,12 +197,44 @@ apiOnlySubscriber {
         type.set("maven")
         groupId.set("com.example.contracts")
     }
-    subscribe("user-account") {
+    subscribe("orders") {
         version.set("2.1.0")
     }
 }
 ----
 
+[#version-precedence]
+=== Where a subscription's version comes from
+
+The first of these that is set is the one resolved:
+
+. `version` on the subscription;
+. `version` on `apiOnlySubscriber`, for every subscription that does not set its own;
+. the `apiContractVersion` project property.
+
+The property is read through the project the plugin is applied to.
+It can therefore come from that project's own `gradle.properties` (in a multi-project build, the subproject's) as well as from `-PapiContractVersion=...` or `ORG_GRADLE_PROJECT_apiContractVersion`.
+That lets each project in a multi-project build pin its own contract version in its own `gradle.properties`, with no version in its build file at all:
+
+.orders/gradle.properties
+[source,properties]
+----
+apiContractVersion=2.1.0
+----
+
+.orders/build.gradle
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribe('orders')
+}
+----
+
+A subscription that gets a version from none of them fails the build, and the message names all three.
+
+A subscription for an API the project calls takes only its own `version`, as <<api-clients,Calling other APIs §>> explains.
+
+[#channels]
 === Channels
 
 [cols="1,3",options="header"]
@@ -157,21 +242,50 @@ apiOnlySubscriber {
 | Channel | Notes
 
 | `maven`
-| The default. The artifact is declared in a detached configuration and Gradle's own dependency resolution performs the fetching, caching and up-to-date checking — so this plugin carries no HTTP client, no cache and no retry policy of its own.
+| The default.
+The artifact is declared in a detached configuration and Gradle's own dependency resolution performs the fetching, caching and up-to-date checking, so this plugin carries no HTTP client, no cache and no retry policy of its own.
+The repository, and its credentials, are an ordinary entry in the build's `repositories`.
 
 | `file`
-| A local directory. The escape hatch for iterating on a contract before it is published anywhere, and the only channel that reads the filesystem directly.
+| A local directory, read as `<directory>/<target>/<version>/<artifactId>-<version>.tgz`.
+The escape hatch for iterating on a contract before it is published anywhere, the way for a library and the projects implementing it to share one build, and the only channel that reads the filesystem directly.
+A version the directory does not hold fails the fetch, which lists the versions it does hold.
 |===
 
-Resolving only through channel APIs is also what keeps an accidental path dependency on the specification repository from creeping in: in a single repository the fragments are always reachable, so such a dependency would never fail.
+Resolving only through channels is also what keeps an accidental path dependency on the specification library from creeping in: in a single repository the fragments are always reachable, so such a dependency would never fail.
 
+A subscription can resolve through a channel of its own, and every setting its `channel { }` leaves out comes from the project's.
+That is how one project takes the contract it implements from a library in its own repository, and calls an API published to a Maven repository:
+
+.Groovy DSL
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = "$rootDir/contracts/build/publish"
+    }
+    subscribe('billing')
+    subscribeAsClient('orders') {
+        version = '2.1.0'
+        channel {
+            type = 'maven'
+            groupId = 'com.example.contracts'
+        }
+    }
+}
+----
+
+The Maven repository goes in `repositories`, as for any `maven` channel.
+
+[#pre-releases]
 === Pre-releases
 
 A contract that is not finished must never quietly satisfy a build, so a pre-release version is refused:
 
 [source]
 ----
-subscription 'user-account' resolves the pre-release version 1.1.0-rc.1.
+subscription 'orders' resolves the pre-release version 1.1.0-rc.1.
 A contract that is not finished must not quietly satisfy a build. Set
 allowPrerelease = true on this subscription to work against it deliberately,
 and remember to take it off again before release.
@@ -182,14 +296,15 @@ Working against one is a deliberate, reviewable line:
 .Groovy DSL
 [source,groovy]
 ----
-subscribe('user-account') {
+subscribe('orders') {
     version = '1.1.0-rc.1'
     allowPrerelease = true
 }
 ----
 
-Both the SemVer spelling (`-rc.1`, `-alpha.3`) and Maven's `-SNAPSHOT` count as pre-releases — the latter because it is what Maven consumers expect, even though it is not SemVer-legal.
+Both the SemVer spelling (`-rc.1`, `-alpha.3`) and Maven's `-SNAPSHOT` count as pre-releases, the latter because it is what Maven consumers expect, even though it is not SemVer-legal.
 
+[#tasks]
 == Tasks
 
 [cols="2,1,3",options="header"]
@@ -203,16 +318,15 @@ Both the SemVer spelling (`-rc.1`, `-alpha.3`) and Maven's `-SNAPSHOT` count as 
 | `updateApiOnlySubscriberDSL` | api only subscriber | Adds missing `apiOnlySubscriber` properties with their defaults to `build.gradle`.
 |===
 
-`<Target>` is the target name in camel case: `user-account` gives `fetchApiSpecUserAccount`.
+`<Target>` is the target name in camel case: `customer-orders` gives `fetchApiSpecCustomerOrders`.
 
-`verifyApiSpec` **is** wired into `check`, so contract drift fails an ordinary build rather than waiting for someone to look. `processResources` depends on the fetch, so a build that packages resources fetches them first.
+`verifyApiSpec` **is** wired into `check`, so contract drift fails an ordinary build rather than waiting for someone to look.
+`processResources` depends on the fetch, so a build that packages resources fetches them first.
 
-After upgrading the plugin, run `./gradlew updateApiOnlySubscriberDSL` to add any
-new defaulted properties to the existing `apiOnlySubscriber {}` block. The task
-backs up the original file as `build.gradle.bak`. If the block is absent, it
-leaves the file unchanged unless run with
-`--generateApiOnlySubscriberDSL`. Subscription targets and versions are never
-invented by the task.
+After upgrading the plugin, run `./gradlew updateApiOnlySubscriberDSL` to add any new defaulted properties to the existing `apiOnlySubscriber {}` block.
+The task backs up the original file as `build.gradle.bak`.
+If the block is absent, it leaves the file unchanged unless run with `--generateApiOnlySubscriberDSL`.
+Subscription targets and versions are never invented by the task.
 
 Running them explicitly:
 
@@ -222,40 +336,173 @@ Running them explicitly:
 ./gradlew verifyApiSpec
 ----
 
+[#verify-does-not-fetch]
 === Why `verifyApiSpec` does not depend on `fetchApiSpec`
 
-It is ordered *after* the fetch, but does not depend on it. Depending on it would re-fetch before checking, overwriting a hand-edited document and reporting success — quietly repairing the exact drift the task exists to find.
+It is ordered *after* the fetch, but does not depend on it.
+Depending on it would re-fetch before checking, overwriting a hand-edited document and reporting success: quietly repairing the exact drift the task exists to find.
 
+`./gradlew verifyApiSpec` on its own therefore reports a hand edit.
+A build that also runs the fetch, such as `./gradlew check` in a project with the `java` plugin, fetches first and so restores the published document before it is verified.
+
+[#using-the-documents]
 == Using the fetched documents
 
-Each subscription exposes its documents as providers derived from the fetch task, so anything wired to them carries the task dependency automatically:
+Each subscription exposes its documents as providers derived from the fetch task, so anything wired to them carries the task dependency automatically.
+For example, generating code from the contract with the https://openapi-generator.tech/docs/plugins/[OpenAPI Generator Gradle plugin ↗]:
 
 .Groovy DSL
 [source,groovy]
 ----
-apiOnlySuite {
-    rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+openApiGenerate {
+    inputSpec = apiOnlySubscriber.subscription('orders').openapi.map { it.asFile.path }
 }
 ----
 
 .Kotlin DSL
 [source,kotlin]
 ----
-apiOnlySuite {
-    rootDocument.set(apiOnlySubscriber.subscription("user-account").openapi)
+openApiGenerate {
+    inputSpec.set(apiOnlySubscriber.subscription("orders").openapi.map { it.asFile.path })
 }
 ----
 
-Handing out a bare path instead would let a consumer read the directory before anything had populated it. Gradle rejects that outright, which is the class of bug these providers exist to remove.
+Handing out a bare path instead would let a consumer read the directory before anything had populated it.
+Gradle rejects that outright, which is the class of bug these providers exist to remove.
 
+[#where-documents-land]
 == Where documents land
 
-`build/api-spec/<target>/`, registered as an additional resources directory.
+`build/api-spec/<target>/`.
+For the contract the project implements, that directory is registered as an additional resources directory, so each document is at the root of the classpath: `/openapi.yaml`, `/asyncapi.yaml`, and the archive's `/manifest.json`.
+For an API the project calls, its contents are copied to `/contracts/<target>/` on the classpath instead, as <<api-clients,Calling other APIs §>> explains.
 
-Not `src/main/resources`. Generated files inside a source tree show up in IDE search, tempt hand-editing, and survive a `clean`. From `build/` they reach the classpath identically, `clean` removes them, and nothing gitignored lives under `src/`.
+Not `src/main/resources`.
+Generated files inside a source tree show up in IDE search, tempt hand-editing, and survive a `clean`.
+From `build/` they reach the classpath identically, `clean` removes them, and nothing gitignored lives under `src/`.
 
-Writing into `src/` stays possible for teams whose tooling insists on it — set `into` on the subscription — but it is not the default.
+Writing into `src/` stays possible for teams whose tooling insists on it (set `into` on the subscription), but it is not the default.
 
+[#one-contract-per-project]
+== One implemented contract per project
+
+A project implements at most one contract, and may call any number of APIs.
+
+A project implements one API contract: its build, its tests and its release answer to that contract, at the version its `apiContractVersion` declares.
+Two implemented contracts in one project would share that one version, one classpath root and one release, so neither could change without the other, and a build could not say which of them it was checking.
+So a second `subscribe` to a different contract fails the build, at the line that declares it:
+
+[source]
+----
+apiOnlySubscriber already implements 'orders', so it cannot also implement 'payments'.
+A project implements one API contract: two in one project would share one version, one classpath root and one release, so neither could change without the other.
+If this project calls 'payments' rather than implementing it, declare it with subscribeAsClient('payments') instead.
+If it implements both, put each contract in a project of its own, in a multi-project build, with its own apiOnlySubscriber block and apiContractVersion.
+See https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-subscriber/README.adoc#one-contract-per-project
+----
+
+Subscribing to the same contract twice is not a second contract: the second `subscribe` configures the first.
+A project that calls `payments` rather than implementing it declares it with `subscribeAsClient`, as <<api-clients,Calling other APIs §>> describes.
+
+When a project really implements two contracts, put each in a project of its own, in a multi-project build.
+Each project applies the Subscriber, subscribes to its own contract, and declares that contract's version in its own `gradle.properties`:
+
+.settings.gradle
+[source,groovy]
+----
+rootProject.name = 'shop'
+include 'orders', 'payments'
+----
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0' apply false
+}
+----
+
+.orders/build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber'
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('orders')
+}
+----
+
+.orders/gradle.properties
+[source,properties]
+----
+# The version of the orders contract this project implements.
+apiContractVersion=2.1.0
+----
+
+`payments/build.gradle` and `payments/gradle.properties` are the same, with `payments` and its own version.
+Each project then has its own `apionly.lock`, its own `fetchApiSpec` and `verifyApiSpec` tasks, and its contract at the root of its own classpath, as `/openapi.yaml`.
+Code both projects share, such as a domain model, goes in a third project that both depend on.
+
+[#api-clients]
+== Calling other APIs
+
+A project that calls other APIs subscribes to each of them with `subscribeAsClient`, next to the one contract it implements, if it implements one:
+
+.Groovy DSL
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+
+    // The contract this project implements, at apiContractVersion.
+    subscribe('billing')
+
+    // The APIs it calls, each at its own version.
+    subscribeAsClient('orders') {
+        version = '2.1.0'
+    }
+    subscribeAsClient('payments') {
+        version = '1.4.0'
+        groupId = 'com.example.payments'   // published by another provider
+    }
+}
+----
+
+A project that implements no contract of its own has only `subscribeAsClient` subscriptions.
+A contract is either implemented or called: subscribing to the same target with both `subscribe` and `subscribeAsClient` fails the build.
+
+[#what-a-client-gets]
+=== What a client subscription gets
+
+Every check the implemented contract gets:
+
+* the fetch at exactly the version it declares, and a refusal of a pre-release unless it sets `allowPrerelease = true`;
+* every document checked against the archive's own `manifest.json`;
+* its own entry in `apionly.lock`, and a refusal when a locked version comes back with different bytes, so the build keeps the bundle it locked;
+* `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the verification part of `check`, failing when a fetched document has drifted;
+* the `openapi` and `asyncapi` providers, to generate a client from, carrying the dependency on the fetch;
+* a `channel { }` of its own when its provider publishes somewhere else, with every setting it leaves out taken from the project's channel.
+
+[#what-a-client-does-not-get]
+=== What a client subscription does not get
+
+* **A place at the classpath root.**
+The root is the implemented contract's.
+With the `java` plugin, the documents of an API the project calls are copied to `/contracts/<target>/`, so any number of them fit side by side: `/contracts/orders/openapi.yaml`, `/contracts/payments/openapi.yaml`.
+* **A shared version.**
+`apiContractVersion` and `apiOnlySubscriber.version` are the version of the contract the project implements.
+Each called API sets its own `version`, because its provider releases it on its own schedule; without one, the build fails with `client subscription '<target>' declares no version`.
+[#lockfile]
 == The lockfile
 
 `apionly.lock` is committed, and records per target the resolved version, the channel it came from, and the SHA-256 of every fetched file:
@@ -267,15 +514,15 @@ Writing into `src/` stays possible for teams whose tooling insists on it — set
 # Run `verifyApiSpec` to check that what is on disk still matches.
 format 1
 
-target user-account
-version 2.1.0
+target orders
+version 1.1.0
 channel maven
-sha256 18baaca0249e15659105a2467338f32bab6d35a48fb1f088dfa30777f2e12059 asyncapi.yaml
-sha256 f2a09aed8880faf8e1debf77b9f1f71ca94a5ff13bc217cce3e2df7ef307b739 openapi.yaml
+sha256 d4e72b89678bd50bf764e4c5ddce1ff8ea7e844e900751d4c285e161d99c723d openapi.yaml
 ----
 
 It is a small, sorted, line-oriented text file rather than JSON because it is read by people in review far more often than by machines, and a one-line diff should mean one thing changed.
 
+[#what-it-catches]
 === What it catches
 
 [cols="2,3",options="header"]
@@ -285,20 +532,27 @@ It is a small, sorted, line-oriented text file rather than JSON because it is re
 | A fetched document is edited by hand
 | `verifyApiSpec` fails, reporting the locked hash and the hash on disk.
 
-| A released version is rebuilt and republished with different bytes
-| `fetchApiSpec` refuses to re-lock it, naming each document that differs.
+| A locked version is published again with different bytes: to the `file` channel, or as a rebuilt release or a moved tag in a repository
+| `fetchApiSpec` refuses to re-lock it, naming each document that differs and saying how to resolve it.
+
+| A subscribed version is not in the `file` channel
+| `fetchApiSpec` fails, listing the versions the channel does hold.
 
 | An archive disagrees with its own `manifest.json`
 | `fetchApiSpec` refuses it before anything is unpacked into the build.
 
 | A version is upgraded deliberately
-| The lock is updated, and the build logs `Updated user-account from 2.1.0 to 2.2.0`.
+| The lock is updated, and the build logs `Updated orders from 2.1.0 to 2.2.0`.
 |===
 
+[#not-what-gradle-does]
 === Why this is not what Gradle already does
 
-Gradle verifies that the *artifact* it downloaded matches its coordinates. The lockfile and manifest verify that the *files extracted into the build* still match what the producer published. Both are needed, and only the second catches a hand-edited document sitting in `build/`.
+Gradle verifies that the *artifact* it downloaded matches its coordinates.
+The lockfile and manifest verify that the *files extracted into the build* still match what the producer published.
+Both are needed, and only the second catches a hand-edited document sitting in `build/`.
 
+[#full-example]
 == Full example
 
 .build.gradle
@@ -306,8 +560,7 @@ Gradle verifies that the *artifact* it downloaded matches its coordinates. The l
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-suite' version '3.10.0'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.0.1'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
 }
 
 repositories {
@@ -328,13 +581,9 @@ apiOnlySubscriber {
         type = 'maven'
         groupId = 'com.example.contracts'
     }
-    subscribe('user-account') {
+    subscribe('orders') {
         version = '2.1.0'
     }
-}
-
-apiOnlySuite {
-    rootDocument = apiOnlySubscriber.subscription('user-account').openapi
 }
 ----
 
@@ -344,29 +593,22 @@ apiOnlySuite {
 ./gradlew check            # build, test, and fail on contract drift
 ----
 
+[#maven-local]
 == A caution about `mavenLocal()`
 
-The local Maven repository is a convenient test harness, not a faithful model of a remote one: its metadata and snapshot-staleness behaviour differ. Confirm pre-release semantics against a real remote before relying on them.
+The local Maven repository is a convenient test harness, not a faithful model of a remote one: its metadata and snapshot-staleness behaviour differ.
+Confirm pre-release semantics against a real remote before relying on them.
 
+[#next]
 == Where to go next
 
-This document is a reference for this half alone. link:../docs/README.adoc[The
-manuals] cover using it together with the
-link:../api-only-publisher/README.adoc[Publisher], organised by where the API
-descriptions live.
+* link:../docs/README.adoc[The documentation →] helps you pick the use case that fits, with a tutorial and AI prompts for each.
+If a contract simply arrives at your build as an artifact, link:../docs/use-cases/provider/4-implementing-a-published-contract/overview.adoc[provider use case 4 →] and link:../docs/use-cases/client/4-calling-a-published-api/overview.adoc[client use case 4 →] are this plugin on its own, start to finish.
+* link:../docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] maps every setting, task and check across the two tools, and says where a change to either belongs.
+* link:../docs/reference/run-book.adoc[The run-book →] covers operating both, and lists every failure message with what to do.
 
-If a contract simply arrives at your build as an artifact and your only job is to
-consume it well, link:../docs/consuming-a-published-contract.adoc[Consuming a
-contract you do not own] is the one to read: it is this plugin on its own, start
-to finish. link:../docs/troubleshooting.adoc[Troubleshooting] lists the failures
-worth recognising on sight.
-
-== Relationship to the API-Only Suite
-
-The link:https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-suite[API-Only Suite] bundles the Shadow, Mirage and Doppelganger detectors, which answer _does this implementation match its contract?_
-
-This plugin answers a different question: _where does the contract come from, and is it still what we agreed?_ A project can reasonably want either without the other, so they are separate plugins, applied side by side.
-
+[#license]
 == License
 
-MIT. See link:LICENSE[LICENSE].
+MIT.
+See link:LICENSE[LICENSE →].

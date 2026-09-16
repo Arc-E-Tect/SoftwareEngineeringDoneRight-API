@@ -55,12 +55,8 @@ function stage(config, kind, log) {
 /**
  * Substitute placeholders across the staged tree, in place.
  *
- * Every YAML file is visited rather than only the bundle roots and info.yaml.
- * The tool this replaces read only the one file it was handed, which is why the
- * shared info block had to be preprocessed as a separate up-front step and why
- * bundles had to $ref a generated merged_info.yaml instead of the file they
- * meant. Visiting the staged tree removes that special case: a placeholder works
- * wherever it is written.
+ * Every YAML file is visited, not only the bundle roots, so a placeholder works
+ * wherever it is written, and no file has to be preprocessed separately first.
  */
 function substituteTree(config, kind, log) {
     const stagingRoot = config.stagingRoot(kind);
@@ -155,9 +151,12 @@ function prepare(config, { kinds = ["openapi", "asyncapi"], log = () => {} } = {
 /**
  * Build every requested target.
  *
+ * `versionOf(target)` names the version to stamp on a target's documents; a target
+ * it returns nothing for keeps the version its source declares.
+ *
  * @returns {Array<{target, kind, file, distributed}>}
  */
-function build(config, { targets, version, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
+function build(config, { targets, versionOf = () => null, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
     const results = [];
     for (const kind of kinds) {
         const all = config.targetsFor(kind).filter((t) => !targets || targets.includes(t));
@@ -182,6 +181,7 @@ function build(config, { targets, version, kinds = ["openapi", "asyncapi"], log 
             }
             const outFile = path.join(config.distDir(target), config.outputName(kind));
             bundle(config, target, kind, outFile, log);
+            const version = versionOf(target);
             if (version) {
                 log(`-- Stamping version '${version}'`);
                 stampFile(outFile, version);

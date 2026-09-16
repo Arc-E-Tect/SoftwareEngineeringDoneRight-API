@@ -1,0 +1,95 @@
+= Client use case 1: the contract of an API you call lives in your project
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+Your project calls an API, and the contract for that API lives in your own project.
+You define what you need from the provider, a consumer-defined contract, or you describe an API that has no published contract of its own.
+
+The API-Only Publisher bundles the contract's fragments into one document, lints it, and publishes it as a versioned archive to a directory inside the project's `build/`.
+The API-Only Subscriber fetches that archive as a client subscription, checks it against a committed lockfile, and puts the document on the classpath under `contracts/<target>/`.
+Everything happens on the local file system, in one Gradle build.
+
+[#fits]
+== When this fits
+
+* The calling side owns the contract of the API it calls.
+* No other build in or outside the repository needs that contract.
+* You want a change to the contract reviewed in the same pull request as the code that calls the API.
+
+[#does-not-fit]
+== When it does not
+
+* **Your project implements the API rather than calling it.**
+That is link:../../provider/1-contract-in-the-implementing-project/overview.adoc[provider use case 1 →].
+* **Several projects in the repository share the contract's fragments.**
+That is link:../2-specification-library-in-the-same-repository/overview.adoc[client use case 2 →].
+* **The contract lives in another repository you can access.**
+That is link:../3-specification-library-in-another-repository/overview.adoc[client use case 3 →].
+* **The contract is only published, and you cannot see where it comes from.**
+That is link:../4-calling-a-published-api/overview.adoc[client use case 4 →].
+* **Your project also implements a contract.**
+See link:../../both/implementing-and-calling/overview.adoc[implementing one contract and calling others →].
+
+link:../../../README.adoc[The documentation's entry point →] compares every use case.
+
+[#what-you-get]
+== What you get
+
+* `./gradlew check` bundles and lints the contract, fails on a fragment nothing references, and runs your tests against the bundled document.
+* The document on the classpath is exactly the one `apionly.lock` records.
+* A change to a fragment cannot slip through under an old version: the build fails until the contract's version is raised.
+* No registry, no credentials, and nothing generated under `src/`.
+
+[#what-you-do-not-need]
+== What you do not need
+
+A registry.
+The contract never leaves this project, so a directory in `build/` gives the Subscriber everything a registry would.
+
+When the provider starts to need the contract, move it to a specification library that publishes it to a registry, as link:../../provider/3-specification-library-in-its-own-repository/overview.adoc[provider use case 3 →] describes, and subscribe to it from there, as in client use case 3.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Pin the Publisher**: a `package.json` with the Publisher as an exact dev dependency and an `apionly` npm script.
+. **Lay out the fragments** under `src/main/api/`, with one bundle root for the contract, and the Redocly lint configuration at the project root.
+. **Give the contract a version** in `orders.bundle.properties`, beside its bundle root.
+. **Describe the build** in `apionly.yaml`: where the fragments are, the output directories inside `build/`, the pinned bundler, and a `file` channel that publishes into `build/`.
+. **Declare the version the project calls** in `gradle.properties`, as `ordersApiVersion`.
+. **Write the contract test first**: a test that fails until the contract, at that version, is on the classpath at `/contracts/orders/openapi.yaml`.
+. **Wire Gradle**: tasks that install the Publisher and build, publish and lint the contract, and a `subscribeAsClient('orders')` that fetches what was published, at the version `gradle.properties` declares.
+. **Commit `apionly.lock`** after the first build, and run the same `./gradlew check` in CI.
+
+[#day-to-day]
+== Day to day
+
+* **Changing the contract**: edit the fragments, raise `version` in `orders.bundle.properties` and `ordersApiVersion` in `gradle.properties` to the same new version, run `./gradlew check`, and commit the updated `apionly.lock` with the change.
+Major is for a breaking change, minor for an additive one, patch for anything else.
+* **Adding a fragment**: reference it from the bundle, or from a fragment the bundle reaches.
+A fragment nothing references fails the lint.
+* **Upgrading the Publisher or a bundler**: see link:../../../reference/run-book.adoc#upgrading-the-tools[the run-book →].
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this setup step by step: every file, every value, and what to consider at each step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant build it in your own project, starting with the tests.
+* link:../../../reference/run-book.adoc#calling-apis[The run-book →] covers operating the setup, and what each failure means.
+* link:../../../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] explains what a client subscription gets, and what it does not.

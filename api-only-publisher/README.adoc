@@ -11,214 +11,280 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Node-22%2B-339933?logo=node.js[Node 22+,link=https://nodejs.org]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+// Remove this notice when 1.0.0 is released.
+[IMPORTANT]
+====
+Until 1.0.0 is released, any release may change the command line, `apionly.yaml` or the published artifacts incompatibly, without a major version bump.
+The interface is still being settled; 1.0.0 is the first release whose interface is kept stable.
+Pin an exact version, and read the changelog before upgrading.
+====
+
+[#what-it-is]
 == What it is
 
-`api-only-publisher` turns a library of small, reusable API description
-fragments into one complete, self-contained document per target, and distributes
-each to whoever needs it.
+`api-only-publisher` turns a library of small, reusable API description fragments into one complete, self-contained document per target, and distributes each to whoever needs it.
 
-It is the producer half of a pair. The consumer half, `API-Only Subscriber`,
-fetches a published document into an implementation project and verifies that it
-has not drifted. The two are coupled only by the published artifact and its
-manifest -- neither knows anything else about the other.
+It is the producer half of a pair.
+The consumer half, the link:../api-only-subscriber/README.adoc[API-Only Subscriber →], fetches a published document into an implementation project and verifies that it has not drifted.
+The two are coupled only by the published artifact and its manifest; neither knows anything else about the other.
 
-A *target* is whatever gets its own contract document: a microservice, a modular
-monolith, a backend-for-frontend, or a documentation aggregate spanning all of
-them. It need not be a deployable, which is why this is not called `services`.
+A *target* is whatever gets its own contract document: a microservice, a modular monolith, a backend-for-frontend, or a documentation aggregate spanning all of them.
+It need not be a deployable, which is why this is not called `services`.
 
-== Why it is not a shell script
+This document is the reference for the Publisher alone.
+To set it up for your situation, start at link:../docs/README.adoc[the documentation →].
 
-It was one, and the shell showed through in three places.
-
-The target list was a plain Bash array with a comment explaining that it avoided
-associative arrays for the Bash 3.2 that macOS still ships. Both scripts carried
-a write-to-a-temp-file-and-move dance to work around the difference between BSD
-and GNU `sed -i`. And neither could parse YAML, which is why setting a version
-was a regular expression that silently did nothing when it failed to match.
-
-Node was never an optional dependency either: `@redocly/cli` and `@asyncapi/cli`
-are Node tools, so a Node runtime was already required to run the pipeline at all.
-
+[#requirements]
 == Requirements
 
 [cols="1,1",options="header"]
 |===
 | Requirement | Version
-| Node        | 22 +
-| npm         | 10 +
+| Node.js     | `^22.14.0`, `^24.10.0` or `>=26.0.0`
+| npm         | The one that comes with Node.js
 |===
 
-Nothing else. The bundlers are fetched by `npx` at the versions `apionly.yaml`
-pins, so they need no installation, and the only runtime dependency is `yaml`.
+Nothing else.
+The bundlers, https://redocly.com/docs/cli/[Redocly CLI ↗] and https://www.asyncapi.com/tools/cli[AsyncAPI CLI ↗], are fetched by `npx` at the versions `apionly.yaml` pins, so they need no installation, and the only runtime dependency is `yaml`.
 
+[#installation]
 == Installation
 
-As a command, without installing anything:
+The Publisher behaves the same however it is started.
+What differs is where its version is pinned, and what checks that pin.
+
+[#as-a-development-dependency]
+=== As a development dependency
+
+The fit for a specification library, and for any build that runs the Publisher more than once.
 
 [source,console]
 ----
-npx @arc-e-tect/api-only-publisher build
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher
 ----
 
-As a dependency of a specification library:
+.package.json
+[source,json]
+----
+{
+  "private": true,
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "<version>"
+  }
+}
+----
 
 [source,console]
 ----
-npm install --save-dev @arc-e-tect/api-only-publisher
+npm ci
+npm run apionly -- build
+npm run apionly -- publish --target orders
 ----
 
-Pin it exactly rather than with a range. This tool's output is expected to be
-reproducible — a specification library's golden fixtures assert it byte for byte
-— and a floating version quietly breaks that guarantee.
+* The version is pinned in one place, `package.json`, and every command and every CI job runs that one.
+* `package-lock.json` records the integrity hash of what was installed, so `npm ci` installs exactly those bytes or fails.
+* A CI job can cache the installation, keyed on `package-lock.json`, instead of resolving the tool on every run.
+* Renovate and Dependabot see the dependency, so an upgrade arrives as a pull request that moves the pin.
+* The cost is a `package.json` and a `package-lock.json` in the library, and an `npm ci` before the first command.
 
+Run it through the script, as `npm run apionly -- <command>`.
+`npx api-only-publisher`, without the scope, is not this package: npx would look that name up on the public registry.
+
+[#with-npx]
+=== With `npx`, installing nothing
+
+The fit for trying the tool, for scaffolding a library with `init`, and for a one-off command.
+
+[source,console]
+----
+npx @arc-e-tect/api-only-publisher@<version> init my-api-library
+npx @arc-e-tect/api-only-publisher@<version> build -C my-api-library
+----
+
+* Nothing is added to the repository.
+* The version is pinned in every command instead, so each script and CI job that runs the Publisher has to name the same version, and nothing checks that they do.
+* Without a version, `npx` runs whatever it resolves at that moment, which is not reproducible.
+* Nothing records an integrity hash, and nothing notices when a newer version is released.
+
+Either way, pin an exact version rather than a range.
+A published contract should change only when its fragments or its version change, and a floating tool version lets it change without either.
+
+The bundlers are a separate matter.
+However the Publisher itself is started, it fetches them with `npx`, at the versions `toolchain` in `apionly.yaml` pins.
+
+[#commands]
 == Commands
 
 [cols="1,3", options="header"]
 |===
 |Command |Purpose
 
-|`init [dir]`
-|Scaffold `apionly.yaml` and a reference directory layout that builds as it
-stands. This is how the *conventions* become reusable, as opposed to the code.
+|`init [dir] [--force]`
+|Scaffold `apionly.yaml` and a reference directory layout that builds as it stands.
 
-|`build`
-|Stage, substitute placeholders, bundle, stamp the version, lint, and distribute.
+|`build [--target <t>]... [--pre-release <ids>] [--openapi\|--asyncapi]`
+|Stage, substitute placeholders, bundle, stamp each published target's version, and lint.
 
-|`lint`
-|Lint what is already built, without rebuilding, for fast local feedback.
+|`lint [--target <t>]...`
+|Lint what is already built, without rebuilding, and write a report per document.
+Without `--target`, it also fails on a fragment no target reaches, as <<unreferenced,A fragment no target reaches fails the lint §>> describes.
 
 |`targets`
-|List the declared targets, what each one builds, and whether it is distributed.
+|List the declared targets, what each one builds, and whether it is published.
 
-|`closure`
-|Show each target's dependency closure: how many files it reaches, and the hash
-of their content.
+|`closure [--target <t>]...`
+|Show each target's dependency closure: how many files it reaches, and the hash of their content.
 
 |`changed --since <ref>`
-|Report which targets' closures actually changed since a git ref. This is what
-drives a release: a target whose closure is untouched is not released, however
-much else in the repository moved.
+|Report which targets' closures changed between a git ref and the working tree.
+A target whose closure is untouched needs no new version, however much else in the repository moved.
 
-|`pack --version <v>`
-|Archive each built target with a `manifest.json`.
+|`pack [--pre-release <ids>] [--target <t>]... [--out <dir>]`
+|Archive each built, published target with a `manifest.json`, at the version its version file declares.
 
-|`publish --version <v>`
-|Pack once, then ship those same bytes to every configured channel.
+|`publish [--pre-release <ids>] [--target <t>]... [--channel <c>]... [--out <dir>]`
+|Pack once, then ship those same bytes to every configured channel, or to each `--channel`.
 
-|`split --out <dir>`
+|`split --out <dir> [--by kind\|target]`
 |Make the library safe to break into separate repositories.
 |===
 
+`--target` and `--channel` may be repeated.
+`-C <dir>` runs as if started in `<dir>`; without it the configuration is found by walking up from the current directory.
+`-q` or `--quiet` reports only errors, which is what a script that reads the output wants.
+`--pre-release <ids>` appends pre-release identifiers to each target's version, as <<versions,Versions §>> describes.
+
 [source,console]
 ----
-api-only-publisher init my-api-library
-api-only-publisher build -C my-api-library --version 2.3.1
-api-only-publisher build --target user-account --openapi
-api-only-publisher targets
+npm run apionly -- build --target orders --openapi
+npm run apionly -- publish --target orders --pre-release rc.1
+npm run apionly -- changed --since origin/main --quiet
 ----
 
-`--target` may be repeated. `-C <dir>` runs as if started in `<dir>`; without it
-the configuration is found by walking up from the current directory.
+[#what-build-does]
+== What `build` does
 
-== What `build` actually does
-
-. **Stage.** The whole source root is copied to `build/staging/<type>/`. Nothing
-after this point touches the hand-authored tree.
+. **Stage.** The whole source root is copied to `<build.staging>/<kind>/`.
+Nothing after this point touches the hand-authored tree.
 +
-The *whole* root, not just one specification type's subtree, because the trees
-`$ref` each other -- event schemas reuse the OpenAPI common schemas, so a
-username means the same thing over Kafka as over HTTP. A partial copy breaks
-those references. Each type gets *its own* staging root, so building one never
-invalidates the other's staged tree.
+The *whole* root, not just one specification kind's subtree, because the trees `$ref` each other: an event schema can reuse an OpenAPI component schema, so a field means the same thing in an event as in an HTTP response.
+A partial copy breaks those references.
+Each kind gets *its own* staging root, so building one never invalidates the other's staged tree.
 
-. **Substitute placeholders**, in place, across the staged copy. A `{{token}}`
-is replaced with the contents of `<token>.md`, found by searching the staged
-root. Indentation is preserved, so multi-line Markdown stays valid inside an
-indented YAML scalar.
+. **Substitute placeholders**, in place, across the staged copy.
+A `{{token}}` is replaced with the contents of `<token>.md`, found by searching the staged source root.
+Indentation is preserved, so multi-line Markdown stays valid inside an indented YAML scalar.
 
-. **Bundle.** `@redocly/cli bundle` or `@asyncapi/cli bundle` resolves every
-`$ref` into one flat, self-contained document under `dist/<target>/`.
+. **Bundle.** `@redocly/cli bundle` or `@asyncapi/cli bundle` resolves every `$ref` into one flat, self-contained document under `<build.dist>/<target>/`.
 
-. **Stamp the version**, if `--version` was given, on the *finished* document.
+. **Stamp the version** of each published target on its *finished* document: the version its version file declares, with any `--pre-release` identifiers appended.
+A `publish: false` target keeps the version its source declares.
 
-. **Lint** the finished document, so a broken fragment surfaces against the
-target it actually affects rather than at deploy time.
+. **Lint** the finished document, so a broken fragment surfaces against the target it actually affects.
 
-. **Distribute**, unless the target is `publish: false`.
+[#versions]
+== Versions
 
+Every published target has a version of its own, and it is kept in the library, beside the fragments it describes.
+
+.specs/openapi/bundles/orders.bundle.properties
+[source,properties]
+----
+# The version of the orders contract, for every document it builds.
+# Semantic: major for a breaking change, minor for an additive one, patch for
+# anything else. Change it in the same commit as the fragments it describes.
+version=2.1.0
+----
+
+By convention the file is `<target>.bundle.properties`, beside the target's first bundle root: its OpenAPI one, or its AsyncAPI one when it has no OpenAPI document.
+A target that keeps its version elsewhere names the file with `versionFile`, relative to `apionly.yaml`.
+The syntax is that of a Java properties file, so a JVM build can read the same file.
+
+`build`, `pack` and `publish` read the version of every target they act on before they act on any of them.
+A missing file, a file without a `version`, or a version that is not semantic stops the command before anything has been built or shipped.
+A `publish: false` target is never shipped, so it needs no version file.
+
+The version is not a command-line argument, and that is deliberate.
+A version on the command line lets two builds of the same commit publish different versions, and lets through a version nobody reviewed.
+A version in the library changes in the same commit as the fragments it describes, is reviewed with them, and is the same whoever builds that commit.
+
+The file holds a release version.
+A pre-release is that version with identifiers appended when it is built: `publish --pre-release rc.1` publishes `2.1.0-rc.1`.
+Cutting one never means editing the file, and then remembering to edit it back, which is why a version file that declares a pre-release is refused.
+
+A version names one set of documents.
+Publishing different documents under a version that was published before, after editing a fragment without changing the version file, is refused by the API-Only Subscriber in every project that locked the earlier ones.
+Change the version in the same commit as the fragments instead.
+
+[#closure]
 == Independent versioning, and the dependency closure
 
-Giving each target its own version has one non-obvious consequence, and the
-`closure` and `changed` commands are what pay for it.
+Giving each target its own version has one non-obvious consequence, and the `closure` and `changed` commands are what pay for it.
 
-A change under `components/common/` affects every target that reaches it. A
-change under one service's own context affects only that one. Under
-repository-wide versioning the distinction is invisible, because everything bumps
-together; under per-target versioning the release job has to know the difference,
-or one service's edit releases every other service and the version numbers stop
-meaning anything.
+A change under `components/common/` affects every target that reaches it.
+A change under one target's own fragments affects only that one.
+Under repository-wide versioning the distinction is invisible, because everything bumps together; under per-target versioning a release has to know the difference, or one target's edit releases every other target and the version numbers stop meaning anything.
 
-A target's *closure* is every file reachable from its bundle root by following
-`$ref`s transitively. `changed --since <ref>` resolves each closure and reports
-which targets a commit actually touched:
+A target's *closure* is every file reachable from its bundle root by following `$ref`s transitively.
+`changed --since <ref>` resolves each closure and reports which targets a change actually touched:
 
 [source,console]
 ----
-api-only-publisher changed --since origin/main
+npm run apionly -- changed --since origin/main
 ----
 
-Two things make this correct rather than approximate. The closure is computed
-over the *staged, substituted* tree, so a change to a Markdown snippet -- which
-genuinely changes the published document -- counts. And a change to the *shape*
-of a closure always means editing a file already inside it, so a bundle gaining
-or losing a `$ref` is caught without diffing membership separately.
+Two things make this correct rather than approximate.
+The closure is computed over the *staged, substituted* tree, so a change to a Markdown snippet, which genuinely changes the published document, counts.
+And a change to the *shape* of a closure always means editing a file already inside it, so a bundle gaining or losing a `$ref` is caught without diffing membership separately.
 
-The closure hash is recorded in each release's manifest as `closureSha256`, which
-is what lets a later commit compare against what was actually published.
+The closure hash is recorded in each release's manifest as `closureSha256`, which is what lets a later commit compare against what was actually published.
 
+[#splitting]
 == Splitting the library
 
-A fragment library is one `$ref` graph, and that graph does not respect the
-directory boundaries a repository split would follow. Here, the AsyncAPI event
-schemas reuse `openapi/components/common/schemas/UsernameV1.yaml` -- a username
-means the same thing over Kafka as over HTTP. Move the two trees into separate
-repositories as they stand and every one of those references dangles.
+A fragment library is one `$ref` graph, and that graph does not respect the directory boundaries a repository split would follow.
+When the AsyncAPI documents reuse `openapi/components/common/schemas/`, moving the two trees into separate repositories as they stand leaves every one of those references dangling.
 
 [source,console]
 ----
-api-only-publisher split --out build/split --by kind
+npm run apionly -- split --out build/split --by kind
 ----
 
-Each part is written with its own subtree *plus* a copy of every foreign file it
-reaches, so that afterwards each side is self-contained and builds on its own.
-The copies keep their original path relative to the shared source root, which is
-what makes this safe: every relative `$ref` keeps resolving exactly as it did, so
-nothing is rewritten and no reference can break because a rewrite got the depth
-wrong.
+Each part is written with its own subtree *plus* a copy of every foreign file it reaches, so that afterwards each side is self-contained and builds on its own.
+The copies keep their original path relative to the shared source root, which is what makes this safe: every relative `$ref` keeps resolving exactly as it did, so nothing is rewritten and no reference can break because a rewrite got the depth wrong.
 
-`--by kind` splits along the specification types. `--by target` gives every
-target its own self-contained tree, which is what you want before splitting into
-per-service repositories.
+`--by kind` splits along the specification kinds.
+`--by target` gives every target its own self-contained tree, which is what you want before splitting into per-target repositories.
 
-Any part that received copies gets an `IMPORTED.adoc` listing them and saying
-plainly what it costs: those copies can now drift, and nothing will notice. A
-shared schema that two repositories both define is two schemas that happen to
-agree today. Where that matters, promote the fragment to a contract of its own,
-published and consumed like any other, rather than copied.
+Any part that received copies gets an `IMPORTED.adoc` listing them and saying plainly what it costs: those copies can now drift, and nothing will notice.
+A shared schema that two repositories both define is two schemas that happen to agree today.
+Where that matters, promote the fragment to a contract of its own, published and consumed like any other, rather than copied.
 
+[#aggregates]
 == Aggregates
 
-A whole-landscape OpenAPI view is just another bundle root: every path body
-already lives in a `$ref`'d fragment, so a portfolio costs one hand-written
-table of contents and duplicates no contract text.
+A whole-landscape OpenAPI view is just another bundle root: every path body already lives in a `$ref`'d fragment, so a portfolio costs one hand-written table of contents and duplicates no contract text.
 
-AsyncAPI cannot be written that way. Its operations use document-root pointers
-(`channel: {$ref: '#/channels/auditV1'}`), and `#` resolves against whichever file
-contains it, so moving an operation into a fragment breaks it. A hand-written
-async portfolio would have to copy every operation verbatim, and that copy would
-start rotting the moment a member changed.
+AsyncAPI cannot be written that way.
+Its operations use document-root pointers (`channel: {$ref: '#/channels/orderPlacedV1'}`), and `#` resolves against whichever file contains it, so moving an operation into a fragment breaks it.
+A hand-written async portfolio would have to copy every operation verbatim, and that copy would start rotting the moment a member changed.
 
-So it is generated instead. Declare the members and the aggregate's own identity:
+So it is generated instead.
+Declare the members and the aggregate's own identity:
 
 [source,yaml]
 ----
@@ -227,17 +293,17 @@ portfolio:
   asyncapi:
     bundle: portfolio_asyncapi_structure.yaml
     aggregate:
-      - user-account
+      - orders
+      - payments
     info:
       title: Everything, together
       version: 0.0.0
 ----
 
-The bundle root is synthesised into the staging tree immediately before bundling,
-so nothing is duplicated in the source and the view cannot fall behind its
-members. Two members contributing the same channel or operation key is an error
-rather than a silent overwrite.
+The bundle root is synthesised into the staging tree immediately before bundling, so nothing is duplicated in the source and the view cannot fall behind its members.
+Two members contributing the same channel or operation key is an error rather than a silent overwrite.
 
+[#channels]
 == Channels
 
 [cols="1,3", options="header"]
@@ -245,74 +311,64 @@ rather than a silent overwrite.
 |Channel |What it is for
 
 |`file`
-|A local directory. Not a distribution mechanism -- it exists so the pipeline is
-testable end to end with no infrastructure, and as a local-iteration escape
-hatch afterwards.
+|A local directory, laid out as `<directory>/<target>/<version>/`.
+Not a distribution mechanism between repositories: it makes the pipeline testable end to end with no infrastructure, lets a library share one build with the projects that implement it, and is a local-iteration escape hatch.
+Publishing a version again replaces that version and keeps the others; with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
 
 |`maven`
-|A path publishes into a repository layout on disk; an `http(s)` URL deploys to a
-real remote. Native for Gradle consumers: version resolution, caching and
-conflict handling come free, which is what lets the Subscriber carry no HTTP
-client of its own.
+|A path publishes into a repository layout on disk; an `http(s)` URL deploys to a remote repository with an HTTP `PUT` per file and a bearer token.
+Native for Gradle consumers: version resolution, caching and conflict handling come free, which is what lets the Subscriber carry no HTTP client of its own.
 
 |`npm`
-|Real semver, integrity hashes for free, private scopes available, and the
-toolchain here is already Node.
+|Real semver, integrity hashes, private scopes, and a toolchain that is already Node.js.
 
 |`github-release`
-|The language-neutral floor: immutable per tag, works for private repositories
-with a token, readable by a consumer with no JVM and no Node. No
-dependency-resolution semantics and no update notification, which is why it is
-the fallback rather than the default.
+|The language-neutral floor: immutable per tag, works for private repositories with a token, readable by a consumer with no JVM and no Node.js.
+No dependency-resolution semantics and no update notification, which is why it is the fallback rather than the default.
 |===
 
 Credentials are read from the environment, never from configuration.
-`channels.maven.tokenEnv` names the variable; a configuration file gets
-committed, and a credential in a committed file is a credential that has leaked.
+`channels.maven.tokenEnv` names the variable, `MAVEN_TOKEN` by default; a configuration file gets committed, and a credential in a committed file is a credential that has leaked.
 
+link:../docs/reference/how-publisher-and-subscriber-work-together.adoc#channels[How the Publisher and the Subscriber work together →] lists each channel's layout and options.
+
+[#why-registries]
 === Why npm and Maven rather than release assets alone
 
-Publishing is passive. The producer releases `2.1.0` and nothing happens in an
-implementation repository until somebody looks.
+Publishing is passive.
+The producer releases `2.1.0` and nothing happens in an implementation repository until somebody looks.
 
-Renovate and Dependabot understand npm and Maven natively, so a contract bump
-arrives downstream as a pull request without any bespoke machinery. That is the
-practical argument for preferring them, and the reason to design the coordinates
-so that standard update bots can read them.
+Renovate and Dependabot understand npm and Maven natively, so a contract bump arrives downstream as a pull request without any bespoke machinery.
+That is the practical argument for preferring them, and the reason to design the coordinates so that standard update bots can read them.
 
+[#pre-releases]
 == Pre-releases
 
-API-Only design means implementation starts against a contract that is not
-finished. If the only way to obtain a bundle were a final release, teams would
-work around the tool by cloning the specification repository -- which is exactly
-the broad read access that publishing artifacts exists to avoid, with none of the
-guarantees.
+API-first design means implementation starts against a contract that is not finished.
+If the only way to obtain a bundle were a final release, teams would work around the tool by cloning the specification repository, which is exactly the broad read access that publishing artifacts exists to avoid, with none of the guarantees.
 
-So a pre-release version is first-class: `2.1.0-rc.1`, or Maven's `-SNAPSHOT`
-spelling, which is not semver-legal but is what Maven consumers expect.
+So a pre-release version is first-class: `2.1.0-rc.1`, or Maven's `-SNAPSHOT` spelling, which is not semver-legal but is what Maven consumers expect.
+It is cut from the version in the target's version file: `publish --pre-release rc.1` publishes `2.1.0-rc.1` when the file declares `2.1.0`.
 
-The hard rule is the other half of it. A pre-release must never quietly satisfy a
-production build:
+The hard rule is the other half of it.
+A pre-release must never quietly satisfy a production build:
 
-* npm publishes it under the `next` dist-tag, never `latest`, so `npm install`
-cannot pick one up by accident.
-* A GitHub release is marked as a pre-release, so "latest release" never resolves
-to an unfinished contract.
-* The API-Only Subscriber refuses a pre-release version outright unless the
-subscription sets `allowPrerelease = true` -- a visible, reviewable line in a
-build file rather than a default.
+* npm publishes it under the `next` dist-tag, never `latest`, so `npm install` cannot pick one up by accident.
+* A GitHub release is marked as a pre-release, so "latest release" never resolves to an unfinished contract.
+* The API-Only Subscriber refuses a pre-release version outright unless the subscription sets `allowPrerelease = true`: a visible, reviewable line in a build file rather than a default.
 
+[#configuration]
 == Configuration
 
-Everything project-specific lives in `apionly.yaml`, not in the code. Adapting
-the tool to another project means editing configuration.
+Everything project-specific lives in `apionly.yaml`, not in the code.
+Adapting the tool to another project means editing configuration.
 
 [source,yaml]
 ----
 schemaVersion: 1
 
 sources:
-  root: specs          # staged wholesale; the types share fragments
+  root: specs          # staged wholesale; the kinds share fragments
   openapi: openapi
   asyncapi: asyncapi
 
@@ -327,75 +383,98 @@ defaults:
 
 build:
   staging: build/staging
-  dist: dist
+  dist: build/dist
 reports:
   lint: build/reports/lint
+lint:
+  unreferenced: error  # a fragment no target reaches: error, warn or off
 
 toolchain:
   redocly: "@redocly/cli@2.52.0"
   asyncapi: "@asyncapi/cli@6.0.2"
 
+channels:
+  file:
+    directory: build/publish
+    clean: true        # keep only the version being published
+
 targets:
-  user-account:
+  orders:
+    # versionFile: versions/orders.properties
+    #              default: orders.bundle.properties beside the first bundle root
     openapi:
-      bundle: bundles/user-account_openapi_structure.yaml
+      bundle: bundles/orders.yaml
     asyncapi:
-      bundle: user-account_asyncapi_structure.yaml
+      bundle: orders_asyncapi.yaml
   portfolio:
-    publish: false     # built and linted, never distributed
+    publish: false     # built and linted, never published
     openapi:
-      bundle: bundles/portfolio_openapi_structure.yaml
+      bundle: bundles/portfolio.yaml
 ----
 
-`targets` is the single source of truth for what gets built. It replaced the
-per-script target arrays and the `apis:` map in `redocly.yaml`, which said
-overlapping things in two places under two different names.
+`targets` is the single source of truth for what gets built.
 
+[#pinning-the-bundlers]
 === Pinning the bundlers
 
-`toolchain` pins the bundler versions. Unpinned, the documents this tool produces
-could change because an upstream release happened, with nothing in the library
-having changed -- which makes any claim that a refactoring preserved output
-unfalsifiable. An upgrade should be a deliberate commit that moves the pin and
-the expected output together.
+`toolchain` pins the bundler versions.
+Unpinned, the documents this tool produces could change because an upstream release happened, with nothing in the library having changed.
+An upgrade should be a deliberate commit that moves the pin, reviewed with whatever it changes in the published documents.
 
+[#behaviour]
 == Behaviour worth knowing about
 
+[#unresolved-placeholders]
 === Unresolved placeholders fail the build
 
-The tool this absorbed emitted the literal string `*MISSING CONTENT*` into the
-document and carried on with a warning, so a broken contract could ship from a
-green build. An unresolved `{{token}}` is now an error. Set
-`defaults.placeholders.strict: false` to get the old leniency, in which case the
-token is left visible rather than replaced with a marker.
+An unresolved `{{token}}` is an error, so a broken contract cannot ship from a green build.
+Set `defaults.placeholders.strict: false` to leave the token visible in the document instead.
 
+[#placeholder-search]
 === Placeholder snippets are found from the source root
 
-The absorbed tool searched downward from the *input file's own directory*, never
-from the directory it was told to use, so a snippet one level up was invisible
-and the workaround was to move the Markdown files. The search now starts at the
-staged source root.
+`<token>.md` is searched for from the staged source root downwards, so a snippet can live anywhere under it.
 
+[#unreferenced]
+=== A fragment no target reaches fails the lint
+
+A linter checks documents, and a fragment reaches a document only through a `$ref`.
+A fragment that no target references is therefore never linted, however wrong it is, until the day a target starts to use it.
+
+So `lint`, run without `--target`, also lists every YAML file under the source root that no target's closure reaches, in `<reports.lint>/unreferenced.txt`, and fails when there is one.
+Every target counts, `publish: false` ones included, because they are linted too.
+That reports a fragment that does not comply before anything uses it, and finds a definition left behind by a change that stopped using it.
+
+Configuration is not a fragment, so it may sit anywhere, `sources.root` included.
+The check skips the well-known configuration files of lint tools, wherever they are: `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml`, `.spectral.yml`, and `apionly.yaml`.
+It also skips the lint configurations `defaults.<kind>.lint` names, whatever they are called.
+Any other YAML file under the source root counts.
+
+`lint.unreferenced` in `apionly.yaml` sets what happens: `error` by default, `warn` to report without failing, or `off` not to look.
+`lint --target` does not look, because an unreferenced fragment belongs to no target.
+
+`lint` lints every document even when one of them fails, and names every failure at the end, so a single run reports all of them.
+
+[#version-stamping]
 === Version stamping edits one scalar
 
-`info.version` is located structurally and that one scalar is spliced. It is
-deliberately not a re-serialisation: re-emitting a document reformats everything
-around the edit, because the AsyncAPI CLI wraps long descriptions at a width no
-YAML emitter reproduces. Splicing keeps every other byte exactly as the bundler
-wrote it. A document with no `info` block, or no version inside it, is an error.
+`info.version` is located structurally and that one scalar is spliced.
+It is deliberately not a re-serialisation: re-emitting a document reformats everything around the edit, because the AsyncAPI CLI wraps long descriptions at a width no YAML emitter reproduces.
+Splicing keeps every other byte exactly as the bundler wrote it.
+A document with no `info` block, or no version inside it, is an error.
 
+[#distribution]
 === `distribution` is transitional
 
-A producer has no business knowing the directory layout of the projects that
-consume it. The `distribution` block exists so that a specification library can
-adopt this tool without every consumer changing at the same time. The API-Only
-Subscriber replaces it: each consuming project declares where its own copy lands,
-and the block goes away.
+A producer has no business knowing the directory layout of the projects that consume it.
+The `distribution` block copies built documents into such a layout, so that a library can adopt this tool before its consumers adopt the API-Only Subscriber.
+Once they subscribe, each consuming project declares where its own copy lands, and the block goes away.
 
+[#adapting]
 == Adapting it to another project
 
-The tool has no dependency on any particular product, framework or directory
-layout. In order of what usually needs changing:
+The tool has no dependency on any particular product, framework or directory layout.
+In order of what usually needs changing:
 
 [cols="2,3", options="header"]
 |===
@@ -408,7 +487,7 @@ layout. In order of what usually needs changing:
 |`sources`
 
 |What each document is called
-|`defaults.<type>.outputName`
+|`defaults.<kind>.outputName`
 
 |The lint rules
 |`defaults.openapi.lint`
@@ -417,41 +496,39 @@ layout. In order of what usually needs changing:
 |`reports.lint`, defaulting to `build/reports/lint/<target>/<kind>.txt`
 
 |Where built documents go
-|`build.dist`, and `distribution` while it still exists
+|`build.dist`
 
 |Where artifacts are published
 |`channels`
+
+|Where a target's version is kept
+|Its version file, or `targets.<target>.versionFile`
 |===
 
-Beyond that: the `common/` versus `<product>/<target>/` split is one convention
-for organising a multi-target fragment library, not a requirement. A single-target
-project can keep every fragment in one flat directory, or skip fragments entirely
-and hand-author one complete document. The tool only needs one bundle root file
-per target; what that file `$ref`s, or whether it `$ref`s anything at all, is
-entirely up to the library.
+Beyond that, a `components/common/` directory beside per-target directories is one convention for organising a multi-target fragment library, not a requirement.
+A single-target project can keep every fragment in one flat directory, or skip fragments entirely and hand-author one complete document.
+The tool only needs one bundle root file per target; what that file `$ref`s, or whether it `$ref`s anything at all, is up to the library.
 
-Placeholders are optional too. A library with no `{{token}}` anywhere simply has
-nothing substituted.
+Placeholders are optional too.
+A library with no `{{token}}` anywhere simply has nothing substituted.
 
+[#breaking-changes]
 == Breaking changes
 
-The tool does not police them. `changed` tells a release job which targets a
-commit altered, and every manifest records the closure hash of what was
-published, so the hooks a diff gate would need already exist -- but the gate
-itself is deliberately not built.
+The tool does not police them.
+`changed` tells a release which targets a commit altered, and every manifest records the closure hash of what was published, so the hooks a diff gate would need already exist, but the gate itself is deliberately not built.
 
-A specification library should write down its own policy. The one this repository
-uses is at `usable-suspects/docs/breaking-changes.adoc`, and is a reasonable
-starting point to copy.
+A breaking change is declared where it is made: the major version in the target's version file changes in the same commit as the fragments it breaks.
+A specification library should write down its own policy for what counts as breaking.
 
+[#as-a-library]
 == Using it as a library
 
-Everything the CLI does is available programmatically, so a release job that
-wants to decide something for itself does not have to parse console output:
+Everything the CLI does is available programmatically, so a release job that wants to decide something for itself does not have to parse console output:
 
 [source,javascript]
 ----
-const { loadFrom, prepare, forTargets, changedSince } =
+const { loadFrom, prepare, changedSince } =
     require('@arc-e-tect/api-only-publisher');
 
 const config = loadFrom('.');
@@ -464,19 +541,20 @@ for (const result of changedSince(config, 'origin/main')) {
 }
 ----
 
+[#exit-codes]
 == Exit codes
 
 [cols="1,3",options="header"]
 |===
 | Code | Meaning
 | `0`  | Success.
-| `1`  | A handled failure: bad configuration, an unresolved placeholder, a
-         document that cannot be stamped, a dangling `$ref`, a channel that
-         refused the artifact. The message says which.
+| `1`  | A handled failure: bad configuration, an unresolved placeholder, a document that cannot be stamped, a dangling `$ref`, a lint failure, a channel that refused the artifact.
+The message says which.
 |===
 
 Anything else is a bug; please report it.
 
+[#tests]
 == Tests
 
 [source,console]
@@ -484,32 +562,22 @@ Anything else is a bug; please report it.
 npm test
 ----
 
-Covers placeholder substitution (including each of the three defects fixed on
-the way in), version stamping, configuration parsing, and the scaffold.
+Covers every module and every command: placeholder substitution, version stamping, version files, configuration parsing, closures, packing, channels, splitting, and the scaffold.
+`build.e2e.test.js` runs the real bundlers.
+The run fails below 90% of lines and functions, or 80% of branches.
 
-The end-to-end guarantee lives elsewhere, in the specification library's own
-golden fixtures: they assert that the documents this tool produces are unchanged,
-byte for byte, from the ones the pipeline produced before it existed.
-
+[#relationship]
 == Relationship to the API-Only Subscriber
 
-This half publishes; link:../api-only-subscriber/README.adoc[the Subscriber]
-fetches and verifies. They share one seam — an archive plus a `manifest.json` —
-and nothing else, which is why they can be versioned independently while living
-in one repository.
+This half publishes; link:../api-only-subscriber/README.adoc[the Subscriber →] fetches and verifies.
+They share one seam, an archive plus a `manifest.json`, and nothing else, which is why they can be versioned independently while living in one repository.
 
-This document is a reference for this half alone. For how the two are put
-together in a real project, see link:../docs/README.adoc[the manuals], which are
-organised by where the API descriptions live relative to the code that implements
-them: link:../docs/in-the-implementation-project.adoc[in the implementation
-project], link:../docs/elsewhere-in-the-repository.adoc[elsewhere in the same
-repository], link:../docs/in-its-own-repository.adoc[in a repository of their
-own]. The first uses only `build` and reads the result directly; the second
-publishes to the `file` channel, and the third to a registry. If you are
-replacing a script that copies a document into `src/main/resources`, start at
-link:../docs/migrating-a-checked-in-document.adoc[Migrating a checked-in
-document].
+* link:../docs/README.adoc[The documentation →] helps you pick the use case that fits, with a tutorial and AI prompts for each.
+* link:../docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] maps every setting, command and check across the two tools, and says where a change to either belongs.
+* link:../docs/reference/run-book.adoc[The run-book →] covers operating both, and every failure message.
 
+[#license]
 == License
 
-MIT. See link:LICENSE[LICENSE].
+MIT.
+See link:LICENSE[LICENSE →].
