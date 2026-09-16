@@ -19,3 +19,4 @@ node_modules/
 # Gradle build state
 .gradle/
 build/
+/worktrees/
