@@ -1,0 +1,395 @@
+= Manual 1 -- The descriptions live in the implementation project
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+One project owns both the contract and the code that implements it. The
+fragments sit under `src/main/api/`, beside the Java that serves them, and the
+same commit changes both.
+
+Everything the implementation needs is already in the project, so the setup is
+the simplest one possible: the Publisher builds the document, and the build
+reads it straight from disk. Nothing is packed, versioned or published, and the
+Subscriber is not involved.
+
+Read link:concepts.adoc[Concepts] first.
+
+== When this fits
+
+* One team owns the contract outright.
+* The contract describes this project and nothing else.
+* You want the contract reviewed in the same pull request as the code that
+implements it.
+
+=== You may not need the Publisher yet
+
+If the contract is one hand-written `openapi.yaml` with no `$ref` to other files
+and no `{{placeholders}}`, there is nothing to bundle. Point your tooling at the
+file and stop there. Adopt the Publisher once you start splitting the document
+into fragments, sharing prose between documents, or want the document linted as
+part of the build.
+
+== When it does not
+
+* **Another project in this repository needs one of your fragments.** A shared
+error shape or `Username` needs an owner that is neither project. Go to
+link:elsewhere-in-the-repository.adoc[manual 2].
+* **Another build needs the contract**, inside this repository or outside it.
+That build has a version of its own, so the contract has to reach it as a
+versioned artifact. <<tomorrow>> describes the change.
+
+== The shape
+
+[source]
+----
+user-account-service/
+├── apionly.yaml                 <1>
+├── package.json                 <2>
+├── build.gradle                 <3>
+└── src/
+    └── main/
+        ├── api/                 <4>
+        │   ├── .redocly.yaml
+        │   ├── openapi/
+        │   │   ├── bundles/user-account_openapi_structure.yaml
+        │   │   ├── shared/info.yaml
+        │   │   ├── shared/conventions.md
+        │   │   ├── paths/…
+        │   │   └── components/…
+        │   └── asyncapi/…
+        └── java/…
+----
+<1> What the Publisher builds.
+<2> Pins the Publisher and gives it an npm script. A few lines.
+<3> One task that runs the build, and one provider that says where the document
+is.
+<4> The Publisher's `sources.root`.
+
+== Overview
+
+[cols="1,3", options="header"]
+|===
+|What |Why
+
+|The **Publisher** is a pinned dev dependency, run through an npm script
+|It turns fragments into one bundled, linted document.
+
+|A Gradle task, `buildContract`, runs the Publisher's `build`
+|So `./gradlew check` fails on a broken fragment, like it does on a broken test.
+Gradle's input tracking skips the task when nothing under `src/main/api` changed.
+
+|The build reads the document from `build/api-only/dist/`
+|The project can see the file, so reading it is all it takes. A registry would
+add a release step, a version and a credential, and solve nothing.
+
+|**One provider** is the only place the document's location is written
+|The Suite, a generator and the classpath all read through it. If the contract is
+ever published, this line changes and nothing that reads it does.
+
+|`build.staging` and `build.dist` point inside `build/`
+|Generated documents stay out of the source tree, and `clean` removes them.
+
+|No `channels`, no `publish`, no Subscriber
+|Nothing needs them yet.
+|===
+
+== Tutorial
+
+At the end, `./gradlew check` builds, lints and validates the project's API
+description, and the bundled document is on the classpath and wired into the
+API-Only Suite.
+
+=== 1. Pin the Publisher
+
+The Publisher is a Node CLI, so this Gradle project gets a small `package.json`:
+
+.package.json
+[source,json]
+----
+{
+  "name": "user-account-service-api",
+  "private": true,
+  "description": "Builds this project's API description from src/main/api.",
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "0.0.2"
+  }
+}
+----
+
+[source,console]
+----
+npm install
+----
+
+Pin the version exactly, without a range, so the output changes only when you
+decide it should. Commit `package-lock.json`, and add `node_modules/` to
+`.gitignore`.
+
+From now on you run the Publisher through the `apionly` script:
+`npm run apionly -- build`. link:concepts.adoc#running-the-publisher[Concepts]
+explains why it is not `npx api-only-publisher`.
+
+=== 2. Lay out the fragments
+
+If you are starting from nothing, scaffold a layout that already builds, then
+move it into place:
+
+[source,console]
+----
+npx @arc-e-tect/api-only-publisher@0.0.2 init /tmp/scaffold
+mkdir -p src/main/api
+cp -r /tmp/scaffold/specs/* src/main/api/
+cp /tmp/scaffold/.redocly.yaml src/main/api/
+----
+
+If you already have one hand-written document, put it at
+`src/main/api/openapi/bundles/user-account_openapi_structure.yaml` and leave it
+whole. A bundle root that `$ref`s nothing is still a valid bundle root, and you
+can split it into fragments later.
+
+=== 3. Write `apionly.yaml`
+
+At the project root, beside `build.gradle`:
+
+.apionly.yaml
+[source,yaml]
+----
+schemaVersion: 1
+
+sources:
+  root: src/main/api
+  openapi: openapi
+  asyncapi: asyncapi
+
+defaults:
+  openapi:
+    lint: src/main/api/.redocly.yaml
+    outputName: openapi.yaml
+  asyncapi:
+    outputName: asyncapi.yaml
+  placeholders:
+    strict: true
+
+build:
+  # Inside build/, so `clean` removes it and nothing generated lives under src/.
+  staging: build/api-only/staging
+  dist: build/api-only/dist
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+  asyncapi: "@asyncapi/cli@6.0.2"
+
+targets:
+  user-account:
+    openapi:
+      bundle: bundles/user-account_openapi_structure.yaml
+----
+
+If the project also has an AsyncAPI description, add an `asyncapi:` entry under
+the target.
+
+[source,console]
+----
+npm run apionly -- targets
+npm run apionly -- build
+----
+
+You now have `build/api-only/dist/user-account/openapi.yaml`: a single,
+self-contained file.
+
+=== 4. Wire the build into Gradle
+
+.build.gradle
+[source,groovy]
+----
+def contractDir = layout.buildDirectory.dir('api-only/dist/user-account')
+
+def buildContract = tasks.register('buildContract', Exec) {
+    group = 'api-only'
+    description = 'Builds and lints this project\'s API description documents.'
+
+    // Declared so Gradle skips the task when nothing changed, and runs it again
+    // when something did.
+    inputs.dir(layout.projectDirectory.dir('src/main/api'))
+        .withPropertyName('fragments')
+    inputs.file(layout.projectDirectory.file('apionly.yaml'))
+        .withPropertyName('configuration')
+    outputs.dir(contractDir)
+
+    workingDir = projectDir
+    commandLine 'npm', 'run', '--silent', 'apionly', '--', 'build',
+                '--version', project.version.toString()
+}
+
+// The one place this build says where its contract comes from. Everything that
+// needs the document reads it through this provider.
+def contract = buildContract.map { contractDir.get().file('openapi.yaml') }
+
+// A broken fragment fails the same build as a broken test.
+tasks.named('check') { dependsOn buildContract }
+
+// On the classpath, as it would be from src/main/resources. Passing the task
+// provider rather than a path brings the dependency along.
+sourceSets.main.resources.srcDir(buildContract)
+tasks.named('processResources') { dependsOn buildContract }
+----
+
+`--version` stamps the project version onto `info.version`, so the document
+records which build produced it. If the project has no version (Gradle reports
+`unspecified`), drop the flag and the document keeps the version its `info`
+block declares.
+
+On Windows, the executable is `npm.cmd`.
+
+[source,console]
+----
+./gradlew check
+./gradlew check     # buildContract is now UP-TO-DATE
+----
+
+=== 5. Point the tooling at the provider
+
+.build.gradle
+[source,groovy]
+----
+apiOnlySuite {
+    rootDocument = contract
+}
+----
+
+A code generator works the same way:
+
+[source,groovy]
+----
+openApiGenerate {
+    inputSpec = contract.map { it.asFile.absolutePath }
+}
+----
+
+Always derive from `contract`, never from a path string. A provider derived from
+the task carries the dependency, so nothing can end up reading an empty directory. It is also
+the line <<tomorrow>> replaces.
+
+=== 6. Build it in CI
+
+An existing Gradle job needs only Node and an install step added:
+
+[source,yaml]
+----
+- uses: actions/setup-node@v4
+  with:
+    node-version: 22
+- run: npm ci
+- run: ./gradlew check
+----
+
+== What you have now
+
+* `./gradlew check` fails on a broken fragment, an unresolved placeholder, or a
+document that does not lint.
+* The bundled document is on the classpath and wired into the Suite.
+* One line in `build.gradle` says where the contract comes from.
+* No registry, no versioned artifacts, no credentials, and nothing generated
+under `src/`.
+
+[#tomorrow]
+== When tomorrow comes
+
+The signal is another build that needs the contract: a client generating stubs,
+or a partner validating against it. That build has its own version and its own
+schedule, so it has to be able to pin a version of the contract. The contract
+therefore travels as a versioned artifact.
+
+Where that build lives decides the channel:
+
+* **In this repository:** the `file` channel, publishing into a committed
+directory, as link:elsewhere-in-the-repository.adoc[manual 2] describes. No
+registry. By then the contract usually deserves a library of its own, so manual 2
+is the place to continue.
+* **Outside this repository:** a registry, as described below.
+
+This project keeps building its contract exactly as it does now. The change is
+all additions:
+
+. **Add a channel** to `apionly.yaml`. For a consumer outside the repository,
+`maven` is the channel Gradle consumers can resolve:
++
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.pkg.github.com/example/user-account-service
+    tokenEnv: MAVEN_TOKEN
+----
++
+To try it before wiring CI, use `repository: build/api-only/maven`, which writes
+a Maven repository layout to disk.
+
+. **Publish in the release job**, after the build and with the same version:
++
+[source,yaml]
+----
+- name: Publish the API description
+  env:
+    MAVEN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    npm run apionly -- build   --version "$VERSION"
+    npm run apionly -- publish --version "$VERSION"
+----
+
+. **The other build subscribes**, as described in
+link:consuming-a-published-contract.adoc[manual 4].
+
+This project does not subscribe to its own contract, now or later. It would be
+checking itself against its own output, and the lockfile would change with every
+fragment edit.
+
+If the contract later moves out of this project entirely, this build becomes a
+consumer like any other: `buildContract`, the `srcDir` line and `package.json`
+go, the Subscriber plugin comes in, and the provider becomes:
+
+[source,groovy]
+----
+def contract = apiOnlySubscriber.subscription('user-account').openapi
+----
+
+The Suite, the generator and everything else that reads `contract` stay as they
+are. The producer side of that move is described in
+link:in-its-own-repository.adoc[manual 3], and
+link:prompts/7-move-to-published-contract.md[prompt 7] walks an AI assistant
+through it.
+
+== Doing this with an AI coding assistant
+
+link:prompts/1-contract-in-implementation-project.md[Prompt 1] takes Claude Code
+or Codex through this tutorial. The assistant investigates first and proposes a
+plan. Once you agree, it implements the plan and verifies each step by running
+it. link:ai-assistants.adoc[Using the prompts] covers the practical side.
+
+== What to watch for
+
+=== The contract shares the project's version
+
+Stamping `project.version` is cheap and accurate today. If the contract is ever
+published, consumers will see a new contract version with every release of the
+service, including releases that did not touch the contract. Once they start
+asking what changed in 1.4.2, the contract is ready for its own repository.
+
+=== Keep the path in one place
+
+`build/api-only/dist/user-account/openapi.yaml` should appear exactly once, in
+`contractDir`. Every string copy of that path is another line to hunt down when
+the contract's source changes, and another reader that bypasses the task
+dependency.
+
+=== Never use bare `npx api-only-publisher`
+
+Use the npm script instead. The unscoped name is not this package, and without a
+local install npx looks it up on the public registry. See
+link:concepts.adoc#running-the-publisher[Concepts].

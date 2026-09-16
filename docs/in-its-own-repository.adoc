@@ -1,0 +1,469 @@
+= Manual 3 -- The descriptions live in their own repository
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+The specification library is a repository. It has its own release cadence, its
+own reviewers, its own version history, and it ships artifacts. Implementation
+projects, in other repositories, subscribe to those artifacts and have no access
+to the fragments at all.
+
+This is where both components do their full job. Manuals 1 and 2 deliberately use
+less of them, and each ends with _When tomorrow comes_: the short version of how
+to get here.
+
+Read link:concepts.adoc[Concepts] first.
+
+== When this fits
+
+* More than one team implements against these contracts.
+* A contract must be releasable without releasing anything that implements it,
+and vice versa.
+* "Who is allowed to change this contract?" has a different answer from "who is
+allowed to change this service?"
+* You want a consumer's build to fail on drift without that consumer being able
+to reach the fragments and fix the symptom.
+
+== When it does not
+
+* One team, one service, one contract. The second repository buys nothing and
+costs a CI pipeline. link:in-the-implementation-project.adoc[Manual 1].
+* The design is changing daily and every contract edit needs an implementation
+edit in the same review. Stay in one repository, as in
+link:in-the-implementation-project.adoc[manual 1] or
+link:elsewhere-in-the-repository.adoc[manual 2], until it settles.
+
+== The shape
+
+Two repositories that share nothing but published artifacts.
+
+[source]
+----
+example/contracts                        example/user-account-service
+├── apionly.yaml                         ├── build.gradle
+├── package.json                         ├── apionly.lock          <2>
+├── .redocly.yaml                        ├── settings.gradle
+├── .github/workflows/release.yml        └── src/main/java/…
+└── specs/
+    ├── openapi/
+    │   ├── bundles/…                    example/relationship-service
+    │   ├── components/common/…          ├── build.gradle
+    │   └── paths/…                      ├── apionly.lock
+    └── asyncapi/…                       └── src/main/java/…
+                                    <1>
+----
+<1> The only thing crossing the gap: `user-account-2.1.0.tgz`, in a Maven
+repository.
+<2> The evidence, in each consumer, of which version it is building against.
+
+== Overview
+
+[cols="1,3", options="header"]
+|===
+|What |Why
+
+|The contracts repository runs the **Publisher** and nothing else
+|It has no implementation to build and no JVM to install.
+
+|Every implementation repository applies the **Subscriber**
+|And commits its `apionly.lock`.
+
+|The channel is `maven`, against a real remote
+|GitHub Packages, Artifactory, Nexus, Maven Central -- whichever you already run.
+It is the only channel a Gradle consumer can resolve, and using it means Gradle's
+own dependency resolution does the fetching, caching and up-to-date checking.
+
+|Publish to `npm` as well, if you have non-JVM consumers
+|One `publish` ships the same bytes to both. See
+link:consuming-a-published-contract.adoc[manual 4].
+
+|Release is driven by `changed --since`
+|A commit touching one target's fragments releases one target.
+
+|Renovate or Dependabot watches the coordinates
+|Publishing is passive: the producer releases `2.1.0` and *nothing happens*
+downstream until somebody looks. An update bot is what turns a release into a
+pull request in every consumer, and is the reason to prefer Maven and npm
+coordinates over release assets.
+|===
+
+== Tutorial, producer side
+
+=== 1. Create the repository
+
+[source,console]
+----
+mkdir contracts && cd contracts && git init
+npx @arc-e-tect/api-only-publisher@0.0.2 init .
+----
+
+.package.json
+[source,json]
+----
+{
+  "name": "contracts",
+  "private": true,
+  "description": "The organisation's published API descriptions.",
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "0.0.2"
+  }
+}
+----
+
+[source,console]
+----
+npm install
+git add -A && git commit -m "chore: scaffold the specification library"
+----
+
+=== 2. Declare the targets and the channel
+
+.apionly.yaml
+[source,yaml]
+----
+schemaVersion: 1
+
+sources:
+  root: specs
+  openapi: openapi
+  asyncapi: asyncapi
+
+defaults:
+  openapi:
+    lint: .redocly.yaml
+    outputName: openapi.yaml
+  asyncapi:
+    outputName: asyncapi.yaml
+  placeholders:
+    strict: true
+
+build:
+  staging: build/staging
+  dist: dist
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+  asyncapi: "@asyncapi/cli@6.0.2"
+
+targets:
+  user-account:
+    openapi:
+      bundle: bundles/user-account_openapi_structure.yaml
+    asyncapi:
+      bundle: user-account_asyncapi_structure.yaml
+  relationship:
+    openapi:
+      bundle: bundles/relationship_openapi_structure.yaml
+  portfolio:
+    publish: false
+    openapi:
+      bundle: bundles/portfolio_openapi_structure.yaml
+
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.pkg.github.com/example/contracts
+    # The *name of the environment variable* holding the credential. Never the
+    # credential: this file is committed.
+    tokenEnv: MAVEN_TOKEN
+  npm:
+    scope: "@example"
+    access: public
+----
+
+=== 3. Prove it locally, without a remote
+
+Before wiring any CI, publish into a directory and subscribe to it from a scratch
+Gradle project. This is link:before-anything-is-published.adoc[manual 5] in
+miniature, and it is worth the ten minutes: it separates "my configuration is
+wrong" from "my credentials are wrong", which are otherwise the same error
+message.
+
+[source,console]
+----
+npm run apionly -- build   --version 0.1.0
+npm run apionly -- publish --version 0.1.0 --channel file
+find publish -type f      # the file channel's default directory
+----
+
+[#release-workflow]
+=== 4. The release workflow
+
+.`.github/workflows/release.yml`
+[source,yaml]
+----
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write        # npm trusted publishing, if you use the npm channel
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # changed --since needs history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      # A target whose closure is untouched is not released, however much else
+      # in the repository moved. This is what makes per-target versions mean
+      # something.
+      - name: Which targets changed
+        id: changed
+        run: |
+          npm run --silent apionly -- changed --since "${{ github.event.before }}" --quiet \
+            > "$RUNNER_TEMP/changed.txt"
+          echo "Changed targets:"; cat "$RUNNER_TEMP/changed.txt"
+
+      - name: Release each changed target
+        env:
+          MAVEN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          while read -r target; do
+            [ -n "$target" ] || continue
+
+            # Your versioning policy. See the note below.
+            version="$(./scripts/next-version.sh "$target")"
+
+            npm run apionly -- build   --version "$version" --target "$target"
+            npm run apionly -- publish --version "$version" --target "$target"
+
+            git tag "${target}-v${version}"
+          done < "$RUNNER_TEMP/changed.txt"
+
+          git push --tags
+----
+
+[NOTE]
+====
+**Versioning policy is yours.** The Publisher tells you *which* targets changed
+and records the closure hash of what was published; it deliberately does not
+decide whether a change is a patch, a minor or a break. That is a policy a
+specification library should write down for itself.
+
+Two answers that work:
+
+* **Conventional Commits scoped by target name** -- `feat(user-account): …` --
+run through `semantic-release` with a per-target tag namespace, which is how this
+repository releases its own two components.
+* **A committed `versions.yaml`**, bumped in the same pull request as the change.
+Cruder, and entirely explicit, which some organisations prefer for contracts
+specifically.
+
+Per-target git tags (`user-account-v2.1.0`) are worth creating either way: they
+are what makes `changed --since user-account-v2.1.0` answerable later.
+====
+
+=== 5. Pre-releases, deliberately
+
+An implementation usually starts before the contract is final. Publish
+pre-releases and let consumers opt into them:
+
+[source,console]
+----
+npm run apionly -- build   --version 2.1.0-rc.1 --target user-account
+npm run apionly -- publish --version 2.1.0-rc.1 --target user-account
+----
+
+Both halves then enforce the rule that a pre-release must never quietly satisfy a
+build: npm puts it under the `next` dist-tag rather than `latest`, a GitHub
+release is marked as a pre-release, and the Subscriber refuses it outright unless
+the consumer's build file says `allowPrerelease = true`.
+
+That last one is the important half, because it is the one that appears in a code
+review.
+
+== Tutorial, consumer side
+
+=== 6. Apply the Subscriber
+
+.user-account-service/build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.0.2'
+    // Optional, and a different question: does this implementation match the
+    // contract? See below.
+    id 'com.arc-e-tect.api-only-suite' version '3.10.0'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'
+        url = uri('https://maven.pkg.github.com/example/contracts')
+        // Gradle reads apiContractsUsername and apiContractsPassword from
+        // gradle.properties, or from ORG_GRADLE_PROJECT_apiContracts* in the
+        // environment. Nothing about the credential is named here, which is the
+        // point: a build file gets committed.
+        credentials(PasswordCredentials)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('user-account') {
+        version = '2.1.0'
+    }
+}
+
+apiOnlySuite {
+    rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+}
+----
+
+.`~/.gradle/gradle.properties`, or CI environment
+[source,properties]
+----
+apiContractsUsername=your-username
+apiContractsPassword=a-token-with-read:packages
+----
+
+=== 7. Fetch, lock, commit
+
+[source,console]
+----
+./gradlew fetchApiSpec
+----
+
+[source]
+----
+> Task :fetchApiSpecUserAccount
+Subscribed to user-account 2.1.0
+----
+
+[source,console]
+----
+cat apionly.lock
+git add apionly.lock
+git commit -m "build: subscribe to user-account 2.1.0"
+----
+
+From now on `./gradlew check` fails if anybody edits the fetched document, and
+`./gradlew build` puts it on the classpath.
+
+=== 8. Upgrading
+
+Change one line:
+
+[source,groovy]
+----
+subscribe('user-account') { version = '2.2.0' }
+----
+
+[source,console]
+----
+./gradlew fetchApiSpec
+----
+
+[source]
+----
+Updated user-account from 2.1.0 to 2.2.0
+----
+
+Commit the build file and the lockfile together. The diff in `apionly.lock` --
+one version line and a hash per document -- is the reviewable record of what
+changed.
+
+[#update-bot]
+=== 9. Let a bot do step 8
+
+This is why the coordinates matter. Renovate and Dependabot read Maven
+coordinates natively, so a contract release becomes a pull request in every
+consumer without any bespoke machinery:
+
+.renovate.json
+[source,json]
+----
+{
+  "packageRules": [
+    {
+      "matchDatasources": ["maven"],
+      "matchPackageNames": ["com.example.contracts:**"],
+      "groupName": "API contracts",
+      "labels": ["contract"],
+      "reviewers": ["team:api-owners"]
+    }
+  ]
+}
+----
+
+The pull request changes the version in `build.gradle`; CI runs `fetchApiSpec`,
+which updates `apionly.lock`; `check` then runs the implementation against the
+new contract. If the API-Only Suite is applied, a breaking contract change fails
+that pull request -- which is the whole system working as intended, in a place
+where somebody is already looking.
+
+== Doing this with an AI coding assistant
+
+Two prompts cover this manual, one for each side:
+link:prompts/3-contract-repository.md[prompt 3] sets up the contracts repository,
+and link:prompts/4-subscribe-to-published-contract.md[prompt 4] subscribes from
+an implementation. link:ai-assistants.adoc[Using the prompts] explains how to
+run them in Claude Code or Codex.
+
+== What you have now
+
+* Contracts released on their own cadence, with their own version history and
+their own reviewers.
+* Consumers that cannot reach the fragments, and therefore cannot fix a drift
+warning by editing the contract.
+* A per-consumer record, in version control, of exactly which contract version it
+builds against.
+* Contract upgrades arriving as pull requests rather than as folklore.
+
+== What to watch for
+
+=== Publishing is passive
+
+The producer releases `2.1.0` and nothing happens anywhere until somebody looks.
+That is a property of artifact distribution, not a defect, but it means step 9 is
+not optional decoration -- without an update bot, consumers sit on old contracts
+indefinitely and the independence you bought turns into drift you cannot see.
+
+=== `mavenLocal()` is not a model of a remote
+
+It is a convenient test harness with different metadata and snapshot-staleness
+behaviour. Confirm pre-release semantics against a real remote before relying on
+them.
+
+=== Two plugins, two questions
+
+The Subscriber answers *where does the contract come from, and is it still what
+we agreed?* The
+https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-suite[API-Only Suite]
+answers *does this implementation match its contract?* They are separate plugins
+because a project can reasonably want either without the other. Applied together,
+as in step 6, the Suite validates against the fetched document and the dependency
+travels through the provider -- so the Suite cannot run against a directory
+nothing has populated.
+
+=== The fragments are now genuinely unreachable
+
+That is the point, and it has a consequence worth planning for: a developer
+debugging a contract question can no longer open the fragment. Publish the
+portfolio target's built document somewhere readable -- a docs site, a GitHub
+Pages job -- or the pressure to hand out read access to the contracts repository
+will win, and with it goes the boundary you just built.

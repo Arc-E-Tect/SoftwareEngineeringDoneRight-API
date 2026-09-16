@@ -1,0 +1,727 @@
+= Manual 2 -- The descriptions live elsewhere in the same repository
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+One repository, several projects. One of them is the specification library; the
+others implement parts of what it describes. Each project has **its own version**
+and releases on its own schedule.
+
+Independent versioning decides the setup. A project has to be able to stay on
+the contract it was built against while the library moves on, and move to a newer
+contract when it chooses to. So the library publishes each target as a
+versioned archive, and every project subscribes to the version it wants and
+records it in `apionly.lock`.
+
+None of that needs a registry. Both halves are in the same checkout, so the
+Publisher's `file` channel writes into a directory in the repository, the
+Subscriber's `file` channel reads from it, and that directory is committed.
+
+This is the shape of the `SoftwareEngineeringDoneRight-Code` repository.
+`usable-suspects/` holds the fragments, and `red-thread/`, `family-ties/`,
+`cucumber-salad/` and `blue-needle/` each release under their own semantic
+version and tag namespace (`red-thread-v…`). Today a script copies generated
+documents into each project's `src/main/resources`;
+link:migrating-a-checked-in-document.adoc[manual 6] covers the move away from
+that.
+
+Read link:concepts.adoc[Concepts] first.
+
+== When this fits
+
+* Several projects share a fragment library -- one error shape, one `Username`,
+one pagination convention -- and that library needs an owner that is none of them.
+* The projects are versioned independently, and each should decide when to take a
+new contract.
+* Everything lives in one repository, and nothing outside it consumes the
+contracts.
+
+== When it does not
+
+* **The description belongs to one project and nothing else uses it.** There is
+nothing to version separately; see link:in-the-implementation-project.adoc[manual 1].
+* **A build outside this repository needs a contract.** It cannot read a
+directory in your checkout. <<tomorrow>> describes the change.
+
+== The shape
+
+[source]
+----
+monorepo/
+├── contracts/                        <1>
+│   ├── apionly.yaml
+│   ├── package.json
+│   ├── versions.properties           <2>
+│   ├── next-version.sh
+│   ├── release.sh                    <3>
+│   ├── specs/
+│   │   ├── openapi/
+│   │   │   ├── bundles/…
+│   │   │   ├── components/common/…
+│   │   │   └── …
+│   │   └── asyncapi/…
+│   └── published/                    <4>
+│       ├── user-account/
+│       │   ├── 1.0.0/user-account-1.0.0.tgz
+│       │   ├── 1.0.0/manifest.json
+│       │   └── 1.1.0/…
+│       └── relationship/
+│           └── 1.0.0/…
+├── user-account-service/             <5>
+│   ├── build.gradle
+│   ├── apionly.lock                  <6>
+│   └── src/main/java/…
+└── relationship-service/
+    ├── build.gradle
+    ├── apionly.lock
+    └── src/main/java/…
+----
+<1> The specification library. It does not need to be a Gradle project.
+<2> The version of each target, bumped in the same pull request as the change it
+describes.
+<3> Publishes every target whose fragments changed since its last release.
+<4> Every released version of every target. **Committed.**
+<5> An independently versioned project. It needs no Node: it only reads archives.
+<6> Which contract version this project builds against, and the hash of every file
+in it.
+
+== Overview
+
+[cols="1,3", options="header"]
+|===
+|What |Why
+
+|The **Publisher** is a dev dependency of `contracts/`, run through an npm script
+|One library, one installation, one set of pinned bundler versions.
+
+|Each **target has its own version**, released as `<target>-contract-v<version>`
+|A change to one service's fragments releases that target only. The tag namespace
+cannot collide with the projects' own `<project>-v<version>` tags.
+
+|Releases are published with the **`file` channel into `contracts/published/`**
+|Both halves can read the directory. No registry, no credentials, no network.
+
+|`published/` is **committed**
+|Every clone and every CI runner has every released version, so a project can
+stay on `1.0.0` long after the fragments have moved on. Overwriting a released
+archive shows up in `git diff`, and a CI check rejects it.
+
+|Every project applies the **Subscriber** with the `file` channel
+|It pins a version, fetches it, checks it against the archive's manifest, and
+commits `apionly.lock`. `check` fails if the fetched document drifts.
+
+|**One provider per contract** is the only place its location is written
+|The Suite, a generator and the classpath all read through it.
+|===
+
+== Tutorial
+
+At the end, the library releases independently versioned contracts into a
+committed directory, and each project builds against the version it chose,
+verified on every `check`.
+
+=== 1. Create the specification library
+
+[source,console]
+----
+npx @arc-e-tect/api-only-publisher@0.0.2 init contracts
+----
+
+.contracts/package.json
+[source,json]
+----
+{
+  "name": "contracts",
+  "private": true,
+  "description": "The API descriptions this repository's projects implement.",
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "0.0.2"
+  }
+}
+----
+
+[source,console]
+----
+cd contracts && npm install
+----
+
+Commit `package-lock.json`. The `apionly` script is how the Publisher is always
+run; link:concepts.adoc#running-the-publisher[Concepts] explains why it is not
+`npx api-only-publisher`.
+
+==== Keeping an existing layout
+
+If the fragments already exist, leave them where they are and describe their
+location in `sources`. In the `SoftwareEngineeringDoneRight-Code` repository the
+library is `usable-suspects/`, with its fragments under `app/src/docs/`:
+
+[source,yaml]
+----
+sources:
+  root: app/src/docs
+  openapi: api
+  asyncapi: asyncapi
+----
+
+Run `init` into a scratch directory and copy only `apionly.yaml` and
+`.redocly.yaml` across.
+
+Keep the default output names, `openapi.yaml` and `asyncapi.yaml`, even if an
+older script produced something else (`iff_openapi.yaml`, say). The Subscriber's
+`openapi` and `asyncapi` providers look for exactly those names.
+
+=== 2. Declare the targets and the file channel
+
+.contracts/apionly.yaml
+[source,yaml]
+----
+schemaVersion: 1
+
+sources:
+  root: specs
+  openapi: openapi
+  asyncapi: asyncapi
+
+defaults:
+  openapi:
+    lint: .redocly.yaml
+    outputName: openapi.yaml
+  asyncapi:
+    outputName: asyncapi.yaml
+  placeholders:
+    strict: true
+
+build:
+  staging: build/staging
+  dist: dist
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+  asyncapi: "@asyncapi/cli@6.0.2"
+
+targets:
+  user-account:
+    openapi:
+      bundle: bundles/user-account_openapi_structure.yaml
+    asyncapi:
+      bundle: user-account_asyncapi_structure.yaml
+
+  relationship:
+    openapi:
+      bundle: bundles/relationship_openapi_structure.yaml
+
+  # A whole-landscape view: built and linted, never published.
+  portfolio:
+    publish: false
+    openapi:
+      bundle: bundles/portfolio_openapi_structure.yaml
+
+channels:
+  file:
+    # Committed, not ignored: every clone needs every released version.
+    directory: published
+----
+
+`published/` sits outside `build/` and `dist/`, so the `.gitignore` that `init`
+wrote leaves it alone. Check:
+
+[source,console]
+----
+npm run apionly -- targets
+npm run apionly -- build
+npm run apionly -- closure
+----
+
+`closure` shows how many files each target reaches. It is worth looking at now,
+because it decides which targets a fragment change releases.
+
+=== 3. Publish the first versions
+
+Each target's version lives in a committed file, and whoever changes a target's
+fragments bumps its number in the same pull request:
+
+.contracts/versions.properties
+[source,properties]
+----
+user-account=1.0.0
+relationship=1.0.0
+----
+
+.contracts/next-version.sh
+[source,bash]
+----
+#!/usr/bin/env bash
+# Prints the version to release for a target, from versions.properties.
+set -euo pipefail
+version="$(awk -F= -v target="$1" '$1 == target { print $2 }' "$(dirname "$0")/versions.properties")"
+if [ -z "$version" ]; then
+  echo "no version for '$1' in versions.properties" >&2
+  exit 1
+fi
+echo "$version"
+----
+
+.contracts/release.sh
+[source,bash]
+----
+#!/usr/bin/env bash
+# Publishes every target whose closure changed since that target's last release,
+# into the committed published/ directory. Run from a clean checkout of main.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+targets="$(npm run --silent apionly -- targets | grep -v 'publish: false' | awk '{print $1}')"
+
+for target in $targets; do
+  last="$(git describe --tags --abbrev=0 --match "${target}-contract-v*" 2>/dev/null || true)"
+
+  # Released before, and nothing it reaches has changed since: nothing to do.
+  if [ -n "$last" ] && ! npm run --silent apionly -- changed --since "$last" --quiet | grep -qx "$target"; then
+    continue
+  fi
+
+  version="$(./next-version.sh "$target" "$last")"
+
+  # A published version is permanent: projects have locked its hashes.
+  if [ -e "published/$target/$version" ]; then
+    echo "$target $version is already published; refusing to overwrite it" >&2
+    exit 1
+  fi
+
+  npm run --silent apionly -- build   --version "$version" --target "$target"
+  npm run --silent apionly -- publish --version "$version" --target "$target" --channel file
+
+  git add "published/$target/$version"
+  git commit -m "chore(contracts): publish $target $version [skip ci]"
+  git tag "${target}-contract-v${version}"
+done
+----
+
+[source,console]
+----
+chmod +x next-version.sh release.sh
+git add -A . && git commit -m "feat(contracts): specification library"
+./release.sh
+git push origin HEAD --tags
+----
+
+[source,console]
+----
+$ git ls-files published
+published/relationship/1.0.0/manifest.json
+published/relationship/1.0.0/relationship-1.0.0.tgz
+published/user-account/1.0.0/manifest.json
+published/user-account/1.0.0/user-account-1.0.0.tgz
+----
+
+If someone forgets to bump a version, the script refuses to publish, because
+that version already exists. It fails loudly rather than overwriting an archive
+that projects have locked.
+
+`versions.properties` is the simplest policy that works. If the repository
+already derives versions from Conventional Commits with semantic-release, a
+`next-version.sh` that reads commits scoped by target name (`feat(user-account): …`)
+fits the same slot. The script receives the target and its last tag.
+
+=== 4. Subscribe from each project
+
+.user-account-service/build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.0.2'
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        // The library's published directory, relative to this project. Written once.
+        directory = "${rootDir}/../contracts/published"
+    }
+    subscribe('user-account') {
+        version = '1.0.0'
+    }
+}
+
+// The one place this build says where its contract comes from.
+def contract = apiOnlySubscriber.subscription('user-account').openapi
+----
+
+[source,console]
+----
+cd user-account-service
+./gradlew fetchApiSpec
+git add apionly.lock build.gradle && git commit -m "build: subscribe to user-account 1.0.0"
+./gradlew check
+----
+
+[source]
+----
+> Task :fetchApiSpecUserAccount
+Subscribed to user-account 1.0.0
+----
+
+The document is at `build/api-spec/user-account/openapi.yaml` and on the
+classpath. From now on, `check` fails if anyone edits it.
+
+In a multi-project Gradle build, `rootDir` is the root of that build, so
+adjust the relative path accordingly.
+
+==== A project that needs several contracts
+
+A service that implements one contract and calls another subscribes to both, each
+at its own version:
+
+.relationship-service/build.gradle
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = "${rootDir}/../contracts/published"
+    }
+    subscribe('relationship') { version = '1.0.0' }   // implemented here
+    subscribe('user-account') { version = '1.0.0' }   // called from here
+}
+
+def relationshipContract = apiOnlySubscriber.subscription('relationship').openapi
+def userAccountContract  = apiOnlySubscriber.subscription('user-account').openapi
+
+// Workaround for 0.0.2: with several subscriptions, each fetched directory holds
+// its own manifest.json and openapi.yaml, and they collide on the classpath root.
+// Give each its own directory instead. Must come after the apiOnlySubscriber block.
+sourceSets.main.resources.setSrcDirs(['src/main/resources'])
+tasks.named('processResources') {
+    ['relationship', 'user-account'].each { target ->
+        from(apiOnlySubscriber.subscription(target).into) { into "contracts/$target" }
+    }
+}
+----
+
+The documents are then on the classpath at `contracts/<target>/openapi.yaml`.
+
+=== 5. Point the tooling at the providers
+
+[source,groovy]
+----
+apiOnlySuite {
+    rootDocument = contract
+}
+----
+
+Derive every reader from a provider, never from a path string. The provider
+carries the dependency on the fetch.
+
+=== 6. Release and take a new version
+
+A contract change is a pull request against `contracts/`: edit the fragments,
+bump the target's number in `versions.properties`. After merge, the release job
+(step 7) publishes `user-account` 1.1.0 into `published/` and tags it.
+
+Every project stays on the version it chose until it decides to move:
+
+[source,groovy]
+----
+subscribe('user-account') { version = '1.1.0' }
+----
+
+[source,console]
+----
+./gradlew fetchApiSpec
+----
+
+[source]
+----
+Updated user-account from 1.0.0 to 1.1.0
+----
+
+Commit `build.gradle` and `apionly.lock` together. The diff in the lockfile -- a
+version line and a hash per document -- is the reviewable record of what the
+project now builds against.
+
+To see which project is on which version:
+
+[source,console]
+----
+grep -A1 '^target' */apionly.lock
+----
+
+==== Working against an unfinished contract
+
+On a feature branch, publish a pre-release by hand, commit it, and opt in
+explicitly in the project that needs it:
+
+[source,console]
+----
+cd contracts
+npm run apionly -- build   --version 1.2.0-rc.1 --target user-account
+npm run apionly -- publish --version 1.2.0-rc.1 --target user-account --channel file
+git add published/user-account/1.2.0-rc.1
+----
+
+[source,groovy]
+----
+subscribe('user-account') {
+    version = '1.2.0-rc.1'
+    allowPrerelease = true   // remove before the project releases
+}
+----
+
+Without `allowPrerelease`, the Subscriber refuses a pre-release outright.
+
+=== 7. Build it in CI
+
+Three kinds of workflow, and each is simpler than it would be with direct file
+access.
+
+**Projects** trigger only on their own directory. A library change cannot affect
+a project until that project bumps its subscription, which is itself a change in
+the project's directory. Projects need Java, not Node:
+
+.`.github/workflows/user-account-service.yml` (trigger and steps)
+[source,yaml]
+----
+on:
+  push:
+    paths: ['user-account-service/**']
+  pull_request:
+    paths: ['user-account-service/**']
+
+# …
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: ./gradlew check
+        working-directory: user-account-service
+----
+
+**Library pull requests** build and lint every target, and fail if anything
+already released was modified or deleted:
+
+.`.github/workflows/contracts-check.yml`
+[source,yaml]
+----
+name: contracts-check
+
+on:
+  pull_request:
+    paths: ['contracts/**']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: contracts
+      - run: npm run apionly -- build
+        working-directory: contracts
+      - name: Released contracts are never changed
+        run: |
+          changed="$(git diff --name-only --diff-filter=MDR "origin/${{ github.base_ref }}...HEAD" -- contracts/published)"
+          if [ -n "$changed" ]; then
+            printf 'Released contract files were modified or deleted:\n%s\n' "$changed"
+            exit 1
+          fi
+----
+
+**The release** runs on the main branch after merge. It needs a token that is
+allowed to push the release commit and tags, which is the same kind of token a
+semantic-release job already uses:
+
+.`.github/workflows/contracts-release.yml`
+[source,yaml]
+----
+name: contracts-release
+
+on:
+  push:
+    branches: [main]
+    paths: ['contracts/**']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                        # history and tags, for changed --since
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: contracts
+      - name: Publish changed contracts
+        run: |
+          git config user.name  "contracts-release"
+          git config user.email "contracts-release@users.noreply.github.com"
+          ./contracts/release.sh
+          git push origin HEAD --tags
+----
+
+== What you have now
+
+* One place owns the contracts, and each target is released under its own version.
+* Every project chooses when to take a new contract, and its `apionly.lock` says
+which one it is on.
+* A fresh clone has every released version, and builds with no registry,
+no credentials and, for projects, no Node.
+* A released contract cannot silently change: `git diff` shows it, CI rejects it,
+and every project that locked it refuses it.
+
+[#tomorrow]
+== When tomorrow comes
+
+The signals:
+
+* A build **outside this repository** needs a contract.
+* The contracts need **their own repository**: their own release cadence,
+reviewers or permissions.
+
+=== 1. Also publish to a registry, without changing any project
+
+Add a channel to `contracts/apionly.yaml`:
+
+[source,yaml]
+----
+channels:
+  file:
+    directory: published
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.pkg.github.com/example/monorepo
+    tokenEnv: MAVEN_TOKEN
+----
+
+In `release.sh`, drop `--channel file` from the `publish` line. `publish` then
+ships the same bytes to every configured channel, the committed directory and the
+registry alike. Give the release job the token in `MAVEN_TOKEN`.
+
+The build outside the repository subscribes as described in
+link:consuming-a-published-contract.adoc[manual 4]. Projects inside the
+repository keep reading `published/`, because nothing about their situation
+changed.
+
+=== 2. Move the library to its own repository, if that is needed
+
+Only now do the projects change, and only their channel block:
+
+.Before
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = "${rootDir}/../contracts/published"
+    }
+    subscribe('user-account') { version = '1.1.0' }
+}
+----
+
+.After
+[source,groovy]
+----
+repositories {
+    maven {
+        name = 'apiContracts'
+        url = uri('https://maven.pkg.github.com/example/contracts')
+        credentials(PasswordCredentials)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('user-account') { version = '1.1.0' }
+}
+----
+
+After `./gradlew fetchApiSpec`, `apionly.lock` changes by exactly one line per
+target: `channel file` becomes `channel maven`. The version and every hash stay
+the same, which is the evidence that the project builds against the same
+contract it did before. The providers, and everything that reads them, are
+untouched.
+
+The Publisher handles the hard part of the move itself. A fragment library is one
+`$ref` graph, and that graph ignores the boundary you want to split along:
+
+[source,console]
+----
+npm run apionly -- split --out build/split --by target
+----
+
+Each part is written with its own subtree *plus* a copy of every foreign file it
+reaches, at its original path relative to the shared source root, so no relative
+`$ref` breaks. Every part that received copies gets an `IMPORTED.adoc` listing
+them and stating the cost: the copies can now drift, and nothing will notice.
+
+[WARNING]
+====
+`split` writes the **staged, substituted** tree. Placeholders are resolved and
+their Markdown inlined, so `{{conventions}}` becomes the prose it stood for and
+`conventions.md` is not copied. The output is a *starting point for a new
+library*, not a faithful move of the old one. If placeholder indirection matters,
+copy the `.md` snippets across by hand and put the tokens back.
+====
+
+Then read link:in-its-own-repository.adoc[manual 3].
+link:prompts/7-move-to-published-contract.md[Prompt 7] walks an AI assistant
+through both steps.
+
+== Doing this with an AI coding assistant
+
+link:prompts/2-contract-library-in-repository.md[Prompt 2] takes Claude Code or
+Codex through this tutorial. It sets up the library and the release script,
+publishes the first versions, subscribes one project, and stops for your review
+before wiring the rest. link:ai-assistants.adoc[Using the prompts] covers the
+practical side.
+
+== What to watch for
+
+=== A contract change reaches a project only when it upgrades
+
+That is independent versioning working as intended, but it also means a project
+can quietly fall behind. The `grep` in step 6 shows who is on what; making that
+visible in a regular review is cheaper than discovering it during an incident.
+
+=== Released versions stay
+
+Every version stays in `published/`, because some project may have locked it. The
+archives are a few kilobytes each. Deleting one fails the CI check on purpose; if
+you really must prune, confirm first that no `apionly.lock` in the repository
+references the version, and expect to override the check for that one pull
+request.
+
+=== Do not publish over a version
+
+The Publisher's `file` channel overwrites without asking. `release.sh` refuses to,
+and the CI check catches it in review, but a hand-run `publish` with an existing
+version bypasses the first and only meets the second in the pull request. When
+`git status` shows `M` under `published/`, run `git checkout -- published/` and
+publish a new version instead.
+
+=== Never use bare `npx api-only-publisher`
+
+Use the npm script. The unscoped name is not this package, and without a local
+install npx looks it up on the public registry. See
+link:concepts.adoc#running-the-publisher[Concepts].

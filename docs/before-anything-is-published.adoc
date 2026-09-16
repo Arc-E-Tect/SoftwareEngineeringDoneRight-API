@@ -1,0 +1,264 @@
+= Manual 5 -- Before the first release
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+The contract lives in a repository of its own (link:in-its-own-repository.adoc[manual 3])
+or belongs to another team (link:consuming-a-published-contract.adoc[manual 4]).
+It is not finished, nothing has been released, and there may not be a registry
+yet. The implementation still has to start this week.
+
+It applies only when **you can clone the contracts repository**, because the
+`file` channel reads a directory on your own machine. If you cannot -- no read
+access, or another company's contract -- an unfinished contract has to reach you
+as a pre-release, in a registry the producer gives you access to. That is
+link:consuming-a-published-contract.adoc[manual 4], step 7.
+
+It does not apply to manual 1, where the project reads the document it just
+built, or to manual 2, where the `file` channel already is the release mechanism.
+
+Read link:concepts.adoc[Concepts] first.
+
+== Why a channel, when the files are right there
+
+With both repositories checked out side by side,
+`../contracts/dist/user-account/openapi.yaml` is within reach, and reading it
+directly, as manual 1 does inside a project, would work. The difference is that
+these are two
+repositories moving independently. The contract author changes fragments while
+the implementation is mid-task, so a direct path builds the implementation
+against whatever is checked out at that moment. That may be a half-finished edit
+on another branch.
+
+Publishing a pre-release to a local directory fixes that for the price of one
+command. The implementation pins `0.1.0-rc.3` and gets exactly that until it
+deliberately moves on. The build file is also already the one it will keep: at
+the first release, only the channel block changes.
+
+The same reasoning is why link:elsewhere-in-the-repository.adoc[manual 2] uses
+the `file` channel between projects in one repository. The only difference here
+is that the directory lives in another repository's checkout, so the archives
+are not part of your repository; only your lockfile is.
+
+== The idea
+
+[source]
+----
+contracts repository  ──publish --channel file──>  a directory  ──channel file──>  implementation build
+----
+
+Everything else behaves as it will in production. The archive, the manifest and
+the lockfile are real, and all three checks run. Only the place where the bytes
+sit is temporary.
+
+== Tutorial
+
+=== 1. In the contracts repository, add a file channel
+
+If the repository is not set up yet, follow
+link:in-its-own-repository.adoc[manual 3], steps 1 and 2. Then:
+
+.contracts/apionly.yaml (addition)
+[source,yaml]
+----
+channels:
+  file:
+    directory: build/publish
+----
+
+=== 2. Publish a pre-release
+
+Use a pre-release version from day one. It is accurate, since the contract is
+unfinished, and it exercises the pre-release rules while nothing is at stake:
+
+[source,console]
+----
+npm run apionly -- build   --version 0.1.0-rc.1
+npm run apionly -- publish --version 0.1.0-rc.1 --channel file
+----
+
+[source,console]
+----
+$ find build/publish -type f
+build/publish/user-account/0.1.0-rc.1/user-account-0.1.0-rc.1.tgz
+build/publish/user-account/0.1.0-rc.1/manifest.json
+----
+
+That layout, `<directory>/<target>/<version>/<target>-<version>.tgz`, is exactly
+what the Subscriber's `file` channel reads, so there is nothing to arrange by hand.
+
+=== 3. In the implementation, subscribe through the file channel
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.0.2'
+}
+
+repositories { mavenCentral() }
+
+// Where the unreleased contracts are published: the only machine-specific
+// value in this file. Override it with -PcontractsDir or in
+// ~/.gradle/gradle.properties rather than committing your own path.
+def contractsDir = providers.gradleProperty('contractsDir')
+        .orElse("${rootDir}/../contracts/build/publish").get()
+
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = contractsDir
+    }
+    subscribe('user-account') {
+        version = '0.1.0-rc.1'
+        // Deliberate and temporary. Remove it before release; having it in the
+        // build file is what makes it easy to find.
+        allowPrerelease = true
+    }
+}
+
+// The one place this build says where its contract comes from.
+def contract = apiOnlySubscriber.subscription('user-account').openapi
+----
+
+[source,console]
+----
+./gradlew fetchApiSpec
+----
+
+[source]
+----
+> Task :fetchApiSpecUserAccount
+Subscribed to user-account 0.1.0-rc.1
+----
+
+The document is now at `build/api-spec/user-account/openapi.yaml` and on the
+classpath, and `apionly.lock` has been written. Commit the lockfile.
+
+=== 4. The loop
+
+This is the cycle you repeat all day:
+
+[source,console]
+----
+# in contracts/, after changing a fragment
+npm run apionly -- build   --version 0.1.0-rc.2
+npm run apionly -- publish --version 0.1.0-rc.2 --channel file
+
+# in the implementation
+./gradlew fetchApiSpec check -PuserAccountVersion=0.1.0-rc.2
+----
+
+For that last line to work without editing the build file every round, read the
+version from a property:
+
+[source,groovy]
+----
+subscribe('user-account') {
+    version = providers.gradleProperty('userAccountVersion').orElse('0.1.0-rc.1')
+    allowPrerelease = true
+}
+----
+
+Update the default and commit it whenever you settle on a pre-release worth
+sharing.
+
+=== 5. Republishing the same version
+
+If you republish a version with different bytes, `fetchApiSpec` refuses it,
+and it is right to (see
+link:troubleshooting.adoc#rebuilt-release[Troubleshooting]). While nobody else
+builds against it, you can throw the local lock away instead of bumping:
+
+[source,console]
+----
+rm apionly.lock && rm -rf build/api-spec && ./gradlew fetchApiSpec
+----
+
+Only do that in this phase, and never in a script someone else runs. As soon as
+a second person or machine builds the project, bump the version as in step 4.
+
+=== 6. The first release
+
+When the contract is ready, release it to a registry as in
+link:in-its-own-repository.adoc#release-workflow[manual 3, step 4]. On the
+implementation side, three things change:
+
+[source,groovy]
+----
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'
+        url = uri('https://maven.pkg.github.com/example/contracts')
+        credentials(PasswordCredentials)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'                        // was 'file'
+        groupId = 'com.example.contracts'     // replaces directory
+    }
+    subscribe('user-account') {
+        version = '0.1.0'                     // allowPrerelease removed
+    }
+}
+----
+
+[source,console]
+----
+./gradlew fetchApiSpec && git add apionly.lock && ./gradlew check
+----
+
+The `contract` provider, and everything that reads it, stays the same.
+
+== Doing this with an AI coding assistant
+
+link:prompts/5-subscribe-before-first-release.md[Prompt 5] sets up both sides of
+the file channel and runs one full cycle of the loop.
+link:ai-assistants.adoc[Using the prompts] covers the practical side.
+
+== What to watch for
+
+=== CI needs the contracts checkout too
+
+The `file` channel reads a local directory, so a CI job cannot resolve the
+contract unless it also checks out the contracts repository and publishes into
+that directory first. Either do that in the job, or leave contract-dependent
+checks out of CI until the first release. That is the real cost of this phase,
+and a good reason not to stay in it long.
+
+=== An uncommitted directory is not distribution
+
+Here the published directory lives in the contracts repository's checkout, and
+nobody commits it, so it exists only on your machine. That is fine for one person
+iterating. It is not distribution: a colleague or a CI runner has none of your
+pre-releases, and putting the directory on a network share only makes the same
+problem slower. As soon as a second person needs the contract, release it through
+a registry, since the contract lives in another repository.
+
+Inside one repository the situation is different, which is why
+link:elsewhere-in-the-repository.adoc[manual 2] commits its published directory
+and treats it as the release mechanism.
+
+=== Pre-releases are the supported path
+
+API-Only design means implementation starts against an unfinished contract. If a
+final release were the only way to get a bundle, teams would clone the
+specification repository instead. That hands out the broad read access
+publishing exists to avoid, and brings none of its checks. `-rc.1` and
+`allowPrerelease = true` are the intended route, not a loophole.
+
+=== Remove `allowPrerelease` before release
+
+Look for it in the pull request that marks the implementation as ready. A check
+on release branches is cheap insurance:
+
+[source,console]
+----
+! grep -rn allowPrerelease --include='build.gradle*' .
+----

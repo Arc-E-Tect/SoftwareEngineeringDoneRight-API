@@ -1,0 +1,129 @@
+= Using the Publisher and the Subscriber together
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+The link:../api-only-publisher/README.adoc[Publisher] and the
+link:../api-only-subscriber/README.adoc[Subscriber] each have a reference
+document of their own, describing every option that half understands. Neither
+says much about the other, on purpose: they are coupled only by a published
+archive.
+
+This directory fills that gap with manuals for putting the two together in a real
+project. They are organised around the question that actually changes the
+answer: *where do the API descriptions live, relative to the code that implements
+them?*
+
+Read link:concepts.adoc[Concepts] first if you have not used either component.
+
+== Build what you need today
+
+Neither component has to be adopted whole. How much of them a project needs
+depends on how far the contract has to travel.
+
+* **Within one project** (manual 1), the Publisher's `build` is all it takes. The
+project reads the document it just built.
+* **Between projects in one repository** (manual 2), each project has its own
+version and moves to a new contract on its own schedule. That takes published
+versions and a lockfile, so the Publisher publishes and the Subscriber subscribes,
+through a committed directory rather than a registry.
+* **Between repositories** (manuals 3 and 4), the same, through a registry.
+
+Each step is a small change from the one before it. Manuals 1 and 2 end with
+_When tomorrow comes_, which describes that change.
+
+== Which manual do I want?
+
+[cols="1,3,2", options="header"]
+|===
+|# |Where the descriptions live |Manual
+
+|1
+|In the same project as the implementation. One team owns both.
+|link:in-the-implementation-project.adoc[In the implementation project]
+
+|2
+|In the same repository, in a library of their own, serving several projects
+that each have their own version.
+|link:elsewhere-in-the-repository.adoc[Elsewhere in the repository]
+
+|3
+|In a repository of their own, released independently of anything that
+implements them.
+|link:in-its-own-repository.adoc[In its own repository]
+
+|4
+|Somewhere you cannot see. You consume another team's or another company's
+contract, and it reaches you as an artifact.
+|link:consuming-a-published-contract.adoc[Consuming a published contract]
+
+|5
+|In another repository that you can clone, and not released yet.
+|link:before-anything-is-published.adoc[Before the first release]
+
+|6
+|In `src/main/resources`, checked in, and copied there by hand or by a script.
+|link:migrating-a-checked-in-document.adoc[Migrating a checked-in document]
+|===
+
+What each manual uses:
+
+[cols="1,2,2,1", options="header"]
+|===
+|Manual |Publisher |Subscriber |Registry
+
+|1
+|`build`
+|--
+|--
+
+|2
+|`build`, `publish` to a committed directory
+|`file` channel
+|--
+
+|3
+|`build`, `publish`
+|in each consuming project
+|yes
+
+|4
+|--
+|yes
+|yes
+
+|5
+|`build`, `publish` to a local directory
+|`file` channel
+|--
+
+|6
+3+|whatever the layout you are migrating to uses
+|===
+
+link:ai-assistants.adoc[Using the prompts with an AI coding assistant] covers
+the Claude Code and Codex prompts that come with each manual.
+link:troubleshooting.adoc[Troubleshooting] lists the failures worth recognising
+on sight.
+
+=== A note on the fourth case
+
+"The descriptions are published to a Maven repository" is a situation, not a
+layout. A registry is a *channel*: manual 3 uses one, and manuals 1 and 2 add one
+only when a consumer outside the repository appears. What really sets case 4
+apart is *ownership*. You subscribe, you never publish, and nobody on your side
+can change the contract.
+
+== The decision, in one paragraph
+
+Ask how far the contract travels. If it stays inside the project that implements
+it, use manual 1. If several projects in one repository consume it and each has
+its own version, use manual 2: each project pins the contract version it builds
+against, and no registry is needed. Move to manual 3 when a consumer lives in
+another repository, or when the contracts need their own release cadence,
+reviewers or permissions. If you only consume, read manual 4. If the contract
+lives in a repository you can clone but has not been released yet, manual 5
+covers the gap. If you have a checked-in copy today, manual 6 gets you to any of
+the others.

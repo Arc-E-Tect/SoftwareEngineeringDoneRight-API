@@ -1,0 +1,418 @@
+= Troubleshooting
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+The failures worth recognising on sight, what each one actually means, and what
+to do. Grouped by which half produced them.
+
+== Publisher
+
+=== `sh: api-only-publisher: command not found`
+
+From `npm run apionly -- …`: the Publisher is not installed in this directory's
+`node_modules`. Run `npm ci` in the directory that holds the library's
+`package.json` -- `contracts/` in manual 2, the project root in manual 1.
+
+That failure is the npm script doing its job. It only runs what is installed,
+and it never fetches anything.
+
+=== `npm error 404 … 'api-only-publisher@*' could not be found`
+
+Someone ran `npx api-only-publisher`. Without a local install, npx looked for a
+package with that unscoped name on the public registry. The 404 is the lucky
+outcome: had anyone published a package under that name, npx would have run it,
+and in CI it answers its own install prompt. Replace the call with
+`npm run apionly -- …`, as described in
+link:concepts.adoc#running-the-publisher[Concepts].
+
+=== Captured output starts with `> apionly`
+
+`npm run` prints its own header lines to standard output. Anything that reads
+the output -- above all a release loop fed by `changed --quiet` -- then treats
+`> apionly` as a target name. Use `npm run --silent apionly -- …`.
+
+=== `no apionly.yaml found in … or any parent directory`
+
+The CLI walks up from the current directory looking for the configuration, so
+this means it is genuinely not above you. Either you are in the wrong tree, or
+the file is named something else.
+
+[source,console]
+----
+api-only-publisher build -C path/to/library    # run as if started there
+----
+
+=== `… declares schemaVersion X; this version understands 1`
+
+The configuration was written for a different version of the tool. `schemaVersion`
+exists so that a mismatch is a clear message rather than a strange failure three
+steps later. Upgrade the tool, or fix the number if it was a typo.
+
+=== `no Markdown file found for {{conventions}}`
+
+[source]
+----
+specs/openapi/shared/info.yaml: no Markdown file found for {{conventions}}.
+Searched for conventions.md under build/staging/openapi.
+----
+
+A `{{token}}` with no `<token>.md` anywhere under the staged source root.
+
+This is an error rather than a warning, deliberately. The tool this replaced
+emitted the literal string `*MISSING CONTENT*` into the document and carried on,
+so a broken contract could ship from a green build.
+
+Three things to check, in order:
+
+. The file exists and is named exactly `<token>.md`.
+. It is *under `sources.root`*. The search starts at the staged source root and
+descends, so a snippet outside the library is invisible.
+. It was not excluded from staging. Staging copies the whole source root, so this
+is rare -- but a `.gitignore`d snippet in a fresh CI checkout is not there to be
+copied.
+
+`defaults.placeholders.strict: false` restores the old leniency, in which case
+the token is left visible in the output rather than replaced with a marker. It is
+a way to unblock an afternoon, not a setting to leave on.
+
+=== `target 'x': bundle root not found at …`
+
+The path in `targets.<name>.<kind>.bundle` is resolved relative to
+`<staging root>/<sources.<kind>>`, not relative to the configuration file. With
+
+[source,yaml]
+----
+sources:
+  root: specs
+  openapi: openapi
+targets:
+  user-account:
+    openapi:
+      bundle: bundles/user-account_openapi_structure.yaml
+----
+
+the file must be at `specs/openapi/bundles/user-account_openapi_structure.yaml`.
+The error prints the staged path it looked at; compare it with the staged tree
+rather than with the source tree.
+
+=== `… has no top-level 'info' block to stamp a version into`
+
+`--version` splices `info.version` on the *finished* document. A document with no
+`info`, or an `info` with no `version`, cannot be stamped, and inventing one
+silently would be worse.
+
+Add a placeholder version to the bundle root's `info` block -- `version: 0.0.0` is
+conventional, since it is always overwritten.
+
+=== `openapi.yaml declares info.version '0.0.0' but is being packed as '1.4.0'`
+
+`pack` refuses to package a document whose stamped version disagrees with the
+version it is being packed as. Almost always it means the release job built
+without `--version`, or built and packed in separate steps that disagree.
+
+[source,console]
+----
+api-only-publisher build   --version 1.4.0
+api-only-publisher publish --version 1.4.0     # same value, both times
+----
+
+Nothing else in the pipeline catches this, because `pack` is the first step that
+takes the version on trust from its caller rather than deriving it -- which is
+why the check is there.
+
+=== `no credential in $MAVEN_TOKEN, which channels.maven.tokenEnv names`
+
+Remote Maven publication needs a token, read from the environment and never from
+configuration. Set it in the release job's environment. If the variable has a
+different name, `channels.maven.tokenEnv` is what names it.
+
+A 401 or 403 from the PUT produces a different message, which says to check that
+same variable -- there the credential exists and was rejected.
+
+=== `changed --since` reports that nothing changed, and you know something did
+
+Two causes, and it is worth distinguishing them because one is a configuration
+mistake and the other is not.
+
+**The ref is wrong.** `--since origin/main` in a CI job with a shallow checkout
+compares against a ref that is not there. Set `fetch-depth: 0`.
+
+**The change is genuinely outside every closure.** A file no bundle root reaches
+is not in any target's closure, so editing it changes no published document, so
+nothing is released. That is correct behaviour. `api-only-publisher closure` shows
+what each target actually reaches; a file you expected to matter that is not in
+any closure usually means a `$ref` was never added.
+
+=== `fatal: not a git repository` printed during `publish`
+
+Harmless. The manifest records the repository and commit that produced an
+archive, and outside a git checkout there is nothing to record, so those fields
+come back `null` and git says so on stderr. The publish succeeds.
+
+Worth noticing in CI, though: a manifest with `"source": {"repository": null,
+"commit": null}` is a published artifact whose provenance was not captured. If
+your release job produces those, it is building somewhere it should not be.
+
+== Direct access (manual 1)
+
+=== The implementation built against an outdated document
+
+Either `buildContract` did not run, or Gradle considered it up to date when it
+was not.
+
+* **Something reads the document by path.** A task configured with
+`file('build/api-only/dist/…')` has no dependency on `buildContract`, so it can
+run before it or without it. Derive every reader from the `contract` provider.
+* **The inputs are too narrow.** The task's inputs must be the whole of
+`src/main/api/` plus `apionly.yaml`, not only one subdirectory. A shared fragment
+changes every document that reaches it.
+* **The build ran with `-x buildContract`.** That is fine for a quick local run,
+but the document is then whatever `build/api-only/dist/` last held.
+
+== File channel in one repository (manual 2)
+
+=== `git status` shows a modified file under `published/`
+
+Someone published a version that already existed, and the Publisher's `file`
+channel overwrote it. A published version is meant to be permanent: every
+project that locked it will refuse the new bytes on its next fetch.
+
+[source,console]
+----
+git checkout -- contracts/published/     # put the released archives back
+----
+
+Then publish the change as a new version. Manual 2's release script refuses to
+publish over an existing version, and its CI check fails any pull request that
+modifies or deletes something already under `published/`.
+
+=== A project cannot find a version that was just released
+
+The release commit that added `published/<target>/<version>/` is not yet on the
+branch the project is built from. Merge or rebase, then fetch again. The
+Subscriber's message names the path it looked for:
+`no archive for 'user-account' 1.3.0 at …`.
+
+=== A fresh clone or CI runner cannot resolve any contract
+
+Check that `published/` is not gitignored. The `.gitignore` that `init` writes
+covers `build/` and `dist/`, so the published directory has to be outside both,
+and committed. If the archives only exist on the machine that published them,
+every other checkout fails.
+
+=== The `openapi` provider points at a file that does not exist
+
+`apiOnlySubscriber.subscription('x').openapi` always looks for `openapi.yaml`,
+and `.asyncapi` for `asyncapi.yaml`. If the library sets
+`defaults.openapi.outputName` to anything else -- `iff_openapi.yaml`, say -- the
+document is fetched and locked, but the provider finds nothing. Keep the
+default output names.
+
+== Subscriber
+
+=== `subscription 'x' resolves the pre-release version 1.1.0-rc.1`
+
+[source]
+----
+A contract that is not finished must not quietly satisfy a build. Set
+allowPrerelease = true on this subscription to work against it deliberately,
+and remember to take it off again before release.
+----
+
+Working as intended. Either subscribe to a final version, or opt in explicitly:
+
+[source,groovy]
+----
+subscribe('user-account') {
+    version = '1.1.0-rc.1'
+    allowPrerelease = true
+}
+----
+
+Both the SemVer spelling and Maven's `-SNAPSHOT` count as pre-releases.
+
+=== `Could not find com.example.contracts:user-account:2.1.0`
+
+Gradle's own message, not the plugin's, and the causes are the ordinary ones:
+
+* The repository is not declared, or is declared in `settings.gradle`'s
+`dependencyResolutionManagement` in a way that excludes project repositories.
+* The credential is missing or lacks read scope. With
+`credentials(PasswordCredentials)` and `name = 'apiContracts'`, Gradle wants
+`apiContractsUsername` / `apiContractsPassword` -- in `gradle.properties` or as
+`ORG_GRADLE_PROJECT_*`.
+* The version was never published. Check what is actually in the repository
+before assuming the build is wrong.
+* The extension is different. The plugin forms
+`group:name:version@tgz`; `channel { extension = '…' }` changes it.
+
+=== `no archive for 'x' 1.0.0 at …`
+
+The `file` channel, which expects exactly
+`<directory>/<target>/<version>/<artifactId>-<version>.tgz`. That is the layout
+`api-only-publisher publish --channel file` writes, so this usually means the
+publish has not run, ran with a different version, or wrote somewhere else.
+
+The error prints the full path it looked for. Compare it against
+`find <directory> -name '*.tgz'`. In manual 2, also check that the release commit
+adding that version has reached your branch.
+
+=== `the archive for 'x' declares openapi.yaml but does not contain it`
+
+The archive disagrees with its own `manifest.json`, and it is refused before
+anything is unpacked into the build. This is a producer-side problem: a
+hand-assembled archive, a truncated upload, or a repository that served the wrong
+bytes.
+
+Re-download and try again once; if it persists, tell the producer.
+
+[#rebuilt-release]
+=== `the published contract for 'x' 2.1.0 is not the one recorded in apionly.lock`
+
+[source]
+----
+A released version was rebuilt, or a tag was moved. Find out which before
+accepting this: subscribe to a new version if the change was intended, or delete
+the entry from apionly.lock to re-lock deliberately.
+----
+
+The most important failure in the system, and the one most likely to be worked
+around badly.
+
+`2.1.0` was published once, you locked it, and it has come back with different
+content. Somebody rebuilt a released version, or moved a tag. Whatever the
+contract now says, it is not what your project agreed to.
+
+**Do not delete `apionly.lock` to make it go away.** Find out what changed first.
+The manifest published beside the artifact -- `<artifact>-<version>-manifest.json`
+in the Maven repository -- records the commit that produced each build, which is
+usually enough to identify what happened in one look.
+
+The right resolution is almost always for the producer to release `2.1.1`. Deleting
+the entry to re-lock deliberately is the escape hatch for when you have
+established that the change was intended and harmless -- during
+link:before-anything-is-published.adoc[manual 5]'s early iteration, for instance.
+
+=== `the contract for 'x' has drifted from apionly.lock`
+
+[source]
+----
+    - openapi.yaml has changed since it was locked
+        locked:  070e7f08be18…
+        on disk: 05f0ec291244…
+----
+
+A fetched document was edited after it was fetched. Usually somebody opened
+`build/api-spec/…/openapi.yaml` to try something and forgot.
+
+[source,console]
+----
+./gradlew fetchApiSpec     # restores the published bytes
+----
+
+If the change was wanted, it belongs in the specification library, and this
+project then subscribes to the new version. That is the whole point: these
+documents are fetched, not authored here.
+
+=== `nothing has been fetched for 'x' yet, so there is nothing to verify`
+
+A clean checkout, or after `clean`. `verifyApiSpec` deliberately does not depend
+on `fetchApiSpec` -- depending on it would re-fetch before checking, overwriting a
+hand-edited document and reporting success, which is precisely the drift the task
+exists to find.
+
+With the `java` plugin applied, `./gradlew check` and `./gradlew build` both pull
+the fetch into the graph through `processResources`, so this only shows up when
+`verifyApiSpec` is run on its own. Run `fetchApiSpec` first.
+
+=== `subscription 'x' declares no version`
+
+`version` has no default, on purpose. A subscription without one has not said
+what it builds against.
+
+=== `no subscription for 'x'; declared subscriptions are […]`
+
+From `apiOnlySubscriber.subscription('x')` naming a target that was never
+subscribed to. Usually a typo, or a target name that changed on the producer side
+-- the target name is the coordination point across both halves, and renaming one
+is a breaking change for every consumer.
+
+=== `Entry manifest.json is a duplicate but no duplicate handling strategy has been set`
+
+This happens in a project that has two or more subscriptions and applies the `java`
+plugin. The plugin adds each subscription's directory as a resource root, and each of
+those directories holds a `manifest.json`, and usually an `openapi.yaml`, so
+`processResources` sees the same path twice.
+
+This is a limitation of the current release (0.0.2). Until it is fixed, remove the
+fetched directories from the resource roots and give each its own directory on the
+classpath. These lines must come *after* the `apiOnlySubscriber` block:
+
+[source,groovy]
+----
+sourceSets.main.resources.setSrcDirs(['src/main/resources'])
+tasks.named('processResources') {
+    ['relationship', 'user-account'].each { target ->
+        from(apiOnlySubscriber.subscription(target).into) { into "contracts/$target" }
+    }
+}
+----
+
+The fetch still runs before `processResources`, and `verifyApiSpec` is
+unaffected. If the project uses other resource directories, list them in
+`setSrcDirs` as well.
+
+=== The fetched `manifest.json` ends up inside the jar
+
+Expected. The archive is extracted whole into `build/api-spec/<target>/`, and that
+directory is registered as a resources directory, so `manifest.json` is packaged
+alongside the documents.
+
+It is small, and it makes a deployed artifact carry the provenance of the
+contract it was built against, which is usually worth having. To exclude it:
+
+[source,groovy]
+----
+tasks.named('processResources') {
+    exclude '**/manifest.json'
+}
+----
+
+== Both halves
+
+=== The documents differ between two machines
+
+Check the `toolchain` pins first. `toolchain.redocly` and `toolchain.asyncapi`
+pin the bundler versions precisely so that the output cannot change because an
+upstream release happened. An unpinned or range-pinned bundler makes any claim
+about reproducible output unfalsifiable.
+
+Then check that the Publisher itself is pinned exactly, with no range, and that
+CI runs `npm ci` rather than `npm install`.
+
+=== A consumer is on an old contract and nobody noticed
+
+Publishing is passive: the producer releases and nothing happens downstream until
+somebody looks. This is a property of artifact distribution rather than a defect,
+and the answer is an update bot -- Renovate or Dependabot reading the Maven or npm
+coordinates natively. See
+link:in-its-own-repository.adoc#update-bot[manual 3, step 9].
+
+If you are publishing only to `github-release`, no bot can help: it has no
+dependency-resolution semantics and no update notification, which is why it is
+the fallback rather than the default.
+
+=== A target name needs to change
+
+It is the coordination point for everything: the key in `targets:`, the argument
+to `subscribe(…)`, the Maven `artifactId` by default, the directory the documents
+land in, and the task suffix (`fetchApiSpecUserAccount`). Renaming one is a
+breaking change for every consumer.
+
+The soft landing is `artifactId` on the producer's channel configuration and on
+the consumer's subscription, which decouples the published coordinate from the
+target name. Publish under both names for a release or two, move consumers, then
+drop the old one.

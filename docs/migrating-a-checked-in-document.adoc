@@ -1,0 +1,322 @@
+= Manual 6 -- Migrating a checked-in document
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+Today there is an `openapi.yaml` in `src/main/resources`. It is committed. It got
+there by hand, from a script someone wrote, or from a build step nobody has
+looked at in two years. Several projects have one, and the copies no longer quite
+match.
+
+This manual moves you from there to a generated document in four phases, without
+a flag day. Each phase leaves the repository working, so you can stop after any
+of them.
+
+Read link:concepts.adoc[Concepts] first. Before you start, decide which layout you
+are migrating *to*:
+
+* link:in-the-implementation-project.adoc[Manual 1], if the description belongs
+to the project that implements it. The project reads the document it builds.
+* link:elsewhere-in-the-repository.adoc[Manual 2], if a library in the same
+repository serves several projects, each with its own version. They subscribe
+to versions published into a committed directory. No registry.
+* link:in-its-own-repository.adoc[Manual 3], if the consumers live in other
+repositories.
+
+Phases 1, 2 and 4 are the same either way. Only phase 3 differs.
+
+== The risk you are actually managing
+
+The tooling takes a day, so that is not the risk. The risk is that **nobody knows
+whether the checked-in document is current**, and the migration is when that
+becomes everybody's problem at once.
+
+So phase 1 changes nothing downstream. Its only job is to confirm that the
+generated document and the committed one agree. Do not skip it, and do not start
+by deleting anything.
+
+== Phase 1 -- Reproduce what exists, byte for byte
+
+*Downstream changes: none.*
+
+=== 1. Record the current document as a fixture
+
+[source,console]
+----
+mkdir -p .migration/golden
+cp user-account-service/src/main/resources/openapi.yaml .migration/golden/user-account.yaml
+----
+
+Do this for every project. These are the documents the migration must not
+change.
+
+=== 2. Build a library that produces it
+
+[source,console]
+----
+npx @arc-e-tect/api-only-publisher@0.0.2 init contracts
+----
+
+Put the library where your chosen layout needs it: `src/main/api` inside the
+project for manual 1, or a `contracts/` directory for manuals 2 and 3. Give it a
+`package.json` that pins the Publisher and defines the `apionly` script, as
+link:concepts.adoc#running-the-publisher[Concepts] shows.
+
+If the documents are hand-written and monolithic, the first version of the
+library is one bundle root per target and no fragments at all:
+
+[source,console]
+----
+cp .migration/golden/user-account.yaml \
+   contracts/specs/openapi/bundles/user-account_openapi_structure.yaml
+----
+
+That is a legitimate specification library. The tool only needs one bundle root
+per target; whether it `$ref`s anything is up to you. Factoring out shared error
+shapes comes *next*, and it is much safer once a fixture test is in place.
+
+Declare the targets in `apionly.yaml`, then:
+
+[source,console]
+----
+cd contracts && npm install && npm run apionly -- build
+----
+
+=== 3. Diff until it is empty
+
+[source,console]
+----
+diff -u ../.migration/golden/user-account.yaml dist/user-account/openapi.yaml
+----
+
+It will not be empty the first time. These are the differences to expect, and what
+each one means:
+
+[cols="2,3", options="header"]
+|===
+|Difference |What to do about it
+
+|`$ref` s have been resolved and inlined
+|Correct: that is bundling. If the golden file still *has* `$ref` s, the old
+pipeline shipped an unbundled document and consumers were resolving the
+references themselves. That is worth knowing, and it is a behaviour change to
+announce rather than hide.
+
+|`info.version` differs
+|Build with `--version <the version in the golden file>`.
+
+|Key ordering, quoting or line wrapping
+|That comes from the bundler, and it is not worth fighting. Confirm it is only
+formatting -- `diff <(yq -S . a.yaml) <(yq -S . b.yaml)` if you have `yq` -- then
+re-baseline the fixture and move on.
+
+|A description contains `*MISSING CONTENT*`
+|The old tool wrote that marker for an unresolved placeholder and carried on
+with a warning, so a broken contract could ship from a green build. The Publisher
+fails instead. You have found a real defect in the committed document, so fix the
+fragment.
+
+|Content is genuinely different
+|Stop. The committed document and its source have drifted, which is exactly what
+this migration exists to prevent. Before going further, agree with the consumers
+which one is the contract.
+|===
+
+=== 4. Lock the fixture in
+
+Once the diff is empty, keep it that way:
+
+.contracts/verify-golden.sh
+[source,bash]
+----
+#!/usr/bin/env bash
+set -euo pipefail
+npm run --silent apionly -- build \
+  --version "$(yq -r .info.version ../.migration/golden/user-account.yaml)"
+diff -u ../.migration/golden/user-account.yaml dist/user-account/openapi.yaml
+echo "output unchanged"
+----
+
+Run it in CI. Every refactoring of the library from here on -- extracting the
+common error shapes, introducing placeholders, splitting out the paths -- becomes
+checkable: either it preserves the document or it does not.
+
+Commit. **Nothing downstream has changed.**
+
+== Phase 2 -- Generate into the existing locations
+
+*Downstream changes: the committed document becomes generated. Consumers do not
+change.*
+
+The Publisher has a transitional `distribution` block for exactly this: it copies
+each built document into the directory where the consuming project already
+expects it.
+
+.contracts/apionly.yaml (addition)
+[source,yaml]
+----
+# Transitional; deleted in phase 4. It lets the library be adopted without every
+# consumer changing on the same day.
+distribution:
+  root: ..
+  layout: "{target}-service/src/main/resources"
+----
+
+[source,console]
+----
+npm run apionly -- build --version 1.4.0
+----
+
+[source]
+----
+-- Distributed to ../user-account-service/src/main/resources/openapi.yaml
+----
+
+The destination directory must already exist. If it does not, the build fails
+instead of creating a directory somewhere unexpected.
+
+Now:
+
+. Delete whatever script used to do the copying.
+. Run the library's build in CI on every commit, and fail when the copy produces
+a diff. This is the phase 1 fixture check, now pointed at the real locations.
+. Stop editing the documents in `src/main/resources`. Put a comment at the top of
+each saying where it comes from, and hold the line in review.
+
+Consumers still find the file at the path they always used, and their builds are
+untouched.
+
+[NOTE]
+====
+This is the phase to linger in. It is safe and reversible, and it is where the
+library gets refactored: extracting `components/common/`, introducing
+`{{token}}` placeholders for shared prose, and splitting one monolith into the
+per-target bundle roots you actually want. The fixture checks every step.
+====
+
+== Phase 3 -- Switch consumers one at a time
+
+*Downstream changes: one project per pull request, starting with whichever you
+choose.*
+
+Start with the least important consumer.
+
+=== If you are migrating to manual 1
+
+. **Compare before touching the build file.**
++
+[source,console]
+----
+npm run apionly -- build
+diff -u src/main/resources/openapi.yaml build/api-only/dist/user-account/openapi.yaml
+----
++
+The diff is empty, because the committed copy came out of the same build in
+phase 2.
+
+. **Switch in a single commit.** Delete the committed copy, add the
+`buildContract` task and the `contract` provider
+(link:in-the-implementation-project.adoc[manual 1], step 4), and remove the
+project from the `distribution` layout. Doing everything at once means the
+project never has two copies of `openapi.yaml` on its resource path.
++
+[source,console]
+----
+git rm src/main/resources/openapi.yaml
+./gradlew clean check
+----
+
+=== If you are migrating to manual 2
+
+. **Publish** the version the consumer uses today into the library's committed
+`published/` directory, as in link:elsewhere-in-the-repository.adoc[manual 2],
+steps 2 and 3, and commit it.
+. **Subscribe** from the consumer through the `file` channel (manual 2, step 4),
+and run `./gradlew fetchApiSpec`.
+. **Compare** `src/main/resources/openapi.yaml` with
+`build/api-spec/user-account/openapi.yaml`. They must be identical.
+. **Switch in a single commit**: delete the committed copy, commit
+`apionly.lock`, and remove the consumer from the `distribution` layout.
+
+=== If you are migrating to manual 3
+
+. **Publish** the version the consumer uses today, after adding a channel as in
+link:in-its-own-repository.adoc[manual 3], steps 2 and 4.
+. **Subscribe** from the consumer, as in
+link:consuming-a-published-contract.adoc[manual 4], and run
+`./gradlew fetchApiSpec`.
+. **Compare** `src/main/resources/openapi.yaml` with
+`build/api-spec/user-account/openapi.yaml`. They must be identical.
+. **Switch in a single commit**: delete the committed copy, commit
+`apionly.lock`, and remove the consumer from the `distribution` layout.
+
+=== Repeat
+
+Move one project per pull request. Each change is small, reversible and reviewable
+on its own, and the fleet can stay in a mixed state for as long as it needs to.
+
+If the `distribution` layout gets awkward to maintain as consumers leave it, speed
+up. That awkwardness is intended.
+
+== Phase 4 -- Remove the scaffolding
+
+*Downstream changes: none. This is bookkeeping.*
+
+When the last consumer has been switched:
+
+. Delete the `distribution` block from `apionly.yaml`.
+. Delete `.migration/` and `verify-golden.sh`. The build now checks the document on every
+run: `buildContract` in manual 1, and the lockfile in manuals 2 and 3.
+. Make sure `dist/`, `build/` and `node_modules/` are in `.gitignore`.
+. Check that no committed copy survives anywhere:
++
+[source,console]
+----
+git ls-files '*/src/main/resources/*openapi*' '*/src/main/resources/*asyncapi*'
+----
+
+. If you migrated to manual 2 or 3, write down the versioning policy you have
+been applying informally.
+link:in-its-own-repository.adoc#release-workflow[Manual 3, step 4] says what it
+has to decide.
+
+== Doing this with an AI coding assistant
+
+link:prompts/6-migrate-checked-in-document.md[Prompt 6] takes Claude Code or
+Codex through all four phases, and stops for your review at the end of each one,
+which is how this manual is meant to be used.
+link:ai-assistants.adoc[Using the prompts] covers the practical side.
+
+== What you have now
+
+* One place owns each contract, and every consumer gets a document generated
+from it.
+* No committed copies: the document is generated everywhere it is needed.
+* A fragment library you can refactor safely, because its output was checked.
+* If you migrated to manual 2 or 3, a record in each consuming project of which
+contract version it builds against.
+
+== What to watch for
+
+=== Phase 1 is where you find the bad news
+
+If the committed document and its source disagree, you have found a real
+problem, and the migration did not cause it. Do not make the diff empty by
+editing the source until it matches: the committed file may be the wrong one, and
+consumers have been building against it either way. Resolve it with the consumers
+before continuing.
+
+=== `distribution` is transitional
+
+It exists so a library can be adopted without every consumer changing on the
+same day. Left in place, it is worse than what you started with: a producer that
+knows its consumers' directory layouts, plus a generated document that is still
+committed. Set a date for phase 4.
+
+=== Do not migrate and refactor in the same commit
+
+Phase 1 gives you a fixture precisely so the library can be refactored safely.
+Doing both at once throws that away, and the first time the output changes you
+will not know which half caused it.

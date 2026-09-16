@@ -1,0 +1,426 @@
+= Manual 4 -- Consuming a contract you do not own
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+The contract arrives as an artifact. You did not build it, you cannot change it,
+and you may have no access to the fragments it was built from -- another team
+publishes it, or another company does. Your job is to consume it well.
+
+This is the Subscriber on its own. Nothing in this manual runs the Publisher.
+
+Read link:concepts.adoc[Concepts] first.
+
+== When this fits
+
+* You implement somebody else's contract, or you are a client generating stubs
+from one.
+* The contract is published to a Maven repository you can read.
+* The producer may or may not be using the API-Only Publisher. It does not matter
+much, provided the artifact has the right shape -- see
+<<producers-who-do-not-use-the-publisher>>.
+
+== Overview
+
+[cols="1,3", options="header"]
+|===
+|What |Why
+
+|Apply the **Subscriber**, apply nothing else
+|There is no library to build here.
+
+|Declare the repository the artifacts come from, with credentials **outside** the
+build file
+|A build file gets committed.
+
+|Commit `apionly.lock`
+|It is what makes "which version of somebody else's contract are we on?"
+answerable by reading your own repository rather than by asking them.
+
+|Let `check` verify
+|Drift fails an ordinary build. You did not author these documents and nobody on
+your side should be editing them.
+
+|Point the API-Only Suite at the subscription, if you use it
+|Then your build answers both questions: is the contract the one we agreed, and
+does our code match it?
+|===
+
+== Tutorial
+
+=== 1. Find out what you are subscribing to
+
+Three things, and it is worth getting all three from the producer in one
+conversation rather than discovering them from error messages:
+
+[cols="1,2,2", options="header"]
+|===
+|What |Example |Where it goes
+
+|The repository URL
+|`https://maven.pkg.github.com/example/contracts`
+|`repositories { maven { url … } }`
+
+|The group id
+|`com.example.contracts`
+|`channel { groupId = … }`
+
+|The target names, and the versions available
+|`user-account`, `2.1.0`
+|`subscribe('user-account') { version = … }`
+|===
+
+The artifact extension is `tgz` by default. If the producer publishes under a
+different one, `channel { extension = 'tar.gz' }` is the knob.
+
+=== 2. Apply the plugin
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '0.0.2'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'
+        url = uri('https://maven.pkg.github.com/example/contracts')
+        credentials(PasswordCredentials)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('user-account') {
+        version = '2.1.0'
+    }
+}
+----
+
+.Kotlin DSL
+[source,kotlin]
+----
+plugins {
+    java
+    id("com.arc-e-tect.api-only-subscriber") version "0.0.2"
+}
+
+apiOnlySubscriber {
+    channel {
+        type.set("maven")
+        groupId.set("com.example.contracts")
+    }
+    subscribe("user-account") {
+        version.set("2.1.0")
+    }
+}
+----
+
+The `java` plugin is optional. With it, the fetched documents are added to the
+main resources and reach the classpath; without it they are still fetched and
+verified, just not packaged.
+
+=== 3. Supply the credential without committing it
+
+Name the repository -- `name = 'apiContracts'` -- and Gradle derives the property
+names from it. Nothing about the credential appears in the build file.
+
+.`~/.gradle/gradle.properties`, on a developer machine
+[source,properties]
+----
+apiContractsUsername=your-username
+apiContractsPassword=ghp_a_token_with_read_packages
+----
+
+.In CI
+[source,yaml]
+----
+env:
+  ORG_GRADLE_PROJECT_apiContractsUsername: ${{ github.actor }}
+  ORG_GRADLE_PROJECT_apiContractsPassword: ${{ secrets.GITHUB_TOKEN }}
+----
+
+=== 4. Fetch and lock
+
+[source,console]
+----
+./gradlew fetchApiSpec
+----
+
+Four things happen, in this order, and each of them can stop the build:
+
+. Gradle resolves `com.example.contracts:user-account:2.1.0@tgz`.
+. The version is checked against the pre-release rule. `2.1.0-rc.1` is refused
+here unless you asked for it.
+. The archive is extracted, and **every document is hashed against the archive's
+own `manifest.json`**. An archive that disagrees with itself never reaches your
+build.
+. The version, the channel and every hash are written to `apionly.lock`.
+
+[source,console]
+----
+cat apionly.lock
+git add apionly.lock
+git commit -m "build: subscribe to user-account 2.1.0"
+----
+
+=== 5. Use the documents
+
+They are at `build/api-spec/user-account/`. Reach them through the subscription
+rather than by path, so the dependency on the fetch travels with them:
+
+.Wiring the API-Only Suite
+[source,groovy]
+----
+apiOnlySuite {
+    rootDocument = apiOnlySubscriber.subscription('user-account').openapi
+}
+----
+
+.Wiring a code generator
+[source,groovy]
+----
+openApiGenerate {
+    inputSpec = apiOnlySubscriber.subscription('user-account')
+                    .openapi.map { it.asFile.absolutePath }
+    generatorName = 'spring'
+    outputDir = layout.buildDirectory.dir('generated/user-account').map { it.asFile.absolutePath }
+}
+----
+
+Handing out a bare path instead would let a task read the directory before
+anything had populated it. Gradle rejects that outright, which is the class of bug
+these providers exist to remove.
+
+=== 6. Make drift fail the build
+
+Nothing to do: `verifyApiSpec` is already wired into `check`.
+
+[source,console]
+----
+./gradlew check
+----
+
+Worth doing once, deliberately, so you recognise it later:
+
+[source,console]
+----
+echo "# what if I just" >> build/api-spec/user-account/openapi.yaml
+./gradlew verifyApiSpec
+----
+
+[source]
+----
+> the contract for 'user-account' has drifted from apionly.lock:
+    - openapi.yaml has changed since it was locked
+        locked:  070e7f08be184268ec86cfa1c375ba4a3121304bef77ff1a3a6c4c97de47712f
+        on disk: 05f0ec291244159139ebcdcf26b168dbeff6271d892cefa9d55f3be19a3a4c8c
+
+  These documents are fetched, not authored here. Change the contract in the
+  specification library and subscribe to the new version, or re-run fetchApiSpec
+  if the change was intended.
+----
+
+=== 7. Working against an unfinished contract
+
+You will be asked to start before the contract is final. Do it deliberately:
+
+[source,groovy]
+----
+subscribe('user-account') {
+    version = '2.2.0-rc.1'
+    allowPrerelease = true
+}
+----
+
+Without that second line the build fails, naming the version and saying what to
+do. The failure is the feature: `allowPrerelease = true` is a line in a committed
+build file, so it appears in a diff, it appears in review, and somebody can ask
+whether it is still supposed to be there before a release goes out.
+
+=== 8. Subscribing to several producers
+
+One channel serves every subscription in a project, but a single subscription can
+override the group:
+
+[source,groovy]
+----
+repositories {
+    maven { name = 'apiContracts';  url = uri('https://maven.pkg.github.com/example/contracts');  credentials(PasswordCredentials) }
+    maven { name = 'partnerSpecs';  url = uri('https://nexus.partner.invalid/repository/specs'); credentials(PasswordCredentials) }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('user-account')   { version = '2.1.0' }
+    subscribe('relationship')   { version = '1.4.2' }
+
+    subscribe('partner-billing') {
+        version = '7.0.1'
+        groupId = 'io.partner.api'        // published somewhere else
+        artifactId = 'billing-contract'   // and under a different name
+    }
+}
+----
+
+Gradle searches every declared repository, so both resolve. All three land in one
+`apionly.lock`, sorted, one block per target.
+
+[WARNING]
+====
+With the `java` plugin applied, the current release (0.0.2) adds each
+subscription's directory as a resource root. Every one of those directories holds a
+`manifest.json`, and usually an `openapi.yaml`, so with two or more subscriptions
+`processResources` fails with `Entry manifest.json is a duplicate`.
+
+Until the plugin handles this, remove the fetched directories from the resource
+roots and give each one its own directory on the classpath. These lines must come
+*after* the `apiOnlySubscriber` block:
+
+[source,groovy]
+----
+sourceSets.main.resources.setSrcDirs(['src/main/resources'])
+tasks.named('processResources') {
+    ['user-account', 'relationship', 'partner-billing'].each { target ->
+        from(apiOnlySubscriber.subscription(target).into) { into "contracts/$target" }
+    }
+}
+----
+
+The documents then sit at `contracts/<target>/openapi.yaml` on the classpath. The
+fetch still runs before `processResources`, `verifyApiSpec` is unaffected, and so
+are the providers from step 5. If the project uses other resource directories,
+list them in `setSrcDirs` as well.
+====
+
+[#producers-who-do-not-use-the-publisher]
+== Producers who do not use the Publisher
+
+The Subscriber does not require the Publisher. It requires an archive of the
+shape described in link:concepts.adoc#the-seam[Concepts]: a `.tgz` containing
+the documents and a `manifest.json` that lists them with their SHA-256 hashes,
+published at `groupId:artifactId:version@tgz`.
+
+A producer using anything else can meet that: it is a tar of a directory plus a
+JSON file. What they cannot skip is the manifest -- without it there is nothing
+for step 4's third check to check, and the archive cannot verify itself.
+
+If the producer publishes a bare `openapi.yaml` and will not change, the
+Subscriber is the wrong tool and an ordinary Gradle dependency with Gradle's own
+https://docs.gradle.org/current/userguide/dependency_verification.html[dependency
+verification] is the honest alternative. It verifies the artifact rather than the
+extracted files, which is less, but it is not nothing.
+
+== If you have no JVM
+
+The Subscriber is a Gradle plugin, and there is no equivalent for other
+ecosystems. A producer using the Publisher has two channels that serve you
+directly, and neither needs Gradle:
+
+[cols="1,3", options="header"]
+|===
+|Channel |How you consume it
+
+|`npm`
+|`npm install @example/user-account`. Real semver, integrity hashes for free,
+private scopes available, and Renovate and Dependabot understand it natively.
+Pre-releases arrive under the `next` dist-tag, so `npm install` cannot pick one up
+by accident. The documents are the package contents; `manifest.json` is in there
+too.
+
+|`github-release`
+|`gh release download user-account-v2.1.0 --repo example/contracts`. Immutable per
+tag, works for private repositories with a token, and needs neither a JVM nor
+Node. It has no dependency-resolution semantics and no update notification, which
+is why it is the floor rather than the default.
+|===
+
+What you give up is the lockfile and `verifyApiSpec` -- nothing re-checks the
+files on disk against what was published. If that matters, the manifest is inside
+the archive and checking it is a dozen lines of whatever you have:
+
+[source,console]
+----
+npm install @example/user-account@2.1.0
+node -e '
+  const fs=require("fs"),c=require("crypto"),p=require.resolve("@example/user-account/manifest.json");
+  const dir=require("path").dirname(p);
+  for (const f of JSON.parse(fs.readFileSync(p)).files) {
+    const got=c.createHash("sha256").update(fs.readFileSync(dir+"/"+f.path)).digest("hex");
+    if (got!==f.sha256) { console.error(`${f.path} does not match the manifest`); process.exit(1); }
+  }
+  console.log("contract verified against its manifest");
+'
+----
+
+That checks the archive against itself, which is the first of the three checks.
+The second -- has anything changed since we locked it? -- is what `package-lock.json`
+already does for you at the package level.
+
+== Doing this with an AI coding assistant
+
+link:prompts/4-subscribe-to-published-contract.md[Prompt 4] takes Claude Code or
+Codex through this manual. It establishes which contracts to subscribe to,
+applies the plugin, commits the lockfile, and demonstrates drift detection before
+handing back. link:ai-assistants.adoc[Using the prompts] covers the practical
+side.
+
+== What you have now
+
+* A build that cannot silently start using a different contract.
+* A committed record of exactly which contract version you build against.
+* A build failure, rather than a surprise in production, when somebody edits a
+fetched document.
+* A reviewable line whenever the project works against an unfinished contract.
+
+== What to watch for
+
+=== A rebuilt release is refused, not re-locked
+
+If the producer rebuilds `2.1.0` and republishes it with different bytes,
+`fetchApiSpec` refuses to re-lock it and names each document that differs. That is
+correct: a released version that changes is a released version that lied, and a
+lockfile that quietly accepts it locks nothing.
+
+Do not work around it by deleting `apionly.lock`. Tell the producer, and ask them
+to release `2.1.1`.
+
+=== `verifyApiSpec` deliberately does not fetch
+
+It is ordered after `fetchApiSpec` but does not depend on it. If it did, it would
+re-fetch before checking -- overwriting the hand-edited document and reporting
+success, quietly repairing the exact drift it exists to find.
+
+So a clean checkout needs `fetchApiSpec` at least once. With the `java` plugin
+applied, `processResources` depends on the fetch, so `./gradlew check` and
+`./gradlew build` both pull it into the graph and order it correctly -- you do not
+have to run it by hand. What does *not* work is a bare `./gradlew verifyApiSpec`
+against an empty `build/`, which fails with:
+
+[source]
+----
+nothing has been fetched for 'user-account' yet, so there is nothing to verify.
+
+Run fetchApiSpec first. It resolves the subscribed contract, unpacks it into
+user-account, and records what it unpacked in apionly.lock.
+----
+
+Without the `java` plugin there is no `processResources`, so nothing pulls the
+fetch in for you and `fetchApiSpec` has to be run explicitly, or wired to
+whatever consumes the documents.
+
+=== The version lives in the build file, the hashes in the lockfile
+
+Editing `apionly.lock` by hand to "fix" a failure fixes nothing and removes the
+only evidence of what happened. The lockfile carries a comment saying so.

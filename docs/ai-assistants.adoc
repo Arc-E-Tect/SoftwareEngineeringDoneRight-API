@@ -1,0 +1,154 @@
+= Using the prompts with an AI coding assistant
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+Each manual has a matching prompt you can give to an AI coding assistant, such as
+Claude Code or Codex, so it does the tutorial's work in your own repository. The
+prompts are plain Markdown and the same for both tools.
+
+[cols="2,3", options="header"]
+|===
+|Prompt |What it does
+
+|link:prompts/1-contract-in-implementation-project.md[1 -- contract in the implementation project]
+|Manual 1. Adds the Publisher to a project that owns its contract, with a
+`buildContract` task and one `contract` provider. No registry.
+
+|link:prompts/2-contract-library-in-repository.md[2 -- contract library in the repository]
+|Manual 2. Creates or adopts a specification library directory that publishes
+versioned archives into a committed directory, and subscribes each project to the
+versions it needs. No registry.
+
+|link:prompts/3-contract-repository.md[3 -- contracts repository]
+|Manual 3, producer side. Sets up a repository that builds its targets and
+publishes the changed ones from CI.
+
+|link:prompts/4-subscribe-to-published-contract.md[4 -- subscribe to a published contract]
+|Manuals 3 and 4, consumer side. Applies the Subscriber, commits the lockfile,
+and wires the fetched document into the build.
+
+|link:prompts/5-subscribe-before-first-release.md[5 -- before the first release]
+|Manual 5. Connects an implementation to an unreleased contract in another
+repository you can clone, through the `file` channel.
+
+|link:prompts/6-migrate-checked-in-document.md[6 -- migrate a checked-in document]
+|Manual 6. Replaces committed copies with generated documents, one phase at a
+time, and stops after each phase.
+
+|link:prompts/7-move-to-published-contract.md[7 -- move to a published contract]
+|_When tomorrow comes_ in manuals 1 and 2. Starts publishing a contract that was
+only read directly (manual 1), or moves a `file`-channel setup (manual 2) to a
+registry.
+|===
+
+== How the prompts are built
+
+They all follow the same structure. Knowing it makes it easier to correct the
+assistant when it drifts.
+
+. **Facts, not a summary.** Each prompt includes the exact configuration keys,
+commands, plugin coordinates, pinned versions and Gradle snippets from the
+manual, and those snippets were run against real builds. An assistant that
+cannot browse still has what it needs, and one that can has no reason to guess.
+. **Principles.** These settle the design choices: build what is needed today,
+write the document's location in exactly one provider, never edit generated
+files, and keep credentials out of committed files.
+. **Investigate, propose, stop.** The assistant reads your repository, reports
+what it found, and proposes a plan. It changes nothing until you agree.
+. **Implement.**
+. **Verify by running.** Every prompt lists commands and what they should print,
+and the assistant must not report a step as done without running it.
+. **Hand over.** A summary of what to commit, and an offer to record the
+conventions for later sessions.
+
+== Running a prompt
+
+=== Claude Code
+
+Paste the prompt into a session started at the root of your repository.
+
+To reuse a prompt, save it as a project command. The file name becomes the
+command name:
+
+[source,console]
+----
+mkdir -p .claude/commands
+curl -fsSL -o .claude/commands/adopt-api-only-publisher.md \
+  https://raw.githubusercontent.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/main/docs/prompts/1-contract-in-implementation-project.md
+----
+
+Then type `/adopt-api-only-publisher` in Claude Code. Commit the file and your
+team gets the same command.
+
+Plan mode suits the first step of every prompt, because the assistant can
+investigate and propose but cannot edit anything.
+
+=== Codex
+
+Paste the prompt into the Codex CLI, the IDE extension or a cloud task, started
+at the root of your repository.
+
+Codex can also keep prompts for reuse as Markdown files in `~/.codex/prompts/`:
+
+[source,console]
+----
+mkdir -p ~/.codex/prompts
+curl -fsSL -o ~/.codex/prompts/adopt-api-only-publisher.md \
+  https://raw.githubusercontent.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/main/docs/prompts/1-contract-in-implementation-project.md
+----
+
+The way saved prompts are invoked has changed between Codex releases, so check
+the Codex documentation for your version. They live in your home directory
+rather than the repository, which means each developer installs them.
+
+Codex runs commands in a sandbox that may block network access. Every prompt
+needs the network once, for `npm install`, and the Subscriber prompts also need
+it for Gradle to resolve the plugin. Allow network access for the session, or
+run those commands yourself when the assistant asks.
+
+== Record the conventions for later sessions
+
+Once the setup is done, the next session's assistant will not know that the
+Publisher runs through an npm script or that `build/api-spec/` holds fetched
+files. Every prompt ends by offering to write this down. Aim for something like:
+
+.CLAUDE.md (Claude Code) or AGENTS.md (Codex)
+[source,markdown]
+----
+## API contracts
+
+- The API description is authored in `src/main/api/` and built by the Gradle
+  task `buildContract` (API-Only Publisher). Edit the fragments, never the
+  built document under `build/`.
+- Run the Publisher only as `npm run apionly -- <command>`. Never use
+  `npx api-only-publisher`.
+- Everything that needs the document reads it through the `contract` provider
+  in `build.gradle`. Do not add string paths to the document.
+- If this project subscribes to published contracts: documents under
+  `build/api-spec/` are fetched, not authored, and `apionly.lock` is generated.
+  Never edit either by hand; change the version in `build.gradle` and run
+  `./gradlew fetchApiSpec`.
+----
+
+Keep only the bullets that apply. Both files are read at the start of every
+session, so short and specific works better than complete.
+
+== Staying in control
+
+* **Review the plan, not only the diff.** The decisions that matter here are the
+layout and where the document's location is written. Both are settled in the
+first step, where a correction takes one sentence.
+* **Watch for invented options.** If the assistant proposes a configuration key,
+task or channel the prompt does not list, ask where it came from. For the
+versions they name, the prompts list every option that exists.
+* **Watch for scope creep.** An assistant that adds the Subscriber or a
+`channels:` block to manual 1, or a Maven repository to manual 2, is solving a
+problem you do not have yet. The prompts tell it not to, so point it back there.
+* **Read the verification output yourself.** Seeing `UP-TO-DATE` on a second run
+and a rebuild after a fragment edit takes thirty seconds and confirms the wiring
+is right.
+* **Credentials never go into a prompt.** The prompts do not ask for any. If an
+assistant asks for a token to write into a file, stop it.

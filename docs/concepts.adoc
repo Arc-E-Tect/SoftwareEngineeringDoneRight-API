@@ -1,0 +1,382 @@
+= Concepts
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+Everything the manuals assume, in one place. If you have used either component
+this is revision; if you have not, it is the twenty minutes that makes the rest
+read quickly.
+
+== Start with what you need
+
+Neither component has to be adopted whole. Build what the project needs today,
+and arrange it so that tomorrow's change is small.
+
+[cols="3,2,2,2,2", options="header"]
+|===
+|Where the descriptions live |Publisher `build` |Publisher `publish` |Subscriber |`apionly.lock`
+
+|1. In the implementation project |yes |-- |-- |--
+|2. Elsewhere in the same repository |yes |to a committed directory |`file` channel |in each consumer
+|3. In a repository of their own |yes |to a registry |in each consumer |in each consumer
+|4. Somewhere you cannot see |-- |-- |yes |yes
+|5. Another repository you can clone, before its first release |yes |to a local directory |`file` channel |yes
+|===
+
+The rule behind the table is to add only what the distance requires.
+
+* Inside one project there is only one version, so there is nothing to pin. The
+project reads the built document directly.
+* Between projects that each carry their own version, a consumer has to be able
+to stay on the contract it was built against while the library moves on. That
+takes published versions and a lockfile. When both sides share a repository, a
+committed directory provides both as reliably as a registry would, for everyone
+who clones the repository.
+* A registry only earns its keep when the consumer cannot clone the repository
+the contract lives in.
+
+One habit keeps each step from turning into a dead end: everything in a build that
+needs the document -- the API-Only Suite, a code generator, the classpath --
+reads it through **one** Gradle provider.
+
+.Today: built from fragments this build can see
+[source,groovy]
+----
+def contract = buildContract.map { contractDir.get().file('openapi.yaml') }
+----
+
+.Tomorrow: fetched from a published artifact
+[source,groovy]
+----
+def contract = apiOnlySubscriber.subscription('user-account').openapi
+----
+
+Both are a `Provider<RegularFile>` that carries its task dependency, so nothing
+downstream notices when one replaces the other. Once a project subscribes, moving
+from the `file` channel to a registry changes only the channel block. In
+`apionly.lock`, one line changes: `channel file` becomes `channel maven`, and the
+version and hashes stay the same. Manuals 1 and 2 each end with _When tomorrow
+comes_, which describes their next step.
+
+[#the-seam]
+== The seam
+
+The two components share exactly one thing: a gzipped tar archive containing the
+built documents and a `manifest.json` describing them.
+
+[source]
+----
+user-account-2.1.0.tgz
+├── openapi.yaml
+├── asyncapi.yaml
+└── manifest.json
+----
+
+Neither half knows anything else about the other. The Publisher does not know
+what a Gradle project is; the Subscriber has never heard of a fragment, a
+placeholder or a bundle root.
+
+The seam matters as soon as a contract is consumed by a build other than the one
+that authors it. Inside a single project, as in manual 1, nothing crosses it:
+the project reads the document it just built, and only the Publisher's `build`
+is involved. Between two projects -- even two in the same repository, as in
+manual 2 -- the archive does cross, because each project decides for itself which
+version it builds against.
+
+The manifest is the part worth reading:
+
+[source,json]
+----
+{
+  "schemaVersion": 1,
+  "target": "example-service",
+  "version": "1.0.0",
+  "producedAt": "2026-09-12T15:46:25Z",
+  "closureSha256": "6685386114909162a1f95d4ed187d7ff7a9a088626d2700e70eef0dc4bd7e753",
+  "source": {
+    "repository": "git@github.com:example/contracts.git",
+    "commit": "3f1c0b9..."
+  },
+  "files": [
+    { "path": "openapi.yaml", "sha256": "070e7f08be18..." }
+  ]
+}
+----
+
+`source` answers "which commit produced this?" without anyone having to keep a
+spreadsheet. `closureSha256` answers "did the inputs actually change?".
+`files` is what makes the archive check itself.
+
+== Target
+
+A *target* is whatever gets its own contract document, and therefore its own
+version. A microservice, a modular monolith, a backend-for-frontend, or a
+documentation aggregate spanning all of them.
+
+It need not be deployable, which is why the configuration does not call them
+`services`. A target with `publish: false` is built and linted like any other and
+never distributed -- that is how a portfolio view exists without pretending to be
+a contract anyone implements.
+
+The target name is the unit of coordination across the whole system. It is the
+key in `targets:` on the producer side, the argument to `subscribe(...)` on the
+consumer side, the Maven `artifactId` by default, and the directory the documents
+land in. Choose them once, carefully.
+
+== Closure
+
+A target's *closure* is every file reachable from its bundle root by following
+`$ref` transitively, computed over the **staged, substituted** tree rather than
+the hand-authored one -- so a change to a Markdown snippet pulled in by a
+`{{token}}` counts, because it genuinely changes the published document.
+
+Closures exist because targets are versioned independently, and independent
+versioning has a consequence that is easy to miss: a change under
+`components/common/` affects every target that reaches it, while a change under
+one service's own directory affects one. Without closures, a release job either
+releases everything on every commit -- at which point the version numbers stop
+meaning anything -- or guesses from directory names, which is wrong the first
+time two targets share a fragment.
+
+[source,console]
+----
+api-only-publisher closure                    # what each target reaches, and its hash
+api-only-publisher changed --since origin/main  # which targets a commit actually touched
+----
+
+`changed` is what drives a release. Every manual that describes a CI job uses it.
+
+== Version
+
+Per target, semantic, and stamped onto `info.version` of the finished document
+rather than taken on trust. `pack` refuses to package a document whose
+`info.version` disagrees with the version it is being packed as, which is the one
+mistake nothing else in the pipeline would catch.
+
+A **pre-release** -- `2.1.0-rc.1`, or Maven's `-SNAPSHOT`, which is not
+SemVer-legal but is what Maven consumers expect -- is first-class, because
+API-Only design means implementation starts against a contract that is not
+finished. If the only way to get a bundle were a final release, teams would clone
+the specification repository instead, which is exactly the broad read access that
+publishing artifacts exists to avoid.
+
+The rule is the other half of it: *a pre-release must never quietly satisfy a
+build*. So the two halves enforce it at both ends.
+
+[cols="1,3", options="header"]
+|===
+|Where |What happens to a pre-release
+
+|npm
+|Published under the `next` dist-tag, never `latest`.
+
+|GitHub release
+|Marked as a pre-release, so "latest release" never resolves to one.
+
+|Subscriber
+|Refused outright, unless the subscription sets `allowPrerelease = true`.
+|===
+
+== Channels
+
+A *channel* is how the archive travels. Both halves have a notion of channels,
+and **the two lists are not the same** -- this catches people out, so it is worth
+being blunt about:
+
+[cols="1,2,2", options="header"]
+|===
+|Channel |Publisher |Subscriber
+
+|`maven`
+|Yes -- a directory on disk, or an `http(s)` URL to deploy to
+|Yes, and the default
+
+|`file`
+|Yes -- a local directory
+|Yes
+
+|`npm`
+|Yes
+|**No**
+
+|`github-release`
+|Yes
+|**No**
+|===
+
+So: **if your consumers are Gradle builds in other repositories, publish to
+`maven`**. Inside one repository, `file` is enough. npm and
+github-release are real channels with real audiences -- a TypeScript client
+generating types, a consumer with neither a JVM nor Node -- but the Subscriber
+cannot fetch from either, and a library that publishes only to npm has no Gradle
+consumers, whatever its README says.
+
+Publishing to several channels at once is normal and costs nothing: `publish`
+packs once and ships those same bytes everywhere, so the npm copy and the Maven
+copy of one version cannot differ by a line ending.
+
+`file` is distribution without infrastructure: a directory both halves can
+reach. Between projects in one repository
+(link:elsewhere-in-the-repository.adoc[manual 2]), that directory is committed.
+Every published version is then as reproducible as it would be in a registry for
+anyone who clones the repository, and a change to a released archive shows up in
+`git diff` before any build gets to refuse it. Between repositories
+(link:before-anything-is-published.adoc[manual 5]), it only works while both
+repositories are checked out side by side.
+
+[#running-the-publisher]
+== Running the Publisher
+
+Install it as a pinned dev dependency and run it through an npm script:
+
+.package.json
+[source,json]
+----
+{
+  "private": true,
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "0.0.2"
+  }
+}
+----
+
+[source,console]
+----
+npm ci
+npm run apionly -- build
+npm run --silent apionly -- changed --since origin/main --quiet   # when capturing output
+----
+
+`--silent` stops npm from printing its own header lines, which matters whenever a
+script reads the output.
+
+Do not run it as `npx api-only-publisher`. That unscoped name is not this
+package. Without a local install, npx looks the name up on the public registry,
+and in CI, where npx answers its own install prompt, it would run whatever
+someone has published under that name. `npm run` only uses what is in
+`node_modules`: if the tool is not installed, it fails with
+`api-only-publisher: command not found` and fetches nothing.
+
+The manuals use `npx` in one place, the one-time scaffold, and there they spell
+the package out in full, scoped and pinned:
+`npx @arc-e-tect/api-only-publisher@0.0.2 init`.
+
+== Credentials
+
+Read from the environment, never from configuration.
+`channels.maven.tokenEnv` names the variable that holds the token; the token
+itself is never in `apionly.yaml`, because `apionly.yaml` is committed and a
+credential in a committed file is a credential that has leaked.
+
+On the Gradle side the same rule applies through Gradle's own mechanism:
+`credentials(PasswordCredentials)` in the repository block, with the actual
+values coming from `gradle.properties` outside the repository or from
+`ORG_GRADLE_PROJECT_*` in the environment.
+
+== The lockfile
+
+`apionly.lock` sits beside the consuming project's build file, is committed, and
+records per target the resolved version, the channel, and the SHA-256 of every
+fetched file.
+
+[source]
+----
+format 1
+
+target user-account
+version 2.1.0
+channel maven
+sha256 18baaca0249e15659105a2467338f32bab6d35a48fb1f088dfa30777f2e12059 asyncapi.yaml
+sha256 f2a09aed8880faf8e1debf77b9f1f71ca94a5ff13bc217cce3e2df7ef307b739 openapi.yaml
+----
+
+It makes "which contract is this project building against?" a question you answer
+by reading the repository rather than by running a build.
+
+== The three checks
+
+There are three verifications in the pipeline and they catch different things.
+Knowing which is which saves a lot of time when one of them fires.
+
+[cols="1,2,3", options="header"]
+|===
+|When |What is checked |What it catches
+
+|`pack`, producer side
+|Each document's `info.version` against the version being packed
+|A release job that built without `--version`, or with the wrong one. The
+document would otherwise ship claiming a version nobody asked for.
+
+|`fetchApiSpec`, consumer side
+|Every file in the archive against the archive's own `manifest.json`
+|A corrupted or tampered archive, before anything is unpacked into the build.
+Also a *released version republished with different bytes*, which is refused
+rather than silently re-locked.
+
+|`verifyApiSpec`, consumer side
+|The files on disk against `apionly.lock`
+|Someone editing a fetched document by hand. This is the common one.
+|===
+
+`verifyApiSpec` is wired into `check`, so drift fails an ordinary build. It is
+deliberately *not* dependent on `fetchApiSpec`: depending on it would re-fetch
+before checking, overwriting the hand-edited file and reporting success --
+quietly repairing exactly the drift the task exists to find.
+
+== Where the documents land
+
+`build/api-spec/<target>/`, registered as an additional resources directory, so
+they reach the classpath exactly as they would from `src/main/resources`.
+
+Not `src/main/resources` itself. Generated files inside a source tree show up in
+IDE search, tempt hand-editing, and survive a `clean`. Setting `into` on a
+subscription moves them, for teams whose tooling insists, but it is not the
+default and it should not be the first thing you reach for.
+
+== Who runs what
+
+[cols="1,2,2", options="header"]
+|===
+| |Producer side |Consumer side
+
+|Tool
+|`api-only-publisher`, a Node CLI
+|`com.arc-e-tect.api-only-subscriber`, a Gradle plugin
+
+|Needs
+|Node 22+, npm 10+
+|Gradle 8+, Java 21+
+
+|Configured in
+|`apionly.yaml`
+|the `apiOnlySubscriber { }` block
+
+|Committed alongside
+|the fragment library
+|`apionly.lock`
+
+|Runs
+|on every build that needs the document (manual 1), and in a release job when
+publishing (manuals 2 and 3)
+|on every build, via `check`, in every project that subscribes
+|===
+
+== What is deliberately not here
+
+The Publisher does not police breaking changes. `changed` tells a release job
+which targets a commit altered and every manifest records the closure hash of
+what was published, so the hooks a diff gate would need already exist -- but the
+gate is not built, because what counts as breaking is a policy a specification
+library should write down for itself rather than inherit.
+
+The Subscriber does not check that an implementation matches its contract. That
+is the question the separate
+https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-suite[API-Only Suite]
+answers, with the Shadow, Mirage and Doppelganger detectors. The two plugins are
+applied side by side, and
+link:in-its-own-repository.adoc[manual 3] shows the wiring.
