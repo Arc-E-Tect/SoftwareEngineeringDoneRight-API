@@ -26,6 +26,10 @@ sourceSets {
 }
 
 dependencies {
+    // YAML 1.2, no transitive dependencies: a Gradle plugin's runtime classpath is
+    // the consumer's build script classpath, so every dependency here is theirs too.
+    implementation libs.snakeyaml.engine
+
     handwrittenImplementation libs.spring.restdocs.core
 
     testImplementation sourceSets.handwritten.output
@@ -82,6 +86,20 @@ tasks.register('recordHandwrittenFixtures', JavaExec) {
 
 tasks.named('check') {
     dependsOn verifyHandwrittenFixtures
+}
+
+// Javadoc is part of the product: the model is what every emitter is written
+// against. Warnings are errors, as in the Subscriber.
+tasks.named('javadoc') {
+    options {
+        encoding = 'UTF-8'
+        addBooleanOption('Xdoclint:all', true)
+        addBooleanOption('Xwerror', true)
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('javadoc')
 }
 
 jacocoTestReport {
