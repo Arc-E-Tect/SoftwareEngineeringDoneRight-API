@@ -5,10 +5,12 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const YAML = require("yaml");
 
 const { substituteFile } = require("./placeholders");
 const { stampFile } = require("./version");
 const { generateAsyncApi, isAggregate } = require("./aggregate");
+const { stampFiles, componentPaths, strayPaths, FragmentPathError, KEY } = require("./fragment-paths");
 
 class BuildError extends Error {}
 
@@ -82,8 +84,8 @@ function substituteTree(config, kind, log) {
     log(`-- Substituted ${tokens} placeholder(s) across ${files} file(s)`);
 }
 
-function bundle(config, target, kind, outFile, log) {
-    const source = config.bundlePath(target, kind);
+function bundle(config, target, kind, outFile, log, { stagingRoot } = {}) {
+    const source = config.bundlePath(target, kind, stagingRoot);
     if (!fs.existsSync(source)) {
         throw new BuildError(`target '${target}': bundle root not found at ${source}`);
     }
@@ -94,6 +96,58 @@ function bundle(config, target, kind, outFile, log) {
     if (!fs.existsSync(outFile)) {
         throw new BuildError(`target '${target}': ${tool} produced no output at ${outFile}`);
     }
+}
+
+/**
+ * Bundle a target with x-fragment-path on every component built from a fragment.
+ *
+ * Two passes over two fresh copies of the staged tree, so the build's own staged
+ * tree -- which every other target bundles from -- is never stamped. The first
+ * stamps every fragment and learns which of them the bundler made components of.
+ * The second stamps only those, so the document differs from an unstamped one by
+ * exactly one line per such component.
+ *
+ * That holds as long as no component's fragment is also inlined somewhere else;
+ * if one is, the inlined copy would carry the stamp too, and the build fails
+ * rather than publish it.
+ */
+function bundleWithFragmentPaths(config, target, kind, outFile, log) {
+    const scratch = config.fragmentPathStaging(target);
+    fs.rmSync(scratch, { recursive: true, force: true });
+
+    const pass = (name, only) => {
+        const root = path.join(scratch, name);
+        fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
+        try {
+            stampFiles(root, { only });
+        } catch (error) {
+            if (error instanceof FragmentPathError) throw new BuildError(`target '${target}': ${error.message}`);
+            throw error;
+        }
+        const file = path.join(scratch, `${name}.yaml`);
+        bundle(config, target, kind, file, () => {}, { stagingRoot: root });
+        return YAML.parse(fs.readFileSync(file, "utf8"));
+    };
+
+    log(`-- Bundling ${path.basename(config.bundlePath(target, kind))} with ${KEY}`);
+    const discovered = componentPaths(pass("discover", null));
+    const fragments = new Set([...discovered.values()].filter(Boolean));
+    const document = pass("stamp", fragments);
+
+    const components = componentPaths(document);
+    if ([...components.keys()].join("\n") !== [...discovered.keys()].join("\n")) {
+        throw new BuildError(`target '${target}': stamping ${KEY} changed the bundler's component names`);
+    }
+    const stray = strayPaths(document);
+    if (stray.length > 0) {
+        throw new BuildError(
+            `target '${target}': a component's fragment is also inlined elsewhere, so ${KEY} would appear ` +
+            `off its component: ${stray.map((s) => `${s.at} (${s.path})`).join(", ")}`);
+    }
+
+    fs.mkdirSync(path.dirname(outFile), { recursive: true });
+    fs.copyFileSync(path.join(scratch, "stamp.yaml"), outFile);
+    log(`-- Stamped ${KEY} on ${[...components.values()].filter(Boolean).length} component(s)`);
 }
 
 function lint(config, kind, file, log, { report = false, reportFile = null } = {}) {
@@ -180,7 +234,11 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
                 generateAsyncApi(config, target, { log });
             }
             const outFile = path.join(config.distDir(target), config.outputName(kind));
-            bundle(config, target, kind, outFile, log);
+            if (config.fragmentPaths(kind)) {
+                bundleWithFragmentPaths(config, target, kind, outFile, log);
+            } else {
+                bundle(config, target, kind, outFile, log);
+            }
             const version = versionOf(target);
             if (version) {
                 log(`-- Stamping version '${version}'`);
@@ -200,4 +258,4 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
     return results;
 }
 
-module.exports = { build, prepare, stage, substituteTree, bundle, lint, distribute, BuildError };
+module.exports = { build, prepare, stage, substituteTree, bundle, bundleWithFragmentPaths, lint, distribute, BuildError };

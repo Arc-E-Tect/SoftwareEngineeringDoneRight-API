@@ -190,6 +190,7 @@ A `{{token}}` is replaced with the contents of `<token>.md`, found by searching 
 Indentation is preserved, so multi-line Markdown stays valid inside an indented YAML scalar.
 
 . **Bundle.** `@redocly/cli bundle` or `@asyncapi/cli bundle` resolves every `$ref` into one flat, self-contained document under `<build.dist>/<target>/`.
+An OpenAPI document's components each carry the path of the fragment they came from, as <<fragment-paths,`x-fragment-path` §>> describes.
 
 . **Stamp the version** of each published target on its *finished* document: the version its version file declares, with any `--pre-release` identifiers appended.
 A `publish: false` target keeps the version its source declares.
@@ -376,6 +377,7 @@ defaults:
   openapi:
     lint: .redocly.yaml
     outputName: openapi.yaml
+    fragmentPaths: true  # x-fragment-path on every component; the default
   asyncapi:
     outputName: asyncapi.yaml
   placeholders:
@@ -463,6 +465,69 @@ It is deliberately not a re-serialisation: re-emitting a document reformats ever
 Splicing keeps every other byte exactly as the bundler wrote it.
 A document with no `info` block, or no version inside it, is an error.
 
+[#fragment-paths]
+=== Every component says which fragment it came from
+
+Bundling flattens the library's directories into one `components` namespace, and the bundler names each component after its file.
+Two fragments with the same file name in different directories become `UserV1` and `UserV1-2`, and nothing in the document says which is which.
+
+So every component the bundler builds from a fragment carries that fragment's path, relative to `sources.root`, as its first key:
+
+[source,yaml]
+----
+components:
+  schemas:
+    UsernameV1:
+      x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+      type: string
+----
+
+The path always uses forward slashes, and it names a file in the library.
+Other OpenAPI tooling ignores the key, as it ignores any `x-` extension.
+It is how the API-Only TranscriberJ ties generated code to the fragment it came from, instead of to a component name the bundler picked.
+
+It is on by default, for OpenAPI documents only.
+`defaults.openapi.fragmentPaths: false` turns it off.
+
+How it is done::
+The bundler is not told anything; it is shown stamped fragments, in copies of the staged tree under `<build.staging>/fragment-paths/<target>/`.
+The first bundle is built with every fragment stamped, to learn which fragments become components.
+The second, the one that is published, is built with only those stamped.
+So a document differs from one built with `fragmentPaths: false` by exactly one line per component, and in no other byte.
+The cost is a second bundler run per OpenAPI target.
+
+What stops the build::
+A fragment that writes `x-fragment-path` itself: the Publisher sets that key and nothing else may.
+A component's fragment that is also inlined somewhere else in the same document, since the inlined copy would carry the key as well; the error names where.
+
+A component written directly in a bundle root, rather than `$ref`'d from a fragment, has no fragment and carries no path.
+
+[#fragment-path-versions]
+==== What a change to `x-fragment-path` means for a contract's version
+
+Semantic versioning describes the contract, so the version follows from what a change does to the contract's promises:
+
+[cols="2,1,3", options="header"]
+|===
+|Change |Version |Why
+
+|The key appears for the first time
+|MINOR
+|A new feature of the published document.
+
+|A fragment moves to another directory, changing the value
+|PATCH
+|The contract promises the same; only its provenance metadata differs.
+
+|The key is removed, by `fragmentPaths: false` after it was published
+|MAJOR
+|Consumers relying on it lose provenance and collision disambiguation, and may stop generating code at all.
+|===
+
+Upgrading to a Publisher that stamps the key changes every OpenAPI document that has components built from fragments.
+`changed` does not see that, because a target's closure hash covers the fragments, not the Publisher.
+Bump each such target's MINOR version in the upgrade's commit, or set `fragmentPaths: false` until you do: publishing a changed document under a version already published is refused by every Subscriber that locked it (see <<versions,Versions §>>).
+
 [#distribution]
 === `distribution` is transitional
 
@@ -491,6 +556,9 @@ In order of what usually needs changing:
 
 |The lint rules
 |`defaults.openapi.lint`
+
+|Whether components carry `x-fragment-path`
+|`defaults.openapi.fragmentPaths`, defaulting to `true`
 
 |Where lint reports go
 |`reports.lint`, defaulting to `build/reports/lint/<target>/<kind>.txt`

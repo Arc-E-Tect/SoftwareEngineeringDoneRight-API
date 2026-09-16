@@ -68,3 +68,59 @@ test("a bundle root that does not exist is reported against its target", { timeo
 
     assert.throws(() => build(config, { versionOf: () => "1.0.0" }), /bundle root not found/);
 });
+
+// ------------------------------------------------------- x-fragment-path
+
+const YAML = require("yaml");
+
+function withoutStamps(text) {
+    return text.split("\n").filter((line) => !/^\s*x-fragment-path: /.test(line)).join("\n");
+}
+
+test("every hoisted component carries the path of the fragment it came from, and nothing else changes", { timeout: 300000 }, () => {
+    const stamped = scaffold();
+    const plain = scaffold();
+    fs.writeFileSync(plain.path, fs.readFileSync(plain.path, "utf8")
+        .replace("    outputName: openapi.yaml", "    outputName: openapi.yaml\n    fragmentPaths: false"));
+    const plainConfig = loadFrom(plain.root);
+
+    const withPaths = fs.readFileSync(build(stamped, { versionOf: () => "1.0.0" })[0].file, "utf8");
+    const withoutPaths = fs.readFileSync(build(plainConfig, { versionOf: () => "1.0.0" })[0].file, "utf8");
+
+    const components = YAML.parse(withPaths).components;
+    const found = [];
+    for (const [type, entries] of Object.entries(components)) {
+        for (const [name, value] of Object.entries(entries)) {
+            const fragment = value["x-fragment-path"];
+            assert.ok(fragment, `${type}/${name} carries no x-fragment-path`);
+            assert.ok(fs.existsSync(path.join(stamped.sourceRoot(), fragment)), `${fragment} is not a file in the library`);
+            found.push(`${type}/${name}=${fragment}`);
+        }
+    }
+    assert.deepStrictEqual(found.sort(), [
+        "responses/InvalidRequestProblemV1=openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml",
+        "securitySchemes/bearerAuth=openapi/components/common/security/BearerAuth.yaml",
+    ]);
+
+    assert.ok(!withoutPaths.includes("x-fragment-path"));
+    assert.strictEqual(withoutStamps(withPaths), withoutPaths);
+});
+
+test("a component fragment that is also inlined elsewhere fails the build rather than stamping the copy", { timeout: 300000 }, () => {
+    const config = scaffold();
+    const info = path.join(config.sourceRoot(), "openapi/shared/info.yaml");
+    fs.appendFileSync(info, "x-auth:\n  $ref: '../components/common/security/BearerAuth.yaml'\n");
+
+    assert.throws(() => build(config, { versionOf: () => "1.0.0" }),
+        /x-fragment-path.*\/info\/x-auth.*openapi\/components\/common\/security\/BearerAuth\.yaml/s);
+});
+
+test("a fragment that sets x-fragment-path itself fails the build, against its target", { timeout: 300000 }, () => {
+    const config = scaffold();
+    const scheme = path.join(config.sourceRoot(), "openapi/components/common/security/BearerAuth.yaml");
+    fs.writeFileSync(scheme, "x-fragment-path: elsewhere.yaml\n" + fs.readFileSync(scheme, "utf8"));
+
+    assert.throws(() => build(config, { versionOf: () => "1.0.0" }), (error) =>
+        error.name === "Error" && error.constructor.name === "BuildError" &&
+        /target 'example-service': openapi\/components\/common\/security\/BearerAuth\.yaml declares x-fragment-path/.test(error.message));
+});
