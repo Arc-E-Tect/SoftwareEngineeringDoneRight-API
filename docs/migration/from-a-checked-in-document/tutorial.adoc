@@ -1,0 +1,472 @@
+= Tutorial: migrating a checked-in document to a generated one
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.1
+:api-only-subscriber-version: 0.3.1
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial migrates a Gradle project, `orders-service`, that has a committed `src/main/resources/openapi.yaml` describing the `orders` API it implements.
+At the end, that document is generated on every build, verified against a lockfile, and no copy of it is committed.
+Every file and every command below was run exactly as shown, with API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
+
+The four phases are separate pull requests.
+After each one the repository works, so you can stop, and pick the next one up later.
+
+[#before-you-start]
+== Before you start
+
+[cols="1,2", options="header"]
+|===
+|You need |Version
+
+|Node.js and npm
+|Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`
+
+|Java
+|21 or newer
+
+|Gradle
+|8 or newer, through the project's wrapper
+
+|A committed API description
+|`src/main/resources/openapi.yaml` below, with `info.version: 1.4.0`
+|===
+
+The API is called `orders` throughout: in the Publisher's terms, the *target*.
+Use your own API's name wherever `orders` appears.
+
+[#where-you-start]
+== Where you start
+
+[source]
+----
+orders-service/
+├── build.gradle                       No contract tooling yet
+├── settings.gradle
+└── src/
+    ├── main/resources/openapi.yaml    Committed, maintained by hand
+    └── test/java/com/example/orders/
+----
+
+[#phase-1]
+== Phase 1: reproduce what exists, byte for byte
+
+*Downstream changes: none.*
+
+=== Record the committed document as a fixture
+
+[source,console]
+----
+mkdir -p .migration/golden
+cp src/main/resources/openapi.yaml .migration/golden/orders.yaml
+----
+
+Do this for every project that has one.
+These are the documents the migration must not change.
+
+=== Build a library that produces it
+
+Pin the Publisher, as every use case does:
+
+.package.json
+[source,json]
+----
+{
+  "name": "orders-service-api",
+  "private": true,
+  "scripts": {
+    "apionly": "api-only-publisher"
+  }
+}
+----
+
+[source,console,subs="attributes+"]
+----
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}
+----
+
+The first version of the library is the committed document itself, as the bundle root, referencing nothing:
+
+[source,console]
+----
+mkdir -p src/main/api/openapi/bundles
+cp .migration/golden/orders.yaml src/main/api/openapi/bundles/orders.yaml
+----
+
+Give the contract the version the committed document declares.
+The version is read from this file; there is no `--version` option.
+
+.src/main/api/openapi/bundles/orders.bundle.properties
+[source,properties]
+----
+# The version of the orders contract, as the committed document declares it.
+version=1.4.0
+----
+
+.`.redocly.yaml`, at the project root
+[source,yaml]
+----
+extends:
+  - recommended
+----
+
+.apionly.yaml
+[source,yaml]
+----
+schemaVersion: 1
+
+sources:
+  root: src/main/api
+  openapi: openapi
+
+defaults:
+  openapi:
+    lint: .redocly.yaml
+    outputName: openapi.yaml
+
+build:
+  staging: build/api-only/staging
+  dist: build/api-only/dist
+
+reports:
+  lint: build/api-only/reports/lint
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+
+targets:
+  orders:
+    openapi:
+      bundle: bundles/orders.yaml
+----
+
+[source,console]
+----
+npm run apionly -- build
+----
+
+[source]
+----
+=== openapi ===
+-- Staging src/main/api -> build/api-only/staging/openapi
+-- Substituted 0 placeholder(s) across 0 file(s)
+
+=== orders (openapi) ===
+-- Bundling orders.yaml with x-fragment-path
+-- Stamped x-fragment-path on 0 component(s)
+-- Stamping version '1.4.0'
+-- Validating openapi.yaml
+
+Built 1 document(s).
+----
+
+Nothing is stamped with `x-fragment-path` yet: the document has no components that came from a fragment, because it is still one file.
+Components acquire the key as you split the document up, which is a change to the contract; <<watch-for,What to watch for §>> says what it means for its version.
+
+=== Diff until the difference is understood
+
+[source,console]
+----
+diff -u .migration/golden/orders.yaml build/api-only/dist/orders/openapi.yaml
+----
+
+[source]
+----
+--- .migration/golden/orders.yaml
++++ build/api-only/dist/orders/openapi.yaml
+@@ -24,3 +24,4 @@
+                   type: string
+         '400':
+           description: The request was not valid.
++components: {}
+----
+
+One difference, and it is the bundler's, not the contract's: a bundled document carries a `components` block even when it is empty.
+These are the differences to expect, and what each means:
+
+[cols="2,3", options="header"]
+|===
+|Difference |What to do about it
+
+|An empty `components: {}` appears
+|The bundler writes it.
+It says nothing about the contract, so accept it and re-baseline the fixture.
+
+|`$ref` s have been resolved and inlined
+|Correct: that is bundling.
+If the committed document still *has* `$ref` s, the old pipeline shipped an unbundled document and consumers were resolving the references themselves.
+That is a behaviour change to announce rather than hide.
+
+|`info.version` differs
+|Put the committed document's version in `orders.bundle.properties`.
+The build stamps it from there.
+
+|Key ordering, quoting or line wrapping
+|That comes from the bundler, and is not worth fighting.
+Confirm it is only formatting, with `diff <(yq -S . a.yaml) <(yq -S . b.yaml)` if you have https://mikefarah.gitbook.io/yq/[yq ↗], then re-baseline the fixture.
+
+|The lint fails on the document
+|The committed document has always had that problem; nothing linted it.
+Fix the description, in its own commit, and tell the consumers if the fix changes what the contract says.
+
+|Content is genuinely different
+|Stop.
+The committed document and its source have drifted, which is what this migration exists to prevent.
+Agree with the consumers which one is the contract before going further.
+|===
+
+Re-baseline once the only differences left are the bundler's:
+
+[source,console]
+----
+cp build/api-only/dist/orders/openapi.yaml .migration/golden/orders.yaml
+----
+
+=== Lock the fixture in
+
+..migration/verify-golden.sh
+[source,bash]
+----
+#!/usr/bin/env bash
+# Fails when the library stops producing the document it produced at the start of the migration.
+set -euo pipefail
+npm run --silent apionly -- build --target orders
+diff -u .migration/golden/orders.yaml build/api-only/dist/orders/openapi.yaml
+echo "orders: unchanged"
+----
+
+[source,console]
+----
+chmod +x .migration/verify-golden.sh
+./.migration/verify-golden.sh
+----
+
+[source]
+----
+orders: unchanged
+----
+
+Run it in CI from now on.
+Every refactoring of the library — extracting the common error shapes, introducing placeholders, splitting out the paths — becomes checkable: either it preserves the document or it does not.
+
+Commit `package.json`, `package-lock.json`, `apionly.yaml`, `.redocly.yaml`, `src/main/api/` and `.migration/`.
+*Nothing downstream has changed.*
+
+[#phase-2]
+== Phase 2: generate into the existing location
+
+*Downstream changes: the committed document becomes generated. Consumers do not change.*
+
+The Publisher's transitional `distribution` block copies each built document where the project already expects it:
+
+.apionly.yaml (addition)
+[source,yaml]
+----
+# Transitional; deleted in phase 4. It copies each built document where the
+# project already expects it, so nothing downstream changes yet.
+distribution:
+  root: .
+  layout: "src/main/resources"
+----
+
+[source,console]
+----
+npm run apionly -- build
+----
+
+[source]
+----
+-- Validating openapi.yaml
+-- Distributed to src/main/resources/openapi.yaml
+
+Built 1 document(s).
+----
+
+The destination directory has to exist: the build fails rather than creating a directory somewhere unexpected.
+`git status` shows `src/main/resources/openapi.yaml` unchanged, because the library reproduces it exactly.
+
+Now:
+
+. Delete whatever script used to copy or generate the document.
+. Run the library's build in CI on every commit, and fail when `git diff --exit-code -- src/main/resources/openapi.yaml` shows a change.
+. Stop editing the document under `src/main/resources`.
+Put a comment at the top saying where it comes from, and hold that line in review.
+
+.Considerations
+* **This is the phase to linger in.**
+It is safe and reversible, and it is where the library gets refactored: extracting `components/common/`, introducing `{{token}}` placeholders for shared prose, and splitting one document into the fragments you actually want.
+The fixture checks every step.
+* **Several projects** are each a line in the layout: `layout: "{target}-service/src/main/resources"` with `root: ..` copies each contract into the project named after it.
+
+[#phase-3]
+== Phase 3: switch the consumers, one at a time
+
+*Downstream changes: one project per pull request.*
+
+Start with the least important consumer.
+This tutorial migrates to link:../../use-cases/provider/1-contract-in-the-implementing-project/overview.adoc[provider use case 1 →]: the project that implements the contract also owns it.
+<<other-layouts,The other two layouts §>> below differ only in this phase.
+
+=== Declare the version the project implements
+
+.gradle.properties
+[source,properties]
+----
+# The version of the orders contract this project implements.
+apiContractVersion=1.4.0
+----
+
+=== Publish to a channel, and subscribe
+
+Add a `file` channel to `apionly.yaml`, inside `build/`:
+
+.apionly.yaml (addition)
+[source,yaml]
+----
+channels:
+  file:
+    directory: build/api-only/publish
+    clean: true
+----
+
+Then wire the build exactly as link:../../use-cases/provider/1-contract-in-the-implementing-project/tutorial.adoc#step-8[provider use case 1's tutorial, step 8 →] does: the tasks that install the Publisher and build, publish and lint the contract, the `apiOnlySubscriber` block that subscribes to `orders`, and `fetchApiSpecOrders` depending on the publish.
+
+=== Compare before deleting anything
+
+[source,console]
+----
+./gradlew fetchApiSpec
+diff -u src/main/resources/openapi.yaml build/api-spec/orders/openapi.yaml
+----
+
+[source]
+----
+Subscribed to orders 1.4.0
+----
+
+The diff is empty: the committed copy came out of this same build in phase 2.
+
+=== Switch in a single commit
+
+[source,console]
+----
+git rm src/main/resources/openapi.yaml
+./gradlew check
+----
+
+[source]
+----
+> Task :installApiOnlyPublisher UP-TO-DATE
+> Task :buildApiContract
+> Task :lintApiContract
+> Task :publishApiContract
+> Task :fetchApiSpecOrders
+> Task :processResources
+> Task :test
+> Task :verifyApiSpecOrders
+> Task :verifyApiSpec
+> Task :check
+
+BUILD SUCCESSFUL
+----
+
+Remove this project from the `distribution` layout in the same commit, and commit `apionly.lock`:
+
+.apionly.lock
+[source]
+----
+# apionly.lock -- the published contracts this project builds against.
+# Generated by the Arc-E-Tect API-Only Subscriber. Commit it; do not edit it.
+# Run `verifyApiSpec` to check that what is on disk still matches.
+format 1
+
+target orders
+version 1.4.0
+channel file
+sha256 201d9e5a17ae779f27ecb86f87084047c64385e0b13f36009157f8c3f02c2591 openapi.yaml
+----
+
+Doing all of it at once means the project never has two copies of `openapi.yaml` on its resource path.
+
+[#other-layouts]
+=== The other two layouts
+
+[cols="1,3", options="header"]
+|===
+|Migrating to |Phase 3 for each consumer
+
+|link:../../use-cases/provider/2-specification-library-in-the-same-repository/overview.adoc[Provider use case 2 →], a library in the same repository
+|Publish the version the consumer uses today to the library's `file` channel, subscribe from the consumer, compare `src/main/resources/openapi.yaml` with `build/api-spec/<target>/openapi.yaml`, then delete the committed copy, commit `apionly.lock`, and take the consumer out of the `distribution` layout.
+
+|link:../../use-cases/provider/3-specification-library-in-its-own-repository/overview.adoc[Provider use case 3 →], a library in its own repository
+|Release the version the consumer uses today from the contracts repository, subscribe from the consumer through the `maven` channel as link:../../use-cases/provider/4-implementing-a-published-contract/tutorial.adoc[provider use case 4's tutorial →] describes, compare the two documents, then delete the committed copy and commit `apionly.lock`.
+|===
+
+Move one project per pull request.
+Each change is small, reversible and reviewable on its own, and the fleet can stay in a mixed state for as long as it needs to.
+
+[#phase-4]
+== Phase 4: remove the scaffolding
+
+*Downstream changes: none. This is bookkeeping.*
+
+When the last consumer has been switched:
+
+. Delete the `distribution` block from `apionly.yaml`.
+. Delete `.migration/`.
+The build checks the document on every run now: `verifyApiSpec` against `apionly.lock`, and the lint on every build.
+. Make sure `build/` and `node_modules/` are in `.gitignore`.
+. Check that no committed copy survives:
++
+[source,console]
+----
+git ls-files '*/src/main/resources/*openapi*' '*/src/main/resources/*asyncapi*'
+----
++
+It prints nothing.
+
+. Write down the versioning policy you have been applying informally.
+link:../../reference/run-book.adoc#changing-a-contract[The run-book →] says what it has to decide.
+
+[#what-you-have]
+== What you have now
+
+* One place owns the contract, and every copy of it is generated.
+* `./gradlew check` bundles, lints, publishes, fetches and verifies the document, and fails when it changed under a version that was already published.
+* A committed `apionly.lock` that says exactly which contract the project builds against.
+* A library that can be refactored into fragments, checked at each step.
+
+[#watch-for]
+== What to watch for
+
+* **Phase 1 is where the bad news is.**
+If the committed document and its source disagree, the migration did not cause it, and making the diff empty by editing the source hides it.
+* **`distribution` is transitional.**
+Left in place it is worse than what you started with: a producer that knows its consumers' directory layouts, and a generated document that is still committed.
+Set a date for phase 4.
+* **Splitting the document into fragments changes it.**
+Every component that moves into a fragment gains an `x-fragment-path`, so the document changes even though the contract says the same thing.
+Raise the contract's minor version with it, as link:../../../api-only-publisher/README.adoc#fragment-path-versions[the Publisher's README →] describes.
+* **Do not migrate and refactor in the same commit.**
+The fixture exists so the library can be refactored safely; doing both at once throws that away.
+
+[#next]
+== Where to go next
+
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] do this in your own repository, stopping for your review at the end of each phase.
+* link:../../use-cases/provider/1-contract-in-the-implementing-project/tutorial.adoc[Provider use case 1's tutorial →] builds the setup this tutorial migrates to, from nothing.
+* link:../../reference/run-book.adoc[The run-book →] covers operating it, and what each failure means.

@@ -19,4 +19,9 @@ node_modules/
 # Gradle build state
 .gradle/
 build/
+
+# Eclipse and VS Code Java compile output
+bin/
+
+# Git worktrees kept inside the checkout
 /worktrees/
