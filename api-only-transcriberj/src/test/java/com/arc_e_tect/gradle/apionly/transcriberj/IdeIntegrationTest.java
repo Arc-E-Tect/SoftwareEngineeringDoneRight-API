@@ -142,6 +142,38 @@ class IdeIntegrationTest {
     }
 
     @Test
+    void inAMultiProjectBuildTheRootsSyncRunsEverySubprojectsGeneration() {
+        Project root = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        root.getPluginManager().apply("idea");
+        root.getPluginManager().apply("org.jetbrains.gradle.plugin.idea-ext");
+        project = ProjectBuilder.builder().withName("service").withParent(root)
+                .withProjectDir(projectDir.resolve("service").toFile()).build();
+
+        subscribe("user-account");
+
+        // IntelliJ reads the task triggers from the root project's model, wherever the
+        // TranscriberJ is applied.
+        assertThat(afterSync(root)).hasSize(1).allSatisfy(trigger ->
+                assertThat(trigger.toString()).contains("generateContractSourcesUserAccount"));
+    }
+
+    @Test
+    void ideaExtOnTheSubprojectIsWiredIntoTheRootRatherThanFailing() {
+        Project root = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        root.getPluginManager().apply("idea");
+        root.getPluginManager().apply("org.jetbrains.gradle.plugin.idea-ext");
+        project = ProjectBuilder.builder().withName("service").withParent(root)
+                .withProjectDir(projectDir.resolve("service").toFile()).build();
+        project.getPluginManager().apply("idea");
+        project.getPluginManager().apply("org.jetbrains.gradle.plugin.idea-ext");
+
+        subscribe("user-account");
+
+        // A subproject has no IDEA project model of its own, and the task is registered once.
+        assertThat(afterSync(root)).hasSize(1);
+    }
+
+    @Test
     void aProjectWithoutIdeaExtHasNoTaskTriggers() {
         assertThat(IdeIntegration.taskTriggers(project)).isNull();
 

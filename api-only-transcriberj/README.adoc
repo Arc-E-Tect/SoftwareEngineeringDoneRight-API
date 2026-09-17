@@ -208,6 +208,9 @@ plugins {
 Nothing else is needed: the plugin finds it, whether it is applied before or after the TranscriberJ.
 It applies the `idea` plugin itself, so the generated directories are marked as well.
 
+In a multi-project build, apply it in the root build:
+IntelliJ reads the task triggers from the root project's model, so that is where every subproject's generation task is registered, whichever project applies idea-ext.
+
 .Considerations
 * **Without idea-ext**, IntelliJ resolves the generated classes after any build that runs the generation task -- `./gradlew generateContractSources<Contract>`, or any `compileTestJava` that depends on it -- and again after every `clean`.
 The three lines above are what makes that automatic.
