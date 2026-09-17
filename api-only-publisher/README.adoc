@@ -488,8 +488,8 @@ The path always uses forward slashes, and it names a file in the library.
 Other OpenAPI tooling ignores the key, as it ignores any `x-` extension.
 It is how the API-Only TranscriberJ ties generated code to the fragment it came from, instead of to a component name the bundler picked.
 
-It is on by default, for OpenAPI documents only.
-`defaults.openapi.fragmentPaths: false` turns it off.
+It is on by default, for both specification kinds.
+`defaults.openapi.fragmentPaths: false` and `defaults.asyncapi.fragmentPaths: false` turn it off, each for its own kind.
 
 How it is done::
 The bundler is not told anything; it is shown stamped fragments, in copies of the staged tree under `<build.staging>/fragment-paths/<target>/`.
@@ -503,6 +503,38 @@ A fragment that writes `x-fragment-path` itself: the Publisher sets that key and
 A component's fragment that is also inlined somewhere else in the same document, since the inlined copy would carry the key as well; the error names where.
 
 A component written directly in a bundle root, rather than `$ref`'d from a fragment, has no fragment and carries no path.
+
+[#fragment-paths-asyncapi]
+==== AsyncAPI, where the bundler inlines rather than hoists
+
+An AsyncAPI bundle has no `components` section at all.
+The bundler inlines a message into its channel, the message's payload into the message, and any schema that payload references into the payload.
+So there is nothing to hoist and nothing to select: every fragment is stamped, and the stamp arrives wherever the bundler put that fragment.
+
+[source,yaml]
+----
+channels:
+  auditV1:
+    x-fragment-path: asyncapi/channels/iff/useraccount/AuditV1.yaml
+    address: iff.useraccount.audit.v1
+    messages:
+      registrationInitiatedMessage:
+        x-fragment-path: asyncapi/messages/iff/useraccount/RegistrationInitiatedMessageV1.yaml
+        payload:
+          x-fragment-path: asyncapi/components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+----
+
+The last of those is the point of a shared library: a schema the OpenAPI tree owns keeps its own path when an event payload references it, so a consumer can tell that the `username` in an event and the `username` in a response are one fragment, and generate one class for both.
+
+The bundle root is the document rather than a fragment of one, so it is never stamped.
+One bundler run is enough, because nothing has to be discovered first.
+
+What stops the build::
+A fragment that writes `x-fragment-path` itself, as on the OpenAPI side.
+A stamp in the built document that names no file in the library, which would mean the bundler moved a stamp away from what explains it.
 
 [#fragment-path-versions]
 ==== What a change to `x-fragment-path` means for a contract's version
@@ -526,9 +558,11 @@ Semantic versioning describes the contract, so the version follows from what a c
 |Consumers relying on it lose provenance and collision disambiguation, and may stop generating code at all.
 |===
 
-Upgrading to a Publisher that stamps the key changes every OpenAPI document that has components built from fragments.
+The policy is the same for both kinds: an AsyncAPI document gains the key exactly as an OpenAPI one does, and the version follows the table above.
+
+Upgrading to a Publisher that stamps the key changes every OpenAPI document that has components built from fragments, and every AsyncAPI document that has fragments at all.
 `changed` does not see that, because a target's closure hash covers the fragments, not the Publisher.
-Bump each such target's MINOR version in the upgrade's commit, or set `fragmentPaths: false` until you do: publishing a changed document under a version already published is refused by every Subscriber that locked it (see <<versions,Versions §>>).
+Bump each such target's MINOR version in the upgrade's commit, or set `fragmentPaths: false` for the kind until you do: publishing a changed document under a version already published is refused by every Subscriber that locked it (see <<versions,Versions §>>).
 
 [#distribution]
 === `distribution` is transitional

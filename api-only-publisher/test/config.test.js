@@ -151,11 +151,24 @@ test("the unreferenced-fragment report sits with the lint reports", () => {
     assert.strictEqual(load(file).unreferencedReport(), path.join(path.dirname(file), "build/reports/lint/unreferenced.txt"));
 });
 
-test("x-fragment-path stamping is on by default, for OpenAPI only", () => {
+test("x-fragment-path stamping is on by default, for both specification kinds", () => {
     const config = load(write(MINIMAL));
     assert.strictEqual(config.fragmentPaths("openapi"), true);
-    assert.strictEqual(config.fragmentPaths("asyncapi"), false);
+    assert.strictEqual(config.fragmentPaths("asyncapi"), true);
     assert.strictEqual(config.fragmentPathStaging("alpha"), path.join(config.root, "build/staging/fragment-paths/alpha"));
+});
+
+test("defaults.asyncapi.fragmentPaths turns AsyncAPI stamping off on its own, and refuses anything but a boolean", () => {
+    const withAsyncapi = (value) => MINIMAL.replace("    outputName: openapi.yaml",
+        `    outputName: openapi.yaml\n  asyncapi:\n    outputName: asyncapi.yaml\n    fragmentPaths: ${value}`);
+
+    const off = load(write(withAsyncapi("false")));
+    assert.strictEqual(off.fragmentPaths("asyncapi"), false);
+    assert.strictEqual(off.fragmentPaths("openapi"), true);
+
+    const wrong = load(write(withAsyncapi('"no"')));
+    assert.throws(() => wrong.fragmentPaths("asyncapi"), (error) =>
+        error instanceof ConfigError && /defaults\.asyncapi\.fragmentPaths must be true or false/.test(error.message));
 });
 
 test("defaults.openapi.fragmentPaths turns stamping off, and refuses anything but a boolean", () => {

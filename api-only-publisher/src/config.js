@@ -164,12 +164,12 @@ function load(configPath) {
         // Whether built documents of this kind carry x-fragment-path on each
         // component. On unless turned off; OpenAPI only.
         fragmentPaths(kind) {
-            if (kind !== "openapi") return false;
-            const configured = (this.defaults.openapi || {}).fragmentPaths;
+            if (kind !== "openapi" && kind !== "asyncapi") return false;
+            const configured = (this.defaults[kind] || {}).fragmentPaths;
             if (configured === undefined) return true;
             if (typeof configured !== "boolean") {
                 throw new ConfigError(
-                    `defaults.openapi.fragmentPaths must be true or false, not ${JSON.stringify(configured)}`);
+                    `defaults.${kind}.fragmentPaths must be true or false, not ${JSON.stringify(configured)}`);
             }
             return configured;
         },

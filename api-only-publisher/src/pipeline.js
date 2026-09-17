@@ -10,7 +10,7 @@ const YAML = require("yaml");
 const { substituteFile } = require("./placeholders");
 const { stampFile } = require("./version");
 const { generateAsyncApi, isAggregate } = require("./aggregate");
-const { stampFiles, componentPaths, strayPaths, FragmentPathError, KEY } = require("./fragment-paths");
+const { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps, FragmentPathError, KEY } = require("./fragment-paths");
 
 class BuildError extends Error {}
 
@@ -112,6 +112,7 @@ function bundle(config, target, kind, outFile, log, { stagingRoot } = {}) {
  * rather than publish it.
  */
 function bundleWithFragmentPaths(config, target, kind, outFile, log) {
+    if (kind === "asyncapi") return bundleInlinedWithFragmentPaths(config, target, kind, outFile, log);
     const scratch = config.fragmentPathStaging(target);
     fs.rmSync(scratch, { recursive: true, force: true });
 
@@ -148,6 +149,50 @@ function bundleWithFragmentPaths(config, target, kind, outFile, log) {
     fs.mkdirSync(path.dirname(outFile), { recursive: true });
     fs.copyFileSync(path.join(scratch, "stamp.yaml"), outFile);
     log(`-- Stamped ${KEY} on ${[...components.values()].filter(Boolean).length} component(s)`);
+}
+
+/**
+ * Bundle a target whose bundler inlines rather than hoists, with x-fragment-path on
+ * every fragment it inlines.
+ *
+ * An AsyncAPI bundle has no components section: a message is inlined into its
+ * channel, its payload into the message, and a schema the payload references into
+ * the payload -- including one from the OpenAPI tree, which is how a shared fragment
+ * travels. So there is nothing to discover and nothing to select: every fragment is
+ * stamped, and the stamp arrives wherever the bundler put that fragment.
+ *
+ * The bundle root is the document, not a fragment of one, so it is left alone.
+ */
+function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
+    const scratch = config.fragmentPathStaging(target);
+    fs.rmSync(scratch, { recursive: true, force: true });
+    const root = path.join(scratch, "stamp");
+    fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
+
+    const bundleRoot = path.relative(root, config.bundlePath(target, kind, root)).split(path.sep).join("/");
+    try {
+        stampFiles(root, { except: new Set([bundleRoot]) });
+    } catch (error) {
+        if (error instanceof FragmentPathError) throw new BuildError(`target '${target}': ${error.message}`);
+        throw error;
+    }
+
+    log(`-- Bundling ${path.basename(config.bundlePath(target, kind))} with ${KEY}`);
+    const file = path.join(scratch, "stamp.yaml");
+    bundle(config, target, kind, file, () => {}, { stagingRoot: root });
+    const document = YAML.parse(fs.readFileSync(file, "utf8"));
+
+    const stamps = fragmentStamps(document);
+    const missing = unresolvedStamps(document, root);
+    if (missing.length > 0) {
+        throw new BuildError(
+            `target '${target}': ${KEY} names a fragment that is not in the library: ` +
+            missing.map((stamp) => `${stamp.at} (${stamp.path})`).join(", "));
+    }
+
+    fs.mkdirSync(path.dirname(outFile), { recursive: true });
+    fs.copyFileSync(file, outFile);
+    log(`-- Stamped ${KEY} on ${stamps.length} inlined fragment(s)`);
 }
 
 function lint(config, kind, file, log, { report = false, reportFile = null } = {}) {

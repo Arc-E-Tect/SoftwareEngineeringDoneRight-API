@@ -124,3 +124,123 @@ test("a fragment that sets x-fragment-path itself fails the build, against its t
         error.name === "Error" && error.constructor.name === "BuildError" &&
         /target 'example-service': openapi\/components\/common\/security\/BearerAuth\.yaml declares x-fragment-path/.test(error.message));
 });
+
+// ------------------------------------------------- x-fragment-path on AsyncAPI
+
+/**
+ * A two-tree library: an AsyncAPI channel whose message payload references a schema
+ * in the OpenAPI tree, which is what a shared fragment looks like in practice.
+ */
+function asyncLibrary({ fragmentPaths = null } = {}) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-async-"));
+    const write = (rel, content) => {
+        const file = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content);
+    };
+    write("apionly.yaml", `schemaVersion: 1
+sources:
+  root: specs
+  openapi: openapi
+  asyncapi: asyncapi
+defaults:
+  asyncapi:
+    outputName: asyncapi.yaml${fragmentPaths === null ? "" : `\n    fragmentPaths: ${fragmentPaths}`}
+build:
+  staging: build/staging
+  dist: dist
+toolchain:
+  asyncapi: "@asyncapi/cli@6.0.2"
+targets:
+  audit:
+    asyncapi:
+      bundle: bundles/audit_asyncapi_structure.yaml
+`);
+    write("specs/asyncapi/bundles/audit_asyncapi_structure.yaml", `asyncapi: 3.0.0
+info:
+  title: Audit API
+  version: 0.0.0
+channels:
+  auditV1:
+    $ref: '../channels/Audit.yaml'
+operations:
+  publishRegistered:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    messages:
+      - $ref: '#/channels/auditV1/messages/registered'
+`);
+    write("specs/asyncapi/channels/Audit.yaml", `address: iff.audit.v1
+description: Audit events.
+messages:
+  registered:
+    $ref: '../messages/RegisteredMessage.yaml'
+`);
+    write("specs/asyncapi/messages/RegisteredMessage.yaml", `name: RegisteredV1
+contentType: application/json
+payload:
+  $ref: '../components/schemas/RegisteredEventV1.yaml'
+`);
+    write("specs/asyncapi/components/schemas/RegisteredEventV1.yaml", `type: object
+required:
+  - username
+properties:
+  username:
+    $ref: '../../../openapi/components/schemas/UsernameV1.yaml'
+`);
+    write("specs/openapi/components/schemas/UsernameV1.yaml", `type: string
+description: The unique username of the account.
+`);
+    return loadFrom(dir);
+}
+
+test("every AsyncAPI fragment the bundler inlines carries the path it came from", { timeout: 300000 }, () => {
+    const config = asyncLibrary();
+
+    const results = build(config, { versionOf: () => "1.0.0" });
+
+    const document = YAML.parse(fs.readFileSync(results[0].file, "utf8"));
+    const channel = document.channels.auditV1;
+    const message = channel.messages.registered;
+    const stamps = {
+        channel: channel["x-fragment-path"],
+        message: message["x-fragment-path"],
+        payload: message.payload["x-fragment-path"],
+        shared: message.payload.properties.username["x-fragment-path"],
+    };
+    assert.deepStrictEqual(stamps, {
+        channel: "asyncapi/channels/Audit.yaml",
+        message: "asyncapi/messages/RegisteredMessage.yaml",
+        payload: "asyncapi/components/schemas/RegisteredEventV1.yaml",
+        // The shared fragment keeps its own path, in the tree it belongs to.
+        shared: "openapi/components/schemas/UsernameV1.yaml",
+    });
+    for (const fragment of Object.values(stamps)) {
+        assert.ok(fs.existsSync(path.join(config.sourceRoot(), fragment)), `${fragment} is not a file in the library`);
+    }
+    // The document itself is not a fragment of anything.
+    assert.ok(!Object.hasOwn(document, "x-fragment-path"));
+});
+
+test("stamping AsyncAPI changes nothing but the stamps, and can be turned off", { timeout: 300000 }, () => {
+    const stampedFile = build(asyncLibrary(), { versionOf: () => "1.0.0" })[0].file;
+    const plainFile = build(asyncLibrary({ fragmentPaths: false }), { versionOf: () => "1.0.0" })[0].file;
+
+    const stamped = fs.readFileSync(stampedFile, "utf8");
+    const plain = fs.readFileSync(plainFile, "utf8");
+
+    assert.ok(!plain.includes("x-fragment-path"));
+    assert.strictEqual(withoutStamps(stamped), plain);
+});
+
+test("an AsyncAPI fragment that sets x-fragment-path itself fails the build, against its target", { timeout: 300000 }, () => {
+    const config = asyncLibrary();
+    const message = path.join(config.sourceRoot(), "specs/asyncapi/messages/RegisteredMessage.yaml");
+    const file = fs.existsSync(message) ? message
+        : path.join(config.sourceRoot(), "asyncapi/messages/RegisteredMessage.yaml");
+    fs.writeFileSync(file, `x-fragment-path: asyncapi/messages/RegisteredMessage.yaml\n${fs.readFileSync(file, "utf8")}`);
+
+    assert.throws(() => build(config, { versionOf: () => "1.0.0" }), (error) =>
+        /target 'audit'/.test(error.message) && /the Publisher sets that key and a fragment may not/.test(error.message));
+});
