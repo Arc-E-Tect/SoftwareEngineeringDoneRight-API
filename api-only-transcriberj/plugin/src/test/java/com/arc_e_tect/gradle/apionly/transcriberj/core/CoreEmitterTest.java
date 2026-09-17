@@ -506,20 +506,20 @@ class CoreEmitterTest {
         Path contract = GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml");
         Path out = directory.resolve("out");
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
-                new Settings("c", "not a package", false, "p", 1), out, List.of()))
+                new Settings("c", "not a package", false, "p", 1), out, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage not a package");
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
-                new Settings("c", null, false, "p", 1), out, List.of()))
+                new Settings("c", null, false, "p", 1), out, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage null");
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
-                new Settings("c", "a.b", true, "p", 1), out, List.of()))
+                new Settings("c", "a.b", true, "p", 1), out, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("generateDocs is not supported yet");
         assertThatThrownBy(() -> Generation.run(contract, "2.0.0", "x",
-                new Settings("c", "a.b", false, "p", 1), out, List.of()))
+                new Settings("c", "a.b", false, "p", 1), out, List.of(), null))
                 .isInstanceOf(GenerationException.class)
                 .hasMessageContaining("locked at version 2.0.0, but " + contract + " says it is version 1.0.0");
         assertThatThrownBy(() -> Generation.run(directory.resolve("missing.yaml"), "1.0.0", "x",
-                new Settings("c", "a.b", false, "p", 1), out, List.of()))
+                new Settings("c", "a.b", false, "p", 1), out, List.of(), null))
                 .isInstanceOf(java.io.UncheckedIOException.class);
     }
 

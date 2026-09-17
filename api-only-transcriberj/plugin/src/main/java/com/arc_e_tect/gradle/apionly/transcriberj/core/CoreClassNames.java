@@ -55,6 +55,8 @@ final class CoreClassNames implements ClassNames {
         final String location;
         String name;
         boolean exposed;
+        /** The path of the operation the class belongs to, or null for a component. */
+        String path;
 
         Candidate(Origin origin, String key, Provenance provenance, Schema schema, String location, String name) {
             this.origin = origin;
@@ -65,6 +67,9 @@ final class CoreClassNames implements ClassNames {
             this.name = name;
         }
     }
+
+    private final Map<String, GeneratedClass> byOperation = new LinkedHashMap<>();
+    private final Map<GeneratedClass, String> paths = new LinkedHashMap<>();
 
     CoreClassNames(ContractModel model, Shapes shapes, GenerationReport report) {
         this.shapes = shapes;
@@ -97,10 +102,16 @@ final class CoreClassNames implements ClassNames {
                     + "API-Only Publisher and defaults.openapi.fragmentPaths left on.");
         }
 
-        for (PathItem item : model.paths()) {
-            for (Operation operation : item.operations()) {
-                inline(operation, report);
-            }
+        for (Operation operation : model.operations()) {
+            String location = operationLocation(operation);
+            Candidate candidate = new Candidate(Origin.OPERATION, location,
+                    new Provenance(null, CanonicalJson.sha256(operationSummary(operation))), null, location,
+                    operationName(operation) + "Operation");
+            candidate.path = operation.path();
+            candidates.add(candidate);
+        }
+        for (Operation operation : model.operations()) {
+            inline(operation, report);
         }
 
         resolveCollisions();
@@ -110,7 +121,10 @@ final class CoreClassNames implements ClassNames {
             GeneratedClass generated = new GeneratedClass(c.name, c.origin, c.key, c.exposed, c.provenance,
                     c.schema, c.schema != null && shapes.isObject(c.schema));
             classes.add(generated);
-            if (c.origin == Origin.INLINE_REQUEST || c.origin == Origin.INLINE_RESPONSE) {
+            if (c.path != null) paths.put(generated, c.path);
+            if (c.origin == Origin.OPERATION) {
+                byOperation.put(c.key, generated);
+            } else if (c.origin == Origin.INLINE_REQUEST || c.origin == Origin.INLINE_RESPONSE) {
                 byLocation.put(c.key, generated);
             } else {
                 byComponent.put(c.origin + "/" + c.key, generated);
@@ -140,26 +154,54 @@ final class CoreClassNames implements ClassNames {
         return single == null ? null : location + "/content/" + Shapes.escape(single.contentType()) + "/schema";
     }
 
-    private void inline(Operation operation, GenerationReport report) {
-        String location = "/paths/" + Shapes.escape(operation.path()) + "/" + operation.method().key();
-        String operationName;
+    static String operationLocation(Operation operation) {
+        return "/paths/" + Shapes.escape(operation.path()) + "/" + operation.method().key();
+    }
+
+    /** An operation's name: its operationId, or else its method and path. */
+    private static String operationName(Operation operation) {
         if (operation.operationId() != null) {
-            operationName = JavaText.typeName(operation.operationId());
-        } else {
-            operationName = JavaText.typeName(operation.method().key() + " "
-                    + operation.path().replace("{", " by ").replace("}", " "));
+            return JavaText.typeName(operation.operationId());
         }
+        return JavaText.typeName(operation.method().key() + " "
+                + operation.path().replace("{", " by ").replace("}", " "));
+    }
+
+    /** What an operation class is generated from, for its hash. */
+    private static Map<String, Object> operationSummary(Operation operation) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("method", operation.method().name());
+        summary.put("path", operation.path());
+        summary.put("operationId", operation.operationId());
+        if (operation.requestBody() != null && operation.requestBody().content() != null) {
+            summary.put("requestContentTypes",
+                    operation.requestBody().content().stream().map(MediaType::contentType).toList());
+        }
+        Map<String, Object> responses = new LinkedHashMap<>();
+        if (operation.responses() != null) {
+            for (Response response : operation.responses()) {
+                responses.put(response.status(), response.content() == null ? List.of()
+                        : response.content().stream().map(MediaType::contentType).toList());
+            }
+        }
+        summary.put("responses", responses);
+        return summary;
+    }
+
+    private void inline(Operation operation, GenerationReport report) {
+        String location = operationLocation(operation);
+        String operationName = operationName(operation);
         boolean named = false;
 
         RequestBody body = operation.requestBody();
         if (body != null && body.reference() == null && body.content() != null) {
-            named |= inlineContent(body.content(), location + "/requestBody", operationName + "Request",
-                    Origin.INLINE_REQUEST, report);
+            named |= inlineContent(body.content(), operation.path(), location + "/requestBody",
+                    operationName + "Request", Origin.INLINE_REQUEST, report);
         }
         if (operation.responses() != null) {
             for (Response response : operation.responses()) {
                 if (response.reference() != null || response.content() == null) continue;
-                named |= inlineContent(response.content(),
+                named |= inlineContent(response.content(), operation.path(),
                         location + "/responses/" + Shapes.escape(response.status()),
                         operationName + JavaText.typeName("Response " + response.status()),
                         Origin.INLINE_RESPONSE, report);
@@ -171,16 +213,18 @@ final class CoreClassNames implements ClassNames {
         }
     }
 
-    private boolean inlineContent(List<MediaType> content, String location, String baseName, Origin origin,
-                                  GenerationReport report) {
+    private boolean inlineContent(List<MediaType> content, String path, String location, String baseName,
+                                  Origin origin, GenerationReport report) {
         List<MediaType> needing = content.stream().filter(m -> needsClass(m.schema())).toList();
         for (MediaType mediaType : needing) {
             String schemaLocation = location + "/content/" + Shapes.escape(mediaType.contentType()) + "/schema";
             String subtype = mediaType.contentType().substring(mediaType.contentType().indexOf('/') + 1);
             String name = needing.size() == 1 ? baseName : baseName + JavaText.typeName(subtype);
             Provenance provenance = new Provenance(null, CanonicalJson.sha256(Shapes.render(mediaType.schema())));
-            candidates.add(new Candidate(origin, schemaLocation, provenance, mediaType.schema(), schemaLocation,
-                    name));
+            Candidate candidate = new Candidate(origin, schemaLocation, provenance, mediaType.schema(),
+                    schemaLocation, name);
+            candidate.path = path;
+            candidates.add(candidate);
             report.recommend(schemaLocation, INLINE_ADVICE);
         }
         return !needing.isEmpty();
@@ -336,6 +380,21 @@ final class CoreClassNames implements ClassNames {
     @Override
     public Optional<GeneratedClass> component(Origin origin, String componentName) {
         return Optional.ofNullable(byComponent.get(origin + "/" + componentName));
+    }
+
+    @Override
+    public Optional<GeneratedClass> operation(String location) {
+        return Optional.ofNullable(byOperation.get(location));
+    }
+
+    /**
+     * The path of the operation a class belongs to.
+     *
+     * @param generated an operation class or an inline schema's class
+     * @return the path, or {@code null} for a component's class
+     */
+    String path(GeneratedClass generated) {
+        return paths.get(generated);
     }
 
     @Override

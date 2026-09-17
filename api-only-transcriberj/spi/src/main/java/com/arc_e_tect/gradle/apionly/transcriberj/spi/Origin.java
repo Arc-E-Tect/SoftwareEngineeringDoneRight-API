@@ -13,5 +13,7 @@ public enum Origin {
     /** A schema written inline in an operation's request body. */
     INLINE_REQUEST,
     /** A schema written inline in an operation's response. */
-    INLINE_RESPONSE
+    INLINE_RESPONSE,
+    /** An operation: a method on a path, with its responses. */
+    OPERATION
 }

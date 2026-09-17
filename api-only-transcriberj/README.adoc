@@ -165,6 +165,9 @@ Everything goes in the base package, flat, whatever directory a fragment was in.
 |A reusable response, request body or parameter
 |Named after its fragment's file, as a schema is.
 
+|An operation
+|Named after its `operationId`, or else its method and path, followed by `Operation`: `GetUserOperation`.
+
 |A schema written inline in an operation's request or response
 |Named after the operation: `<OperationId>Request`, `<OperationId>Response<Status>`.
 An operation without an `operationId` is named after its method and path.
@@ -189,6 +192,53 @@ They are constants only; generated bodies do not enforce them.
 * **Where it is sent**: `CONTENT_TYPE` and `CONTENT_TYPES` for bodies; `NAME`, `IN` and `REQUIRED` for a parameter; `OPERATION_ID`, `METHOD`, `PATH` and `STATUS` for an inline schema.
 * **`description()`**, the placeholder.
 * **`body(...)`** and **`fields(prefix)`**, when the schema describes an object.
+
+[#operations]
+=== Operations
+
+An operation's class holds what a test needs to call it, so a wrong endpoint fails to compile rather than at run time:
+
+[source,java]
+----
+public final class GetUserOperation {
+    public static final String OPERATION_ID = "GetUser";
+    public static final String METHOD = "GET";
+    public static final String PATH = "/v1/users/{username}";
+    public static final int STATUS_200 = 200;
+    public static final String CONTENT_TYPE_200 = "application/json";
+    public static final int STATUS_404 = 404;
+    public static final String CONTENT_TYPE_404 = "application/problem+json";
+    // LOCATION, OPERATION_SHA256, CONTRACT_VERSION, REQUEST_CONTENT_TYPE where there is one
+
+    public static String path(String username) { ... }
+}
+----
+
+`path(...)` fills in the placeholders in the order the path names them, and exists only when the path has any.
+It uses the values as given, without encoding them, so a pattern such as `.*` stays a pattern in a WireMock matcher.
+A status that is not a number, such as `4XX` or `default`, has content-type constants but no `STATUS_` constant.
+
+[source,java]
+----
+webTestClient.get().uri(GetUserOperation.PATH, "alice")
+wireMock.stubFor(get(urlEqualTo(GetUserOperation.path("alice"))))
+----
+
+[#endpoint-index]
+=== The endpoint index
+
+Tools that read test sources one file at a time, without a classpath, cannot see what `GetUserOperation.PATH` holds.
+The generation therefore also writes `build/generated/transcriberj-index/<contract>/contract-endpoints.properties`, with every operation's and inline schema's path keyed `ClassName.PATH`.
+The subscription exposes it, carrying the generation task:
+
+[source,groovy]
+----
+doppelgangerApiDetector {
+    propertyFiles.from(apiOnlyTranscriberJ.subscriptions.named('orders').flatMap { it.endpointIndex })
+}
+----
+
+The API-Only Suite's contract-evidence scan resolves `ClassName.FIELD` references through such a file from api-detector-core 1.8.0 on.
 
 [#bodies]
 === Bodies
@@ -236,7 +286,7 @@ A map, an object with `additionalProperties` and no properties of its own, is a 
 [#manifest]
 === The manifest
 
-`ContractManifest` holds the contract's name, title, version and document hash, and an entry for every generated class with what it came from.
+`ContractManifest` holds the contract's name, title, version and document hash, and an entry for every generated class, operations included, with what it came from.
 One test can assert that the whole tree corresponds to the locked contract.
 
 [#unrepresentable]

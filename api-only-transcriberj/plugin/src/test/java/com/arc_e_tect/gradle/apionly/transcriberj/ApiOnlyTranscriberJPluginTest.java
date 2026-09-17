@@ -83,6 +83,8 @@ class ApiOnlyTranscriberJPluginTest {
                 .isEqualTo(projectDir.resolve("build/api-spec/user-account/openapi.yaml").toFile());
         assertThat(generate.getReportFile().get().getAsFile())
                 .isEqualTo(projectDir.resolve("build/reports/transcriberj/user-account.txt").toFile());
+        assertThat(subscription.getEndpointIndex().get().getAsFile()).isEqualTo(projectDir.resolve(
+                "build/generated/transcriberj-index/user-account/contract-endpoints.properties").toFile());
         assertThat(project.getTasks().getByName("check").getDependsOn()).anySatisfy(d ->
                 assertThat(d.toString()).contains("verifyContractSourcesUserAccount"));
 
@@ -156,6 +158,7 @@ class ApiOnlyTranscriberJPluginTest {
         task.getEmitterClasspath().from(jar.toFile());
         task.getOutputDirectory().set(projectDir.resolve("out").toFile());
         task.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        task.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
 
         task.generate();
 
@@ -165,6 +168,7 @@ class ApiOnlyTranscriberJPluginTest {
         assertThat(Files.readString(projectDir.resolve("out/com/example/contract/ContractManifest.java")))
                 .contains("CONTRACT_SHA256 = \"abc\"");
         assertThat(Files.readString(projectDir.resolve("report.txt"))).startsWith("API-Only TranscriberJ: user-account");
+        assertThat(Files.readString(projectDir.resolve("index.properties"))).contains("GetUserOperation.PATH=");
 
         task.getBasePackage().set((String) null);
         assertThatThrownBy(task::generate).isInstanceOf(GradleException.class)
@@ -187,6 +191,7 @@ class ApiOnlyTranscriberJPluginTest {
         parameters.getDescriptionPlaceholder().set("p");
         parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
         parameters.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        parameters.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
         GenerateContractSourcesAction action = new GenerateContractSourcesAction() {
             @Override
             public Parameters getParameters() {

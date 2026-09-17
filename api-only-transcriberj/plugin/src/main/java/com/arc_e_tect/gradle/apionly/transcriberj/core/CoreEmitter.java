@@ -82,7 +82,10 @@ final class CoreEmitter implements Emitter {
                 "depth", String.valueOf(context.settings().recursionDepth()))));
         context.writeJava(pkg, "ContractManifest", manifest(context, header, pkg));
         for (GeneratedClass generated : names.all()) {
-            context.writeJava(pkg, generated.simpleName(), new ClassWriter(context, generated, header).write());
+            String source = generated.origin() == Origin.OPERATION
+                    ? operationClass(context, generated, header)
+                    : new ClassWriter(context, generated, header).write();
+            context.writeJava(pkg, generated.simpleName(), source);
         }
     }
 
@@ -153,8 +156,120 @@ final class CoreEmitter implements Emitter {
             case RESPONSE -> "/components/responses/" + Shapes.escape(g.key());
             case PARAMETER -> "/components/parameters/" + Shapes.escape(g.key());
             case REQUEST_BODY -> "/components/requestBodies/" + Shapes.escape(g.key());
-            case INLINE_REQUEST, INLINE_RESPONSE -> g.key();
+            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION -> g.key();
         };
+    }
+
+    /**
+     * An operation's class: what a test needs to call it -- its method, its path and
+     * a way to fill in its placeholders -- and, per response, its status and content type.
+     */
+    private String operationClass(EmitterContext context, GeneratedClass generated, String header) {
+        Operation operation = context.model().operations().stream()
+                .filter(o -> CoreClassNames.operationLocation(o).equals(generated.key()))
+                .findFirst().orElseThrow();
+        String name = generated.simpleName();
+        StringBuilder out = new StringBuilder(header);
+        out.append("package ").append(context.settings().basePackage()).append(";\n\n");
+        out.append("/**\n * Generated from operation ").append(operation.method().name()).append(' ')
+                .append(JavaText.comment(operation.path())).append(".\n */\n");
+        out.append("public final class ").append(name).append(" {\n\n");
+        Set<String> declared = new HashSet<>();
+        java.util.function.BiConsumer<String[], String> constant = (typeAndName, value) -> {
+            if (!declared.add(typeAndName[1])) {
+                throw new GenerationException(name + " would declare " + typeAndName[1] + " twice; the responses of "
+                        + generated.key() + " have status codes that read the same as constant names");
+            }
+            constant(out, typeAndName[2], typeAndName[0], typeAndName[1], value);
+        };
+        if (operation.operationId() != null) {
+            constant.accept(new String[]{"String", "OPERATION_ID", "The operation's operationId."},
+                    JavaText.literal(operation.operationId()));
+        }
+        constant.accept(new String[]{"String", "METHOD", "The operation's HTTP method."},
+                JavaText.literal(operation.method().name()));
+        constant.accept(new String[]{"String", "PATH", "The operation's path, as the contract writes it."},
+                JavaText.literal(operation.path()));
+        constant.accept(new String[]{"String", "LOCATION", "Where, in the contract, the operation is written."},
+                JavaText.literal(generated.key()));
+        constant.accept(new String[]{"String", "OPERATION_SHA256",
+                "The SHA-256 of what this class was generated from, in RFC 8785 canonical JSON."},
+                JavaText.literal(generated.provenance().sha256()));
+        constant.accept(new String[]{"String", "CONTRACT_VERSION",
+                "The version of the contract this class was generated from."},
+                JavaText.literal(context.model().version()));
+
+        RequestBody body = operation.requestBody();
+        if (body != null && body.content() != null && !body.content().isEmpty()) {
+            List<String> types = body.content().stream().map(MediaType::contentType).toList();
+            if (types.size() == 1) {
+                constant.accept(new String[]{"String", "REQUEST_CONTENT_TYPE", "The content type of the request body."},
+                        JavaText.literal(types.get(0)));
+            } else {
+                constant.accept(new String[]{"java.util.List<String>", "REQUEST_CONTENT_TYPES",
+                        "Every content type the request body may be sent as."}, listOf(types));
+            }
+        }
+        if (operation.responses() != null) {
+            for (Response response : operation.responses()) {
+                // Appended to STATUS_ and CONTENT_TYPE_, so a leading digit is fine as it is.
+                String code = response.status().toUpperCase(java.util.Locale.ROOT).replaceAll("[^A-Z0-9]", "_");
+                if (response.status().matches("\\d{3}")) {
+                    constant.accept(new String[]{"int", "STATUS_" + code,
+                            "The status of the response the contract describes as " + response.status() + "."},
+                            response.status());
+                }
+                List<String> types = response.content() == null ? List.of()
+                        : response.content().stream().map(MediaType::contentType).toList();
+                if (types.size() == 1) {
+                    constant.accept(new String[]{"String", "CONTENT_TYPE_" + code,
+                            "The content type of response " + response.status() + "."}, JavaText.literal(types.get(0)));
+                } else if (types.size() > 1) {
+                    constant.accept(new String[]{"java.util.List<String>", "CONTENT_TYPES_" + code,
+                            "Every content type response " + response.status() + " may be sent as."}, listOf(types));
+                }
+            }
+        }
+
+        out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n\n");
+
+        List<String> placeholders = new ArrayList<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\{([^}]+)}").matcher(operation.path());
+        while (matcher.find()) {
+            placeholders.add(matcher.group(1));
+        }
+        if (!placeholders.isEmpty()) {
+            List<String> parameters = new ArrayList<>();
+            Set<String> parameterNames = new HashSet<>();
+            StringBuilder body2 = new StringBuilder();
+            String expression = "PATH";
+            for (String placeholder : placeholders) {
+                String parameter = JavaText.variableName(placeholder);
+                for (int i = 2; !parameterNames.add(parameter); i++) {
+                    parameter = JavaText.variableName(placeholder) + i;
+                }
+                parameters.add("String " + parameter);
+                body2.append(INDENT).append(INDENT).append("java.util.Objects.requireNonNull(").append(parameter)
+                        .append(", ").append(JavaText.literal(parameter)).append(");\n");
+                expression = expression + ".replace(" + JavaText.literal("{" + placeholder + "}") + ", "
+                        + parameter + ")";
+            }
+            out.append(INDENT).append("/**\n")
+                    .append(INDENT).append(" * The path with its placeholders filled in, in the order the path names them.\n")
+                    .append(INDENT).append(" * The values are used as given, not encoded, so a pattern such as {@code .*}\n")
+                    .append(INDENT).append(" * stays a pattern.\n")
+                    .append(INDENT).append(" */\n");
+            out.append(INDENT).append("public static String path(").append(String.join(", ", parameters))
+                    .append(") {\n").append(body2)
+                    .append(INDENT).append(INDENT).append("return ").append(expression).append(";\n")
+                    .append(INDENT).append("}\n\n");
+        }
+        out.append("}\n");
+        return out.toString();
+    }
+
+    private static String listOf(List<String> values) {
+        return "java.util.List.of(" + String.join(", ", values.stream().map(JavaText::literal).toList()) + ")";
     }
 
     private static void constant(StringBuilder out, String doc, String type, String name, String value) {
@@ -254,6 +369,7 @@ final class CoreEmitter implements Emitter {
                 case REQUEST_BODY -> "Generated from request body " + from + ".";
                 case INLINE_REQUEST -> "Generated from the request body schema at " + from + ".";
                 case INLINE_RESPONSE -> "Generated from the response schema at " + from + ".";
+                case OPERATION -> throw new IllegalStateException("an operation's class is not a schema's");
             };
         }
 

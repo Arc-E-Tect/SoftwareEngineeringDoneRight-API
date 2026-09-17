@@ -2,6 +2,7 @@ package com.arc_e_tect.gradle.apionly.transcriberj;
 
 import org.gradle.api.Named;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 
@@ -75,6 +76,21 @@ public abstract class TranscriberJSubscription implements Named {
      * @return the placeholder
      */
     public abstract Property<String> getDescriptionPlaceholder();
+
+    /**
+     * The endpoint index the generation writes: the path of every generated operation and
+     * inline schema class, keyed {@code ClassName.PATH}. Read-only; it carries the
+     * generation task, so a tool reading it runs after the generation.
+     *
+     * <pre>
+     * doppelgangerApiDetector {
+     *     propertyFiles.from(apiOnlyTranscriberJ.subscriptions.named('orders').flatMap { it.endpointIndex })
+     * }
+     * </pre>
+     *
+     * @return the index
+     */
+    public abstract RegularFileProperty getEndpointIndex();
 
     /**
      * Where the sources are generated.

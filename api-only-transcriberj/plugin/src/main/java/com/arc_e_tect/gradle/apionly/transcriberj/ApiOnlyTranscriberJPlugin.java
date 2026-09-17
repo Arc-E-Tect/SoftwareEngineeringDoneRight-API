@@ -97,7 +97,12 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getOutputDirectory().set(subscription.getInto());
                         task.getReportFile().set(
                                 project.getLayout().getBuildDirectory().file("reports/transcriberj/" + contract + ".txt"));
+                        task.getEndpointIndex().set(project.getLayout().getBuildDirectory()
+                                .file("generated/transcriberj-index/" + contract + "/contract-endpoints.properties"));
                     });
+
+            subscription.getEndpointIndex().set(generate.flatMap(GenerateContractSourcesTask::getEndpointIndex));
+            subscription.getEndpointIndex().disallowChanges();
 
             TaskProvider<VerifyContractSourcesTask> verify = project.getTasks().register(
                     VERIFY_TASK + suffix, VerifyContractSourcesTask.class, task -> {

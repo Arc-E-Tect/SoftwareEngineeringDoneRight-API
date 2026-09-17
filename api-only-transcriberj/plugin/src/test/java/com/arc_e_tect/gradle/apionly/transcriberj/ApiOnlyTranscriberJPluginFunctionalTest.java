@@ -142,6 +142,9 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         assertThat(first.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(first.task(":verifyContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(projectDir.resolve("build/reports/transcriberj/user-account.txt")).exists();
+        assertThat(projectDir.resolve(
+                "build/generated/transcriberj-index/user-account/contract-endpoints.properties"))
+                .content().contains("GetUserOperation.PATH=/v1/users/{username}");
         assertThat(projectDir.resolve("build/generated/sources/transcriberj/user-account/com/example/contract/UserV1.java"))
                 .exists();
 

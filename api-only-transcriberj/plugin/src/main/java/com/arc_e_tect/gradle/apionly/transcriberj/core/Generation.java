@@ -41,11 +41,15 @@ public final class Generation {
      * @param settings        how the project asked for the classes
      * @param outputDirectory where the sources go
      * @param emitters        the emitters to run after the core emitter
+     * @param endpointIndex   where to write the path of every operation class and inline
+     *                        schema class, keyed {@code ClassName.PATH}, for tools that read
+     *                        test sources without a classpath; {@code null} to write none
      * @return what could not be generated in full
      * @throws GenerationException when no sources can be generated from the contract
      */
     public static GenerationReport run(Path contract, String contractVersion, String contractSha256,
-                                       Settings settings, Path outputDirectory, List<Emitter> emitters) {
+                                       Settings settings, Path outputDirectory, List<Emitter> emitters,
+                                       Path endpointIndex) {
         if (settings.basePackage() == null || !PACKAGE.matcher(settings.basePackage()).matches()) {
             throw new GenerationException("Contract " + settings.contract() + ": basePackage "
                     + settings.basePackage() + " is not a Java package name.");
@@ -78,7 +82,47 @@ public final class Generation {
         for (Emitter emitter : emitters) {
             emitter.emit(new Context(model, settings, names, outputDirectory, report, emitter.id()));
         }
+        if (endpointIndex != null) {
+            writeEndpointIndex(endpointIndex, settings, model, names);
+        }
         return report;
+    }
+
+    private static void writeEndpointIndex(Path file, Settings settings, ContractModel model, CoreClassNames names) {
+        StringBuilder out = new StringBuilder()
+                .append("# The path of every class the API-Only TranscriberJ generated from contract ")
+                .append(settings.contract()).append(' ').append(model.version()).append(",\n")
+                .append("# keyed ClassName.PATH, for tools that read test sources without a classpath.\n");
+        for (var generated : names.all()) {
+            String path = names.path(generated);
+            if (path != null) {
+                out.append(generated.simpleName()).append(".PATH=").append(propertyValue(path)).append('\n');
+            }
+        }
+        try {
+            if (file.getParent() != null) Files.createDirectories(file.getParent());
+            Files.writeString(file, out, StandardCharsets.ISO_8859_1);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** A value as a .properties file needs it written, in ISO 8859-1. */
+    private static String propertyValue(String value) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == 92) {
+                out.append(c).append(c);
+            } else if (i == 0 && c == ' ') {
+                out.append((char) 92).append(c);
+            } else if (c < 0x20 || c > 0x7e) {
+                out.append((char) 92).append('u').append(String.format("%04x", (int) c));
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
     }
 
     private static void clean(Path directory) {

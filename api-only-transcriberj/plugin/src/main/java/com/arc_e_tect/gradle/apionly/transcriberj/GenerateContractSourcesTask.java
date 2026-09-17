@@ -108,6 +108,16 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     public abstract DirectoryProperty getOutputDirectory();
 
     /**
+     * Where the path of every generated operation and inline schema class goes, keyed
+     * {@code ClassName.PATH}: a properties file for tools that read test sources without
+     * a classpath, such as the API-Only Suite's contract-evidence scan.
+     *
+     * @return the index
+     */
+    @OutputFile
+    public abstract RegularFileProperty getEndpointIndex();
+
+    /**
      * Where the report of what could not be generated in full goes.
      *
      * @return the report
@@ -143,6 +153,7 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             parameters.getDescriptionPlaceholder().set(getDescriptionPlaceholder());
             parameters.getOutputDirectory().set(getOutputDirectory());
             parameters.getReportFile().set(getReportFile());
+            parameters.getEndpointIndex().set(getEndpointIndex());
         });
         queue.await();
 

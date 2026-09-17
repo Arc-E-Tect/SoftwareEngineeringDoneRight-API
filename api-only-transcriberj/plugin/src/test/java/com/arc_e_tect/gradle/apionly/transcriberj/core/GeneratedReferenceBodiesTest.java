@@ -78,13 +78,15 @@ class GeneratedReferenceBodiesTest {
     @Test
     void theGeneratedClassesAreTheHandWrittenOnesPlusTheInlineResponsesAndSupport() {
         assertThat(generated.classNames()).containsExactly(
-                "ContractField", "ContractJson", "ContractManifest", "ErrorDetailV1", "GetHealthResponse200",
-                "GetRootResponse200", "InternalServerProblemV1", "InvalidRequestProblemV1", "ProblemDetailsV1",
+                "CompleteUserRegistrationOperation", "ContractField", "ContractJson", "ContractManifest",
+                "ErrorDetailV1", "GetHealthOperation", "GetHealthResponse200", "GetRootOperation",
+                "GetRootResponse200", "GetUserOperation", "InitiateUserRegistrationOperation",
+                "InternalServerProblemV1", "InvalidRequestProblemV1", "ProblemDetailsV1",
                 "RegisteredRequestCannotBeProcessedProblemV1", "RegistrationNotFoundProblemV1",
-                "RegistrationProcessExpiredProblemV1", "UserAccountV1", "UserNotFoundProblemV1",
-                "UserRegistrationRequestV1", "UserRegistrationResendEmailRequestV1", "UserRegistrationResponseV1",
-                "UserV1", "UsernameAlreadyRegisteredProblemV1", "UsernameV1", "VerificationLinkExpiredProblemV1",
-                "VerificationLinkSupersededProblemV1");
+                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailOperation", "UserAccountV1",
+                "UserNotFoundProblemV1", "UserRegistrationRequestV1", "UserRegistrationResendEmailRequestV1",
+                "UserRegistrationResponseV1", "UserV1", "UsernameAlreadyRegisteredProblemV1", "UsernameV1",
+                "VerificationLinkExpiredProblemV1", "VerificationLinkSupersededProblemV1");
     }
 
     @Test
@@ -114,7 +116,7 @@ class GeneratedReferenceBodiesTest {
         assertThat(generated.constant("GetRootResponse200", "OPERATION_ID")).isEqualTo("GetRoot");
         assertThat(generated.constant("ContractManifest", "CONTRACT")).isEqualTo("user-account");
         assertThat(generated.constant("ContractManifest", "CONTRACT_VERSION")).isEqualTo("1.0.0");
-        assertThat((List<?>) generated.constant("ContractManifest", "ENTRIES")).hasSize(19);
+        assertThat((List<?>) generated.constant("ContractManifest", "ENTRIES")).hasSize(25);
     }
 
     @Test

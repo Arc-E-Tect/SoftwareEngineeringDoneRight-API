@@ -24,6 +24,14 @@ public interface ClassNames {
     Optional<GeneratedClass> component(Origin origin, String componentName);
 
     /**
+     * The class for an operation.
+     *
+     * @param location the JSON pointer of the operation, such as {@code /paths/~1v1~1users/get}
+     * @return the class, or empty when there is none
+     */
+    Optional<GeneratedClass> operation(String location);
+
+    /**
      * The class for a schema written inline in an operation.
      *
      * @param location the JSON pointer of the schema

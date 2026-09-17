@@ -86,6 +86,13 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         DirectoryProperty getOutputDirectory();
 
         /**
+         * Where the endpoint index goes.
+         *
+         * @return the index
+         */
+        RegularFileProperty getEndpointIndex();
+
+        /**
          * Where the report goes.
          *
          * @return the report
@@ -106,7 +113,8 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         try {
             report = Generation.run(p.getContract().get().getAsFile().toPath(), p.getContractVersion().get(),
                     p.getContractSha256().get(), settings, p.getOutputDirectory().get().getAsFile().toPath(),
-                    emitters(GenerateContractSourcesAction.class.getClassLoader()));
+                    emitters(GenerateContractSourcesAction.class.getClassLoader()),
+                    p.getEndpointIndex().get().getAsFile().toPath());
         } catch (GenerationException e) {
             throw new GradleException(e.getMessage(), e);
         }

@@ -8,8 +8,9 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.Schema;
  *
  * @param simpleName  its simple name, in the base package
  * @param origin      what it was generated from
- * @param key         the component's name for a component, or the JSON pointer of the
- *                    schema for an inline schema
+ * @param key         the component's name for a component, the JSON pointer of the
+ *                    schema for an inline schema, or the JSON pointer of the operation
+ *                    for an operation
  * @param exposed     whether it is public; a class nothing outside the package needs is
  *                    package-private
  * @param provenance  where it came from; an inline schema has no fragment path

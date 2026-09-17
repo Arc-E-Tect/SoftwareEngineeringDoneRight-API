@@ -49,8 +49,14 @@ final class GeneratedSources {
 
     static GeneratedSources generate(Path contract, String version, Path into, Settings settings,
                                      List<Emitter> emitters) {
+        return generate(contract, version, into, settings, emitters, null);
+    }
+
+    static GeneratedSources generate(Path contract, String version, Path into, Settings settings,
+                                     List<Emitter> emitters, Path endpointIndex) {
         Path sources = into.resolve("sources");
-        GenerationReport report = Generation.run(contract, version, "a".repeat(64), settings, sources, emitters);
+        GenerationReport report = Generation.run(contract, version, "a".repeat(64), settings, sources, emitters,
+                endpointIndex);
         return new GeneratedSources(sources, report);
     }
 
