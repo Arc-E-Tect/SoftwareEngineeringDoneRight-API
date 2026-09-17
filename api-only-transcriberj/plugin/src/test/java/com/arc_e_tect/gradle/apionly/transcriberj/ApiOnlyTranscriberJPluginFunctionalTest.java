@@ -60,6 +60,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                 apiOnlyTranscriberJ {
                     subscription('user-account') {
                         basePackage = 'com.example.contract'
+                        recursionDepth = (findProperty('transcriberDepth') ?: '3') as int
                     }
                 }
 
@@ -129,7 +130,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                 .contains("COUNT 2")
                 .contains("VERSION 1.0.0")
                 .contains("API-Only TranscriberJ: user-account 1.0.0: 17 degraded method(s), 2 recommendation(s), "
-                        + "2 undecided construct(s)");
+                        + "2 undecided construct(s), 0 warning(s)");
         assertThat(first.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(first.task(":verifyContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(projectDir.resolve("build/reports/transcriberj/user-account.txt")).exists();
@@ -145,6 +146,13 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         BuildResult upgraded = runner("useContract", "-PcontractVersion=1.0.1").build();
         assertThat(upgraded.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(upgraded.getOutput()).contains("VERSION 1.0.1");
+    }
+
+    @Test
+    void designWarningsAreLoggedAsWarnings() throws Exception {
+        BuildResult result = runner("generateContractSourcesUserAccount", "-PtranscriberDepth=5").build();
+        assertThat(result.getOutput()).contains("API-Only TranscriberJ: user-account 1.0.0: warning: "
+                + "recursionDepth is 5; following a recursion more than 3 times");
     }
 
     @Test

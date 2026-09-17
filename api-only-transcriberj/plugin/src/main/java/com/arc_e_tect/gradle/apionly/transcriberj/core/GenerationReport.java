@@ -35,6 +35,7 @@ public final class GenerationReport {
     private final List<Degraded> degraded = new ArrayList<>();
     private final List<Recommendation> recommendations = new ArrayList<>();
     private final List<Finding> undecided = new ArrayList<>();
+    private final List<String> warnings = new ArrayList<>();
 
     /** Creates an empty report. */
     public GenerationReport() {
@@ -46,6 +47,10 @@ public final class GenerationReport {
 
     void recommend(String location, String advice) {
         recommendations.add(new Recommendation(location, advice));
+    }
+
+    void warn(String warning) {
+        warnings.add(warning);
     }
 
     void findings(List<Finding> findings) {
@@ -80,6 +85,15 @@ public final class GenerationReport {
     }
 
     /**
+     * Everything about the contract's design worth a second look.
+     *
+     * @return the warnings, in the order they were found
+     */
+    public List<String> warnings() {
+        return List.copyOf(warnings);
+    }
+
+    /**
      * The report as text, for a file and a build log.
      *
      * @param contract the contract's name
@@ -91,7 +105,12 @@ public final class GenerationReport {
         out.append("API-Only TranscriberJ: ").append(contract).append(' ').append(version).append('\n');
         out.append(degraded.size()).append(" degraded method(s), ")
                 .append(recommendations.size()).append(" recommendation(s), ")
-                .append(undecided.size()).append(" undecided construct(s)\n");
+                .append(undecided.size()).append(" undecided construct(s), ")
+                .append(warnings.size()).append(" warning(s)\n");
+        if (!warnings.isEmpty()) {
+            out.append("\nWarnings:\n");
+            warnings.forEach(w -> out.append("  ").append(w).append('\n'));
+        }
         if (!degraded.isEmpty()) {
             out.append("\nDegraded methods -- these throw UnsupportedOperationException:\n");
             for (Degraded d : degraded) {

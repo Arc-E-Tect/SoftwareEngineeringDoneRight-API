@@ -150,6 +150,10 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             List<String> report = Files.readAllLines(getReportFile().get().getAsFile().toPath());
             getLogger().lifecycle("{}: {} -- see {}", report.get(0), report.get(1),
                     getReportFile().get().getAsFile());
+            int warnings = report.indexOf("Warnings:");
+            for (int i = warnings + 1; warnings >= 0 && i < report.size() && !report.get(i).isBlank(); i++) {
+                getLogger().warn("{}: warning: {}", report.get(0), report.get(i).strip());
+            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

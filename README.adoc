@@ -128,7 +128,7 @@ Every component gates its own build on coverage, and every gate was checked by m
 |Measured
 |94.4% lines, 95.3% functions, 88.0% branches
 |97.1% instructions, 90.8% branches
-|`plugin` 96.7% instructions, 87.8% branches; `spi` 96.1% instructions, 93.9% branches
+|`plugin` 96.6% instructions, 87.9% branches; `spi` 96.1% instructions, 93.9% branches
 
 |Exclusions
 |none

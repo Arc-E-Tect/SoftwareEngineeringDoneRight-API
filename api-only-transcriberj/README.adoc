@@ -102,7 +102,8 @@ apiOnlyTranscriberJ {
         // sourceSets = ['testContract', 'testContractWireMock']
 
         // How many times a recursive $ref is followed in field descriptions
-        // before the rest is documented as a subsection.
+        // before the rest is documented as a subsection. Above 3 is warned
+        // about: see "Depth is warned about".
         // Default: 3
         // recursionDepth = 3
 
@@ -257,6 +258,17 @@ A `body(...)` that cannot be generated takes `Object...`, since its parameters c
 
 Every degraded method, every recommendation and every undecided construct is listed in `build/reports/transcriberj/<contract>.txt`, and the build log gives the counts.
 A schema written inline in an operation is generated, and also listed with the recommendation to make it a component.
+
+[#depth-warnings]
+=== Depth is warned about
+
+A contract that goes three levels deep is more often an accident than a design, so generation warns, in the build log and the report, whatever `recursionDepth` allows:
+
+* when `recursionDepth` is set above 3;
+* when a recursive `$ref` runs through 3 or more components, such as `A -> B -> C -> A`;
+* when a request or response body nests objects 3 or more levels deep, following references and list items, such as `order.customer.address`.
+
+A warning never fails the build.
 
 [#emitters]
 == Emitters

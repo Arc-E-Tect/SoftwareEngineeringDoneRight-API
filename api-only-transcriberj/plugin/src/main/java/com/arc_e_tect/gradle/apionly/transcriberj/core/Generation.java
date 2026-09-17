@@ -71,6 +71,7 @@ public final class Generation {
         report.findings(model.findings());
         Shapes shapes = new Shapes(model);
         CoreClassNames names = new CoreClassNames(model, shapes, report);
+        DesignWarnings.check(model, settings, shapes, names, report);
 
         CoreEmitter core = new CoreEmitter(shapes, names, contractSha256);
         core.emit(new Context(model, settings, names, outputDirectory, report, core.id()));
