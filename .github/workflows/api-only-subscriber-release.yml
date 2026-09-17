@@ -26,6 +26,7 @@ jobs:
       fail_on_empty_version: ${{ github.ref_name == 'main' }}
       fail_on_existing_tag: ${{ github.ref_name == 'main' }}
       project_dir: api-only-subscriber
+      tag_format: 'api-only-subscriber-v${version}'
       DEBUG: true
     secrets:
       sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}

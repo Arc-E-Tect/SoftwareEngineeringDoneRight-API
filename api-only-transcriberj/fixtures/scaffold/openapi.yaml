@@ -1,0 +1,70 @@
+openapi: 3.1.1
+info:
+  title: Example API
+  version: 0.1.0
+  description: |
+    What this API is for.
+
+    ## Conventions
+
+    Prose shared by every document in this library lives in a Markdown snippet like
+    this one, pulled into the specification by a placeholder token. Replace this file
+    with whatever your own API consumers need to know up front -- pagination, status
+    codes, error shapes.
+  contact:
+    name: Example Team
+    url: https://example.invalid
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: https://api.example.invalid
+    description: Production.
+security:
+  - bearerAuth: []
+tags: []
+paths:
+  /v1/examples:
+    get:
+      operationId: listExamples
+      summary: List examples.
+      responses:
+        '200':
+          description: The examples.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequestProblemV1'
+components:
+  securitySchemes:
+    bearerAuth:
+      x-fragment-path: openapi/components/common/security/BearerAuth.yaml
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    InvalidRequestProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml
+      description: The request was not valid.
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                format: uri
+              title:
+                type: string
+              status:
+                type: integer
+              detail:
+                type: string
+            required:
+              - type
+              - title
+              - status

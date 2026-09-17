@@ -153,8 +153,30 @@ function load(configPath) {
         isPublished(target) {
             return this.targets[target].publish !== false;
         },
-        bundlePath(target, kind) {
-            return path.join(this.stagingDir(kind), this.targets[target][kind].bundle);
+        // A target's bundle root in a staged tree: the build's own, unless another
+        // staged copy is named.
+        bundlePath(target, kind, stagingRoot = this.stagingRoot(kind)) {
+            return path.join(
+                stagingRoot,
+                requireString(this.sources[kind], `sources.${kind}`),
+                this.targets[target][kind].bundle);
+        },
+        // Whether built documents of this kind carry x-fragment-path on each
+        // component. On unless turned off; OpenAPI only.
+        fragmentPaths(kind) {
+            if (kind !== "openapi") return false;
+            const configured = (this.defaults.openapi || {}).fragmentPaths;
+            if (configured === undefined) return true;
+            if (typeof configured !== "boolean") {
+                throw new ConfigError(
+                    `defaults.openapi.fragmentPaths must be true or false, not ${JSON.stringify(configured)}`);
+            }
+            return configured;
+        },
+        // Where one target's stamped copies of the staged tree are built.
+        fragmentPathStaging(target) {
+            const staging = this.build.staging || "build/staging";
+            return path.resolve(this.root, staging, "fragment-paths", target);
         },
         // The file a target's version is read from: the target's own `versionFile`,
         // relative to this configuration, or else <target>.bundle.properties beside

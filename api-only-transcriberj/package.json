@@ -1,0 +1,18 @@
+{
+  "name": "api-only-transcriberj",
+  "private": true,
+  "description": "Release bookkeeping only. The plugin is a Gradle build; nothing here is published to npm.",
+  "version": "0.0.0",
+  "devDependencies": {
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "semantic-release": "^25.0.9"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24.10.0 || >=26.0.0"
+  }
+}

@@ -36,6 +36,11 @@ Published as https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-
 |A Gradle plugin.
 Fetches a published contract into a build at the version the build declares, verifies it against a committed lockfile, and fails when the contract has drifted.
 Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal ↗].
+
+|link:api-only-transcriberj/README.adoc[API-Only TranscriberJ →]
+|A Gradle plugin, building on the Subscriber.
+Generates a Java class tree from a subscribed contract: bodies, field descriptions and constants for contract tests and stubs, with room for dialects such as REST Docs as separate emitter libraries.
+Not released yet.
 |===
 
 [#documentation]
@@ -99,6 +104,9 @@ npm test --prefix api-only-publisher
 
 # Subscriber
 cd api-only-subscriber && ./gradlew build
+
+# TranscriberJ
+cd api-only-transcriberj && ./gradlew check
 ----
 
 To change either tool, read link:docs/reference/how-publisher-and-subscriber-work-together.adoc#extending[Where a change belongs →] first.
@@ -106,26 +114,30 @@ To change either tool, read link:docs/reference/how-publisher-and-subscriber-wor
 [#quality-gates]
 == Quality gates
 
-Both components gate their own release, and both gates were checked by making them fail before trusting them to pass.
+Every component gates its own build on coverage, and every gate was checked by making it fail before trusting it to pass.
 
-[cols="1,2,2", options="header"]
+[cols="1,2,2,2", options="header"]
 |===
-| |Publisher |Subscriber
+| |Publisher |Subscriber |TranscriberJ
 
 |Coverage
 |`npm test` enforces 90% of lines and functions, 80% of branches
 |JaCoCo, 0.9 minimum, wired into `check`
+|JaCoCo, 0.9 minimum per module, wired into `check`
 
 |Measured
 |94.4% lines, 95.3% functions, 88.0% branches
 |97.1% instructions, 90.8% branches
+|97.2% instructions, 89.9% branches
 
 |Exclusions
+|none
 |none
 |none
 
 |Dependencies
 |`npm audit`, failing at moderate and above
+|OWASP dependency-check, as the Gradle plugins run it
 |OWASP dependency-check, as the Gradle plugins run it
 |===
 
@@ -140,7 +152,9 @@ The answer taken here is to test those classes in-process as well, so the number
 [#releasing]
 == Releasing
 
-Both components release through `semantic-release`, driven by Conventional Commits, each with its own tag namespace (`api-only-publisher-v*`, `api-only-subscriber-v*`) so their version histories are genuinely independent.
+Every component releases through `semantic-release`, driven by Conventional Commits, each with its own tag namespace (`api-only-publisher-v*`, `api-only-subscriber-v*`, `api-only-transcriberj-v*`) so their version histories are genuinely independent.
+
+The TranscriberJ's emitter interface is part of the plugin, so one release publishes both.
 
 Each is seeded with a `-v0.0.0` tag, and `release/first-release-patch-analyzer.js` forces the first real release to be a patch, so a new component starts at `0.0.1` rather than semantic-release's default `1.0.0`.
 
@@ -155,7 +169,7 @@ Required repository secrets:
 Needs a role that can bypass the `commit-push-main` ruleset, since a release pushes to a protected branch.
 
 |`GRADLE_PUBLISH_KEY` / `GRADLE_PUBLISH_SECRET`
-|Publishing the Subscriber to the Gradle Plugin Portal.
+|Publishing the Subscriber and the TranscriberJ to the Gradle Plugin Portal.
 |===
 
 The Publisher needs no npm credential: it publishes through npm https://docs.npmjs.com/trusted-publishers[trusted publishing ↗], exchanging a short-lived OIDC token for publish rights, and attaches a provenance attestation tying each tarball to the commit and workflow run that produced it.

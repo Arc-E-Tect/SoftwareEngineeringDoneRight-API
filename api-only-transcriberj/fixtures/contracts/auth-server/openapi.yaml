@@ -1,0 +1,335 @@
+openapi: 3.1.1
+info:
+  title: 'IFF - Identification: Friend or Family API'
+  version: 1.0.0
+  contact:
+    name: Arc-E-Tect
+    email: sedr@arc-e-tect.com
+    url: https://discord.gg/HcH7YzTSGH
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  x-logo:
+    url: assets/iff/images/sedr_iff.png
+    altText: IFF logo
+  description: |
+    # 📙  Introduction
+
+    ###  Background
+
+    The IFF application is designed as an API-only application.
+
+
+    IFF is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.
+
+
+    The basic idea behind IFF is to have an application that uses the [Six Degrees of Separation](https://en.wikipedia.org/wiki/Six_degrees_of_separation) idea to contact everybody worldwide.
+    This idea assumes that every person knows 44 other people, and those 44 persons know 43 other than you, and so on, eventually covering the world population.
+
+
+    Another study showed that, on average, people in the US know 611 persons by name [The limits of our personal experience and the value of statistics - Our World in Data](https://ourworldindata.org/limits-personal-experience).
+    Of the 8 billion persons that make up the world population, you know 600 persons by name.
+
+    That is, assuming the study I referred to is correct and knowing that you must know at least 44 people to be connected to the remaining 8 billion minus 44 people at the sixth degree.
+
+    Assuming that you know all your friends and family by name but that not all 600 persons you know by name are family or even friends, but possibly friends of friends or just merely acquaintances, it is useful to know your relationship with a person when you meet this person.
+    To determine whether a person is a friend or family, somebody you know by name or just somebody, we apply a standard personality psychology metric: [Three Levels of Knowing a Person | Psychology Today](https://www.psychologytoday.com/us/blog/the-personality-analyst/201011/three-levels-knowing-person).
+
+    ###  API Reference
+
+    The IFF APIs are organized around [REST](https://en.wikipedia.org/wiki/REST).
+    The API follows the [OpenAPI](https://swagger.io/specification/v3/) specification.
+    The APIs accept request bodies in JSON format and returns JSON-encoded responses.
+    We use standard HTTP response codes, and verbs.
+
+    # 📙  Rate Limits
+
+    Clients that send many requests in quick succession might see error responses that show up as status code 429.
+
+    ### Handling rate limits gracefully
+
+    A basic technique for integrations to gracefully handle limiting is to watch for 429 status codes and build in a retry mechanism.
+    The retry mechanism should follow an exponential backoff schedule to reduce request volume when necessary.
+    We also recommend building some randomness into the backoff schedule to avoid [thundering herd](https://encore.dev/blog/thundering-herd-problem) effect.
+
+    # 📙   Versioning
+
+    The current API version, v1, is a URI path prefix that precedes every API endpoint.
+
+    # 📙   Pagination
+
+    These APIs have no pagination specific parameters needed in the request. At the moment we dont support bulk fetches or updates.
+
+    #### Parameters for Pagination
+
+      <table>
+          <tr>
+            <td><b>Parameter</b></td>
+            <td><b>Description</b></td>
+          </tr>
+          <tr>
+            <td>_</td>
+            <td>_</td>
+          </tr>
+      </table>
+
+    # 📙  Status Codes and Error Messages
+
+    Sometimes your API call will generate an error or return a HTTP status code.
+    Here you will find additional information about what to expect the request is incorrect, or we fail to properly process your request.
+
+    #### The below table defines the HTTP Status codes that this API may return.
+
+
+      <table>
+          <tr>
+            <td><b>HTTP Status Code</b></td>
+            <td><b>Summary</b></td>
+            <td><b>Description</b></td>
+          </tr>
+          <tr>
+            <td>200</td>
+            <td>OK</td>
+            <td>The request is processed successfully</td>
+          </tr>
+          <tr>
+            <td>201</td>
+            <td>Created</td>
+            <td>The request was successfully executed</td>
+          </tr>
+          <tr>
+            <td>202</td>
+            <td>Accepted</td>
+            <td>The request is accepted successfully</td>
+          </tr>
+          <tr>
+            <td>204</td>
+            <td>No content</td>
+            <td>The response contains no content</td>
+          </tr>
+      </table>
+      <br/>
+      <br/>
+      
+
+    #### The below table define the Error Codes that this API may return.
+
+      <table>
+          <tr>
+            <td><b>Error Code</b></td>
+            <td><b>Summary</b></td>
+            <td><b>Description</b></td>
+          </tr>
+           <tr>
+            <td>400</td>
+            <td>Bad Request</td>
+            <td>The request is invalid</td>
+          </tr>
+           <tr>
+            <td>401</td>
+            <td>Unauthorized</td>
+            <td>Requires authentication.</td>
+          </tr>
+           <tr>
+            <td>403</td>
+            <td>Forbidden</td>
+            <td>You are not authorized to access the API. See the API's documentation to understand who is authorized to call the API.</td>
+          </tr>
+           <tr>
+            <td>404</td>
+            <td>Not Found</td>
+            <td>The requested resource could not be found</td>
+          </tr>
+           <tr>
+            <td>409</td>
+            <td>Conflict</td>
+            <td>There is a conflict in the request. The resource most likely exists</td>
+          </tr>
+          <tr>
+            <td>422</td>
+            <td>Unprocessable Content</td>
+            <td>The request is not processable or there is a some validation problem with request</td>
+          </tr>
+          <tr>
+          <tr>
+            <td>429</td>
+            <td>Too Many Requests</td>
+            <td>Too many requests hit the API too quickly. We recommend an exponential backoff of your requests</td>
+          </tr>
+          <tr>
+            <td>500, 502, 503, 504</td>
+            <td>Server Errors</td>
+            <td>Something went wrong on our end. (These are rare.)</td>
+          </tr>
+      </table>
+servers:
+  - url: https://api.iff.arc-e-tect.com
+    description: Production server
+  - url: https://localhost:9090
+    description: Local development server
+    x-internal: true
+tags:
+  - name: System
+    description: |
+      The System tag is used to document the system-level operations of the API.
+paths:
+  /v1:
+    get:
+      security: []
+      tags:
+        - System
+      operationId: GetRoot
+      summary: |
+        Get application root
+      description: |
+        This endpoint returns the basic application information, its name and the currently deployed version of the application.
+      responses:
+        '200':
+          description: |
+            Returns a json formatted object containing the application name and version.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - versionName
+                  - versionCode
+                properties:
+                  versionName:
+                    type: string
+                    minLength: 3
+                    maxLength: 16
+                    examples:
+                      - WIREMOCK
+                  versionCode:
+                    type: number
+                    examples:
+                      - 1
+                  dependencies:
+                    type: object
+                    description: |
+                      Version information of downstream microservices.
+                      Null values for versionName and versionCode indicate the service was unreachable.
+                    additionalProperties:
+                      type: object
+                      properties:
+                        versionName:
+                          type:
+                            - string
+                            - 'null'
+                        versionCode:
+                          type:
+                            - number
+                            - 'null'
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+  /v1/actuator/health:
+    get:
+      security: []
+      tags:
+        - System
+      operationId: GetHealth
+      summary: |
+        Check the health status
+      description: |
+        This endpoint checks the health status of the application.
+        It returns a simple status message indicating whether the application is up and running.
+      responses:
+        '200':
+          description: |
+            Returns the health status of the application as a single text string.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    examples:
+                      - UP
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+components:
+  schemas:
+    ProblemDetailsV1:
+      x-fragment-path: openapi/components/common/responses/errors/ProblemDetailsV1.yaml
+      title: Problem Details
+      description: |
+        A machine-readable problem detail, per RFC 9457. Operation-specific error responses compose this schema via `allOf` and fix `type`/`title`/`status` to known values; use this schema directly only where no more specific problem type has been documented.
+      type: object
+      properties:
+        type:
+          title: Type
+          description: |
+            A URI reference that identifies the problem type. Defaults to "about:blank" when no more specific type applies.
+          type: string
+          format: uri
+          default: about:blank
+          examples:
+            - about:blank
+        title:
+          title: Title
+          description: A short, human-readable summary of the problem type.
+          type: string
+          examples:
+            - Internal Server Error
+        status:
+          title: Status
+          description: The HTTP status code generated by the origin server for this occurrence of the problem.
+          type: integer
+          examples:
+            - 500
+        detail:
+          title: Detail
+          description: A human-readable explanation specific to this occurrence of the problem.
+          type: string
+          examples:
+            - An unexpected error occurred while processing the request.
+        instance:
+          title: Instance
+          description: A URI reference that identifies the specific occurrence of the problem.
+          type: string
+          format: uri
+          examples:
+            - https://api.iff.arc-e-tect.com/v1/users/registrations
+      additionalProperties: true
+    InternalServerProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/InternalServerProblemV1.yaml
+      title: Internal Server Problem
+      description: An unexpected server-side error occurred.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: about:blank
+              examples:
+                - about:blank
+            title:
+              type: string
+              const: Internal Server Error
+              examples:
+                - Internal Server Error
+            status:
+              type: integer
+              const: 500
+              examples:
+                - 500
+            detail:
+              type: string
+              examples:
+                - An unexpected error occurred while processing the request.

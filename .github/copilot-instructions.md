@@ -40,6 +40,13 @@ The hooks provide local defense in depth by rejecting keystores and likely hardc
 - Do not use `pull_request_target` with untrusted pull-request code. Do not expose secrets to pull-request workflows from forks.
 - Use immutable action, container, and dependency versions. Do not use mutable `latest` tags.
 
+## API-Only TranscriberJ
+
+- Build and test with `cd api-only-transcriberj && ./gradlew check`. Add `-PreferenceRepository=<SoftwareEngineeringDoneRight-Code checkout>` to also compare the committed copies of the reference implementation's hand-written classes with that repository.
+- The `model` and `spi` packages are what emitter libraries compile against; changing them changes a published interface. They are part of the plugin artifact and released with it.
+- The plugin's runtime dependencies end up on every consumer's build script classpath. They are the API-Only Subscriber and `snakeyaml-engine`; add none without an explicit decision.
+- It is built by `api-only-transcriberj-build.yml`, released by `api-only-transcriberj-release.yml` under the `api-only-transcriberj-v*` tags, and scanned by `nvd-cache-refresh.yml`.
+
 ## Contribution and change rules
 
 - Work on a branch and use a pull request for changes to `main`. Do not bypass the repository ruleset.

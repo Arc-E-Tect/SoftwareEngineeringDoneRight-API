@@ -1,0 +1,878 @@
+openapi: 3.1.1
+info:
+  title: 'IFF - Identification: Friend or Family API'
+  version: 1.0.0
+  contact:
+    name: Arc-E-Tect
+    email: sedr@arc-e-tect.com
+    url: https://discord.gg/HcH7YzTSGH
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  x-logo:
+    url: assets/iff/images/sedr_iff.png
+    altText: IFF logo
+  description: |
+    # 📙  Introduction
+
+    ###  Background
+
+    The IFF application is designed as an API-only application.
+
+
+    IFF is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.
+
+
+    The basic idea behind IFF is to have an application that uses the [Six Degrees of Separation](https://en.wikipedia.org/wiki/Six_degrees_of_separation) idea to contact everybody worldwide.
+    This idea assumes that every person knows 44 other people, and those 44 persons know 43 other than you, and so on, eventually covering the world population.
+
+
+    Another study showed that, on average, people in the US know 611 persons by name [The limits of our personal experience and the value of statistics - Our World in Data](https://ourworldindata.org/limits-personal-experience).
+    Of the 8 billion persons that make up the world population, you know 600 persons by name.
+
+    That is, assuming the study I referred to is correct and knowing that you must know at least 44 people to be connected to the remaining 8 billion minus 44 people at the sixth degree.
+
+    Assuming that you know all your friends and family by name but that not all 600 persons you know by name are family or even friends, but possibly friends of friends or just merely acquaintances, it is useful to know your relationship with a person when you meet this person.
+    To determine whether a person is a friend or family, somebody you know by name or just somebody, we apply a standard personality psychology metric: [Three Levels of Knowing a Person | Psychology Today](https://www.psychologytoday.com/us/blog/the-personality-analyst/201011/three-levels-knowing-person).
+
+    ###  API Reference
+
+    The IFF APIs are organized around [REST](https://en.wikipedia.org/wiki/REST).
+    The API follows the [OpenAPI](https://swagger.io/specification/v3/) specification.
+    The APIs accept request bodies in JSON format and returns JSON-encoded responses.
+    We use standard HTTP response codes, and verbs.
+
+    # 📙  Rate Limits
+
+    Clients that send many requests in quick succession might see error responses that show up as status code 429.
+
+    ### Handling rate limits gracefully
+
+    A basic technique for integrations to gracefully handle limiting is to watch for 429 status codes and build in a retry mechanism.
+    The retry mechanism should follow an exponential backoff schedule to reduce request volume when necessary.
+    We also recommend building some randomness into the backoff schedule to avoid [thundering herd](https://encore.dev/blog/thundering-herd-problem) effect.
+
+    # 📙   Versioning
+
+    The current API version, v1, is a URI path prefix that precedes every API endpoint.
+
+    # 📙   Pagination
+
+    These APIs have no pagination specific parameters needed in the request. At the moment we dont support bulk fetches or updates.
+
+    #### Parameters for Pagination
+
+      <table>
+          <tr>
+            <td><b>Parameter</b></td>
+            <td><b>Description</b></td>
+          </tr>
+          <tr>
+            <td>_</td>
+            <td>_</td>
+          </tr>
+      </table>
+
+    # 📙  Status Codes and Error Messages
+
+    Sometimes your API call will generate an error or return a HTTP status code.
+    Here you will find additional information about what to expect the request is incorrect, or we fail to properly process your request.
+
+    #### The below table defines the HTTP Status codes that this API may return.
+
+
+      <table>
+          <tr>
+            <td><b>HTTP Status Code</b></td>
+            <td><b>Summary</b></td>
+            <td><b>Description</b></td>
+          </tr>
+          <tr>
+            <td>200</td>
+            <td>OK</td>
+            <td>The request is processed successfully</td>
+          </tr>
+          <tr>
+            <td>201</td>
+            <td>Created</td>
+            <td>The request was successfully executed</td>
+          </tr>
+          <tr>
+            <td>202</td>
+            <td>Accepted</td>
+            <td>The request is accepted successfully</td>
+          </tr>
+          <tr>
+            <td>204</td>
+            <td>No content</td>
+            <td>The response contains no content</td>
+          </tr>
+      </table>
+      <br/>
+      <br/>
+      
+
+    #### The below table define the Error Codes that this API may return.
+
+      <table>
+          <tr>
+            <td><b>Error Code</b></td>
+            <td><b>Summary</b></td>
+            <td><b>Description</b></td>
+          </tr>
+           <tr>
+            <td>400</td>
+            <td>Bad Request</td>
+            <td>The request is invalid</td>
+          </tr>
+           <tr>
+            <td>401</td>
+            <td>Unauthorized</td>
+            <td>Requires authentication.</td>
+          </tr>
+           <tr>
+            <td>403</td>
+            <td>Forbidden</td>
+            <td>You are not authorized to access the API. See the API's documentation to understand who is authorized to call the API.</td>
+          </tr>
+           <tr>
+            <td>404</td>
+            <td>Not Found</td>
+            <td>The requested resource could not be found</td>
+          </tr>
+           <tr>
+            <td>409</td>
+            <td>Conflict</td>
+            <td>There is a conflict in the request. The resource most likely exists</td>
+          </tr>
+          <tr>
+            <td>422</td>
+            <td>Unprocessable Content</td>
+            <td>The request is not processable or there is a some validation problem with request</td>
+          </tr>
+          <tr>
+          <tr>
+            <td>429</td>
+            <td>Too Many Requests</td>
+            <td>Too many requests hit the API too quickly. We recommend an exponential backoff of your requests</td>
+          </tr>
+          <tr>
+            <td>500, 502, 503, 504</td>
+            <td>Server Errors</td>
+            <td>Something went wrong on our end. (These are rare.)</td>
+          </tr>
+      </table>
+servers:
+  - url: https://api.iff.arc-e-tect.com
+    description: Production server
+  - url: https://localhost:9090
+    description: Local development server
+    x-internal: true
+tags:
+  - name: System
+    description: |
+      The System tag is used to document the system-level operations of the API.
+  - name: UserAccount
+    description: Operations related to user account management, including registration, lookup, and lifecycle events.
+paths:
+  /v1:
+    get:
+      security: []
+      tags:
+        - System
+      operationId: GetRoot
+      summary: |
+        Get application root
+      description: |
+        This endpoint returns the basic application information, its name and the currently deployed version of the application.
+      responses:
+        '200':
+          description: |
+            Returns a json formatted object containing the application name and version.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - versionName
+                  - versionCode
+                properties:
+                  versionName:
+                    type: string
+                    minLength: 3
+                    maxLength: 16
+                    examples:
+                      - WIREMOCK
+                  versionCode:
+                    type: number
+                    examples:
+                      - 1
+                  dependencies:
+                    type: object
+                    description: |
+                      Version information of downstream microservices.
+                      Null values for versionName and versionCode indicate the service was unreachable.
+                    additionalProperties:
+                      type: object
+                      properties:
+                        versionName:
+                          type:
+                            - string
+                            - 'null'
+                        versionCode:
+                          type:
+                            - number
+                            - 'null'
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+  /v1/actuator/health:
+    get:
+      security: []
+      tags:
+        - System
+      operationId: GetHealth
+      summary: |
+        Check the health status
+      description: |
+        This endpoint checks the health status of the application.
+        It returns a simple status message indicating whether the application is up and running.
+      responses:
+        '200':
+          description: |
+            Returns the health status of the application as a single text string.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    examples:
+                      - UP
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+  /v1/users/{username}:
+    get:
+      security: []
+      tags:
+        - UserAccount
+      operationId: GetUser
+      summary: |
+        Check whether a user exists
+      description: Looks up a user account by username. Returns the user's basic profile when found, or 404 when no account with that username exists. This operation is used as a precondition check before initiating registration.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: The username to look up.
+          schema:
+            $ref: '#/components/schemas/UsernameV1'
+      responses:
+        '200':
+          description: A user account with the given username exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserV1'
+        '404':
+          description: No user account with the given username exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UserNotFoundProblemV1'
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+  /v1/users/registrations:
+    post:
+      security: []
+      tags:
+        - UserAccount
+      operationId: InitiateUserRegistration
+      summary: |
+        Initiate user registration
+      description: Starts the registration process for a new IFF user account. The caller provides an email address; IFF sends a verification email containing a one-time verification link to that address. The account is not active until the user follows the link and confirms ownership of the address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequestV1'
+      responses:
+        '202':
+          description: Registration initiated. A verification email has been dispatched to the provided address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegistrationResponseV1'
+        '400':
+          description: The request body is missing or contains an invalid username or email address.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InvalidRequestProblemV1'
+        '409':
+          description: A pending or active user account with the given username already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UsernameAlreadyRegisteredProblemV1'
+        '422':
+          description: A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/RegisteredRequestCannotBeProcessedProblemV1'
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+  /v1/users/registrations/verification-email:
+    post:
+      security: []
+      tags:
+        - UserAccount
+      operationId: ResendVerificationEmail
+      summary: |
+        Resend verification email
+      description: Sends a new verification email to the email address associated with the pending registration identified by username. The caller provides the username; IFF generates a new one-time verification link and dispatches a new verification email to the associated email address. This operation is intended for users who did not receive the original verification email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationResendEmailRequestV1'
+      responses:
+        '202':
+          description: Verification email resent. A new verification email has been dispatched to the provided address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegistrationResponseV1'
+        '400':
+          description: The request body is missing or contains an invalid username.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InvalidRequestProblemV1'
+        '404':
+          description: No pending registration exists for the given username.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/RegistrationNotFoundProblemV1'
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+  /v1/users/registrations/completion/{verificationLink}:
+    get:
+      security: []
+      tags:
+        - UserAccount
+      operationId: CompleteUserRegistration
+      summary: |
+        Complete user registration
+      description: Completes the registration process for a new IFF user account. The caller provides the verification link received by email; IFF validates the link, creates the user account, and sends a confirmation email. The verification link is a one-time token embedded in the verification email.
+      parameters:
+        - name: verificationLink
+          in: path
+          required: true
+          description: The one-time verification token from the verification email.
+          schema:
+            type: string
+            examples:
+              - abc123token
+      responses:
+        '200':
+          description: Registration completed. The user account has been created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAccountV1'
+        '410':
+          description: The verification link has been superseded and is no longer valid. A new verification email has been sent; use the new link to complete registration.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/VerificationLinkSupersededProblemV1'
+        '422':
+          description: The verification link has expired, or the registration process has expired.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VerificationLinkExpiredProblemV1'
+                  - $ref: '#/components/schemas/RegistrationProcessExpiredProblemV1'
+        '500':
+          description: An unexpected server-side error occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InternalServerProblemV1'
+components:
+  schemas:
+    ProblemDetailsV1:
+      x-fragment-path: openapi/components/common/responses/errors/ProblemDetailsV1.yaml
+      title: Problem Details
+      description: |
+        A machine-readable problem detail, per RFC 9457. Operation-specific error responses compose this schema via `allOf` and fix `type`/`title`/`status` to known values; use this schema directly only where no more specific problem type has been documented.
+      type: object
+      properties:
+        type:
+          title: Type
+          description: |
+            A URI reference that identifies the problem type. Defaults to "about:blank" when no more specific type applies.
+          type: string
+          format: uri
+          default: about:blank
+          examples:
+            - about:blank
+        title:
+          title: Title
+          description: A short, human-readable summary of the problem type.
+          type: string
+          examples:
+            - Internal Server Error
+        status:
+          title: Status
+          description: The HTTP status code generated by the origin server for this occurrence of the problem.
+          type: integer
+          examples:
+            - 500
+        detail:
+          title: Detail
+          description: A human-readable explanation specific to this occurrence of the problem.
+          type: string
+          examples:
+            - An unexpected error occurred while processing the request.
+        instance:
+          title: Instance
+          description: A URI reference that identifies the specific occurrence of the problem.
+          type: string
+          format: uri
+          examples:
+            - https://api.iff.arc-e-tect.com/v1/users/registrations
+      additionalProperties: true
+    InternalServerProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/InternalServerProblemV1.yaml
+      title: Internal Server Problem
+      description: An unexpected server-side error occurred.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: about:blank
+              examples:
+                - about:blank
+            title:
+              type: string
+              const: Internal Server Error
+              examples:
+                - Internal Server Error
+            status:
+              type: integer
+              const: 500
+              examples:
+                - 500
+            detail:
+              type: string
+              examples:
+                - An unexpected error occurred while processing the request.
+    UsernameV1:
+      x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+      type: string
+      description: |
+        The unique username of the account.
+        Must be 5-12 characters, start with a lowercase letter,
+        and contain only lowercase alphanumerics, dashes, or underscores.
+      minLength: 5
+      maxLength: 12
+      pattern: ^[a-z][a-z0-9_-]*$
+      examples:
+        - alice_1
+        - user-name
+    UserV1:
+      x-fragment-path: openapi/components/iff/user-account/schemas/UserV1.yaml
+      title: User
+      type: object
+      required:
+        - username
+        - emailAddress
+      properties:
+        username:
+          $ref: '#/components/schemas/UsernameV1'
+        emailAddress:
+          type: string
+          format: email
+          description: The email address associated with the account.
+          minLength: 6
+          maxLength: 254
+          examples:
+            - alice@wonderland.com
+    UserNotFoundProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/UserNotFoundProblemV1.yaml
+      title: User Not Found Problem
+      description: The requested user account does not exist.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/user-not-found
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/user-not-found
+            title:
+              type: string
+              const: User Not Found
+              examples:
+                - User Not Found
+            status:
+              type: integer
+              const: 404
+              examples:
+                - 404
+            detail:
+              type: string
+              examples:
+                - No user account with the given username exists.
+    UserRegistrationRequestV1:
+      x-fragment-path: openapi/components/iff/user-account/schemas/UserRegistrationRequestV1.yaml
+      title: User Registration Request
+      type: object
+      required:
+        - username
+        - emailAddress
+      properties:
+        username:
+          $ref: '#/components/schemas/UsernameV1'
+        emailAddress:
+          type: string
+          format: email
+          description: The email address of the prospective user.
+          minLength: 6
+          maxLength: 254
+          examples:
+            - alice@wonderland.com
+    UserRegistrationResponseV1:
+      x-fragment-path: openapi/components/iff/user-account/schemas/UserRegistrationResponseV1.yaml
+      title: User Registration Response
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Human-readable confirmation that the verification email was sent.
+          minLength: 10
+          maxLength: 254
+          examples:
+            - A verification email has been sent to alice@wonderland.com
+    ErrorDetailV1:
+      x-fragment-path: openapi/components/common/responses/errors/ErrorDetailV1.yaml
+      title: Error Detail
+      required:
+        - message
+        - context
+      type: object
+      properties:
+        message:
+          title: Message
+          description: The message describing a detail of the error.
+          type: string
+          minLength: 5
+          maxLength: 254
+          examples:
+            - Divider was 0 (zero).
+        context:
+          title: Context
+          type: string
+          minLength: 5
+          maxLength: 254
+          examples:
+            - While calculating the average of an empty list of numbers, the divider was 0 (zero).
+    InvalidRequestProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml
+      title: Invalid Request Problem
+      description: The request body is missing or fails validation.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/invalid-request
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/invalid-request
+            title:
+              type: string
+              const: Invalid Request
+              examples:
+                - Invalid Request
+            status:
+              type: integer
+              const: 400
+              examples:
+                - 400
+            detail:
+              type: string
+              examples:
+                - The registration request is invalid.
+            errors:
+              title: Errors
+              description: The individual validation failures that caused this request to be rejected.
+              type: array
+              items:
+                $ref: '#/components/schemas/ErrorDetailV1'
+    UsernameAlreadyRegisteredProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/UsernameAlreadyRegisteredProblemV1.yaml
+      title: Username Already Registered Problem
+      description: A pending or active user account with the given username already exists.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/username-already-registered
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/username-already-registered
+            title:
+              type: string
+              const: Username Already Registered
+              examples:
+                - Username Already Registered
+            status:
+              type: integer
+              const: 409
+              examples:
+                - 409
+            detail:
+              type: string
+              examples:
+                - A pending or active user account with the given username already exists.
+    RegisteredRequestCannotBeProcessedProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/RegisteredRequestCannotBeProcessedProblemV1.yaml
+      title: Registration request cannot be processed
+      description: A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed
+            title:
+              type: string
+              const: Registration Request Cannot Be Processed
+              examples:
+                - Registration Request Cannot Be Processed
+            status:
+              type: integer
+              const: 422
+              examples:
+                - 422
+            detail:
+              type: string
+              examples:
+                - A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.
+    UserRegistrationResendEmailRequestV1:
+      x-fragment-path: openapi/components/iff/user-account/schemas/UserRegistrationResendEmailRequestV1.yaml
+      type: object
+      description: Request body for resending a verification email to a pending registration identified by username.
+      required:
+        - username
+      properties:
+        username:
+          $ref: '#/components/schemas/UsernameV1'
+    RegistrationNotFoundProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/RegistrationNotFoundProblemV1.yaml
+      title: Registration Not Found Problem
+      description: No pending registration exists for the given username.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/registration-not-found
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/registration-not-found
+            title:
+              type: string
+              const: Registration Not Found
+              examples:
+                - Registration Not Found
+            status:
+              type: integer
+              const: 404
+              examples:
+                - 404
+            detail:
+              type: string
+              examples:
+                - No pending registration exists for the given username.
+    UserAccountV1:
+      x-fragment-path: openapi/components/iff/user-account/schemas/UserAccountV1.yaml
+      title: User Account
+      type: object
+      required:
+        - username
+        - emailAddress
+      properties:
+        username:
+          $ref: '#/components/schemas/UsernameV1'
+        emailAddress:
+          type: string
+          format: email
+          description: The email address associated with the account.
+          minLength: 6
+          maxLength: 254
+          examples:
+            - alice@wonderland.com
+    VerificationLinkSupersededProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/VerificationLinkSupersededProblemV1.yaml
+      title: Verification Link Superseded Problem
+      description: The verification link has been superseded and is no longer valid.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+            title:
+              type: string
+              const: Verification Link Superseded
+              examples:
+                - Verification Link Superseded
+            status:
+              type: integer
+              const: 410
+              examples:
+                - 410
+            detail:
+              type: string
+              examples:
+                - The verification link has been superseded and is no longer valid. A new verification email has been sent; use the new link to complete registration.
+    VerificationLinkExpiredProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/VerificationLinkExpiredProblemV1.yaml
+      title: Verification Link Expired Problem
+      description: The verification link has expired.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/verification-link-expired
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/verification-link-expired
+            title:
+              type: string
+              const: Verification Link Expired
+              examples:
+                - Verification Link Expired
+            status:
+              type: integer
+              const: 422
+              examples:
+                - 422
+            detail:
+              type: string
+              examples:
+                - The verification link has expired. Request a new verification email to complete the registration process.
+    RegistrationProcessExpiredProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/RegistrationProcessExpiredProblemV1.yaml
+      title: Registration Process Expired Problem
+      description: The registration process has expired.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: https://api.iff.arc-e-tect.com/problems/registration-process-expired
+              examples:
+                - https://api.iff.arc-e-tect.com/problems/registration-process-expired
+            title:
+              type: string
+              const: Registration Process Expired
+              examples:
+                - Registration Process Expired
+            status:
+              type: integer
+              const: 422
+              examples:
+                - 422
+            detail:
+              type: string
+              examples:
+                - The registration process has expired. Start a new registration process.

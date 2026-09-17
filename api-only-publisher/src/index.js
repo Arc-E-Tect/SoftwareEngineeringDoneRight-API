@@ -16,6 +16,7 @@ module.exports = {
     ...require("./closure"),
     ...require("./unreferenced"),
     ...require("./aggregate"),
+    ...require("./fragment-paths"),
     ...require("./pipeline"),
     ...require("./pack"),
     ...require("./changed"),

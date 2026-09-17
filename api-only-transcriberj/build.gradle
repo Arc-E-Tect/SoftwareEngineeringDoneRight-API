@@ -1,0 +1,210 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'jacoco'
+    alias(libs.plugins.owasp.dependency.check)
+    // Publishes to the Gradle Plugin Portal, the only place the plugin is published.
+    // The emitter interface is part of the plugin: an emitter library compiles against
+    // this artifact, and one release publishes both.
+    alias(libs.plugins.plugin.publish)
+    // Kept for publishToMavenLocal, which is how the plugin is used before it is
+    // released.
+    id 'maven-publish'
+}
+
+description = 'Generates a contract-derived Java class tree from a subscribed API contract.'
+
+repositories {
+    mavenCentral()
+    // The API-Only Subscriber is published to the Gradle Plugin Portal only.
+    gradlePluginPortal()
+}
+
+java {
+    toolchain {
+        // 21, as the Subscriber and every sibling plugin target: a Gradle plugin runs
+        // inside the consumer's Gradle JVM, so this is a compatibility floor.
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+gradlePlugin {
+    website = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-transcriberj'
+    vcsUrl  = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+
+    plugins {
+        apiOnlyTranscriberJ {
+            id                  = 'com.arc-e-tect.api-only-transcriberj'
+            implementationClass = 'com.arc_e_tect.gradle.apionly.transcriberj.ApiOnlyTranscriberJPlugin'
+            displayName         = 'Arc-E-Tect API-Only TranscriberJ'
+            description         = project.description
+            tags                = ['openapi', 'api-first', 'contract', 'code-generation', 'rest-docs']
+            compatibility {
+                features {
+                    // Asserted because it is tested: ApiOnlyTranscriberJPluginFunctionalTest
+                    // runs a real build twice with --configuration-cache and requires the
+                    // second to reuse the entry.
+                    configurationCache = true
+                }
+            }
+        }
+    }
+}
+
+// The published POM is what the Plugin Portal reads to describe this plugin.
+publishing {
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            name = 'Arc-E-Tect API-Only TranscriberJ'
+            description = project.description
+            url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-transcriberj'
+            licenses {
+                license {
+                    name = 'MIT License'
+                    url = 'https://opensource.org/licenses/MIT'
+                    distribution = 'repo'
+                }
+            }
+            developers {
+                developer {
+                    id = 'arc-e-tect'
+                    name = 'Arc-E-Tect'
+                }
+            }
+            scm {
+                url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API'
+                connection = 'scm:git:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+                developerConnection = 'scm:git:git@github.com:Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+            }
+        }
+    }
+}
+
+// Ship the licence inside the artifact, not only as a claim in its metadata.
+tasks.named('jar') {
+    from(layout.projectDirectory.file('LICENSE')) {
+        into 'META-INF'
+    }
+}
+
+// The safety net (Phase 0).
+//
+// The reference implementation's hand-written testSchemaCommon classes, copied
+// verbatim from the commit named in src/test/resources/fixtures/handwritten/SOURCE.properties.
+// They live in their own source set so that Spring REST Docs, which they import,
+// never reaches main: the generated core classes must stay dependency-free (D9).
+sourceSets {
+    handwritten
+}
+
+dependencies {
+    // YAML 1.2, no transitive dependencies: the plugin's runtime classpath is the
+    // consumer's build script classpath, so every dependency here is theirs too.
+    implementation libs.snakeyaml.engine
+    implementation libs.api.only.subscriber
+
+    handwrittenImplementation libs.spring.restdocs.core
+
+    testImplementation sourceSets.handwritten.output
+    testImplementation libs.spring.restdocs.core
+    testImplementation gradleTestKit()
+    testImplementation libs.junit.jupiter
+    testImplementation libs.assertj.core
+    testImplementation libs.jackson.databind
+    testRuntimeOnly    libs.junit.platform.launcher
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    // The reference contracts and the Publisher scaffold.
+    systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('fixtures').asFile.absolutePath
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+tasks.named('test') {
+    finalizedBy jacocoTestReport
+}
+
+// The repeatable comparison command:
+//
+//   ./gradlew verifyHandwrittenFixtures
+//
+// Replays every recorded body(...) input against the hand-written classes and
+// compares the output with the committed expectation. Pass
+// -PreferenceRepository=<path to SoftwareEngineeringDoneRight-Code> to also check
+// that the committed copies still match the reference implementation at the
+// recorded commit; without it that check is skipped, not failed.
+def verifyHandwrittenFixtures = tasks.register('verifyHandwrittenFixtures', Test) {
+    description = 'Compares the hand-written reference classes and their body(...) output with the committed fixtures.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    filter {
+        includeTestsMatching 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.*'
+    }
+    def referenceRepository = providers.gradleProperty('referenceRepository')
+    inputs.property('referenceRepository', referenceRepository.orElse(''))
+    systemProperty 'transcriberj.referenceRepository', referenceRepository.getOrElse('')
+    outputs.upToDateWhen { false }
+}
+
+// Rewrites the committed body(...) expectations from the hand-written classes.
+// Only for when the fixture source commit is deliberately moved; review the diff.
+tasks.register('recordHandwrittenFixtures', JavaExec) {
+    description = 'Re-records the expected body(...) output of the hand-written reference classes.'
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenBodyRecorder'
+    args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/bodies.json').asFile.absolutePath
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    // No exclusions, as for the Publisher and the Subscriber. TestKit runs the plugin
+    // in another process, so its tasks are tested in-process as well.
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.9
+            }
+        }
+    }
+}
+
+// Javadoc is part of the product: the model and the emitter interface are what every
+// emitter is written against. Warnings are errors, as in the Subscriber.
+tasks.named('javadoc') {
+    options {
+        encoding = 'UTF-8'
+        addBooleanOption('Xdoclint:all', true)
+        addBooleanOption('Xwerror', true)
+    }
+}
+
+tasks.named('check') {
+    dependsOn verifyHandwrittenFixtures, jacocoTestCoverageVerification, tasks.named('javadoc')
+}
+
+dependencyCheck {
+    // Fatal findings fail the build only when the caller asks; otherwise the scan
+    // reports and the build continues, so a new CVE in a transitive dependency
+    // does not block an unrelated release at an arbitrary moment.
+    failBuildOnCVSS = (System.getenv('FAIL_ON_FATAL') == 'true') ? 9 : 11
+    nvd {
+        apiKey = System.getenv('NVD_APIKEY_SEDR')
+    }
+    analyzers {
+        // A JVM build. The Node analyzers would only report on the release
+        // bookkeeping's package-lock.json, which ships nowhere.
+        nodeAuditEnabled = false
+        nodeEnabled = false
+    }
+}

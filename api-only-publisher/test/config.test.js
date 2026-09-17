@@ -150,3 +150,25 @@ test("the unreferenced-fragment report sits with the lint reports", () => {
     const file = write(MINIMAL);
     assert.strictEqual(load(file).unreferencedReport(), path.join(path.dirname(file), "build/reports/lint/unreferenced.txt"));
 });
+
+test("x-fragment-path stamping is on by default, for OpenAPI only", () => {
+    const config = load(write(MINIMAL));
+    assert.strictEqual(config.fragmentPaths("openapi"), true);
+    assert.strictEqual(config.fragmentPaths("asyncapi"), false);
+    assert.strictEqual(config.fragmentPathStaging("alpha"), path.join(config.root, "build/staging/fragment-paths/alpha"));
+});
+
+test("defaults.openapi.fragmentPaths turns stamping off, and refuses anything but a boolean", () => {
+    const off = load(write(MINIMAL.replace("    outputName: openapi.yaml", "    outputName: openapi.yaml\n    fragmentPaths: false")));
+    assert.strictEqual(off.fragmentPaths("openapi"), false);
+
+    const wrong = load(write(MINIMAL.replace("    outputName: openapi.yaml", "    outputName: openapi.yaml\n    fragmentPaths: \"no\"")));
+    assert.throws(() => wrong.fragmentPaths("openapi"), (error) =>
+        error instanceof ConfigError && /defaults\.openapi\.fragmentPaths must be true or false/.test(error.message));
+});
+
+test("a bundle path can be derived under another staging root", () => {
+    const config = load(write(MINIMAL));
+    assert.strictEqual(config.bundlePath("alpha", "openapi", "/elsewhere"), path.join("/elsewhere", "openapi", "bundles/alpha.yaml"));
+    assert.strictEqual(config.bundlePath("alpha", "openapi"), path.join(config.stagingDir("openapi"), "bundles/alpha.yaml"));
+});
