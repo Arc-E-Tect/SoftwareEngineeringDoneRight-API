@@ -1,0 +1,79 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+description = 'Generates a contract-derived Java class tree from a subscribed API contract.'
+
+gradlePlugin {
+    plugins {
+        apiOnlyTranscriberJ {
+            id                  = 'com.arc-e-tect.api-only-transcriberj'
+            implementationClass = 'com.arc_e_tect.gradle.apionly.transcriberj.ApiOnlyTranscriberJPlugin'
+            displayName         = 'Arc-E-Tect API-Only TranscriberJ'
+            description         = project.description
+            tags                = ['openapi', 'api-first', 'contract', 'code-generation', 'rest-docs']
+        }
+    }
+}
+
+// The safety net (Phase 0).
+//
+// The reference implementation's hand-written testSchemaCommon classes, copied
+// verbatim from the commit named in src/test/resources/fixtures/handwritten/SOURCE.properties.
+// They live in their own source set so that Spring REST Docs, which they import,
+// never reaches main: the generated core classes must stay dependency-free (D9).
+sourceSets {
+    handwritten
+}
+
+dependencies {
+    implementation project(':api-only-transcriberj-spi')
+    implementation libs.api.only.subscriber
+
+    handwrittenImplementation libs.spring.restdocs.core
+
+    testImplementation sourceSets.handwritten.output
+    testImplementation libs.spring.restdocs.core
+    testImplementation gradleTestKit()
+    testImplementation libs.junit.jupiter
+    testImplementation libs.assertj.core
+    testImplementation libs.jackson.databind
+    testRuntimeOnly    libs.junit.platform.launcher
+}
+
+// The repeatable comparison command:
+//
+//   ./gradlew verifyHandwrittenFixtures
+//
+// Replays every recorded body(...) input against the hand-written classes and
+// compares the output with the committed expectation. Pass
+// -PreferenceRepository=<path to SoftwareEngineeringDoneRight-Code> to also check
+// that the committed copies still match the reference implementation at the
+// recorded commit; without it that check is skipped, not failed.
+def verifyHandwrittenFixtures = tasks.register('verifyHandwrittenFixtures', Test) {
+    description = 'Compares the hand-written reference classes and their body(...) output with the committed fixtures.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    filter {
+        includeTestsMatching 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.*'
+    }
+    def referenceRepository = providers.gradleProperty('referenceRepository')
+    inputs.property('referenceRepository', referenceRepository.orElse(''))
+    systemProperty 'transcriberj.referenceRepository', referenceRepository.getOrElse('')
+    outputs.upToDateWhen { false }
+}
+
+// Rewrites the committed body(...) expectations from the hand-written classes.
+// Only for when the fixture source commit is deliberately moved; review the diff.
+tasks.register('recordHandwrittenFixtures', JavaExec) {
+    description = 'Re-records the expected body(...) output of the hand-written reference classes.'
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenBodyRecorder'
+    args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/bodies.json').asFile.absolutePath
+}
+
+tasks.named('check') {
+    dependsOn verifyHandwrittenFixtures
+}

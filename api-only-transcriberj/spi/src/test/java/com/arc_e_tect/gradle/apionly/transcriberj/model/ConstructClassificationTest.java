@@ -411,7 +411,7 @@ class ConstructClassificationTest {
 
     @Test
     void thePublishersScaffoldRoundTripsWithItsReusableResponse() throws java.io.IOException {
-        java.nio.file.Path file = java.nio.file.Path.of("src/test/resources/fixtures/scaffold/openapi.yaml");
+        java.nio.file.Path file = java.nio.file.Path.of(System.getProperty("transcriberj.fixtures"), "scaffold", "openapi.yaml");
         ContractModel model = ContractParser.parse(file);
 
         Response badRequest = model.operation("listExamples").orElseThrow().responses().get(1);

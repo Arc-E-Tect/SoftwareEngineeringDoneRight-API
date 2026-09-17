@@ -24,7 +24,7 @@ class ReferenceContractsTest {
     private static final String ROOT_DEPENDENCIES =
             "/paths/~1v1/get/responses/200/content/application~1json/schema/properties/dependencies";
 
-    private static final Path CONTRACTS = Path.of("src/test/resources/fixtures/contracts");
+    private static final Path CONTRACTS = Path.of(System.getProperty("transcriberj.fixtures"), "contracts");
 
     private static ContractModel model(String target) throws IOException {
         return ContractParser.parse(CONTRACTS.resolve(target).resolve("openapi.yaml"));

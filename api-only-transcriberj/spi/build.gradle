@@ -1,0 +1,15 @@
+plugins {
+    id 'java-library'
+}
+
+description = 'The contract model and the emitter interface of the Arc-E-Tect API-Only TranscriberJ.'
+
+dependencies {
+    // YAML 1.2, no transitive dependencies: the plugin's runtime classpath is the
+    // consumer's build script classpath, so every dependency here is theirs too.
+    implementation libs.snakeyaml.engine
+
+    testImplementation libs.junit.jupiter
+    testImplementation libs.assertj.core
+    testRuntimeOnly    libs.junit.platform.launcher
+}

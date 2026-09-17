@@ -2,4 +2,20 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        // The API-Only Subscriber is published to the Gradle Plugin Portal only.
+        gradlePluginPortal()
+    }
+}
+
 rootProject.name = 'api-only-transcriberj'
+
+// The model and the emitter interface, which emitter libraries compile against.
+include 'spi'
+// The Gradle plugin, with the built-in core emitter.
+include 'plugin'
+
+project(':spi').name = 'api-only-transcriberj-spi'
+project(':plugin').name = 'api-only-transcriberj-plugin'
