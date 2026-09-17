@@ -36,6 +36,11 @@ Published as https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-
 |A Gradle plugin.
 Fetches a published contract into a build at the version the build declares, verifies it against a committed lockfile, and fails when the contract has drifted.
 Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal ↗].
+
+|link:api-only-transcriberj/README.adoc[API-Only TranscriberJ →]
+|A Gradle plugin, building on the Subscriber.
+Generates a Java class tree from a subscribed contract: bodies, field descriptions and constants for contract tests and stubs, with room for dialects such as REST Docs as separate emitter libraries.
+Not released yet.
 |===
 
 [#documentation]
@@ -99,6 +104,9 @@ npm test --prefix api-only-publisher
 
 # Subscriber
 cd api-only-subscriber && ./gradlew build
+
+# TranscriberJ
+cd api-only-transcriberj && ./gradlew check
 ----
 
 To change either tool, read link:docs/reference/how-publisher-and-subscriber-work-together.adoc#extending[Where a change belongs →] first.
@@ -106,27 +114,31 @@ To change either tool, read link:docs/reference/how-publisher-and-subscriber-wor
 [#quality-gates]
 == Quality gates
 
-Both components gate their own release, and both gates were checked by making them fail before trusting them to pass.
+Every component gates its own build on coverage, and every gate was checked by making it fail before trusting it to pass.
 
-[cols="1,2,2", options="header"]
+[cols="1,2,2,2", options="header"]
 |===
-| |Publisher |Subscriber
+| |Publisher |Subscriber |TranscriberJ
 
 |Coverage
 |`npm test` enforces 90% of lines and functions, 80% of branches
 |JaCoCo, 0.9 minimum, wired into `check`
+|JaCoCo, 0.9 minimum per module, wired into `check`
 
 |Measured
 |94.4% lines, 95.3% functions, 88.0% branches
 |97.1% instructions, 90.8% branches
+|`plugin` 96.7% instructions, 87.8% branches; `spi` 96.1% instructions, 93.9% branches
 
 |Exclusions
+|none
 |none
 |none
 
 |Dependencies
 |`npm audit`, failing at moderate and above
 |OWASP dependency-check, as the Gradle plugins run it
+|not scanned yet
 |===
 
 Coverage gates a release; dependency scanning does not.

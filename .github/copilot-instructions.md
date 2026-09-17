@@ -40,6 +40,13 @@ The hooks provide local defense in depth by rejecting keystores and likely hardc
 - Do not use `pull_request_target` with untrusted pull-request code. Do not expose secrets to pull-request workflows from forks.
 - Use immutable action, container, and dependency versions. Do not use mutable `latest` tags.
 
+## API-Only TranscriberJ
+
+- Build and test with `cd api-only-transcriberj && ./gradlew check`. Add `-PreferenceRepository=<SoftwareEngineeringDoneRight-Code checkout>` to also compare the committed copies of the reference implementation's hand-written classes with that repository.
+- The `spi` module is what emitter libraries compile against; changing it changes a published interface.
+- Runtime dependencies of the `plugin` and `spi` modules end up on every consumer's build script classpath. They are the API-Only Subscriber and `snakeyaml-engine`; add none without an explicit decision.
+- There is no CI workflow or release configuration for it yet.
+
 ## Contribution and change rules
 
 - Work on a branch and use a pull request for changes to `main`. Do not bypass the repository ruleset.

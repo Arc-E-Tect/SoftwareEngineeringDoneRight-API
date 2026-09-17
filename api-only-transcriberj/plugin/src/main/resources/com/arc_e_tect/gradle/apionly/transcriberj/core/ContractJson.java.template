@@ -1,0 +1,61 @@
+${header}
+package ${package};
+
+import java.util.List;
+
+/** Writes the JSON of the generated bodies in this package. */
+final class ContractJson {
+
+    private static final char QUOTE = 34;
+    private static final char BACKSLASH = 92;
+
+    private ContractJson() {
+    }
+
+    /** A string as a JSON string literal. */
+    static String string(String value) {
+        StringBuilder out = new StringBuilder(value.length() + 2).append(QUOTE);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case QUOTE, BACKSLASH -> out.append(BACKSLASH).append(c);
+                case 8 -> out.append(BACKSLASH).append('b');
+                case 9 -> out.append(BACKSLASH).append('t');
+                case 10 -> out.append(BACKSLASH).append('n');
+                case 12 -> out.append(BACKSLASH).append('f');
+                case 13 -> out.append(BACKSLASH).append('r');
+                default -> {
+                    if (c < 0x20) {
+                        out.append(BACKSLASH).append('u').append(String.format("%04x", (int) c));
+                    } else {
+                        out.append(c);
+                    }
+                }
+            }
+        }
+        return out.append(QUOTE).toString();
+    }
+
+    /** A body another body returned, for use as a value inside this one. */
+    static String embed(String json) {
+        return json.endsWith("\n") ? json.substring(0, json.length() - 1) : json;
+    }
+
+    /** Values already written as JSON, as a JSON array. */
+    static String array(List<String> values) {
+        return "[" + String.join(",", values) + "]";
+    }
+
+    /** Adds one member to an object begun with an opening brace. */
+    static void member(StringBuilder json, String name, String value) {
+        if (json.length() > 1) {
+            json.append(',');
+        }
+        json.append(string(name)).append(':').append(value);
+    }
+
+    /** Closes an object begun with an opening brace, as every generated body ends. */
+    static String close(StringBuilder json) {
+        return json.append('}').append('\n').toString();
+    }
+}

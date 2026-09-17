@@ -1,0 +1,332 @@
+= API-Only TranscriberJ Gradle Plugin
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+image:https://img.shields.io/badge/Java-21%2B-blue[Java 21+,link=https://adoptium.net]
+image:https://img.shields.io/badge/Gradle-9.7-02303A?logo=gradle[Gradle 9.7,link=https://gradle.org]
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+// Remove this notice when 1.0.0 is released.
+[IMPORTANT]
+====
+Not released yet.
+Until 1.0.0 is released, any release may change the `apiOnlyTranscriberJ` DSL, the generated code or the emitter interface incompatibly, without a major version bump.
+====
+
+A Gradle plugin that generates a Java class tree from a subscribed API contract: bodies, field descriptions and constants for contract tests and stubs, derived from the contract rather than copied from it by hand.
+
+It builds on the other two components.
+The link:../api-only-publisher/README.adoc[API-Only Publisher →] bundles the contract and stamps every component with the fragment it came from; the link:../api-only-subscriber/README.adoc[API-Only Subscriber →] fetches it into the build and locks its version.
+TranscriberJ reads what the Subscriber fetched, and nothing else: a project never needs access to the specification library.
+
+[TIP]
+====
+Hand-written test descriptors catch drift between an implementation and the descriptor.
+They cannot catch drift between the descriptor and the contract: if a schema gains a field and the test class does not, the contract test passes and documents the previous shape.
+Generated from the locked contract, the descriptors change when the contract does.
+====
+
+The `J` is for Java.
+
+[#plugin-id]
+== Plugin ID
+
+[source]
+----
+com.arc-e-tect.api-only-transcriberj
+----
+
+It applies the API-Only Subscriber, which it depends on.
+
+[#requirements]
+== Requirements
+
+* Java 21 or later.
+* Gradle 9; it is tested with 9.7.1, with the configuration cache on.
+* An OpenAPI 3 contract bundled by the API-Only Publisher with `defaults.openapi.fragmentPaths` left on, so that every component carries `x-fragment-path`.
+A contract without it is refused: a class is named after the fragment it came from, never after the key a bundler chose for it.
+
+[#applying]
+== Applying the plugin
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-transcriberj' version '<version>'
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('orders')
+}
+
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.orders.contract'
+    }
+}
+----
+
+The name in `subscription(...)` is the contract's name, exactly as the `apiOnlySubscriber` block subscribes to it, with `subscribe` or `subscribeAsClient`.
+
+[#configuration]
+== Configuration
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        // The package the core classes are generated into. Required.
+        basePackage = 'com.example.orders.contract'
+
+        // The source sets that compile the generated classes.
+        // Default: ['test']
+        // sourceSets = ['testContract', 'testContractWireMock']
+
+        // How many times a recursive $ref is followed in field descriptions
+        // before the rest is documented as a subsection.
+        // Default: 3
+        // recursionDepth = 3
+
+        // The description every generated field carries.
+        // Default: INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE
+        // descriptionPlaceholder = '...'
+
+        // Where the sources are generated.
+        // Default: build/generated/sources/transcriberj/<contract>
+        // into = layout.buildDirectory.dir('generated/sources/transcriberj/orders')
+    }
+}
+
+dependencies {
+    // Emitter libraries: dialects of generated code. None unless added.
+    // transcriberjEmitters 'com.example:some-emitter:1.0.0'
+}
+----
+
+Descriptions are placeholders.
+The class tree exists for contract testing; documentation is generated elsewhere, often with text a technical writer owns.
+Generating descriptions from the contract is not supported yet.
+
+[#tasks]
+== Tasks
+
+[cols="2,3", options="header"]
+|===
+|Task |What it does
+
+|`generateContractSources<Contract>`
+|Generates the class tree, replacing whatever the output directory held, and writes `build/reports/transcriberj/<contract>.txt`.
+Runs whenever the contract document or the lockfile changes; the fetch runs first.
+
+|`verifyContractSources<Contract>`
+|Fails when the generated tree was generated from another version or document than the lockfile names.
+`check` runs it.
+|===
+
+`<Contract>` is the contract's name as the Subscriber's tasks spell it: `user-account` is `UserAccount`.
+
+[#generated-code]
+== What is generated
+
+Everything goes in the base package, flat, whatever directory a fragment was in.
+
+[cols="2,3", options="header"]
+|===
+|From |A class
+
+|A schema component
+|Named after its fragment's file: `UserV1.yaml` is `UserV1`.
+
+|A reusable response, request body or parameter
+|Named after its fragment's file, as a schema is.
+
+|A schema written inline in an operation's request or response
+|Named after the operation: `<OperationId>Request`, `<OperationId>Response<Status>`.
+An operation without an `operationId` is named after its method and path.
+A `oneOf` or `anyOf` whose branches are all references gets no class: each branch already has one.
+|===
+
+Two fragments with the same file name are told apart by the nearest directory in which their paths differ: `iff/user-account/schemas/UserV1.yaml` and `iff/other/schemas/UserV1.yaml` become `UserAccountUserV1` and `OtherUserV1`.
+Only colliding classes are renamed, so adding an unrelated fragment never renames an existing class.
+Names that still collide stop generation.
+
+A class is public when code outside the package needs it: it is a request or response body, a parameter's schema, a non-schema component, or something a public `body(...)` takes as an argument.
+Otherwise it is package-private, like a base schema only ever composed with `allOf`.
+
+[#members]
+=== What each class holds
+
+* **Provenance**: `FRAGMENT_PATH` and `FRAGMENT_SHA256`, or, for an inline schema, `LOCATION` and `SCHEMA_SHA256`; and `CONTRACT_VERSION`.
+The hash is SHA-256 over the component as bundled, `x-fragment-path` included, in https://www.rfc-editor.org/rfc/rfc8785[RFC 8785 ↗] canonical JSON.
+* **Constraints**, as public constants: `MIN_LENGTH`, `MAX_LENGTH`, `PATTERN`, `FORMAT`, `ENUM`, `MINIMUM` and the rest.
+An object's are prefixed with the property: `EMAIL_ADDRESS_MIN_LENGTH`.
+They are constants only; generated bodies do not enforce them.
+* **Where it is sent**: `CONTENT_TYPE` and `CONTENT_TYPES` for bodies; `NAME`, `IN` and `REQUIRED` for a parameter; `OPERATION_ID`, `METHOD`, `PATH` and `STATUS` for an inline schema.
+* **`description()`**, the placeholder.
+* **`body(...)`** and **`fields(prefix)`**, when the schema describes an object.
+
+[#bodies]
+=== Bodies
+
+`body(...)` writes a JSON body in the shape the contract describes, as compact JSON followed by a newline.
+
+* A property with `const` is a private constant, always written, and never a parameter.
+* Every other property is a parameter, in the order the contract declares it, with `allOf` flattened and `required` merged across its branches.
+* `body(required...)` takes the required properties.
+When there are optional ones, `body(required..., optional...)` takes those too, and leaves out each one that is `null`.
+* A required argument that is `null` throws `NullPointerException`, naming it.
+
+[cols="2,3", options="header"]
+|===
+|Property |Parameter
+
+|`string` |`String`
+|`integer` |`int`, or `long` for `format: int64`; boxed when optional
+|`number` |`double`; boxed when optional
+|`boolean` |`boolean`; boxed when optional
+|An object, a `$ref` to one, a `oneOf`, or an untyped schema |`String`: JSON already written, typically by another class's `body(...)`
+|An array |`List<String>`, `List<Integer>` and so on for scalar items; `List<String>` of written JSON for object items
+|===
+
+So bodies compose:
+
+[source,java]
+----
+InvalidRequestProblemV1.body("The request is invalid", null, List.of(
+        ErrorDetailV1.body("username is too long", "username")));
+----
+
+[#fields]
+=== Field descriptions
+
+`fields(prefix)` returns a `List<ContractField>`: a path, a JSON type, whether the field is optional, a description, and whether it is a subsection or open to members the contract does not list.
+
+`ContractField` is generated into the base package, so the core classes depend on nothing.
+A dialect turns these into its own descriptors: Spring REST Docs' `FieldDescriptor`, say.
+
+A field is optional when the contract does not require it, or when an object it is inside is optional.
+A `$ref` to another object delegates to that class; a recursive one is followed `recursionDepth` times and then described as a subsection.
+A map, an object with `additionalProperties` and no properties of its own, is a subsection.
+
+[#manifest]
+=== The manifest
+
+`ContractManifest` holds the contract's name, title, version and document hash, and an entry for every generated class with what it came from.
+One test can assert that the whole tree corresponds to the locked contract.
+
+[#unrepresentable]
+== Constructs no rule represents yet
+
+Nothing stops the build, and no class is skipped.
+The class and its constants are generated; only a method that cannot represent a construct is generated as one that throws `UnsupportedOperationException`, with the reason and, where there is one, the remedy.
+A `body(...)` that cannot be generated takes `Object...`, since its parameters cannot be known.
+
+[cols="2,1,3", options="header"]
+|===
+|Construct |Treatment |Note
+
+|`oneOf`/`anyOf` whose branches are all references |Represented |Each branch has its own class.
+|`oneOf`/`anyOf` with an inline branch |Degraded |Remedy: name the branches, so each becomes a component.
+|`discriminator` |Represented |
+|`additionalProperties`, `patternProperties` |Represented |Recorded as `open`; a map is a subsection.
+|A recursive `$ref` |Represented |To `recursionDepth`.
+|`type` naming several types, such as `[string, 'null']` |Degraded |No rule decided yet.
+|A schema written as `true` or `false` |Degraded |No rule decided yet.
+|Any other keyword the model does not type |Reported |Kept, and listed as undecided.
+|Security schemes, headers and other component types |Reported |Kept, and listed as undecided.
+|===
+
+Every degraded method, every recommendation and every undecided construct is listed in `build/reports/transcriberj/<contract>.txt`, and the build log gives the counts.
+A schema written inline in an operation is generated, and also listed with the recommendation to make it a component.
+
+[#emitters]
+== Emitters
+
+An emitter adds a dialect: companion classes in `<basePackage>.<emitter id>`, such as REST Docs descriptors or WireMock stubs, built on the core classes.
+None is included; a project adds the ones it wants to `transcriberjEmitters`.
+They run after the core emitter, each in a class loader built from that configuration, so their dependencies never mix with the build script's.
+
+An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter` from `com.arc-e-tect:api-only-transcriberj-spi`, and names its implementation in `META-INF/services/com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`.
+
+[source,java]
+----
+public interface Emitter {
+    String id();                              // "restdocs": its package, and its name in reports
+    List<ManagedDependency> dependencies();   // what its generated code needs
+    Set<Construct> represents();              // which classified constructs it handles in full
+    void emit(EmitterContext context);        // model, settings, class names, writeJava, degraded
+}
+----
+
+`EmitterContext.names()` gives every core class's name, so a companion always matches the class it belongs to.
+`EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
+
+The plugin does not yet add the dependencies an emitter declares; the project declares them itself.
+
+[#limits]
+== What this cannot do
+
+The generated field descriptions are a *lossy projection* of the contract.
+A field description says a path, a type and whether it is optional; a JSON Schema says considerably more.
+A test built on them proves that a payload has the fields the contract describes, of the types it describes.
+It does not prove that the payload is valid against the schema, and nothing here claims it does.
+
+Constraints are constants, not checks.
+Generated bodies are built from the arguments given, and a body built from arguments that violate a constraint violates it too.
+Invalid and partial bodies, for the tests of 4xx responses, are written by hand.
+
+[#development]
+== Development
+
+[source,console]
+----
+cd api-only-transcriberj
+./gradlew check
+
+# Also compare the Phase 0 copies of the reference implementation's hand-written
+# classes with that repository, at the commit their SOURCE.properties names.
+./gradlew check -PreferenceRepository=<path to SoftwareEngineeringDoneRight-Code>
+----
+
+The build has two modules:
+
+[cols="1,3", options="header"]
+|===
+|Module |What it is
+
+|`spi`
+|The contract model and the emitter interface: what emitter libraries compile against.
+To be published as `com.arc-e-tect:api-only-transcriberj-spi`; nothing publishes either module yet.
+
+|`plugin`
+|The Gradle plugin and the built-in core emitter.
+|===
+
+The tests read shared fixtures from `fixtures/`: the reference library's published contracts, built by this repository's Publisher, and the Publisher's `init` scaffold.
+Each directory's `SOURCE.properties` says how to rebuild it.
+
+`plugin/src/handwritten` holds the reference implementation's hand-written `testSchemaCommon` classes.
+The generated classes must write, for every input recorded in `plugin/src/test/resources/fixtures/handwritten/bodies.json`, the body the hand-written ones write: byte for byte, except `UserV1`, which is held to JSON equality.
+`./gradlew verifyHandwrittenFixtures` checks the recording itself; the fixtures' own `README.adoc` says which parts are strict and which advisory.
+
+Both modules gate on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
+The plugin's tasks are tested in-process as well as through TestKit, so the coverage agent sees them.

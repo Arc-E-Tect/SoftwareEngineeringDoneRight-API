@@ -21,9 +21,9 @@ import java.util.List;
  * The recorded {@code body(...)} calls in {@code fixtures/handwritten/bodies.json},
  * and the means to replay one against the classes in a given package.
  */
-final class BodyFixtures {
+public final class BodyFixtures {
 
-    static final String HANDWRITTEN_PACKAGE = "com.arc_e_tect.book.sedr.schema";
+    public static final String HANDWRITTEN_PACKAGE = "com.arc_e_tect.book.sedr.schema";
     static final Path FILE = Path.of("src/test/resources/fixtures/handwritten/bodies.json");
 
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -32,11 +32,16 @@ final class BodyFixtures {
     }
 
     /** One recorded call. {@code expected} is {@code null} until recorded. */
-    record Case(String id, String className, String method, JsonNode args, String comparison, String expected) {
+    public record Case(String id, String className, String method, JsonNode args, String comparison, String expected) {
 
-        String replay(String packageName) {
+        public String replay(String packageName) {
+            return replay(packageName, getClass().getClassLoader());
+        }
+
+        /** Replays this call against the classes of a package, as a class loader has them. */
+        public String replay(String packageName, ClassLoader loader) {
             try {
-                Class<?> type = Class.forName(packageName + "." + className);
+                Class<?> type = Class.forName(packageName + "." + className, true, loader);
                 Method target = method(type);
                 target.setAccessible(true);
                 Object[] values = new Object[args.size()];
@@ -76,7 +81,7 @@ final class BodyFixtures {
         }
     }
 
-    static ObjectNode read() {
+    public static ObjectNode read() {
         try {
             return (ObjectNode) JSON.readTree(Files.readString(FILE, StandardCharsets.UTF_8));
         } catch (IOException e) {
@@ -84,7 +89,7 @@ final class BodyFixtures {
         }
     }
 
-    static List<Case> cases(ObjectNode document) {
+    public static List<Case> cases(ObjectNode document) {
         List<Case> cases = new ArrayList<>();
         for (JsonNode c : document.withArray("cases")) {
             JsonNode expected = c.get("expected");

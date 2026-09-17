@@ -1,0 +1,34 @@
+${header}
+package ${package};
+
+/**
+ * One field of a generated body, as the contract describes it.
+ *
+ * <p>Dependency-free on purpose: a dialect's companion class turns these into its
+ * own descriptors, such as Spring REST Docs' {@code FieldDescriptor}.
+ *
+ * @param path        the field's path, such as {@code errors[].message}
+ * @param type        {@code string}, {@code number}, {@code boolean}, {@code object},
+ *                    {@code array}, {@code null} or {@code varies}
+ * @param optional    whether a valid body may leave the field out: because the contract
+ *                    does not require it, or because an object it is inside is optional
+ * @param description the field's description
+ * @param subsection  whether the field stands for everything beneath it, which is not
+ *                    listed field by field: a map, or where a recursive reference stops
+ * @param open        whether the object at this path allows members the contract does
+ *                    not list
+ */
+public record ContractField(
+        String path,
+        String type,
+        boolean optional,
+        String description,
+        boolean subsection,
+        boolean open) {
+
+    /** The description of every field when the contract's descriptions are not used. */
+    public static final String PLACEHOLDER = ${placeholder};
+
+    /** How many times a recursive reference is followed before the rest is a subsection. */
+    public static final int MAX_DEPTH = ${depth};
+}
