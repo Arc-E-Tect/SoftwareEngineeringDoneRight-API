@@ -4,6 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.0
+:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -17,7 +20,8 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial sets up provider use case 4 from nothing: a Gradle project, `orders-service`, that implements version 1.1.0 of an `orders` contract another team publishes to a Maven repository.
-Every file and every command below was run exactly as shown, with API-Only Subscriber 0.2.0, against archives produced by the API-Only Publisher.
+Every file and every command below was run exactly as shown, with API-Only Subscriber {api-only-subscriber-version}, against archives produced by API-Only Publisher {api-only-publisher-version}.
+The archives came from the library in link:../2-specification-library-in-the-same-repository/tutorial.adoc[provider use case 2's tutorial →], with `orders` at 1.1.0 and its summary changed to `List every order.`, and a `1.1.0-rc.1` pre-release of it.
 Only the repository differs: the run used a Maven repository on disk, which takes no credentials.
 
 It assumes you know how to design an API in OpenAPI and how a Gradle project resolves dependencies.
@@ -141,11 +145,11 @@ Run `./gradlew test`, and it fails: `openapi.yaml is not on the test classpath`.
 Change `build.gradle`:
 
 .build.gradle
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'
 }
 
 repositories {
@@ -256,7 +260,7 @@ format 1
 target orders
 version 1.1.0
 channel maven
-sha256 859cc1e470cc508dbae6ed2c60948a5fc4a65506595918974188f98560075952 openapi.yaml
+sha256 1d51fc8cefd42af9eb8b0ffcc2c9d66082db7e4c74f807547ad95bf93dc8c010 openapi.yaml
 ----
 
 Commit it with `build.gradle` and `gradle.properties`.
@@ -268,14 +272,14 @@ Undo each change before the next.
 
 === A hand-edited fetched document
 
-Append a line to `build/api-spec/orders/openapi.yaml`, and run `./gradlew verifyApiSpec` on its own:
+Append the line `# edited by hand` to `build/api-spec/orders/openapi.yaml`, and run `./gradlew verifyApiSpec` on its own:
 
 [source]
 ----
 > the contract for 'orders' has drifted from apionly.lock:
     - openapi.yaml has changed since it was locked
-        locked:  859cc1e470cc508dbae6ed2c60948a5fc4a65506595918974188f98560075952
-        on disk: e37d2a9feba8248cca88d52c908f81c83cda8720c7600a6d0051e327d0c17a16
+        locked:  1d51fc8cefd42af9eb8b0ffcc2c9d66082db7e4c74f807547ad95bf93dc8c010
+        on disk: 2a606cc47f4bfc1aa834cefcfa1dc106e0e4da9cc9e5f205877cf1e01e0b9711
 ----
 
 `./gradlew fetchApiSpec` restores the document.

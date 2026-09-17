@@ -39,9 +39,17 @@ When we are done, `./gradlew check`:
 - **If this project, or this repository, owns the contract, stop and tell me.** That calls for a different setup.
 - **If this project calls the API rather than implementing it, stop and tell me.** That calls for a client subscription, which is a different setup.
 
-## Facts: API-Only Subscriber 0.2.0
+## Versions
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`, from the Gradle Plugin Portal.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Subscriber {api-only-subscriber-version}
+
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`, from the Gradle Plugin Portal.
   It needs Gradle 8 or newer and Java 21 or newer, and supports the configuration cache.
 - Configuration:
 

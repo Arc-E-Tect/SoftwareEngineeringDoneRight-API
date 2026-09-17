@@ -4,6 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.0
+:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -17,7 +20,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This run-book says how to invoke both tools in normal operation, once a setup from one of the use cases exists, and what to do when something fails.
-It describes API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
+It describes API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
 link:how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism behind every step.
 
 [#roles]
@@ -199,6 +202,10 @@ Find out before committing the upgrade:
 . No difference: commit the upgrade.
 . A difference in formatting or ordering: raise the patch version of each contract that differs, adopt them, and commit everything together.
 . A difference in what a contract says: treat it as a contract change, as in <<changing-a-contract,Changing a contract §>>.
+
+From Publisher 0.3.0 or earlier, every OpenAPI document with components built from fragments gains an `x-fragment-path` on each such component.
+That is an addition to the contract: raise the minor version of each of those contracts, or set `defaults.openapi.fragmentPaths: false` in `apionly.yaml` until you do.
+link:../../api-only-publisher/README.adoc#fragment-path-versions[What a change to `x-fragment-path` means for a contract's version →] explains why.
 
 A Subscriber upgrade does not change the contracts, so `apionly.lock` should not change; if it does, read the Subscriber's release notes before committing it.
 

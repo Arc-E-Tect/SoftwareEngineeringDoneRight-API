@@ -38,13 +38,21 @@ When we are done:
 - **Credentials come only from the environment.** `apionly.yaml` names the variable, never its value.
 - **Pin everything**: the Publisher, and the bundler versions under `toolchain`.
 
-## Facts: API-Only Publisher 0.3.0
+## Versions
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-publisher-version}` | `0.4.0` |
+
+## Facts: API-Only Publisher {api-only-publisher-version}
+
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `{api-only-publisher-version}`.
   It needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`, and npm.
 - Install it as an exact dev dependency with an npm script:
   - `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`;
-  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`;
+  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}`;
   - commit `package-lock.json`, and ignore `node_modules/` and `build/`.
 - Run it **only** as `npm run apionly -- <command>`, and as `npm run --silent apionly -- <command>` whenever the output is captured.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
@@ -54,6 +62,7 @@ When we are done:
     A bundle path is relative to `<sources.root>/<sources.openapi>` (or `sources.asyncapi`).
   - `defaults.openapi.lint`: the Redocly configuration file, relative to `apionly.yaml`.
   - `defaults.openapi.outputName`, `defaults.asyncapi.outputName`: keep `openapi.yaml` and `asyncapi.yaml`, because the Subscriber looks for exactly those names.
+  - `defaults.openapi.fragmentPaths`: leave it out; the Publisher then records on every OpenAPI component the fragment it came from, as `x-fragment-path`.
   - `defaults.placeholders.strict`.
   - `build.staging`, `build.dist`, `reports.lint`.
   - `lint.unreferenced`: `error` (the default), `warn` or `off`.

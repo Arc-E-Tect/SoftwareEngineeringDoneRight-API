@@ -4,6 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.0
+:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -17,7 +20,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This tutorial builds provider use case 1 from nothing: one Gradle project that implements an `orders` API, owns that API's OpenAPI description, and builds against a versioned, verified copy of it.
-Every file and every command below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
+Every file and every command below was run exactly as shown, with API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
 
 It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a Gradle project is laid out.
 
@@ -86,9 +89,9 @@ Create `package.json` at the project root:
 
 Install the Publisher as an exact dev dependency:
 
-[source,console]
+[source,console,subs="attributes+"]
 ----
-npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}
 ----
 
 Add `node_modules/` and `build/` to `.gitignore`, and commit `package.json` and `package-lock.json`.
@@ -300,11 +303,11 @@ Before any wiring exists, write the test that proves it works.
 It passes only when the bundled document is on the classpath, at the version the project implements.
 
 .build.gradle
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'
 }
 
 repositories {
@@ -514,7 +517,7 @@ format 1
 target orders
 version 1.0.0
 channel file
-sha256 2958789f19b662c9a58a4b7f2ae88c3ca2c9d017373d4d564b59c0af4e987213 openapi.yaml
+sha256 f8b64fc7665f7f6e6b417506aa10c7971c2b99c8a0568ebd250db7179165488a openapi.yaml
 ----
 
 Commit it.
@@ -547,8 +550,8 @@ Change `summary: List the orders.` in `Orders.yaml` to `summary: List every orde
 > Task :fetchApiSpecOrders FAILED
 > the published contract for 'orders' 1.0.0 is not the one recorded in apionly.lock:
     - openapi.yaml differs
-        locked:    2958789f19b662c9a58a4b7f2ae88c3ca2c9d017373d4d564b59c0af4e987213
-        published: b64ef2062048bf06b910e90a8725953dfe0c73897643b362a65888f1e9a297b4
+        locked:    f8b64fc7665f7f6e6b417506aa10c7971c2b99c8a0568ebd250db7179165488a
+        published: c447d1878ad02e21f44d1395f2afbab1de838eca75664b3220f817c31992bcfe
 
   1.0.0 was published to the file channel again, with different content. Find out why before accepting this: if the change was intended, publish it as a new version and subscribe to that; if it was not, publish the specifications the locked contract came from again. Delete the entry from apionly.lock only to re-lock deliberately.
 ----

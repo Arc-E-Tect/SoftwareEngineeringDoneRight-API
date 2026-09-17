@@ -40,7 +40,7 @@ Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subsc
 |link:api-only-transcriberj/README.adoc[API-Only TranscriberJ →]
 |A Gradle plugin, building on the Subscriber.
 Generates a Java class tree from a subscribed contract: bodies, field descriptions and constants for contract tests and stubs, with room for dialects such as REST Docs as separate emitter libraries.
-Not released yet.
+Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal ↗].
 |===
 
 [#documentation]
@@ -123,10 +123,10 @@ Every component gates its own build on coverage, and every gate was checked by m
 |Coverage
 |`npm test` enforces 90% of lines and functions, 80% of branches
 |JaCoCo, 0.9 minimum, wired into `check`
-|JaCoCo, 0.9 minimum per module, wired into `check`
+|JaCoCo, 0.9 minimum, wired into `check`
 
 |Measured
-|94.4% lines, 95.3% functions, 88.0% branches
+|94.8% lines, 95.8% functions, 88.9% branches
 |97.1% instructions, 90.8% branches
 |97.2% instructions, 89.9% branches
 

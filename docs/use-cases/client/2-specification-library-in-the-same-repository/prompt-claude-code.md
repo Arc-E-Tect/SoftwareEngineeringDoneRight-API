@@ -36,18 +36,27 @@ When we are done, `./gradlew check`:
 - **Nothing generated is committed**, and fetched documents are never edited or copied.
 - **Pin everything**: the Publisher exactly, and the bundler under `toolchain`.
 
-## Facts: API-Only Publisher 0.3.0
+## Versions
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`, installed in `contracts/` with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`, with `"scripts": { "apionly": "api-only-publisher" }` in `contracts/package.json`.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-publisher-version}` | `0.4.0` |
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Publisher {api-only-publisher-version}
+
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `{api-only-publisher-version}`, installed in `contracts/` with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}`, with `"scripts": { "apionly": "api-only-publisher" }` in `contracts/package.json`.
 - Run it only as `npm run apionly -- <command>` in `contracts/`; never `npx api-only-publisher`.
 - `contracts/apionly.yaml`: `sources.root: specs`, `sources.openapi: openapi`, `defaults.openapi.lint: .redocly.yaml` (the file beside `apionly.yaml`), `defaults.openapi.outputName: openapi.yaml`, `build.staging: build/staging`, `build.dist: build/dist`, `reports.lint: build/reports/lint`, `toolchain.redocly: "@redocly/cli@2.52.0"`, `channels.file.directory: build/publish` with `clean: true`, and `targets.<name>.openapi.bundle: bundles/<name>.yaml`.
 - Each contract's version is in `contracts/specs/openapi/bundles/<name>.bundle.properties` as `version=1.0.0`; the bundle root needs `info.version: 0.0.0`.
 - `build --target <t>` bundles, stamps and lints; `lint` fails on any YAML file under `specs/` no target references; `publish --target <t> --channel file` writes `build/publish/<t>/<version>/`; `changed --since <ref> --quiet` lists the targets a change reaches.
 - Every Publisher run rebuilds `contracts/build/staging/`, so no two runs may overlap.
 
-## Facts: API-Only Subscriber 0.2.0
+## Facts: API-Only Subscriber {api-only-subscriber-version}
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`; Gradle 8 or newer, Java 21 or newer.
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer.
 - An API a project calls is declared with `subscribeAsClient('<target>') { version = ... }`; `version` is required, and `apiContractVersion` is not read.
 - In a subproject, read its own `gradle.properties` with `findProperty('<name>')`; `providers.gradleProperty` does not see a subproject's own file.
 - Tasks: `fetchApiSpec<Target>`, `verifyApiSpec<Target>` (target in camel case), `fetchApiSpec`, `verifyApiSpec`; `check` depends on `verifyApiSpec`, `processResources` on the fetches, which copies each contract to `contracts/<target>/` on the classpath.
@@ -64,7 +73,7 @@ import org.gradle.api.services.BuildServiceParameters
 
 plugins {
     id 'base'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0' apply false
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}' apply false
 }
 
 def contracts = file('contracts')

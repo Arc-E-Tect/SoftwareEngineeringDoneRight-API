@@ -37,9 +37,17 @@ When we are done, `./gradlew check`:
 - **A contract that comes from somewhere else than the others gets a `channel { }` of its own** in its subscription; every setting it leaves out comes from the project's channel.
 - **Fetched documents and `apionly.lock` are never edited by hand.**
 
-## Facts: API-Only Subscriber 0.2.0
+## Versions
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`; Gradle 8 or newer, Java 21 or newer.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Subscriber {api-only-subscriber-version}
+
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer.
 - Configuration:
 
   ```groovy

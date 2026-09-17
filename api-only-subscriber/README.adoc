@@ -4,6 +4,8 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-subscriber-version: 0.3.0
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber]
@@ -72,20 +74,20 @@ The plugin is compatible with Gradle's configuration cache.
 == Applying the plugin
 
 .Groovy DSL
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'
 }
 ----
 
 .Kotlin DSL
-[source,kotlin]
+[source,kotlin,subs="attributes+"]
 ----
 plugins {
     java
-    id("com.arc-e-tect.api-only-subscriber") version "0.2.0"
+    id("com.arc-e-tect.api-only-subscriber") version "{api-only-subscriber-version}"
 }
 ----
 
@@ -415,10 +417,10 @@ include 'orders', 'payments'
 ----
 
 .build.gradle
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0' apply false
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}' apply false
 }
 ----
 
@@ -517,7 +519,7 @@ format 1
 target orders
 version 1.1.0
 channel maven
-sha256 d4e72b89678bd50bf764e4c5ddce1ff8ea7e844e900751d4c285e161d99c723d openapi.yaml
+sha256 ab7b2899eed2ec77158f50da8775f0264f8048c03e014cffe1bd1c9a292eeb01 openapi.yaml
 ----
 
 It is a small, sorted, line-oriented text file rather than JSON because it is read by people in review far more often than by machines, and a one-line diff should mean one thing changed.
@@ -556,11 +558,11 @@ Both are needed, and only the second catches a hand-edited document sitting in `
 == Full example
 
 .build.gradle
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'
 }
 
 repositories {

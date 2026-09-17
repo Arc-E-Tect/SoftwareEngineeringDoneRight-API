@@ -4,6 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.0
+:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -18,7 +21,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 
 This tutorial builds provider use case 3 from nothing, on both sides.
 First a `contracts` repository that releases two contracts, `orders` and `payments`, to a Maven repository; then an implementing project in another repository that builds against one of them.
-Every file, command and script below was run exactly as shown, with API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0, against a Maven repository on disk.
+Every file, command and script below was run exactly as shown, with API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}, against a Maven repository on disk.
 What was not run is the part a remote Maven repository adds: the upload with a token in step 8, and resolving with credentials in step 12.
 Step 8 says what to check there.
 
@@ -78,9 +81,9 @@ The values used below:
 }
 ----
 
-[source,console]
+[source,console,subs="attributes+"]
 ----
-npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}
 ----
 
 Add `node_modules/` and `build/` to `.gitignore`, and commit `package.json` and `package-lock.json`.
@@ -554,11 +557,11 @@ class ApiContractTest {
 Add the plugin, the repository and the subscription to `build.gradle`:
 
 .build.gradle (additions)
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'
 }
 
 repositories {
@@ -608,7 +611,7 @@ format 1
 target orders
 version 1.1.0
 channel maven
-sha256 d4e72b89678bd50bf764e4c5ddce1ff8ea7e844e900751d4c285e161d99c723d openapi.yaml
+sha256 ab7b2899eed2ec77158f50da8775f0264f8048c03e014cffe1bd1c9a292eeb01 openapi.yaml
 ----
 
 In CI, the credentials come from the environment, as `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.

@@ -4,6 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.0
+:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -19,7 +22,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 This tutorial sets up client use case 3 from nothing: a Gradle project, `storefront`, in its own repository, that calls the `orders` API released by a `contracts` repository you can check out.
 The `contracts` repository is the one link:../../provider/3-specification-library-in-its-own-repository/tutorial.adoc[provider use case 3's tutorial →] builds; this tutorial uses it as that tutorial leaves it, with `orders` 1.1.0 released and a `file` channel added in its step 13.
 
-Every file and every command below was run exactly as shown, with API-Only Subscriber 0.2.0 and API-Only Publisher 0.3.0.
+Every file and every command below was run exactly as shown, with API-Only Subscriber {api-only-subscriber-version} and API-Only Publisher {api-only-publisher-version}.
 Only the repository differs: the run used the `contracts` repository's Maven repository on disk, which takes no credentials.
 
 [#before-you-start]
@@ -97,11 +100,11 @@ Until step 3 wires the Subscriber, `./gradlew test` fails: `contracts/orders/ope
 == Step 3: Subscribe to the released contract
 
 .build.gradle
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'
+    id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'
 }
 
 repositories {
@@ -166,7 +169,7 @@ format 1
 target orders
 version 1.1.0
 channel maven
-sha256 d4e72b89678bd50bf764e4c5ddce1ff8ea7e844e900751d4c285e161d99c723d openapi.yaml
+sha256 ab7b2899eed2ec77158f50da8775f0264f8048c03e014cffe1bd1c9a292eeb01 openapi.yaml
 ----
 
 In CI, the credentials come from `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`, and a step fails the build when `git diff --exit-code -- apionly.lock` shows a change, as in link:../4-calling-a-published-api/tutorial.adoc#step-8[client use case 4's tutorial →].
@@ -235,7 +238,7 @@ BUILD SUCCESSFUL
 target orders
 version 1.1.0-rc.1
 channel file
-sha256 30c1da10387d16285331c54ea3aad615522621ecb9822a5b6499ab8cc9ae11f5 openapi.yaml
+sha256 f5b49f2a2013de11b86cb9da3430f955e68d4db78879ab8282ff2e86c1b8cc5a openapi.yaml
 ----
 
 .Considerations

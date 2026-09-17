@@ -41,9 +41,17 @@ When we are done, `./gradlew check`:
 - **Each API has its own version**, because each provider releases on its own schedule.
 - **A pre-release is allowed only deliberately**, with `allowPrerelease = true` on that one subscription and a comment saying it must be removed before release.
 
-## Facts: API-Only Subscriber 0.2.0
+## Versions
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`; Gradle 8 or newer, Java 21 or newer; supports the configuration cache.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Subscriber {api-only-subscriber-version}
+
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer; supports the configuration cache.
 - Configuration:
 
   ```groovy
