@@ -1,3 +1,15 @@
+## [0.3.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.1...api-only-subscriber-v0.3.2) (2026-09-17)
+
+
+### 👷 CI/CD
+
+* stop a README-only change from releasing the component it documents ([#16](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/16)) ([a6740ac](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a6740ac11df333034af93889cc62094b0f731f88)), closes [#16](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/16) [#14](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/14)
+
+
+### 📝 Documentation
+
+* add the migration from a checked-in document, and the Publisher failures the run-book lacked ([#15](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/15)) ([ff1ea56](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ff1ea56ddfaa5856de44943af429bc323fe2ddef)), closes [#15](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/15) [#12](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/12) [#12](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/12) [#12](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/12) [#12](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/12)
+
 ## [0.3.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.0...api-only-subscriber-v0.3.1) (2026-09-17)
 
 
