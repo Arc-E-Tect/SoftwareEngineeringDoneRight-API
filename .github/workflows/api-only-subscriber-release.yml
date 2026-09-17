@@ -11,6 +11,12 @@ on:
       - main
     paths:
       - 'api-only-subscriber/**'
+      # A change to the README alone documents the component without changing what
+      # is published, so it does not earn a release of its own; the next release
+      # carries it. Run this workflow manually when a README has to reach the
+      # registry sooner. A commit that changes the README and anything else still
+      # releases: the other file matches the pattern above.
+      - '!api-only-subscriber/README.adoc'
       - 'release/**'
       - '.github/workflows/api-only-subscriber-release.yml'
   workflow_dispatch:
