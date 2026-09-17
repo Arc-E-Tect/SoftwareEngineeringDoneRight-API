@@ -51,6 +51,9 @@ class ReferenceContractsTest {
 
         assertThat(ModelWriter.schemas(model)).isEqualTo(components.get("schemas"));
         assertThat(ModelWriter.otherComponents(model)).isEmpty();
+        assertThat(model.responses()).isEmpty();
+        assertThat(model.parameters()).isEmpty();
+        assertThat(model.requestBodies()).isEmpty();
         assertThat(ModelWriter.paths(model)).isEqualTo(document.get("paths"));
         assertThat(model.openapi()).isEqualTo(document.get("openapi"));
         assertThat(model.title()).isEqualTo(map(document.get("info")).get("title"));

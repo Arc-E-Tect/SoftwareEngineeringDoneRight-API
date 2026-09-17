@@ -11,7 +11,11 @@ import java.util.Optional;
  * @param title           {@code info.title}, or {@code null}
  * @param version         {@code info.version}, the contract's own version, or {@code null}
  * @param components      the schema components, in declaration order
- * @param otherComponents components of every other type, keyed by type, as parsed
+ * @param responses       the reusable response components, in declaration order
+ * @param parameters      the reusable parameter components, in declaration order
+ * @param requestBodies   the reusable request body components, in declaration order
+ * @param otherComponents components of every other type -- security schemes, headers,
+ *                        examples and the like -- keyed by type, as parsed
  * @param paths           the path items, in declaration order
  * @param findings        every classified construct, in the order it was found
  */
@@ -20,6 +24,9 @@ public record ContractModel(
         String title,
         String version,
         List<Component> components,
+        List<Reusable<Response>> responses,
+        List<Reusable<Parameter>> parameters,
+        List<Reusable<RequestBody>> requestBodies,
         Map<String, Object> otherComponents,
         List<PathItem> paths,
         List<Finding> findings) {

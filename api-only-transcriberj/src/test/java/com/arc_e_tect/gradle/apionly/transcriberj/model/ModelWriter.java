@@ -29,6 +29,41 @@ final class ModelWriter {
         return out;
     }
 
+    static Map<String, Object> reusableResponses(ContractModel model) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        model.responses().forEach(r -> out.put(r.name(), withPath(r.provenance(), response(r.value()))));
+        return out;
+    }
+
+    static Map<String, Object> reusableParameters(ContractModel model) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        model.parameters().forEach(p -> out.put(p.name(), withPath(p.provenance(), parameter(p.value()))));
+        return out;
+    }
+
+    static Map<String, Object> reusableRequestBodies(ContractModel model) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        model.requestBodies().forEach(b -> out.put(b.name(), withPath(b.provenance(), requestBody(b.value()))));
+        return out;
+    }
+
+    private static Map<String, Object> withPath(Provenance provenance, Map<String, Object> rendered) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (provenance.fragmentPath() != null) out.put("x-fragment-path", provenance.fragmentPath());
+        out.putAll(rendered);
+        return out;
+    }
+
+    /** A reference as written: its $ref, and whatever was written beside it. */
+    private static Map<String, Object> reference(String type, Reference reference) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("$ref", "#/components/" + type + "/" + reference.name().replace("~", "~0").replace("/", "~1"));
+        putIfPresent(out, "summary", reference.summary());
+        putIfPresent(out, "description", reference.description());
+        out.putAll(reference.other());
+        return out;
+    }
+
     static Map<String, Object> otherComponents(ContractModel model) {
         return new LinkedHashMap<>(model.otherComponents());
     }
@@ -56,21 +91,14 @@ final class ModelWriter {
         if (operation.parameters() != null) out.put("parameters", parameters(operation.parameters()));
         if (operation.requestBody() != null) {
             RequestBody body = operation.requestBody();
-            Map<String, Object> rendered = new LinkedHashMap<>();
-            putIfPresent(rendered, "description", body.description());
-            putIfPresent(rendered, "required", body.required());
-            if (body.content() != null) rendered.put("content", content(body.content()));
-            rendered.putAll(body.other());
-            out.put("requestBody", rendered);
+            out.put("requestBody", body.reference() != null
+                    ? reference("requestBodies", body.reference()) : requestBody(body));
         }
         if (operation.responses() != null) {
             Map<String, Object> responses = new LinkedHashMap<>();
             for (Response response : operation.responses()) {
-                Map<String, Object> rendered = new LinkedHashMap<>();
-                putIfPresent(rendered, "description", response.description());
-                if (response.content() != null) rendered.put("content", content(response.content()));
-                rendered.putAll(response.other());
-                responses.put(response.status(), rendered);
+                responses.put(response.status(), response.reference() != null
+                        ? reference("responses", response.reference()) : response(response));
             }
             out.put("responses", responses);
         }
@@ -81,16 +109,41 @@ final class ModelWriter {
     private static List<Object> parameters(List<Parameter> parameters) {
         List<Object> out = new ArrayList<>();
         for (Parameter parameter : parameters) {
-            Map<String, Object> rendered = new LinkedHashMap<>();
-            putIfPresent(rendered, "name", parameter.name());
-            putIfPresent(rendered, "in", parameter.in());
-            putIfPresent(rendered, "required", parameter.required());
-            putIfPresent(rendered, "description", parameter.description());
-            if (parameter.schema() != null) rendered.put("schema", render(parameter.schema()));
-            rendered.putAll(parameter.other());
-            out.add(rendered);
+            out.add(parameter.reference() != null
+                    ? reference("parameters", parameter.reference()) : parameter(parameter));
         }
         return out;
+    }
+
+    private static Map<String, Object> parameter(Parameter parameter) {
+        if (parameter.reference() != null) return reference("parameters", parameter.reference());
+        Map<String, Object> rendered = new LinkedHashMap<>();
+        putIfPresent(rendered, "name", parameter.name());
+        putIfPresent(rendered, "in", parameter.in());
+        putIfPresent(rendered, "required", parameter.required());
+        putIfPresent(rendered, "description", parameter.description());
+        if (parameter.schema() != null) rendered.put("schema", render(parameter.schema()));
+        rendered.putAll(parameter.other());
+        return rendered;
+    }
+
+    private static Map<String, Object> requestBody(RequestBody body) {
+        if (body.reference() != null) return reference("requestBodies", body.reference());
+        Map<String, Object> rendered = new LinkedHashMap<>();
+        putIfPresent(rendered, "description", body.description());
+        putIfPresent(rendered, "required", body.required());
+        if (body.content() != null) rendered.put("content", content(body.content()));
+        rendered.putAll(body.other());
+        return rendered;
+    }
+
+    private static Map<String, Object> response(Response response) {
+        if (response.reference() != null) return reference("responses", response.reference());
+        Map<String, Object> rendered = new LinkedHashMap<>();
+        putIfPresent(rendered, "description", response.description());
+        if (response.content() != null) rendered.put("content", content(response.content()));
+        rendered.putAll(response.other());
+        return rendered;
     }
 
     private static Map<String, Object> content(List<MediaType> content) {

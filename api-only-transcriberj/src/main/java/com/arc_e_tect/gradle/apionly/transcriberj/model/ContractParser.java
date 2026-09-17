@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -33,13 +34,32 @@ public final class ContractParser {
             "title", "default", "examples", "example", "readOnly", "writeOnly", "deprecated",
             "externalDocs", "xml", "$comment", "contentMediaType", "contentEncoding");
 
+    private static final String RESPONSES = "responses";
+    private static final String PARAMETERS = "parameters";
+    private static final String REQUEST_BODIES = "requestBodies";
+
     private final String source;
     private final Set<String> componentNames = new HashSet<>();
+    private final Map<String, Map<String, Object>> reusableRaw = new HashMap<>();
+    private final Map<String, Object> reusableTyped = new HashMap<>();
+    private final Set<String> resolving = new LinkedHashSet<>();
     private final List<Finding> findings = new ArrayList<>();
     private final List<RefSite> refSites = new ArrayList<>();
     private String currentComponent;
 
     private record RefSite(String from, String to, String location) {
+    }
+
+    /** Types an object that is not a reference. */
+    @FunctionalInterface
+    private interface Typer<T> {
+        T type(Map<String, Object> object, String location);
+    }
+
+    /** The same object, as written through the given reference. */
+    @FunctionalInterface
+    private interface Rereference<T> {
+        T through(T resolved, Reference reference);
     }
 
     private ContractParser(String source) {
@@ -91,15 +111,35 @@ public final class ContractParser {
 
         Map<String, Object> components = optionalMap(document.get("components"), "/components");
         List<Component> schemas = new ArrayList<>();
+        List<Reusable<Response>> responses = new ArrayList<>();
+        List<Reusable<Parameter>> parameters = new ArrayList<>();
+        List<Reusable<RequestBody>> requestBodies = new ArrayList<>();
         Map<String, Object> otherComponents = new LinkedHashMap<>();
         if (components != null) {
             Map<String, Object> schemaMap = optionalMap(components.get("schemas"), "/components/schemas");
             if (schemaMap != null) {
                 componentNames.addAll(schemaMap.keySet());
+            }
+            for (String type : List.of(RESPONSES, PARAMETERS, REQUEST_BODIES)) {
+                Map<String, Object> typed = optionalMap(components.get(type), "/components/" + type);
+                if (typed != null) {
+                    Map<String, Object> raws = new LinkedHashMap<>();
+                    typed.forEach((name, raw) -> raws.put(name, raw));
+                    reusableRaw.put(type, raws);
+                }
+            }
+            if (schemaMap != null) {
                 schemaMap.forEach((name, raw) -> schemas.add(component(name, raw)));
             }
+            reusableRaw.getOrDefault(RESPONSES, Map.of()).forEach((name, raw) ->
+                    responses.add(reusable(RESPONSES, name, raw, responseTyper(null), responseRereference(null))));
+            reusableRaw.getOrDefault(PARAMETERS, Map.of()).forEach((name, raw) ->
+                    parameters.add(reusable(PARAMETERS, name, raw, this::parameter, ContractParser::rereference)));
+            reusableRaw.getOrDefault(REQUEST_BODIES, Map.of()).forEach((name, raw) ->
+                    requestBodies.add(reusable(REQUEST_BODIES, name, raw, this::requestBody,
+                            ContractParser::rereference)));
             components.forEach((type, entries) -> {
-                if (type.equals("schemas")) return;
+                if (List.of("schemas", RESPONSES, PARAMETERS, REQUEST_BODIES).contains(type)) return;
                 otherComponents.put(type, entries);
                 Map<String, Object> typed = optionalMap(entries, "/components/" + escape(type));
                 if (typed != null) {
@@ -122,6 +162,9 @@ public final class ContractParser {
                 title,
                 contractVersion == null ? null : String.valueOf(contractVersion),
                 List.copyOf(schemas),
+                List.copyOf(responses),
+                List.copyOf(parameters),
+                List.copyOf(requestBodies),
                 Collections.unmodifiableMap(otherComponents),
                 List.copyOf(paths),
                 List.copyOf(findings));
@@ -132,17 +175,74 @@ public final class ContractParser {
     private Component component(String name, Object raw) {
         String location = "/components/schemas/" + escape(name);
         currentComponent = name;
-        String fragmentPath = null;
-        Object withoutPath = raw;
-        if (raw instanceof Map<?, ?> m && m.containsKey(FRAGMENT_PATH)) {
-            fragmentPath = string(m.get(FRAGMENT_PATH), location + "/" + FRAGMENT_PATH);
-            Map<String, Object> copy = new LinkedHashMap<>(map(raw, location));
-            copy.remove(FRAGMENT_PATH);
-            withoutPath = copy;
-        }
-        Schema schema = schema(withoutPath, location);
+        Schema schema = schema(withoutFragmentPath(raw, location), location);
         currentComponent = null;
-        return new Component(name, new Provenance(fragmentPath, CanonicalJson.sha256(raw)), schema);
+        return new Component(name, provenance(raw, location), schema);
+    }
+
+    private Provenance provenance(Object raw, String location) {
+        String fragmentPath = raw instanceof Map<?, ?> m && m.containsKey(FRAGMENT_PATH)
+                ? string(m.get(FRAGMENT_PATH), location + "/" + FRAGMENT_PATH)
+                : null;
+        return new Provenance(fragmentPath, CanonicalJson.sha256(raw));
+    }
+
+    private Object withoutFragmentPath(Object raw, String location) {
+        if (!(raw instanceof Map<?, ?> m) || !m.containsKey(FRAGMENT_PATH)) return raw;
+        Map<String, Object> copy = new LinkedHashMap<>(map(raw, location));
+        copy.remove(FRAGMENT_PATH);
+        return copy;
+    }
+
+    private <T> Reusable<T> reusable(String type, String name, Object raw, Typer<T> typer,
+                                     Rereference<T> rereference) {
+        String location = "/components/" + type + "/" + escape(name);
+        return new Reusable<>(name, provenance(raw, location), resolveComponent(type, name, location, typer,
+                rereference));
+    }
+
+    /** A reusable component, typed once however often it is referenced. */
+    @SuppressWarnings("unchecked")
+    private <T> T resolveComponent(String type, String name, String referencedFrom, Typer<T> typer,
+                                   Rereference<T> rereference) {
+        String key = type + "/" + name;
+        if (reusableTyped.containsKey(key)) return (T) reusableTyped.get(key);
+        Map<String, Object> raws = reusableRaw.getOrDefault(type, Map.of());
+        if (!raws.containsKey(name)) {
+            throw error(referencedFrom, "$ref '#/components/" + type + "/" + escape(name) + "' names no component");
+        }
+        if (!resolving.add(key)) {
+            throw error(referencedFrom, "$ref '#/components/" + type + "/" + escape(name)
+                    + "' is part of a cycle of references: " + String.join(" -> ", resolving) + " -> " + key);
+        }
+        String location = "/components/" + type + "/" + escape(name);
+        T typed = object(type, withoutFragmentPath(raws.get(name), location), location, typer, rereference);
+        resolving.remove(key);
+        reusableTyped.put(key, typed);
+        return typed;
+    }
+
+    /**
+     * An object in a position that may hold a reference to a reusable component of
+     * the given type: typed directly, or resolved through the reference.
+     */
+    private <T> T object(String type, Object raw, String location, Typer<T> typer, Rereference<T> rereference) {
+        Map<String, Object> object = new LinkedHashMap<>(map(raw, location));
+        if (!object.containsKey("$ref")) {
+            return typer.type(object, location);
+        }
+        String ref = string(object.remove("$ref"), location + "/$ref");
+        String prefix = "#/components/" + type + "/";
+        if (!ref.startsWith(prefix) || ref.substring(prefix.length()).contains("/")) {
+            throw error(location, "$ref '" + ref + "' is not a reference to a component under components/" + type);
+        }
+        String name = unescape(ref.substring(prefix.length()));
+        Reference reference = new Reference(
+                name,
+                optionalString(object.remove("summary"), location + "/summary"),
+                optionalString(object.remove("description"), location + "/description"),
+                Collections.unmodifiableMap(object));
+        return rereference.through(resolveComponent(type, name, location, typer, rereference), reference);
     }
 
     /** Marks each $ref that closes a cycle of components, where it closes it. */
@@ -403,12 +503,15 @@ public final class ContractParser {
         List<Parameter> parameters = other.containsKey("parameters")
                 ? parameters(other.remove("parameters"), location + "/parameters") : null;
         RequestBody requestBody = other.containsKey("requestBody")
-                ? requestBody(other.remove("requestBody"), location + "/requestBody") : null;
+                ? object(REQUEST_BODIES, other.remove("requestBody"), location + "/requestBody", this::requestBody,
+                        ContractParser::rereference)
+                : null;
         List<Response> responses = null;
         if (other.containsKey("responses")) {
             responses = new ArrayList<>();
             for (Map.Entry<String, Object> r : map(other.remove("responses"), location + "/responses").entrySet()) {
-                responses.add(response(r.getKey(), r.getValue(), location + "/responses/" + escape(r.getKey())));
+                responses.add(object(RESPONSES, r.getValue(), location + "/responses/" + escape(r.getKey()),
+                        responseTyper(r.getKey()), responseRereference(r.getKey())));
             }
             responses = List.copyOf(responses);
         }
@@ -420,38 +523,51 @@ public final class ContractParser {
         List<Parameter> out = new ArrayList<>();
         List<Object> raw = list(value, location);
         for (int i = 0; i < raw.size(); i++) {
-            String at = location + "/" + i;
-            Map<String, Object> other = new LinkedHashMap<>(map(raw.get(i), at));
-            unmodelledReference(other, at);
-            out.add(new Parameter(
-                    optionalString(other.remove("name"), at + "/name"),
-                    optionalString(other.remove("in"), at + "/in"),
-                    bool(other.remove("required"), at + "/required"),
-                    optionalString(other.remove("description"), at + "/description"),
-                    other.containsKey("schema") ? schema(other.remove("schema"), at + "/schema") : null,
-                    Collections.unmodifiableMap(other)));
+            out.add(object(PARAMETERS, raw.get(i), location + "/" + i, this::parameter,
+                    ContractParser::rereference));
         }
         return List.copyOf(out);
     }
 
-    private RequestBody requestBody(Object value, String location) {
-        Map<String, Object> other = new LinkedHashMap<>(map(value, location));
-        unmodelledReference(other, location);
+    private Parameter parameter(Map<String, Object> other, String at) {
+        return new Parameter(
+                null,
+                optionalString(other.remove("name"), at + "/name"),
+                optionalString(other.remove("in"), at + "/in"),
+                bool(other.remove("required"), at + "/required"),
+                optionalString(other.remove("description"), at + "/description"),
+                other.containsKey("schema") ? schema(other.remove("schema"), at + "/schema") : null,
+                Collections.unmodifiableMap(other));
+    }
+
+    private static Parameter rereference(Parameter p, Reference reference) {
+        return new Parameter(reference, p.name(), p.in(), p.required(), p.description(), p.schema(), p.other());
+    }
+
+    private RequestBody requestBody(Map<String, Object> other, String location) {
         return new RequestBody(
+                null,
                 optionalString(other.remove("description"), location + "/description"),
                 bool(other.remove("required"), location + "/required"),
                 other.containsKey("content") ? content(other.remove("content"), location + "/content") : null,
                 Collections.unmodifiableMap(other));
     }
 
-    private Response response(String status, Object value, String location) {
-        Map<String, Object> other = new LinkedHashMap<>(map(value, location));
-        unmodelledReference(other, location);
-        return new Response(
+    private static RequestBody rereference(RequestBody b, Reference reference) {
+        return new RequestBody(reference, b.description(), b.required(), b.content(), b.other());
+    }
+
+    private Typer<Response> responseTyper(String status) {
+        return (other, location) -> new Response(
                 status,
+                null,
                 optionalString(other.remove("description"), location + "/description"),
                 other.containsKey("content") ? content(other.remove("content"), location + "/content") : null,
                 Collections.unmodifiableMap(other));
+    }
+
+    private static Rereference<Response> responseRereference(String status) {
+        return (r, reference) -> new Response(status, reference, r.description(), r.content(), r.other());
     }
 
     private List<MediaType> content(Object value, String location) {
@@ -463,13 +579,6 @@ public final class ContractParser {
             out.add(new MediaType(entry.getKey(), schema, Collections.unmodifiableMap(other)));
         }
         return List.copyOf(out);
-    }
-
-    private void unmodelledReference(Map<String, Object> object, String location) {
-        if (object.containsKey("$ref")) {
-            findings.add(new Finding(location, Construct.UNMODELLED_REFERENCE, Treatment.UNDECIDED,
-                    String.valueOf(object.get("$ref"))));
-        }
     }
 
     // ------------------------------------------------------------- plumbing

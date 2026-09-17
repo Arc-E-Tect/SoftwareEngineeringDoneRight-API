@@ -267,7 +267,7 @@ class ConstructClassificationTest {
     }
 
     @Test
-    void otherComponentTypesAreKeptAndClassified() {
+    void componentTypesTheModelDoesNotTypeAreKeptAndClassified() {
         ContractModel model = ContractParser.parse("""
                 openapi: 3.0.3
                 info: {title: Other, version: '1'}
@@ -277,19 +277,22 @@ class ConstructClassificationTest {
                     NotFound: {description: Not found.}
                   securitySchemes:
                     bearer: {type: http, scheme: bearer}
+                  headers:
+                    X-Trace: {schema: {type: string}}
                 """, "other.yaml");
 
         assertThat(model.components()).isEmpty();
-        assertThat(model.otherComponents()).containsOnlyKeys("responses", "securitySchemes");
+        assertThat(model.responses()).extracting(Reusable::name).containsExactly("NotFound");
+        assertThat(model.otherComponents()).containsOnlyKeys("securitySchemes", "headers");
         assertThat(model.findings()).containsExactly(
-                new Finding("/components/responses/NotFound", Construct.UNMODELLED_COMPONENT_TYPE,
-                        Treatment.UNDECIDED, "responses"),
                 new Finding("/components/securitySchemes/bearer", Construct.UNMODELLED_COMPONENT_TYPE,
-                        Treatment.UNDECIDED, "securitySchemes"));
+                        Treatment.UNDECIDED, "securitySchemes"),
+                new Finding("/components/headers/X-Trace", Construct.UNMODELLED_COMPONENT_TYPE,
+                        Treatment.UNDECIDED, "headers"));
     }
 
     @Test
-    void referencesOutsideSchemasInOperationsAreKeptAndClassified() {
+    void referencesToReusableComponentsResolveAndKeepWhatTheReferenceSays() {
         String yaml = """
                 openapi: 3.1.0
                 info: {title: Refs, version: '1'}
@@ -304,6 +307,10 @@ class ConstructClassificationTest {
                       responses:
                         '404':
                           $ref: '#/components/responses/NotFound'
+                          description: No such thing.
+                          x-ignored: true
+                        '410':
+                          $ref: '#/components/responses/Gone'
                         default:
                           description: Anything else.
                           headers:
@@ -312,28 +319,122 @@ class ConstructClassificationTest {
                             text/plain:
                               example: oops
                       security: []
+                components:
+                  schemas:
+                    Problem: {type: object}
+                  parameters:
+                    Id:
+                      x-fragment-path: openapi/parameters/Id.yaml
+                      name: id
+                      in: path
+                      required: true
+                      schema: {type: string, oneOf: [{type: string}]}
+                  requestBodies:
+                    Thing:
+                      required: true
+                      content:
+                        application/json:
+                          schema: {$ref: '#/components/schemas/Problem'}
+                  responses:
+                    Gone:
+                      $ref: '#/components/responses/NotFound'
+                      summary: Gone is not found.
+                    NotFound:
+                      description: Not found.
+                      content:
+                        application/problem+json:
+                          schema: {$ref: '#/components/schemas/Problem'}
                 """;
         ContractModel model = ContractParser.parse(yaml, "refs.yaml");
 
-        assertThat(model.findings()).extracting(Finding::location, Finding::construct).containsExactly(
-                org.assertj.core.groups.Tuple.tuple("/paths/~1things~1{id}/parameters/0",
-                        Construct.UNMODELLED_REFERENCE),
-                org.assertj.core.groups.Tuple.tuple("/paths/~1things~1{id}/put/requestBody",
-                        Construct.UNMODELLED_REFERENCE),
-                org.assertj.core.groups.Tuple.tuple("/paths/~1things~1{id}/put/responses/404",
-                        Construct.UNMODELLED_REFERENCE));
         PathItem item = model.paths().get(0);
         assertThat(item.other()).containsEntry("summary", "Things.");
+        Parameter id = item.parameters().get(0);
+        assertThat(id.reference()).isEqualTo(new Reference("Id", null, null, Map.of()));
+        assertThat(id.name()).isEqualTo("id");
+        assertThat(id.in()).isEqualTo("path");
+
         Operation put = item.operations().get(0);
         assertThat(put.method()).isEqualTo(HttpMethod.PUT);
         assertThat(put.operationId()).isNull();
         assertThat(put.other()).containsEntry("security", List.of());
-        assertThat(put.responses().get(1).other()).containsKey("headers");
-        assertThat(put.responses().get(1).content().get(0).schema()).isNull();
+        assertThat(put.requestBody().reference().name()).isEqualTo("Thing");
+        assertThat(put.requestBody().required()).isTrue();
+        assertThat(put.requestBody().content()).singleElement().extracting(m -> m.schema().ref()).isEqualTo("Problem");
+
+        Response notFound = put.responses().get(0);
+        assertThat(notFound.status()).isEqualTo("404");
+        assertThat(notFound.reference()).isEqualTo(
+                new Reference("NotFound", null, "No such thing.", Map.of("x-ignored", true)));
+        assertThat(notFound.description()).isEqualTo("Not found.");
+        assertThat(notFound.content()).singleElement().satisfies(m -> {
+            assertThat(m.contentType()).isEqualTo("application/problem+json");
+            assertThat(m.schema().ref()).isEqualTo("Problem");
+        });
+
+        Response gone = put.responses().get(1);
+        assertThat(gone.status()).isEqualTo("410");
+        assertThat(gone.reference().name()).isEqualTo("Gone");
+        assertThat(gone.content()).isEqualTo(notFound.content());
+
+        Response other = put.responses().get(2);
+        assertThat(other.reference()).isNull();
+        assertThat(other.other()).containsKey("headers");
+        assertThat(other.content().get(0).schema()).isNull();
+
+        assertThat(model.parameters()).singleElement().satisfies(p -> {
+            assertThat(p.name()).isEqualTo("Id");
+            assertThat(p.provenance().fragmentPath()).isEqualTo("openapi/parameters/Id.yaml");
+            assertThat(p.value().reference()).isNull();
+        });
+        assertThat(model.responses()).extracting(Reusable::name).containsExactly("Gone", "NotFound");
+        Response goneComponent = model.responses().get(0).value();
+        assertThat(goneComponent.status()).isNull();
+        assertThat(goneComponent.reference()).isEqualTo(new Reference("NotFound", "Gone is not found.", null, Map.of()));
+        assertThat(goneComponent.description()).isEqualTo("Not found.");
+
+        // A schema inside a reusable component is classified once, where it is written.
+        assertThat(model.findings()).containsExactly(new Finding(
+                "/components/parameters/Id/schema", Construct.ONE_OF_INLINE_BRANCHES, Treatment.DEGRADED,
+                "oneOf: <inline #1>"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> document = (Map<String, Object>) new Load(
                 LoadSettings.builder().setSchema(new CoreSchema()).build()).loadFromString(yaml);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> components = (Map<String, Object>) document.get("components");
         assertThat(ModelWriter.paths(model)).isEqualTo(document.get("paths"));
+        assertThat(ModelWriter.reusableParameters(model)).isEqualTo(components.get("parameters"));
+        assertThat(ModelWriter.reusableRequestBodies(model)).isEqualTo(components.get("requestBodies"));
+        assertThat(ModelWriter.reusableResponses(model)).isEqualTo(components.get("responses"));
+    }
+
+    @Test
+    void thePublishersScaffoldRoundTripsWithItsReusableResponse() throws java.io.IOException {
+        java.nio.file.Path file = java.nio.file.Path.of("src/test/resources/fixtures/scaffold/openapi.yaml");
+        ContractModel model = ContractParser.parse(file);
+
+        Response badRequest = model.operation("listExamples").orElseThrow().responses().get(1);
+        assertThat(badRequest.status()).isEqualTo("400");
+        assertThat(badRequest.reference().name()).isEqualTo("InvalidRequestProblemV1");
+        assertThat(badRequest.content()).singleElement().extracting(MediaType::contentType)
+                .isEqualTo("application/problem+json");
+        assertThat(model.responses()).singleElement().satisfies(r -> assertThat(r.provenance().fragmentPath())
+                .isEqualTo("openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml"));
+        assertThat(model.findings()).extracting(Finding::construct)
+                .containsExactly(Construct.UNMODELLED_COMPONENT_TYPE);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> document = (Map<String, Object>) new Load(
+                LoadSettings.builder().setSchema(new CoreSchema()).build())
+                .loadFromString(java.nio.file.Files.readString(file));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> components = (Map<String, Object>) document.get("components");
+        assertThat(ModelWriter.paths(model)).isEqualTo(document.get("paths"));
+        assertThat(ModelWriter.reusableResponses(model)).isEqualTo(components.get("responses"));
+        assertThat(ModelWriter.otherComponents(model)).isEqualTo(Map.of("securitySchemes",
+                components.get("securitySchemes")));
+        assertThat(model.responses().get(0).provenance().sha256()).isEqualTo(CanonicalJson.sha256(
+                ((Map<?, ?>) components.get("responses")).get("InvalidRequestProblemV1")));
     }
 }

@@ -27,10 +27,11 @@ public enum Construct {
     BOOLEAN_SCHEMA(Treatment.UNDECIDED, null),
     /** A schema keyword the model does not type, kept as a raw value. */
     UNMODELLED_KEYWORD(Treatment.UNDECIDED, null),
-    /** A component of a type other than {@code schemas}, kept as a raw value. */
-    UNMODELLED_COMPONENT_TYPE(Treatment.UNDECIDED, null),
-    /** A {@code $ref} in place of a parameter, request body or response, kept as a raw value. */
-    UNMODELLED_REFERENCE(Treatment.UNDECIDED, null);
+    /**
+     * A component of a type the model does not type -- anything but schemas,
+     * responses, parameters and request bodies -- kept as a raw value.
+     */
+    UNMODELLED_COMPONENT_TYPE(Treatment.UNDECIDED, null);
 
     private static final String NAME_THE_BRANCHES =
             "name the branches in the specification so that each becomes a component";

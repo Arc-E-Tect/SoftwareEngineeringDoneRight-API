@@ -107,6 +107,28 @@ class ContractParserErrorsTest {
     }
 
     @Test
+    void aReferenceToAReusableComponentMustNameOneOfTheRightType() {
+        String header = "openapi: 3.1.0\npaths:\n  /a:\n    get:\n      responses:\n        '404':\n";
+        refused(header + "          $ref: '#/components/responses/Missing'\n",
+                "/paths/~1a/get/responses/404: $ref '#/components/responses/Missing' names no component");
+        refused(header + "          $ref: '#/components/parameters/Id'\ncomponents:\n  parameters:\n    Id: {}\n",
+                "/paths/~1a/get/responses/404: $ref '#/components/parameters/Id' is not a reference to a "
+                        + "component under components/responses");
+    }
+
+    @Test
+    void aCycleOfReferencesIsRefusedWithTheCycleNamed() {
+        refused("""
+                openapi: 3.1.0
+                components:
+                  responses:
+                    A: {$ref: '#/components/responses/B'}
+                    B: {$ref: '#/components/responses/A'}
+                """, "/components/responses/B: $ref '#/components/responses/A' is part of a cycle of references: "
+                + "responses/A -> responses/B -> responses/A");
+    }
+
+    @Test
     void aReferenceWithEscapedCharactersResolves() {
         ContractModel model = ContractParser.parse("""
                 openapi: 3.1.0
