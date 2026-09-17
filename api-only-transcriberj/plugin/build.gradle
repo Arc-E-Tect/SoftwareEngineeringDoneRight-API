@@ -1,13 +1,19 @@
 plugins {
     id 'java-gradle-plugin'
-    // For publishToMavenLocal during development; the release publishes to the
-    // Gradle Plugin Portal.
+    // Publishes to the Gradle Plugin Portal, the only place the plugin is published.
+    // Its SPI goes to Maven Central, from the spi module, at the same version.
+    alias(libs.plugins.plugin.publish)
+    // Kept for publishToMavenLocal, which is how the plugin is used before it is
+    // released.
     id 'maven-publish'
 }
 
 description = 'Generates a contract-derived Java class tree from a subscribed API contract.'
 
 gradlePlugin {
+    website = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-transcriberj'
+    vcsUrl  = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+
     plugins {
         apiOnlyTranscriberJ {
             id                  = 'com.arc-e-tect.api-only-transcriberj'
@@ -15,6 +21,14 @@ gradlePlugin {
             displayName         = 'Arc-E-Tect API-Only TranscriberJ'
             description         = project.description
             tags                = ['openapi', 'api-first', 'contract', 'code-generation', 'rest-docs']
+            compatibility {
+                features {
+                    // Asserted because it is tested: ApiOnlyTranscriberJPluginFunctionalTest
+                    // runs a real build twice with --configuration-cache and requires the
+                    // second to reuse the entry.
+                    configurationCache = true
+                }
+            }
         }
     }
 }
@@ -26,6 +40,37 @@ publishing {
         if (name == 'pluginMaven') {
             artifactId = 'api-only-transcriberj'
         }
+        // The published POM is what the Plugin Portal reads to describe this plugin.
+        pom {
+            name = 'Arc-E-Tect API-Only TranscriberJ'
+            description = project.description
+            url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-transcriberj'
+            licenses {
+                license {
+                    name = 'MIT License'
+                    url = 'https://opensource.org/licenses/MIT'
+                    distribution = 'repo'
+                }
+            }
+            developers {
+                developer {
+                    id = 'arc-e-tect'
+                    name = 'Arc-E-Tect'
+                }
+            }
+            scm {
+                url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API'
+                connection = 'scm:git:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+                developerConnection = 'scm:git:git@github.com:Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+            }
+        }
+    }
+}
+
+// Ship the licence inside the artifact, not only as a claim in its metadata.
+tasks.named('jar') {
+    from(rootProject.layout.projectDirectory.file('LICENSE')) {
+        into 'META-INF'
     }
 }
 

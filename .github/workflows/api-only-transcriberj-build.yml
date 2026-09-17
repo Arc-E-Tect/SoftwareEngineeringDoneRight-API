@@ -1,0 +1,136 @@
+name: API-Only TranscriberJ Plugin - Build
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'api-only-transcriberj/**'
+      - '.github/workflows/api-only-transcriberj-build.yml'
+      - '.github/workflows/semantic-version-calculate.yml'
+      - '.github/workflows/determine-release-type.yml'
+
+jobs:
+  Detect-Changes:
+    name: Detect Relevant Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.decide.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # GitHub's own paths: trigger filter above is skipped entirely for a brand-new branch's
+      # first push (there's no prior ref state to diff against), so this only re-checks paths -
+      # against main - for that specific case. An existing branch's push already got here only
+      # because the trigger's own paths filter matched, so it's trusted as-is.
+      - name: Filter paths relevant to this plugin (new-branch pushes only)
+        id: filter
+        if: github.event.before == '0000000000000000000000000000000000000000'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          base: main
+          filters: |
+            changed:
+              - 'api-only-transcriberj/**'
+              - '.github/workflows/api-only-transcriberj-build.yml'
+              - '.github/workflows/semantic-version-calculate.yml'
+              - '.github/workflows/determine-release-type.yml'
+
+      - name: Decide whether to proceed
+        id: decide
+        run: |
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=${{ steps.filter.outputs.changed }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  Calculate-Version:
+    needs: Detect-Changes
+    if: needs.Detect-Changes.outputs.changed == 'true'
+    uses: ./.github/workflows/semantic-version-calculate.yml
+    with:
+      fail_on_empty_version: false
+      fail_on_existing_tag: false
+      project_dir: api-only-transcriberj
+      tag_format: 'api-only-transcriberj-v${version}'
+    secrets:
+      sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Determine-Release-Type:
+    needs: [Detect-Changes, Calculate-Version]
+    if: needs.Detect-Changes.outputs.changed == 'true'
+    uses: ./.github/workflows/determine-release-type.yml
+
+  Build-Plugin:
+    name: Build API-Only TranscriberJ Plugin
+    needs: [Detect-Changes, Calculate-Version]
+    if: needs.Detect-Changes.outputs.changed == 'true'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    runs-on: ubuntu-latest
+
+    env:
+      GRADLE_PROPERTIES_FILE: ./api-only-transcriberj/gradle.properties
+      GRADLE_VERSION_REGEX: version\s*=\s*[0-9]\\+\.[0-9]\\+\.[0-9]\\+[a-zA-Z0-9.-]*
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Update version in Gradle property file
+        run: |
+          echo "VERSION=${{ env.VERSION }}"
+          echo ===== Before - ${{ env.GRADLE_PROPERTIES_FILE }} =====
+          cat ${{ env.GRADLE_PROPERTIES_FILE }}
+          sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" ${{ env.GRADLE_PROPERTIES_FILE }}
+          echo ===== After - ${{ env.GRADLE_PROPERTIES_FILE }} =====
+          cat ${{ env.GRADLE_PROPERTIES_FILE }}
+
+      - name: Build and test API-Only TranscriberJ Plugin
+        run: |
+          cd api-only-transcriberj
+          chmod +x ./gradlew
+          # Both modules: the plugin and the SPI it is released with.
+          ./gradlew build
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+      - name: Validate Plugin
+        run: |
+          cd api-only-transcriberj
+          ./gradlew validatePlugins
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+  Workflow-Summary:
+    name: Workflow Summary
+    needs: [Detect-Changes, Build-Plugin, Determine-Release-Type]
+    if: always() && needs.Detect-Changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output build completion
+        run: |
+          echo "API-Only TranscriberJ Plugin ${{ needs.Determine-Release-Type.outputs.release_type }} build workflow completed"
+          echo "::notice title=Build Complete::API-Only TranscriberJ Plugin ${{ needs.Determine-Release-Type.outputs.release_type }} build workflow completed"

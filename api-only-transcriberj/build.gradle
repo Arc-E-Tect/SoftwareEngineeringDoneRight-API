@@ -1,4 +1,35 @@
+plugins {
+    // On the root as well as on each module: the shared security-scan workflow looks
+    // for dependencyCheckUpdate on the root, and running it there runs every module's.
+    alias(libs.plugins.owasp.dependency.check)
+    alias(libs.plugins.plugin.publish) apply false
+    alias(libs.plugins.jreleaser) apply false
+}
+
 // Conventions both modules share. Each module's own build file says what it is.
+allprojects {
+    apply plugin: 'org.owasp.dependencycheck'
+
+    dependencyCheck {
+        // Fatal findings fail the build only when the caller asks; otherwise the scan
+        // reports and the build continues, so a new CVE in a transitive dependency
+        // does not block an unrelated release at an arbitrary moment.
+        failBuildOnCVSS = (System.getenv('FAIL_ON_FATAL') == 'true') ? 9 : 11
+        // Every module reports under the root's build/reports, where the scan
+        // workflow collects them from.
+        outputDirectory = rootProject.layout.buildDirectory.dir("reports/dependency-check/${project.name}").get().asFile.path
+        nvd {
+            apiKey = System.getenv('NVD_APIKEY_SEDR')
+        }
+        analyzers {
+            // A JVM build. The Node analyzers would only report on the release
+            // bookkeeping's package-lock.json, which ships nowhere.
+            nodeAuditEnabled = false
+            nodeEnabled = false
+        }
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'

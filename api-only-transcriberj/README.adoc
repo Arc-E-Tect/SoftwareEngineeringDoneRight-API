@@ -339,11 +339,15 @@ The build has two modules:
 
 |`spi`
 |The contract model and the emitter interface: what emitter libraries compile against.
-To be published as `com.arc-e-tect:api-only-transcriberj-spi`; nothing publishes either module yet.
+Published to Maven Central as `com.arc-e-tect:api-only-transcriberj-spi`, at the plugin's version.
 
 |`plugin`
 |The Gradle plugin and the built-in core emitter.
+Published to the Gradle Plugin Portal as `com.arc-e-tect.api-only-transcriberj`, with the artifact `com.arc-e-tect:api-only-transcriberj`.
 |===
+
+Both are released together, by `.github/workflows/api-only-transcriberj-release.yml`, under the `api-only-transcriberj-v*` tags.
+`./gradlew publishToMavenLocal` puts both in `mavenLocal` for use before a release.
 
 The tests read shared fixtures from `fixtures/`: the reference library's published contracts, built by this repository's Publisher, and the Publisher's `init` scaffold.
 Each directory's `SOURCE.properties` says how to rebuild it.
