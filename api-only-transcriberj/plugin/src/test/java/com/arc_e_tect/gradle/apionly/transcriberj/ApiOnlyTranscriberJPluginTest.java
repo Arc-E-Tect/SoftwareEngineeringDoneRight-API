@@ -94,6 +94,46 @@ class ApiOnlyTranscriberJPluginTest {
         }
     }
 
+    private Project managedProject(String ownVersion, boolean strict) throws Exception {
+        project.getPluginManager().apply("java");
+        project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);
+        project.getRepositories().mavenCentral();
+        Path jar = projectDir.resolve("emitter.jar");
+        ApiOnlyTranscriberJPluginFunctionalTest.emitterJar(jar);
+        project.getDependencies().add("transcriberjEmitters", project.files(jar.toFile()));
+        if (ownVersion != null) {
+            project.getDependencies().add("testImplementation", "org.apiguardian:apiguardian-api:" + ownVersion);
+        }
+        project.getExtensions().getByType(ApiOnlySubscriberExtension.class).subscribe("user-account");
+        ApiOnlyTranscriberJExtension extension = project.getExtensions().getByType(ApiOnlyTranscriberJExtension.class);
+        extension.getStrictDependencies().set(strict);
+        extension.subscription("user-account", s -> s.getBasePackage().set("a.b"));
+        ((ProjectInternal) project).evaluate();
+        return project;
+    }
+
+    private static List<String> resolved(Project project) {
+        return project.getConfigurations().getByName("testCompileClasspath").getFiles().stream()
+                .map(File::getName).toList();
+    }
+
+    @Test
+    void anEmittersDependencyIsPreferredAtItsPinnedVersion() throws Exception {
+        assertThat(resolved(managedProject(null, false))).contains("apiguardian-api-1.1.0.jar");
+    }
+
+    @Test
+    void theProjectsOwnVersionWinsAndAnUntestedOneFailsWhenStrict() throws Exception {
+        assertThat(resolved(managedProject("1.1.2", false))).contains("apiguardian-api-1.1.2.jar")
+                .doesNotContain("apiguardian-api-1.1.0.jar");
+    }
+
+    @Test
+    void anUntestedVersionFailsTheResolutionWhenStrict() throws Exception {
+        Project strict = managedProject("1.1.2", true);
+        assertThatThrownBy(() -> resolved(strict)).hasStackTraceContaining("strictDependencies");
+    }
+
     @Test
     void theTaskSuffixIsTheSubscribersOwn() {
         assertThat(ApiOnlyTranscriberJPlugin.suffix("user-account")).isEqualTo("UserAccount");

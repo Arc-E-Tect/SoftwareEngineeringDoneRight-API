@@ -1,5 +1,8 @@
 plugins {
     id 'java-gradle-plugin'
+    // For publishToMavenLocal during development; the release publishes to the
+    // Gradle Plugin Portal.
+    id 'maven-publish'
 }
 
 description = 'Generates a contract-derived Java class tree from a subscribed API contract.'
@@ -12,6 +15,16 @@ gradlePlugin {
             displayName         = 'Arc-E-Tect API-Only TranscriberJ'
             description         = project.description
             tags                = ['openapi', 'api-first', 'contract', 'code-generation', 'rest-docs']
+        }
+    }
+}
+
+// The plugin's own artifact is api-only-transcriberj, as the Subscriber's is
+// api-only-subscriber; the module is only named -plugin inside this build.
+publishing {
+    publications.withType(MavenPublication).configureEach {
+        if (name == 'pluginMaven') {
+            artifactId = 'api-only-transcriberj'
         }
     }
 }

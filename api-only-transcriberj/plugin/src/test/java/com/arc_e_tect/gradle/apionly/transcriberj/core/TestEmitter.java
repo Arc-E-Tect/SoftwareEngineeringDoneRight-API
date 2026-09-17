@@ -24,7 +24,7 @@ public class TestEmitter implements Emitter {
 
     @Override
     public List<ManagedDependency> dependencies() {
-        return List.of(new ManagedDependency("org.example", "counting-runtime", "1.0.0", "2"));
+        return List.of(new ManagedDependency("org.apiguardian", "apiguardian-api", "1.1.0", "1.1.2"));
     }
 
     @Override

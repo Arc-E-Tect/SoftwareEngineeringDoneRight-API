@@ -1,8 +1,14 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
 }
 
 description = 'The contract model and the emitter interface of the Arc-E-Tect API-Only TranscriberJ.'
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
 
 dependencies {
     // YAML 1.2, no transitive dependencies: the plugin's runtime classpath is the
@@ -12,4 +18,37 @@ dependencies {
     testImplementation libs.junit.jupiter
     testImplementation libs.assertj.core
     testRuntimeOnly    libs.junit.platform.launcher
+}
+
+// Published to Maven Central by the release; to mavenLocal for development, with
+// publishToMavenLocal.
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
+                name = 'Arc-E-Tect API-Only TranscriberJ SPI'
+                description = project.description
+                url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-transcriberj'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                        distribution = 'repo'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'arc-e-tect'
+                        name = 'Arc-E-Tect'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API'
+                    connection = 'scm:git:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+                    developerConnection = 'scm:git:git@github.com:Arc-E-Tect/SoftwareEngineeringDoneRight-API.git'
+                }
+            }
+        }
+    }
 }

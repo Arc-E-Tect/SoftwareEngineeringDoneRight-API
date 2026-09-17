@@ -3,6 +3,7 @@ package com.arc_e_tect.gradle.apionly.transcriberj;
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
 
 import javax.inject.Inject;
 
@@ -35,6 +36,16 @@ public abstract class ApiOnlyTranscriberJExtension {
         this.subscriptions = objects.domainObjectContainer(TranscriberJSubscription.class,
                 name -> objects.newInstance(TranscriberJSubscription.class, name));
     }
+
+    /**
+     * Whether a dependency version an emitter was not tested with fails the build,
+     * rather than only being warned about.
+     *
+     * <p>Default: {@code false}.
+     *
+     * @return the setting
+     */
+    public abstract Property<Boolean> getStrictDependencies();
 
     /**
      * Every contract classes are generated for.

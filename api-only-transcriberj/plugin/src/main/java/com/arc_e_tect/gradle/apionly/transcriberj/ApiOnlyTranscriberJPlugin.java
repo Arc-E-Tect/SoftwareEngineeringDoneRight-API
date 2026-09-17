@@ -5,15 +5,22 @@ import com.arc_e_tect.gradle.apionly.subscriber.ApiOnlySubscriberPlugin;
 import com.arc_e_tect.gradle.apionly.subscriber.Subscription;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ExternalModuleDependency;
+import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * The API-Only TranscriberJ: a class tree derived from a subscribed contract, for
@@ -41,6 +48,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void apply(Project project) {
         project.getPluginManager().apply(ApiOnlySubscriberPlugin.class);
         ApiOnlySubscriberExtension subscriber = project.getExtensions().getByType(ApiOnlySubscriberExtension.class);
@@ -53,6 +61,14 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
 
         ApiOnlyTranscriberJExtension extension = project.getExtensions()
                 .create(ApiOnlyTranscriberJExtension.NAME, ApiOnlyTranscriberJExtension.class);
+        extension.getStrictDependencies().convention(false);
+
+        // Read once, when first needed: while a source set's dependencies are resolved.
+        Map<String, List<ManagedDependency>>[] managed = new Map[1];
+        Supplier<Map<String, List<ManagedDependency>>> managedDependencies = () -> {
+            if (managed[0] == null) managed[0] = ManagedDependencies.of(emitters.getFiles());
+            return managed[0];
+        };
 
         extension.getSubscriptions().all(subscription -> {
             String contract = subscription.getName();
@@ -101,11 +117,41 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             project.getPlugins().withType(JavaPlugin.class, plugin -> project.afterEvaluate(p -> {
                 SourceSetContainer sourceSets = p.getExtensions().getByType(SourceSetContainer.class);
                 for (String name : subscription.getSourceSets().get()) {
-                    sourceSets.named(name, set -> set.getJava().srcDir(generate.flatMap(
-                            GenerateContractSourcesTask::getOutputDirectory)));
+                    SourceSet set = sourceSets.getByName(name);
+                    set.getJava().srcDir(generate.flatMap(GenerateContractSourcesTask::getOutputDirectory));
+                    manage(p, set, managedDependencies, extension);
                 }
             }));
         });
+    }
+
+    /**
+     * Adds the emitters' dependencies to a source set, each at a version it only
+     * prefers, and checks the versions resolved for it.
+     */
+    private static void manage(Project project, SourceSet set,
+                               Supplier<Map<String, List<ManagedDependency>>> managedDependencies,
+                               ApiOnlyTranscriberJExtension extension) {
+        project.getConfigurations().named(set.getImplementationConfigurationName()).configure(c ->
+                c.withDependencies(dependencies -> managedDependencies.get().values().stream()
+                        .flatMap(List::stream).distinct().forEach(m -> {
+                            ExternalModuleDependency dependency = (ExternalModuleDependency)
+                                    project.getDependencies().create(m.group() + ":" + m.name());
+                            dependency.version(v -> v.prefer(m.pinnedVersion()));
+                            dependencies.add(dependency);
+                        })));
+        for (String classpath : List.of(set.getCompileClasspathConfigurationName(),
+                set.getRuntimeClasspathConfigurationName())) {
+            project.getConfigurations().named(classpath).configure(c -> c.getIncoming().afterResolve(result -> {
+                Map<String, String> resolved = new HashMap<>();
+                result.getResolutionResult().getAllComponents().forEach(component -> {
+                    ModuleVersionIdentifier id = component.getModuleVersion();
+                    if (id != null) resolved.put(id.getGroup() + ":" + id.getName(), id.getVersion());
+                });
+                ManagedDependencies.check(classpath, resolved, managedDependencies.get(),
+                        extension.getStrictDependencies().get(), project.getLogger()::warn);
+            }));
+        }
     }
 
     /** A contract's task-name suffix, as the Subscriber forms it: {@code user-account} is {@code UserAccount}. */

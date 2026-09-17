@@ -117,6 +117,11 @@ apiOnlyTranscriberJ {
     }
 }
 
+// Whether a dependency version an emitter was not tested with fails the build
+// instead of being warned about. Applies to every subscription.
+// Default: false
+// apiOnlyTranscriberJ.strictDependencies = true
+
 dependencies {
     // Emitter libraries: dialects of generated code. None unless added.
     // transcriberjEmitters 'com.example:some-emitter:1.0.0'
@@ -292,7 +297,14 @@ public interface Emitter {
 `EmitterContext.names()` gives every core class's name, so a companion always matches the class it belongs to.
 `EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
 
-The plugin does not yet add the dependencies an emitter declares; the project declares them itself.
+[#emitter-dependencies]
+=== What the generated code depends on
+
+An emitter declares the libraries its generated code needs, the version it was tested with, and the first version it was not.
+The plugin adds each to the source sets it generates into, at a version it only _prefers_: Gradle uses it when nothing else in the build asks for a version, declared or transitive, so a project's own choice always wins.
+
+After resolution, a version at or above the untested one is warned about: "not tested with this plugin version", naming the emitter, the library and the version.
+`strictDependencies = true` makes that a build failure instead.
 
 [#limits]
 == What this cannot do

@@ -43,8 +43,15 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                     id 'com.arc-e-tect.api-only-transcriberj'
                 }
 
+                repositories {
+                    mavenCentral()
+                }
+
                 dependencies {
                     transcriberjEmitters files('emitter.jar')
+                    if (findProperty('ownGuardian')) {
+                        testImplementation "org.apiguardian:apiguardian-api:${findProperty('ownGuardian')}"
+                    }
                 }
 
                 apiOnlySubscriber {
@@ -58,6 +65,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                 }
 
                 apiOnlyTranscriberJ {
+                    strictDependencies = findProperty('strict') != null
                     subscription('user-account') {
                         basePackage = 'com.example.contract'
                         recursionDepth = (findProperty('transcriberDepth') ?: '3') as int
@@ -146,6 +154,25 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         BuildResult upgraded = runner("useContract", "-PcontractVersion=1.0.1").build();
         assertThat(upgraded.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(upgraded.getOutput()).contains("VERSION 1.0.1");
+    }
+
+    @Test
+    void anEmittersDependencyIsAddedAtItsPinnedVersionUnlessTheProjectChoosesOne() throws Exception {
+        runner("dependencies", "--configuration", "testCompileClasspath").build();
+        BuildResult pinned = runner("dependencyInsight", "--configuration", "testCompileClasspath",
+                "--dependency", "apiguardian-api").build();
+        assertThat(pinned.getOutput()).contains("org.apiguardian:apiguardian-api:1.1.0")
+                .doesNotContain("is not tested with this plugin version");
+
+        BuildResult own = runner("dependencyInsight", "--configuration", "testCompileClasspath",
+                "--dependency", "apiguardian-api", "-PownGuardian=1.1.2").build();
+        assertThat(own.getOutput()).contains("org.apiguardian:apiguardian-api:1.1.2")
+                .contains("Emitter counting: org.apiguardian:apiguardian-api 1.1.2 in testCompileClasspath is not "
+                        + "tested with this plugin version");
+
+        BuildResult strict = runner("dependencyInsight", "--configuration", "testCompileClasspath",
+                "--dependency", "apiguardian-api", "-PownGuardian=1.1.2", "-Pstrict=true").buildAndFail();
+        assertThat(strict.getOutput()).contains("apiOnlyTranscriberJ.strictDependencies is set");
     }
 
     @Test
