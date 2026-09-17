@@ -1,3 +1,10 @@
+## [0.1.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.1.0...api-only-transcriberj-v0.1.1) (2026-09-17)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** wire IDE sync from the root project, and never fail a subproject ([#18](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/18)) ([34e78d0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/34e78d0e2a6701fe05be6d95d76b474219231509)), closes [#18](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/18)
+
 # [0.1.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.0.2...api-only-transcriberj-v0.1.0) (2026-09-17)
 
 
