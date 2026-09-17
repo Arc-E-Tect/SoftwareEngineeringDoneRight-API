@@ -164,10 +164,21 @@ link:use-cases/both/implementing-and-calling/tutorial.adoc[Tutorial →] +
 link:use-cases/both/implementing-and-calling/prompt-claude-code.md[Claude Code prompt →] +
 link:use-cases/both/implementing-and-calling/prompt-codex.md[Codex prompt →]
 
+[#migration]
+== Already have a checked-in document?
+
+A project with a committed `openapi.yaml` on its resource path arrives at one of the use cases above through a migration, in four phases: reproduce the committed document byte for byte, generate it in place, switch the consumers one at a time, and remove the scaffolding.
+Each phase leaves the repository working.
+
+link:migration/from-a-checked-in-document/overview.adoc[Overview →] +
+link:migration/from-a-checked-in-document/tutorial.adoc[Tutorial →] +
+link:migration/from-a-checked-in-document/prompt-claude-code.md[Claude Code prompt →] +
+link:migration/from-a-checked-in-document/prompt-codex.md[Codex prompt →]
+
 [#documents]
 == What each use case gives you
 
-Every use case has the same four documents, and each stands on its own:
+Every use case, and the migration, has the same four documents, and each stands on its own:
 
 * the **overview** says when the use case fits, what you get, what you do not need, and the adoption in broad strokes;
 * the **tutorial** builds it step by step, with every file, every value and what to consider;
