@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.4.0...api-only-publisher-v0.4.1) (2026-09-17)
+
+
+### 📝 Documentation
+
+* keep component versions in one place per document, and document the released versions ([#14](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/14)) ([d0cb5cb](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/d0cb5cb060cdf00ea8b7c8dfacb545002cc8eea7)), closes [#14](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/14)
+
 # [0.4.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.3.0...api-only-publisher-v0.4.0) (2026-09-17)
 
 
