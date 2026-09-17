@@ -75,6 +75,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             String suffix = suffix(contract);
             subscription.getSourceSets().convention(List.of("test"));
             subscription.getRecursionDepth().convention(3);
+            subscription.getGenerateDocs().convention(false);
             subscription.getDescriptionPlaceholder()
                     .convention(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
             subscription.getInto().convention(
@@ -92,6 +93,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getContractName().set(contract);
                         task.getBasePackage().set(subscription.getBasePackage());
                         task.getRecursionDepth().set(subscription.getRecursionDepth());
+                        task.getGenerateDocs().set(subscription.getGenerateDocs());
                         task.getDescriptionPlaceholder().set(subscription.getDescriptionPlaceholder());
                         task.getEmitterClasspath().from(emitters);
                         task.getOutputDirectory().set(subscription.getInto());

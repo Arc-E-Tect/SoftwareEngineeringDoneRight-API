@@ -84,6 +84,14 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     public abstract Property<Integer> getRecursionDepth();
 
     /**
+     * Whether descriptions come from the contract.
+     *
+     * @return the setting
+     */
+    @Input
+    public abstract Property<Boolean> getGenerateDocs();
+
+    /**
      * The description every field carries.
      *
      * @return the placeholder
@@ -150,6 +158,7 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             parameters.getContractName().set(getContractName());
             parameters.getBasePackage().set(getBasePackage());
             parameters.getRecursionDepth().set(getRecursionDepth());
+            parameters.getGenerateDocs().set(getGenerateDocs());
             parameters.getDescriptionPlaceholder().set(getDescriptionPlaceholder());
             parameters.getOutputDirectory().set(getOutputDirectory());
             parameters.getReportFile().set(getReportFile());

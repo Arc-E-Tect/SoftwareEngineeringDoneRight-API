@@ -72,6 +72,13 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         Property<Integer> getRecursionDepth();
 
         /**
+         * Whether descriptions come from the contract.
+         *
+         * @return the setting
+         */
+        Property<Boolean> getGenerateDocs();
+
+        /**
          * The description placeholder.
          *
          * @return the placeholder
@@ -107,7 +114,8 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
     @Override
     public void execute() {
         Parameters p = getParameters();
-        Settings settings = new Settings(p.getContractName().get(), p.getBasePackage().get(), false,
+        Settings settings = new Settings(p.getContractName().get(), p.getBasePackage().get(),
+                p.getGenerateDocs().get(),
                 p.getDescriptionPlaceholder().get(), p.getRecursionDepth().get());
         GenerationReport report;
         try {

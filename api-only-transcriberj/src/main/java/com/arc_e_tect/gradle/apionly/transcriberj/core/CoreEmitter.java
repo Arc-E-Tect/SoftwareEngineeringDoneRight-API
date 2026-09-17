@@ -47,11 +47,16 @@ final class CoreEmitter implements Emitter {
     private final Shapes shapes;
     private final CoreClassNames names;
     private final String contractSha256;
+    private final GenerationReport report;
 
-    CoreEmitter(Shapes shapes, CoreClassNames names, String contractSha256) {
+    private static final String NO_DESCRIPTION = "no description; give it one, since generateDocs is on and it is "
+            + "documented with the placeholder until then";
+
+    CoreEmitter(Shapes shapes, CoreClassNames names, String contractSha256, GenerationReport report) {
         this.shapes = shapes;
         this.names = names;
         this.contractSha256 = contractSha256;
+        this.report = report;
     }
 
     @Override
@@ -345,7 +350,7 @@ final class CoreEmitter implements Emitter {
 
             out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n\n");
             method("The description of what this class was generated from.", "public static String description()",
-                    List.of("return ContractField.PLACEHOLDER;"));
+                    List.of("return " + describe(ownDescription(), classLocation()) + ";"));
 
             if (generated.bodyShaped()) {
                 if (target != null) {
@@ -371,6 +376,41 @@ final class CoreEmitter implements Emitter {
                 case INLINE_RESPONSE -> "Generated from the response schema at " + from + ".";
                 case OPERATION -> throw new IllegalStateException("an operation's class is not a schema's");
             };
+        }
+
+        /** The description the contract gives what this class was generated from. */
+        private String ownDescription() {
+            ContractModel model = context.model();
+            return switch (generated.origin()) {
+                case SCHEMA, INLINE_REQUEST, INLINE_RESPONSE ->
+                        generated.schema() == null ? null : generated.schema().description();
+                case RESPONSE -> model.responses().stream().filter(r -> r.name().equals(generated.key()))
+                        .findFirst().map(r -> r.value().description()).orElse(null);
+                case REQUEST_BODY -> model.requestBodies().stream().filter(b -> b.name().equals(generated.key()))
+                        .findFirst().map(b -> b.value().description()).orElse(null);
+                case PARAMETER -> model.parameters().stream().filter(p -> p.name().equals(generated.key()))
+                        .findFirst().map(p -> p.value().description()).orElse(null);
+                case OPERATION -> throw new IllegalStateException("an operation's class is not a schema's");
+            };
+        }
+
+        private String classLocation() {
+            return generated.origin() == Origin.INLINE_REQUEST || generated.origin() == Origin.INLINE_RESPONSE
+                    ? schemaLocation : location(generated);
+        }
+
+        /**
+         * The Java expression a description is written as: the contract's text when
+         * descriptions are generated and it has one, and the placeholder otherwise --
+         * reported, when descriptions are generated.
+         */
+        private String describe(String text, String at) {
+            if (!context.settings().generateDocs()) return "ContractField.PLACEHOLDER";
+            if (text == null || text.isBlank()) {
+                report.recommend(at, NO_DESCRIPTION);
+                return "ContractField.PLACEHOLDER";
+            }
+            return JavaText.literal(text.strip());
         }
 
         /** The schema component a reusable response or request body only refers to. */
@@ -768,11 +808,14 @@ final class CoreEmitter implements Emitter {
 
         private void valueFields(Schema s, String location, String path, String opt, List<String> lines) {
             shapes.unrepresentable(s, location);
-            String description = "ContractField.PLACEHOLDER";
+            String description;
             if (s.ref() != null && s.types() == null && s.properties() == null) {
                 String targetClass = names.component(Origin.SCHEMA, s.ref()).orElseThrow().simpleName();
                 Schema target = shapes.component(s.ref()).orElseThrow();
-                description = targetClass + ".description()";
+                // A reference may describe the property itself; otherwise the component describes it.
+                description = context.settings().generateDocs() && s.description() != null && !s.description().isBlank()
+                        ? JavaText.literal(s.description().strip())
+                        : targetClass + ".description()";
                 if (shapes.isObject(target)) {
                     boolean open = shapes.object(target, "/components/schemas/" + Shapes.escape(s.ref())).open();
                     if (shapes.closesCycle(location)) {
@@ -801,6 +844,7 @@ final class CoreEmitter implements Emitter {
                 lines.add(field(path, shapes.fieldType(target), opt, description, false, false));
                 return;
             }
+            description = describe(s.description(), location);
             if (shapes.isArray(s)) {
                 lines.add(field(path, "array", opt, description, false, false));
                 if (s.items() != null) itemFields(s.items(), location + "/items", path, opt, lines);

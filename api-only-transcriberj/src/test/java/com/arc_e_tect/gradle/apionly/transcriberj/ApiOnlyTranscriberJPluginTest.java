@@ -70,6 +70,7 @@ class ApiOnlyTranscriberJPluginTest {
         assertThat(subscription.getName()).isEqualTo("user-account");
         assertThat(extension.subscription("user-account", s -> { })).isSameAs(subscription);
         assertThat(subscription.getRecursionDepth().get()).isEqualTo(3);
+        assertThat(subscription.getGenerateDocs().get()).isFalse();
         assertThat(subscription.getDescriptionPlaceholder().get())
                 .isEqualTo(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
         assertThat(subscription.getInto().get().getAsFile())
@@ -79,6 +80,7 @@ class ApiOnlyTranscriberJPluginTest {
                 project.getTasks().getByName("generateContractSourcesUserAccount");
         assertThat(generate.getContractName().get()).isEqualTo("user-account");
         assertThat(generate.getBasePackage().get()).isEqualTo("com.example.contract");
+        assertThat(generate.getGenerateDocs().get()).isFalse();
         assertThat(generate.getContract().get().getAsFile())
                 .isEqualTo(projectDir.resolve("build/api-spec/user-account/openapi.yaml").toFile());
         assertThat(generate.getReportFile().get().getAsFile())
@@ -154,6 +156,7 @@ class ApiOnlyTranscriberJPluginTest {
         task.getContractName().set("user-account");
         task.getBasePackage().set("com.example.contract");
         task.getRecursionDepth().set(3);
+        task.getGenerateDocs().set(true);
         task.getDescriptionPlaceholder().set("P");
         task.getEmitterClasspath().from(jar.toFile());
         task.getOutputDirectory().set(projectDir.resolve("out").toFile());
@@ -169,6 +172,8 @@ class ApiOnlyTranscriberJPluginTest {
                 .contains("CONTRACT_SHA256 = \"abc\"");
         assertThat(Files.readString(projectDir.resolve("report.txt"))).startsWith("API-Only TranscriberJ: user-account");
         assertThat(Files.readString(projectDir.resolve("index.properties"))).contains("GetUserOperation.PATH=");
+        assertThat(Files.readString(projectDir.resolve("out/com/example/contract/UsernameV1.java")))
+                .contains("The unique username of the account.");
 
         task.getBasePackage().set((String) null);
         assertThatThrownBy(task::generate).isInstanceOf(GradleException.class)
@@ -188,6 +193,7 @@ class ApiOnlyTranscriberJPluginTest {
         parameters.getContractName().set("c");
         parameters.getBasePackage().set("a.b");
         parameters.getRecursionDepth().set(1);
+        parameters.getGenerateDocs().set(false);
         parameters.getDescriptionPlaceholder().set("p");
         parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
         parameters.getReportFile().set(projectDir.resolve("report.txt").toFile());

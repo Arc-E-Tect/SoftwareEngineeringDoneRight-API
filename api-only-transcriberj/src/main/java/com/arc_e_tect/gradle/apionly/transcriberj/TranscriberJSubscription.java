@@ -69,6 +69,18 @@ public abstract class TranscriberJSubscription implements Named {
     public abstract Property<Integer> getRecursionDepth();
 
     /**
+     * Whether the generated descriptions come from the contract. When they do, a class
+     * or field the contract does not describe is reported, and documented with the
+     * placeholder.
+     *
+     * <p>Default: {@code false}. The class tree is for contract testing; documentation
+     * is usually generated elsewhere, from text a technical writer owns.
+     *
+     * @return the setting
+     */
+    public abstract Property<Boolean> getGenerateDocs();
+
+    /**
      * The description every field carries while descriptions are not generated.
      *
      * <p>Default: {@value #DEFAULT_DESCRIPTION_PLACEHOLDER}.

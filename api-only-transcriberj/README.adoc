@@ -107,7 +107,12 @@ apiOnlyTranscriberJ {
         // Default: 3
         // recursionDepth = 3
 
-        // The description every generated field carries.
+        // Whether descriptions come from the contract.
+        // Default: false
+        // generateDocs = true
+
+        // The description of every class and field when generateDocs is off, and of
+        // those the contract does not describe when it is on.
         // Default: INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE
         // descriptionPlaceholder = '...'
 
@@ -128,9 +133,20 @@ dependencies {
 }
 ----
 
-Descriptions are placeholders.
-The class tree exists for contract testing; documentation is generated elsewhere, often with text a technical writer owns.
-Generating descriptions from the contract is not supported yet.
+[#descriptions]
+=== Descriptions
+
+By default every description is the placeholder.
+The class tree exists for contract testing; documentation is usually generated elsewhere, often with text a technical writer owns.
+
+With `generateDocs = true`, descriptions come from the contract:
+
+* A class's `description()` is its schema's description, or, for a reusable response, request body or parameter, the component's own.
+* A field's description is its property's.
+A `$ref` property is described by the component it refers to, unless the reference carries a description of its own.
+* The text is used as the contract writes it, trimmed at both ends; line breaks inside it are kept.
+* A class or field the contract does not describe is documented with the placeholder, and the report names it with the advice to describe it.
+It does not fail the build.
 
 [#tasks]
 == Tasks
@@ -190,7 +206,7 @@ The hash is SHA-256 over the component as bundled, `x-fragment-path` included, i
 An object's are prefixed with the property: `EMAIL_ADDRESS_MIN_LENGTH`.
 They are constants only; generated bodies do not enforce them.
 * **Where it is sent**: `CONTENT_TYPE` and `CONTENT_TYPES` for bodies; `NAME`, `IN` and `REQUIRED` for a parameter; `OPERATION_ID`, `METHOD`, `PATH` and `STATUS` for an inline schema.
-* **`description()`**, the placeholder.
+* **`description()`**: the placeholder, or the contract's description with `generateDocs` on.
 * **`body(...)`** and **`fields(prefix)`**, when the schema describes an object.
 
 [#operations]

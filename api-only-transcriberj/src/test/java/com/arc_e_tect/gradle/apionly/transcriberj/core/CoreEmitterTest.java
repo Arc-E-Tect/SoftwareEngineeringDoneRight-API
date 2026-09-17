@@ -511,9 +511,6 @@ class CoreEmitterTest {
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
                 new Settings("c", null, false, "p", 1), out, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage null");
-        assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
-                new Settings("c", "a.b", true, "p", 1), out, List.of(), null))
-                .isInstanceOf(GenerationException.class).hasMessageContaining("generateDocs is not supported yet");
         assertThatThrownBy(() -> Generation.run(contract, "2.0.0", "x",
                 new Settings("c", "a.b", false, "p", 1), out, List.of(), null))
                 .isInstanceOf(GenerationException.class)
@@ -590,8 +587,8 @@ class CoreEmitterTest {
         assertThat(names.schemaLocation(names.inline(location).orElseThrow())).isEqualTo(location);
         assertThat(names.schemaLocation(new GeneratedClass("X", Origin.SCHEMA, "missing", false, null, null, false)))
                 .isNull();
-        assertThat(new CoreEmitter(new Shapes(model), names, "x").dependencies()).isEmpty();
-        assertThat(new CoreEmitter(new Shapes(model), names, "x").represents())
+        assertThat(new CoreEmitter(new Shapes(model), names, "x", new GenerationReport()).dependencies()).isEmpty();
+        assertThat(new CoreEmitter(new Shapes(model), names, "x", new GenerationReport()).represents())
                 .doesNotContain(Construct.MULTIPLE_TYPES).contains(Construct.RECURSIVE_REF);
         assertThat(Map.of()).isEmpty();
     }

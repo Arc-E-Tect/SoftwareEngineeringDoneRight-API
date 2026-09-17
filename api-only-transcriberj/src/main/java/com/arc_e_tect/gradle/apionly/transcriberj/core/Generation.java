@@ -54,10 +54,6 @@ public final class Generation {
             throw new GenerationException("Contract " + settings.contract() + ": basePackage "
                     + settings.basePackage() + " is not a Java package name.");
         }
-        if (settings.generateDocs()) {
-            throw new GenerationException("Contract " + settings.contract() + ": generateDocs is not supported yet; "
-                    + "descriptions are placeholders.");
-        }
         ContractModel model;
         try {
             model = ContractParser.parse(contract);
@@ -77,7 +73,7 @@ public final class Generation {
         CoreClassNames names = new CoreClassNames(model, shapes, report);
         DesignWarnings.check(model, settings, shapes, names, report);
 
-        CoreEmitter core = new CoreEmitter(shapes, names, contractSha256);
+        CoreEmitter core = new CoreEmitter(shapes, names, contractSha256, report);
         core.emit(new Context(model, settings, names, outputDirectory, report, core.id()));
         for (Emitter emitter : emitters) {
             emitter.emit(new Context(model, settings, names, outputDirectory, report, emitter.id()));
