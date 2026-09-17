@@ -42,13 +42,22 @@ There is no registry and there are no credentials.
 - **Never edit a fetched document** under `build/api-spec/`, and never edit `apionly.lock` by hand.
 - **If another project in this repository, or a build in another repository, needs this contract, stop and tell me.** That calls for a different setup.
 
-## Facts: API-Only Publisher 0.3.0
+## Versions
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-publisher-version}` | `0.4.0` |
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Publisher {api-only-publisher-version}
+
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `{api-only-publisher-version}`.
   It needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`, and npm.
 - Install it as an exact dev dependency with an npm script:
   - `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`;
-  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`;
+  - install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}`;
   - commit `package-lock.json`, and ignore `node_modules/`.
 - Run it **only** as `npm run apionly -- <command>`, and as `npm run --silent apionly -- <command>` from Gradle or whenever the output is captured.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
@@ -58,6 +67,7 @@ There is no registry and there are no credentials.
     A bundle path is relative to `<sources.root>/<sources.openapi>` (or `sources.asyncapi`).
   - `defaults.openapi.lint`: the Redocly configuration file, relative to `apionly.yaml`.
   - `defaults.openapi.outputName`, `defaults.asyncapi.outputName`: keep `openapi.yaml` and `asyncapi.yaml`, because the Subscriber looks for exactly those names.
+  - `defaults.openapi.fragmentPaths`: leave it out; the Publisher then records on every OpenAPI component the fragment it came from, as `x-fragment-path`.
   - `defaults.placeholders.strict`.
   - `build.staging`, `build.dist`: working and output directories.
   - `reports.lint`: where lint reports go.
@@ -79,9 +89,9 @@ There is no registry and there are no credentials.
 - `{{token}}` in a fragment is replaced by the contents of `<token>.md`, found under the source root.
   An unresolved token fails the build.
 
-## Facts: API-Only Subscriber 0.2.0
+## Facts: API-Only Subscriber {api-only-subscriber-version}
 
-- Gradle plugin `id 'com.arc-e-tect.api-only-subscriber' version '0.2.0'`, from the Gradle Plugin Portal.
+- Gradle plugin `id 'com.arc-e-tect.api-only-subscriber' version '{api-only-subscriber-version}'`, from the Gradle Plugin Portal.
   It needs Gradle 8 or newer and Java 21 or newer, and supports the configuration cache.
 - Configuration:
 

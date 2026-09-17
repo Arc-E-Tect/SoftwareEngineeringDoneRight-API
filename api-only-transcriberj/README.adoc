@@ -4,7 +4,12 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-transcriberj-version: 0.0.1
 
+image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
+image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj]
+image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDoneRight-API?filter=api-only-transcriberj-v*[GitHub release,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/releases?q=api-only-transcriberj]
 image:https://img.shields.io/badge/Java-21%2B-blue[Java 21+,link=https://adoptium.net]
 image:https://img.shields.io/badge/Gradle-9.7-02303A?logo=gradle[Gradle 9.7,link=https://gradle.org]
 
@@ -22,8 +27,9 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 // Remove this notice when 1.0.0 is released.
 [IMPORTANT]
 ====
-Not released yet.
 Until 1.0.0 is released, any release may change the `apiOnlyTranscriberJ` DSL, the generated code or the emitter interface incompatibly, without a major version bump.
+The interface is still being settled; 1.0.0 is the first release whose interface is kept stable.
+Pin an exact version, and read the changelog before upgrading.
 ====
 
 A Gradle plugin that generates a Java class tree from a subscribed API contract: bodies, field descriptions and constants for contract tests and stubs, derived from the contract rather than copied from it by hand.
@@ -63,11 +69,11 @@ A contract without it is refused: a class is named after the fragment it came fr
 == Applying the plugin
 
 .build.gradle
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 plugins {
     id 'java'
-    id 'com.arc-e-tect.api-only-transcriberj' version '<version>'
+    id 'com.arc-e-tect.api-only-transcriberj' version '{api-only-transcriberj-version}'
 }
 
 apiOnlySubscriber {
@@ -352,14 +358,14 @@ An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcrib
 The interface is part of the plugin: an emitter compiles against `com.arc-e-tect:api-only-transcriberj`, from the Gradle Plugin Portal's repository, as a `compileOnly` dependency, since the plugin provides it when it loads the emitter.
 Only the `model` and `spi` packages are meant for emitters.
 
-[source,groovy]
+[source,groovy,subs="attributes+"]
 ----
 repositories {
     gradlePluginPortal()
 }
 
 dependencies {
-    compileOnly 'com.arc-e-tect:api-only-transcriberj:<version>'
+    compileOnly 'com.arc-e-tect:api-only-transcriberj:{api-only-transcriberj-version}'
 }
 ----
 

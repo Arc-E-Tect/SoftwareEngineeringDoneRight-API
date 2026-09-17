@@ -4,6 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-publisher-version: 0.4.0
+:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -20,7 +23,7 @@ This document explains how the two tools fit together: which of their settings, 
 It is written to be read front to back by a person, and to be looked up section by section by a person or an AI assistant working on either tool.
 Every correspondence between the two tools, every Subscriber task and every check is listed; the tools' READMEs list each tool's remaining options.
 
-It describes API-Only Publisher 0.3.0 and API-Only Subscriber 0.2.0.
+It describes API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
 
 [#at-a-glance]
 == At a glance
@@ -281,6 +284,10 @@ With `publish: false`, the package is only packed into `directory`.
 |`defaults.openapi.outputName`, `defaults.asyncapi.outputName`
 |`subscription('<target>').openapi` and `.asyncapi`, which look for `openapi.yaml` and `asyncapi.yaml`
 |Document names in the archive and in `manifest.files`
+
+|`defaults.openapi.fragmentPaths`
+|--
+|`x-fragment-path`, the fragment it came from, on every OpenAPI component built from one; part of the documents, and so of their hashes; on by default
 
 |--
 |`apiOnlySubscriber.lockfile`

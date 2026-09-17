@@ -36,9 +36,18 @@ When we are done:
 - **Each API has its own version**, in `gradle.properties` as `<target>ApiVersion`.
 - **Fetched documents and `apionly.lock` are never edited by hand.**
 
-## Facts: API-Only Subscriber 0.2.0
+## Versions
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`; Gradle 8 or newer, Java 21 or newer.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-publisher-version}` | `0.4.0` |
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Subscriber {api-only-subscriber-version}
+
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer.
 - Configuration, against releases:
 
   ```groovy
@@ -69,7 +78,7 @@ When we are done:
 - `apionly.lock` records target, version, channel (`maven` or `file`) and a SHA-256 per document.
 - It prints `Subscribed to <target> <version>`, `Updated <target> from <old> to <new>`, and refuses a pre-release without `allowPrerelease` with `subscription '<target>' resolves the pre-release version <version>.`.
 
-## Facts: API-Only Publisher 0.3.0, in the library's checkout
+## Facts: API-Only Publisher {api-only-publisher-version}, in the library's checkout
 
 - Run it only as `npm run apionly -- <command>` after `npm ci`; never `npx api-only-publisher`.
 - `build --target <t> --pre-release rc.1` and `publish --target <t> --pre-release rc.1 --channel file` publish `<version>-rc.1`, for the version in the contract's version file, to the library's `file` channel directory, `build/publish` when its `apionly.yaml` has `channels.file.directory: build/publish`.

@@ -37,10 +37,19 @@ When we are done, `./gradlew check`:
 - **Nothing generated lives under `src/`**, and fetched documents are never edited or copied.
 - **Pin everything**: the Publisher exactly, and the bundler under `toolchain`.
 
-## Facts: API-Only Publisher 0.3.0
+## Versions
 
-- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `0.3.0`; it needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`.
-- `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`; install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@0.3.0`; ignore `node_modules/` and `build/`.
+Wherever one of these names appears below, in braces, it stands for this version:
+
+| Name | Version |
+|---|---|
+| `{api-only-publisher-version}` | `0.4.0` |
+| `{api-only-subscriber-version}` | `0.3.0` |
+
+## Facts: API-Only Publisher {api-only-publisher-version}
+
+- npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `{api-only-publisher-version}`; it needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`.
+- `package.json` contains `"scripts": { "apionly": "api-only-publisher" }`; install with `npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@{api-only-publisher-version}`; ignore `node_modules/` and `build/`.
 - Run it **only** as `npm run apionly -- <command>`, or `npm run --silent apionly -- <command>` from Gradle.
   **Never run `npx api-only-publisher`**: that unscoped name is not this package.
 - `apionly.yaml`, at the project root:
@@ -74,9 +83,9 @@ When we are done, `./gradlew check`:
 - The contract's version is in `src/main/api/openapi/bundles/<target>.bundle.properties` as `version=1.0.0`, a release version; the build stamps it into `info.version`, so the bundle root needs `info.version: 0.0.0`.
 - `build --target <t>` bundles, stamps and lints; `lint` lints every document and fails on any YAML file under `sources.root` that no target references; `publish --target <t> --channel file` writes `build/api-only/publish/<t>/<version>/<t>-<version>.tgz` with a `manifest.json`.
 
-## Facts: API-Only Subscriber 0.2.0
+## Facts: API-Only Subscriber {api-only-subscriber-version}
 
-- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `0.2.0`; Gradle 8 or newer, Java 21 or newer; supports the configuration cache.
+- Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer; supports the configuration cache.
 - An API the project calls is declared with `subscribeAsClient`:
 
   ```groovy
