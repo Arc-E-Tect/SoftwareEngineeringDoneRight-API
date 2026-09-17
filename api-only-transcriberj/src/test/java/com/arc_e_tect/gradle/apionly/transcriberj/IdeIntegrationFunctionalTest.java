@@ -88,4 +88,60 @@ class IdeIntegrationFunctionalTest {
         BuildResult again = run("ideModel", "--configuration-cache");
         assertThat(again.getOutput()).contains("Configuration cache entry reused");
     }
+
+    @Test
+    void aSubprojectsGenerationRunsOnTheRootsSync() throws IOException {
+        // The shape of a real service build: the IDE plugin at the root, the TranscriberJ in
+        // the project that subscribes to a contract. IntelliJ reads the root's triggers.
+        Files.writeString(projectDir.resolve("settings.gradle"),
+                "rootProject.name = 'shop'\ninclude 'service'\n");
+        Files.writeString(projectDir.resolve("build.gradle"), """
+                plugins {
+                    id 'org.jetbrains.gradle.plugin.idea-ext' version '%s'
+                }
+
+                // The subproject registers its trigger while it is evaluated, which is after
+                // this file is read, so the model is captured once every project is evaluated.
+                def triggers = new StringBuilder()
+                gradle.projectsEvaluated {
+                    triggers.append(idea.project.settings.taskTriggers.phaseMap.collectEntries { phase, tasks ->
+                        [phase, tasks.collect { it.toString() }]
+                    }.toString())
+                }
+
+                tasks.register('ideModel') {
+                    doLast { println "TRIGGERS ${triggers}" }
+                }
+                """.formatted(IDEA_EXT_VERSION));
+        Path service = Files.createDirectories(projectDir.resolve("service"));
+        Files.writeString(service.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'com.arc-e-tect.api-only-transcriberj'
+                }
+
+                apiOnlySubscriber {
+                    channel {
+                        type = 'file'
+                        directory = file('channel')
+                    }
+                    subscribe('user-account') {
+                        version = '1.0.0'
+                    }
+                }
+
+                apiOnlyTranscriberJ {
+                    subscription('user-account') {
+                        basePackage = 'com.example.contract'
+                    }
+                }
+                """);
+
+        BuildResult result = run("ideModel", "--configuration-cache", "--stacktrace");
+
+        // Only :service registers that task, so the root's triggers holding it is the point.
+        assertThat(result.getOutput())
+                .contains("TRIGGERS [afterSync:[provider(task 'generateContractSourcesUserAccount'")
+                .doesNotContain("will not run on IDE sync");
+    }
 }

@@ -3,12 +3,14 @@ package com.arc_e_tect.gradle.apionly.transcriberj;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.ExtensionAware;
+import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.plugins.ide.eclipse.model.EclipseModel;
 import org.gradle.plugins.ide.idea.model.IdeaModel;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -26,6 +28,9 @@ final class IdeIntegration {
     /** The plugin id of the JetBrains IDEA extensions plugin, which carries the sync hook. */
     static final String IDEA_EXT_PLUGIN = "org.jetbrains.gradle.plugin.idea-ext";
 
+    /** Where the root project remembers which generation tasks already trigger on sync. */
+    private static final String REGISTERED = "apiOnlyTranscriberJ.afterSync";
+
     private IdeIntegration() {
     }
 
@@ -39,7 +44,14 @@ final class IdeIntegration {
     static void wire(Project project, TaskProvider<GenerateContractSourcesTask> generate,
                      Provider<Directory> sources) {
         project.getPluginManager().withPlugin("idea", applied -> markGenerated(project, sources));
-        project.getPluginManager().withPlugin(IDEA_EXT_PLUGIN, applied -> runOnSync(project, generate));
+        // IntelliJ reads the task triggers from the root project's model, so that is where
+        // they are registered however deep the project is, and whichever project applies
+        // idea-ext. Registering is idempotent, so both reactions below can fire.
+        Project root = project.getRootProject();
+        root.getPluginManager().withPlugin(IDEA_EXT_PLUGIN, applied -> runOnSync(root, generate));
+        if (root != project) {
+            project.getPluginManager().withPlugin(IDEA_EXT_PLUGIN, applied -> runOnSync(root, generate));
+        }
         project.getPluginManager().withPlugin("eclipse", applied ->
                 project.getExtensions().getByType(EclipseModel.class).synchronizationTasks(generate));
     }
@@ -61,8 +73,20 @@ final class IdeIntegration {
      * necessarily the ones this plugin could compile against, and its version is the
      * build's choice rather than this plugin's.
      */
-    private static void runOnSync(Project project, TaskProvider<GenerateContractSourcesTask> generate) {
-        registerAfterSync(project, taskTriggers(project), generate);
+    private static void runOnSync(Project root, TaskProvider<GenerateContractSourcesTask> generate) {
+        if (registered(root).add(generate.getName())) {
+            registerAfterSync(root, taskTriggers(root), generate);
+        }
+    }
+
+    /** The generation tasks already registered on this root project, one set per build. */
+    @SuppressWarnings("unchecked")
+    private static Set<String> registered(Project root) {
+        ExtraPropertiesExtension properties = root.getExtensions().getExtraProperties();
+        if (!properties.has(REGISTERED)) {
+            properties.set(REGISTERED, new HashSet<String>());
+        }
+        return (Set<String>) properties.get(REGISTERED);
     }
 
     /**
@@ -74,8 +98,10 @@ final class IdeIntegration {
      */
     static Object taskTriggers(Project project) {
         IdeaModel idea = project.getExtensions().findByType(IdeaModel.class);
-        Object settings = idea == null ? null
-                : ((ExtensionAware) idea.getProject()).getExtensions().findByName("settings");
+        // Only the root project has an IDEA project model; a subproject's is null.
+        Object ideaProject = idea == null ? null : idea.getProject();
+        Object settings = ideaProject == null ? null
+                : ((ExtensionAware) ideaProject).getExtensions().findByName("settings");
         return settings == null ? null : ((ExtensionAware) settings).getExtensions().findByName("taskTriggers");
     }
 
