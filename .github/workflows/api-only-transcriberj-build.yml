@@ -110,7 +110,6 @@ jobs:
         run: |
           cd api-only-transcriberj
           chmod +x ./gradlew
-          # Both modules: the plugin and the SPI it is released with.
           ./gradlew build
         env:
           GITHUB_ACTOR: ${{ github.actor }}

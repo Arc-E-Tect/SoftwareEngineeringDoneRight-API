@@ -176,7 +176,6 @@ jobs:
       project_name: 'api-only-transcriberj'
       semantic_version: ${{ needs.Read-Version-Api-Only-TranscriberJ.outputs.version }}
       fail_on_fatal: true
-      # Both modules report under the root's build/reports/dependency-check.
       reports_subpath: build/reports
     secrets:
       NVD_APIKEY_SEDR: ${{ secrets.NVD_APIKEY_SEDR }}

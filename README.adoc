@@ -128,7 +128,7 @@ Every component gates its own build on coverage, and every gate was checked by m
 |Measured
 |94.4% lines, 95.3% functions, 88.0% branches
 |97.1% instructions, 90.8% branches
-|`plugin` 96.5% instructions, 88.8% branches; `spi` 96.0% instructions, 93.9% branches
+|97.2% instructions, 89.9% branches
 
 |Exclusions
 |none
@@ -154,7 +154,7 @@ The answer taken here is to test those classes in-process as well, so the number
 
 Every component releases through `semantic-release`, driven by Conventional Commits, each with its own tag namespace (`api-only-publisher-v*`, `api-only-subscriber-v*`, `api-only-transcriberj-v*`) so their version histories are genuinely independent.
 
-The TranscriberJ's plugin and its SPI are released together, at one version under one tag: the SPI to Maven Central first, then the plugin, whose POM depends on it, to the Gradle Plugin Portal.
+The TranscriberJ's emitter interface is part of the plugin, so one release publishes both.
 
 Each is seeded with a `-v0.0.0` tag, and `release/first-release-patch-analyzer.js` forces the first real release to be a patch, so a new component starts at `0.0.1` rather than semantic-release's default `1.0.0`.
 
@@ -170,12 +170,6 @@ Needs a role that can bypass the `commit-push-main` ruleset, since a release pus
 
 |`GRADLE_PUBLISH_KEY` / `GRADLE_PUBLISH_SECRET`
 |Publishing the Subscriber and the TranscriberJ to the Gradle Plugin Portal.
-
-|`MAVEN_CENTRAL_USERNAME` / `MAVEN_CENTRAL_PASSWORD`
-|Deploying the TranscriberJ SPI to Maven Central with jReleaser.
-
-|`SIGNING_KEY` / `SIGNING_PASSWORD` / `SIGNING_PUBLIC_KEY`
-|Signing the TranscriberJ SPI, as Maven Central requires.
 |===
 
 The Publisher needs no npm credential: it publishes through npm https://docs.npmjs.com/trusted-publishers[trusted publishing ↗], exchanging a short-lived OIDC token for publish rights, and attaches a provenance attestation tying each tarball to the commit and workflow run that produced it.

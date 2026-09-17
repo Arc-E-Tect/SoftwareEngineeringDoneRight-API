@@ -43,9 +43,9 @@ The hooks provide local defense in depth by rejecting keystores and likely hardc
 ## API-Only TranscriberJ
 
 - Build and test with `cd api-only-transcriberj && ./gradlew check`. Add `-PreferenceRepository=<SoftwareEngineeringDoneRight-Code checkout>` to also compare the committed copies of the reference implementation's hand-written classes with that repository.
-- The `spi` module is what emitter libraries compile against; changing it changes a published interface.
-- Runtime dependencies of the `plugin` and `spi` modules end up on every consumer's build script classpath. They are the API-Only Subscriber and `snakeyaml-engine`; add none without an explicit decision.
-- It is built by `api-only-transcriberj-build.yml`, released by `api-only-transcriberj-release.yml` under the `api-only-transcriberj-v*` tags, and scanned by `nvd-cache-refresh.yml`. The plugin and the SPI share one version.
+- The `model` and `spi` packages are what emitter libraries compile against; changing them changes a published interface. They are part of the plugin artifact and released with it.
+- The plugin's runtime dependencies end up on every consumer's build script classpath. They are the API-Only Subscriber and `snakeyaml-engine`; add none without an explicit decision.
+- It is built by `api-only-transcriberj-build.yml`, released by `api-only-transcriberj-release.yml` under the `api-only-transcriberj-v*` tags, and scanned by `nvd-cache-refresh.yml`.
 
 ## Contribution and change rules
 

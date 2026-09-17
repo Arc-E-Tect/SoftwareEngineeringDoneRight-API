@@ -332,7 +332,20 @@ An emitter adds a dialect: companion classes in `<basePackage>.<emitter id>`, su
 None is included; a project adds the ones it wants to `transcriberjEmitters`.
 They run after the core emitter, each in a class loader built from that configuration, so their dependencies never mix with the build script's.
 
-An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter` from `com.arc-e-tect:api-only-transcriberj-spi`, and names its implementation in `META-INF/services/com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`.
+An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`, and names its implementation in `META-INF/services/com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`.
+The interface is part of the plugin: an emitter compiles against `com.arc-e-tect:api-only-transcriberj`, from the Gradle Plugin Portal's repository, as a `compileOnly` dependency, since the plugin provides it when it loads the emitter.
+Only the `model` and `spi` packages are meant for emitters.
+
+[source,groovy]
+----
+repositories {
+    gradlePluginPortal()
+}
+
+dependencies {
+    compileOnly 'com.arc-e-tect:api-only-transcriberj:<version>'
+}
+----
 
 [source,java]
 ----
@@ -381,30 +394,16 @@ cd api-only-transcriberj
 ./gradlew check -PreferenceRepository=<path to SoftwareEngineeringDoneRight-Code>
 ----
 
-The build has two modules:
-
-[cols="1,3", options="header"]
-|===
-|Module |What it is
-
-|`spi`
-|The contract model and the emitter interface: what emitter libraries compile against.
-Published to Maven Central as `com.arc-e-tect:api-only-transcriberj-spi`, at the plugin's version.
-
-|`plugin`
-|The Gradle plugin and the built-in core emitter.
-Published to the Gradle Plugin Portal as `com.arc-e-tect.api-only-transcriberj`, with the artifact `com.arc-e-tect:api-only-transcriberj`.
-|===
-
-Both are released together, by `.github/workflows/api-only-transcriberj-release.yml`, under the `api-only-transcriberj-v*` tags.
-`./gradlew publishToMavenLocal` puts both in `mavenLocal` for use before a release.
+One build, one artifact: the plugin, the built-in core emitter, and the contract model and emitter interface emitters compile against (the `model` and `spi` packages) are released together, at one version.
+It is published to the Gradle Plugin Portal as `com.arc-e-tect.api-only-transcriberj`, with the artifact `com.arc-e-tect:api-only-transcriberj`, by `.github/workflows/api-only-transcriberj-release.yml`, under the `api-only-transcriberj-v*` tags.
+`./gradlew publishToMavenLocal` puts it in `mavenLocal` for use before a release.
 
 The tests read shared fixtures from `fixtures/`: the reference library's published contracts, built by this repository's Publisher, and the Publisher's `init` scaffold.
 Each directory's `SOURCE.properties` says how to rebuild it.
 
-`plugin/src/handwritten` holds the reference implementation's hand-written `testSchemaCommon` classes.
-The generated classes must write, for every input recorded in `plugin/src/test/resources/fixtures/handwritten/bodies.json`, the body the hand-written ones write: byte for byte, except `UserV1`, which is held to JSON equality.
+`src/handwritten` holds the reference implementation's hand-written `testSchemaCommon` classes.
+The generated classes must write, for every input recorded in `src/test/resources/fixtures/handwritten/bodies.json`, the body the hand-written ones write: byte for byte, except `UserV1`, which is held to JSON equality.
 `./gradlew verifyHandwrittenFixtures` checks the recording itself; the fixtures' own `README.adoc` says which parts are strict and which advisory.
 
-Both modules gate on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
+The build gates on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
 The plugin's tasks are tested in-process as well as through TestKit, so the coverage agent sees them.
