@@ -16,6 +16,9 @@ jackson         = "2.22.2"
 spring-restdocs = "4.0.1"
 snakeyaml-engine = "3.1.1"
 api-only-subscriber = "0.2.1"
+# Only the tests use it: the plugin reacts to idea-ext when a build applies it,
+# and reaches its model reflectively, so it compiles against nothing of it.
+gradle-idea-ext = "1.4.1"
 
 [libraries]
 
@@ -26,3 +29,4 @@ jackson-databind             = { module = "com.fasterxml.jackson.core:jackson-da
 api-only-subscriber          = { module = "com.arc-e-tect:api-only-subscriber",               version.ref = "api-only-subscriber" }
 snakeyaml-engine             = { module = "org.snakeyaml:snakeyaml-engine",                   version.ref = "snakeyaml-engine" }
 spring-restdocs-core         = { module = "org.springframework.restdocs:spring-restdocs-core", version.ref = "spring-restdocs" }
+gradle-idea-ext              = { module = "gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext", version.ref = "gradle-idea-ext" }

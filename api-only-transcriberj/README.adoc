@@ -64,6 +64,9 @@ It applies the API-Only Subscriber, which it depends on.
 * Gradle 9; it is tested with 9.7.1, with the configuration cache on.
 * An OpenAPI 3 contract bundled by the API-Only Publisher with `defaults.openapi.fragmentPaths` left on, so that every component carries `x-fragment-path`.
 A contract without it is refused: a class is named after the fragment it came from, never after the key a bundler chose for it.
+* For the IDE wiring in <<ide,In the IDE §>>, nothing extra: Gradle's own `idea` and `eclipse` plugins, and,
+for IntelliJ's sync hook, `org.jetbrains.gradle.plugin.idea-ext`, which the plugin reads reflectively rather
+than compiling against, so its version is the build's choice. It is tested with 1.4.1.
 
 [#applying]
 == Applying the plugin
@@ -171,6 +174,47 @@ Runs whenever the contract document or the lockfile changes; the fetch runs firs
 |===
 
 `<Contract>` is the contract's name as the Subscriber's tasks spell it: `user-account` is `UserAccount`.
+
+[#ide]
+== In the IDE
+
+The class tree lives in `build/`, so an IDE sees it only once it has been generated.
+The plugin therefore tells each IDE what to run on sync, and which directory holds generated code, reacting to whichever IDE plugin the build applies -- it applies none of them itself.
+
+[cols="2,3", options="header"]
+|===
+|When the build applies |The plugin
+
+|`org.jetbrains.gradle.plugin.idea-ext`
+|Registers every `generateContractSources<Contract>` as an `afterSync` trigger, so importing or re-syncing the project in IntelliJ IDEA generates the sources before indexing them.
+
+|`idea`
+|Adds each contract's output directory to `idea.module.generatedSourceDirs`, so IntelliJ indexes it as generated code rather than as hand-written source.
+
+|`eclipse`
+|Adds every `generateContractSources<Contract>` to `eclipse.synchronizationTasks`, which Buildship runs when it synchronises the project.
+|===
+
+IntelliJ's sync hook lives in the https://github.com/JetBrains/gradle-idea-ext-plugin[idea-ext plugin ↗], which is not part of Gradle, so a build that wants it applies it:
+
+[source,groovy,subs="attributes+"]
+----
+plugins {
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.4.1'
+    id 'com.arc-e-tect.api-only-transcriberj' version '{api-only-transcriberj-version}'
+}
+----
+
+Nothing else is needed: the plugin finds it, whether it is applied before or after the TranscriberJ.
+It applies the `idea` plugin itself, so the generated directories are marked as well.
+
+.Considerations
+* **Without idea-ext**, IntelliJ resolves the generated classes after any build that runs the generation task -- `./gradlew generateContractSources<Contract>`, or any `compileTestJava` that depends on it -- and again after every `clean`.
+The three lines above are what makes that automatic.
+* **Verification stays in `check`.**
+Sync generates; it does not run `verifyContractSources<Contract>`, because a lockfile that has moved on should fail a build rather than a project import.
+* **Eclipse** needs no extra plugin: `eclipse` is part of Gradle, and Buildship runs its synchronisation tasks.
+* **The endpoint index** is a properties file read by other Gradle tasks, not source, so it is not offered to the IDE as a source directory.
 
 [#generated-code]
 == What is generated
