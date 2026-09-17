@@ -275,6 +275,30 @@ The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`
 |The Publisher is not installed in this directory.
 |`npm ci`
 
+|`npm error 404 Not Found - GET https://registry.npmjs.org/api-only-publisher`
+|`npx api-only-publisher`, without the scope: that name is not this package.
+|Run it as `npm run apionly -- <command>`.
+
+|The captured output starts with `> apionly`
+|npm printed the script's banner, and something is parsing the output.
+|Run it as `npm run --silent apionly -- <command>`.
+
+|`no apionly.yaml found in <dir> or any parent directory`
+|The command ran outside the specification library.
+|Run it from the directory that holds `apionly.yaml`, or point at it with `-C <dir>`.
+
+|`<path> declares schemaVersion <n>; this version of api-only-publisher understands 1`
+|The configuration is newer than the Publisher.
+|Upgrade the Publisher, as <<upgrading-the-tools,Upgrading the tools §>> describes.
+
+|`fatal: not a git repository`, or `fatal: ambiguous argument 'HEAD'`, printed during `build` or `publish`
+|Git noise: the Publisher asks git for provenance, and the directory is not a repository, or has no commit yet.
+|Nothing. The document is built and published either way; commit the repository and it stops.
+
+|`changed --since <ref>` reports nothing, and you know something changed
+|The change is outside every target's closure, or it is not committed yet.
+|Check with `closure` which files a target reaches, and commit the change first.
+
 |`target '<t>': no version file at <path>`
 |A published contract has no version file.
 |Create `<target>.bundle.properties` with `version=1.0.0`, or set `targets.<t>.versionFile`.

@@ -1,0 +1,107 @@
+= Migration: from a checked-in document to a generated one
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+There is an `openapi.yaml` under `src/main/resources`, and it is committed.
+It got there by hand, from a script someone wrote, or from a build step nobody has looked at in two years.
+Sometimes several projects have one, and the copies no longer quite match.
+
+This migration replaces those copies with a document the build produces, in four phases.
+Each phase leaves the repository working, so you can stop after any of them, and each is a pull request of its own.
+
+The setup you end at is one of the use cases: link:../../use-cases/provider/1-contract-in-the-implementing-project/overview.adoc[provider use case 1 →] when the contract belongs to the project that implements it, link:../../use-cases/provider/2-specification-library-in-the-same-repository/overview.adoc[provider use case 2 →] when a library in the same repository serves several projects, or link:../../use-cases/provider/3-specification-library-in-its-own-repository/overview.adoc[provider use case 3 →] when consumers live in other repositories.
+Phases 1, 2 and 4 are the same whichever you pick.
+Only phase 3 differs, and link:tutorial.adoc[the tutorial →] gives all three variants.
+
+[#fits]
+== When this fits
+
+* A committed API description is on a project's resource path, and something outside the build maintains it.
+* You want the description generated, without a day on which every project changes at once.
+* You do not know for certain that the committed document still matches the source it came from, and you would rather find out deliberately than during a release.
+
+[#does-not-fit]
+== When it does not
+
+* **Nothing is committed yet.**
+Start at link:../../README.adoc[the entry point →] and pick a use case; there is nothing to migrate.
+* **The document is generated already**, by a tool you are replacing.
+Phase 1 still applies, and is the whole point: prove the new pipeline reproduces what the old one produced, before anything downstream changes.
+* **You want to split the document into fragments as part of the move.**
+Do that after phase 1, never with it; <<refactor,Refactoring belongs after phase 1 §>> says why.
+
+[#risk]
+== The risk you are managing
+
+The tooling is not the risk.
+The risk is that nobody knows whether the committed document is current, and a migration is when that becomes everybody's problem at once.
+
+So phase 1 changes nothing downstream.
+Its only job is to show that the generated document and the committed one agree, and to say so in CI from then on.
+If they disagree, you have found a real defect: the projects that call this API have been building against a document that its source no longer produces.
+Resolve that with them before going further, and do not make the difference disappear by editing the source until it matches.
+
+[#phases]
+== The four phases
+
+[cols="1,2,2", options="header"]
+|===
+|Phase |What it does |What changes downstream
+
+|1. Reproduce
+|Records the committed document as a fixture, builds a library that produces it, and checks the two are identical on every build.
+|Nothing.
+
+|2. Generate in place
+|The Publisher writes the document where the project already expects it, through the transitional `distribution` block.
+|The committed document becomes generated. Consumers do not change.
+
+|3. Switch
+|Each project takes the document from the build instead of the resource path, and its committed copy goes.
+|One project per pull request.
+
+|4. Remove the scaffolding
+|The `distribution` block, the fixture and the migration directory go.
+|Nothing.
+|===
+
+[#what-you-get]
+== What you get
+
+* One place owns the contract, and every copy of it is generated.
+* The build fails when the document changes under a version that was already published, so a change cannot reach a consumer unannounced.
+* A fragment library that can be refactored safely, because its output is checked against the document you started with.
+* A record, in each consuming project, of exactly which version it builds against.
+
+[#refactor]
+== Refactoring belongs after phase 1
+
+The first version of the library is the committed document, unchanged, as a single bundle root that `$ref` s nothing.
+That is a legitimate specification library: the Publisher needs one bundle root per contract, and nothing more.
+
+Extracting shared error shapes, introducing placeholders and splitting the document into fragments come afterwards, one commit at a time, each checked against the fixture.
+Migrating and refactoring in one commit throws that check away: the first time the output changes, you cannot tell which half caused it.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] runs all four phases on a project with a committed document: every file, every command, and what each difference in the first diff means.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant do it in your own repository, stopping for your review at the end of each phase.
+* link:../../reference/run-book.adoc[The run-book →] covers operating the setup once the migration is done.
