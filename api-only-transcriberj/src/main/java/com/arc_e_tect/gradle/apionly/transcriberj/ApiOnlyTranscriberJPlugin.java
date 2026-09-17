@@ -103,6 +103,11 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                                 .file("generated/transcriberj-index/" + contract + "/contract-endpoints.properties"));
                     });
 
+            // The IDE indexes what is on disk at sync time, so it is told which task
+            // produces the sources and which directory holds them. The endpoint index is
+            // not offered: it is a properties file read by a Gradle task, not source.
+            IdeIntegration.wire(project, generate, subscription.getInto());
+
             subscription.getEndpointIndex().set(generate.flatMap(GenerateContractSourcesTask::getEndpointIndex));
             subscription.getEndpointIndex().disallowChanges();
 

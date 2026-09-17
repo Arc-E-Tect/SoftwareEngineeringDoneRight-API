@@ -110,6 +110,7 @@ dependencies {
     testImplementation libs.junit.jupiter
     testImplementation libs.assertj.core
     testImplementation libs.jackson.databind
+    testImplementation libs.gradle.idea.ext
     testRuntimeOnly    libs.junit.platform.launcher
 }
 
