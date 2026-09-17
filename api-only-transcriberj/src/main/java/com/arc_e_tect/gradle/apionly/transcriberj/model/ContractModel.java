@@ -5,7 +5,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * A bundled OpenAPI 3 contract, in the terms code generation needs.
+ * A bundled contract, in the terms code generation needs: its OpenAPI document,
+ * and its AsyncAPI document where it has one, as one model.
  *
  * @param openapi         {@code openapi}, the specification version
  * @param title           {@code info.title}, or {@code null}
@@ -17,6 +18,9 @@ import java.util.Optional;
  * @param otherComponents components of every other type -- security schemes, headers,
  *                        examples and the like -- keyed by type, as parsed
  * @param paths           the path items, in declaration order
+ * @param channels        the channels of the contract's AsyncAPI document, in
+ *                        declaration order; empty when it has none
+ * @param asyncOperations the operations of that document, in declaration order
  * @param findings        every classified construct, in the order it was found
  */
 public record ContractModel(
@@ -29,6 +33,8 @@ public record ContractModel(
         List<Reusable<RequestBody>> requestBodies,
         Map<String, Object> otherComponents,
         List<PathItem> paths,
+        List<AsyncChannel> channels,
+        List<AsyncOperation> asyncOperations,
         List<Finding> findings) {
 
     /**
@@ -56,6 +62,15 @@ public record ContractModel(
      * @param operationId the id
      * @return the operation, or empty when there is none
      */
+    /**
+     * The messages of every channel, in declaration order.
+     *
+     * @return the messages
+     */
+    public List<AsyncMessage> messages() {
+        return channels.stream().flatMap(c -> c.messages().stream()).toList();
+    }
+
     public Optional<Operation> operation(String operationId) {
         return operations().stream().filter(o -> operationId.equals(o.operationId())).findFirst();
     }

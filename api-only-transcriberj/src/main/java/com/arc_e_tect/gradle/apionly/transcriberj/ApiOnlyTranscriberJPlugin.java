@@ -83,12 +83,17 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
 
             Provider<RegularFile> document = project.provider(() -> subscriber.subscription(contract))
                     .flatMap(Subscription::getOpenapi);
+            // A contract describes events or it does not; the Subscriber only offers the
+            // document when the archive holds one.
+            Provider<RegularFile> asyncDocument = project.provider(() -> subscriber.subscription(contract))
+                    .flatMap(Subscription::getAsyncapi);
 
             TaskProvider<GenerateContractSourcesTask> generate = project.getTasks().register(
                     GENERATE_TASK + suffix, GenerateContractSourcesTask.class, task -> {
                         task.setGroup("api-only");
                         task.setDescription("Generates the class tree of the " + contract + " contract.");
                         task.getContract().set(document);
+                        task.getAsyncContract().setFrom(asyncDocument);
                         task.getLockfile().set(subscriber.getLockfile());
                         task.getContractName().set(contract);
                         task.getBasePackage().set(subscription.getBasePackage());

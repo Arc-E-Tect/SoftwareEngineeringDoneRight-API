@@ -50,13 +50,40 @@ public final class Generation {
     public static GenerationReport run(Path contract, String contractVersion, String contractSha256,
                                        Settings settings, Path outputDirectory, List<Emitter> emitters,
                                        Path endpointIndex) {
+        return run(contract, null, contractVersion, contractSha256, settings, outputDirectory, emitters,
+                endpointIndex);
+    }
+
+    /**
+     * Generates one contract's sources from both of its documents.
+     *
+     * <p>They are read into one model, so a fragment both use -- a username in a
+     * response and in an event payload -- is one component, and one class.
+     *
+     * @param contract        the fetched OpenAPI document
+     * @param asyncContract   the fetched AsyncAPI document, or {@code null} when the
+     *                        contract has none
+     * @param contractVersion the version the build locked the contract at
+     * @param contractSha256  the SHA-256 the build locked the document at
+     * @param settings        how the project asked for the classes
+     * @param outputDirectory where the sources go
+     * @param emitters        the emitters to run after the core emitter
+     * @param endpointIndex   where to write the path of every operation class and inline
+     *                        schema class, keyed {@code ClassName.PATH}, for tools that read
+     *                        test sources without a classpath; {@code null} to write none
+     * @return what could not be generated in full
+     * @throws GenerationException when no sources can be generated from the contract
+     */
+    public static GenerationReport run(Path contract, Path asyncContract, String contractVersion,
+                                       String contractSha256, Settings settings, Path outputDirectory,
+                                       List<Emitter> emitters, Path endpointIndex) {
         if (settings.basePackage() == null || !PACKAGE.matcher(settings.basePackage()).matches()) {
             throw new GenerationException("Contract " + settings.contract() + ": basePackage "
                     + settings.basePackage() + " is not a Java package name.");
         }
         ContractModel model;
         try {
-            model = ContractParser.parse(contract);
+            model = ContractParser.parse(contract, asyncContract);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

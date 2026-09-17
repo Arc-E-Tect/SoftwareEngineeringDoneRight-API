@@ -76,7 +76,7 @@ final class CoreClassNames implements ClassNames {
         List<String> unstamped = new ArrayList<>();
 
         for (Component c : model.components()) {
-            String location = "/components/schemas/" + Shapes.escape(c.name());
+            String location = c.location();
             component(Origin.SCHEMA, c.name(), c.provenance(), c.schema(), location, location, unstamped);
         }
         for (Reusable<Response> r : model.responses()) {
