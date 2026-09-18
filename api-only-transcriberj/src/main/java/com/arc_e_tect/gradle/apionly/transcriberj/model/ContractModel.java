@@ -71,6 +71,12 @@ public record ContractModel(
         return channels.stream().flatMap(c -> c.messages().stream()).toList();
     }
 
+    /**
+     * The operation with the given {@code operationId}.
+     *
+     * @param operationId the id
+     * @return the operation, or empty when there is none
+     */
     public Optional<Operation> operation(String operationId) {
         return operations().stream().filter(o -> operationId.equals(o.operationId())).findFirst();
     }

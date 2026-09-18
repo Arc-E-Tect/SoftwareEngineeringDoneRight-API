@@ -1,0 +1,74 @@
+{
+  "note" : "Recorded from the reference implementation's hand-written event classes, in src/handwritten. Each case names a class, the arguments its canonical constructor takes, and the payload its toPayload() produced. Regenerate with ./gradlew recordHandwrittenEventPayloads.",
+  "cases" : [ {
+    "id" : "ConfirmationEmailSentEventV1",
+    "class" : "ConfirmationEmailSentEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "NewVerificationEmailSentEventV1",
+    "class" : "NewVerificationEmailSentEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "PersonDeletedEventV1",
+    "class" : "PersonDeletedEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithExpiredLinkEventV1",
+    "class" : "RegistrationAttemptedWithExpiredLinkEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithExpiredRegistrationProcessEventV1",
+    "class" : "RegistrationAttemptedWithExpiredRegistrationProcessEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithInitiatedEmailAddressEventV1",
+    "class" : "RegistrationAttemptedWithInitiatedEmailAddressEventV1",
+    "args" : [ "alice@wonderland.com", "alice", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"emailAddress\":\"alice@wonderland.com\",\"attemptedUsername\":\"alice\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithInvalidLinkEventV1",
+    "class" : "RegistrationAttemptedWithInvalidLinkEventV1",
+    "args" : [ "https://iff.example.com/verify/abc-123", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"verificationLink\":\"https://iff.example.com/verify/abc-123\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithReservedUsernameEventV1",
+    "class" : "RegistrationAttemptedWithReservedUsernameEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithTakenEmailAddressEventV1",
+    "class" : "RegistrationAttemptedWithTakenEmailAddressEventV1",
+    "args" : [ "alice@wonderland.com", "alice", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"emailAddress\":\"alice@wonderland.com\",\"attemptedUsername\":\"alice\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationAttemptedWithTakenUsernameEventV1",
+    "class" : "RegistrationAttemptedWithTakenUsernameEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "RegistrationInitiatedEventV1",
+    "class" : "RegistrationInitiatedEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "UserAccountCreatedEventV1",
+    "class" : "UserAccountCreatedEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "VerificationEmailResendRequestedEventV1",
+    "class" : "VerificationEmailResendRequestedEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  }, {
+    "id" : "VerificationEmailSentEventV1",
+    "class" : "VerificationEmailSentEventV1",
+    "args" : [ "alice", "alice@wonderland.com", "2026-01-15T10:30:00Z" ],
+    "expected" : "{\"username\":\"alice\",\"emailAddress\":\"alice@wonderland.com\",\"occurredAt\":\"2026-01-15T10:30:00Z\"}"
+  } ]
+}

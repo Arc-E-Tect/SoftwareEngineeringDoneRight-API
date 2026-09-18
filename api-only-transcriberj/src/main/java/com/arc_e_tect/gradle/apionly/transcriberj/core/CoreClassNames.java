@@ -1,5 +1,8 @@
 package com.arc_e_tect.gradle.apionly.transcriberj.core;
 
+import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncChannel;
+import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncMessage;
+import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncOperation;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.CanonicalJson;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Component;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.ContractModel;
@@ -114,6 +117,21 @@ final class CoreClassNames implements ClassNames {
             inline(operation, report);
         }
 
+        for (AsyncChannel channel : model.channels()) {
+            if (channel.provenance().fragmentPath() == null) {
+                unstamped.add(channel.location());
+                continue;
+            }
+            String file = fragmentFile(channel.provenance());
+            candidates.add(new Candidate(Origin.CHANNEL, channel.location(), channel.provenance(), null,
+                    channel.location(), JavaText.typeName(file) + "Channel"));
+        }
+        for (AsyncOperation operation : model.asyncOperations()) {
+            candidates.add(new Candidate(Origin.ASYNC_OPERATION, operation.location(),
+                    new Provenance(null, CanonicalJson.sha256(asyncOperationSummary(operation))), null,
+                    operation.location(), JavaText.typeName(operation.operationId()) + "Operation"));
+        }
+
         resolveCollisions();
         expose(model);
 
@@ -122,7 +140,8 @@ final class CoreClassNames implements ClassNames {
                     c.schema, c.schema != null && shapes.isObject(c.schema));
             classes.add(generated);
             if (c.path != null) paths.put(generated, c.path);
-            if (c.origin == Origin.OPERATION) {
+            if (c.origin == Origin.OPERATION || c.origin == Origin.CHANNEL
+                    || c.origin == Origin.ASYNC_OPERATION) {
                 byOperation.put(c.key, generated);
             } else if (c.origin == Origin.INLINE_REQUEST || c.origin == Origin.INLINE_RESPONSE) {
                 byLocation.put(c.key, generated);
@@ -138,9 +157,24 @@ final class CoreClassNames implements ClassNames {
             unstamped.add(location);
             return;
         }
-        String file = provenance.fragmentPath().substring(provenance.fragmentPath().lastIndexOf('/') + 1)
+        candidates.add(new Candidate(origin, name, provenance, schema, schemaLocation,
+                JavaText.typeName(fragmentFile(provenance))));
+    }
+
+    /** A fragment's file name, without its directories or its extension. */
+    private static String fragmentFile(Provenance provenance) {
+        return provenance.fragmentPath().substring(provenance.fragmentPath().lastIndexOf('/') + 1)
                 .replaceFirst("\\.ya?ml$", "");
-        candidates.add(new Candidate(origin, name, provenance, schema, schemaLocation, JavaText.typeName(file)));
+    }
+
+    /** What an AsyncAPI operation class is generated from, for its hash. */
+    private static Map<String, Object> asyncOperationSummary(AsyncOperation operation) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("operationId", operation.operationId());
+        summary.put("action", operation.action());
+        summary.put("channel", operation.channelKey());
+        summary.put("messages", operation.messageKeys());
+        return summary;
     }
 
     /** The one media type with a schema, or null when there is not exactly one. */
@@ -335,6 +369,22 @@ final class CoreClassNames implements ClassNames {
                         }
                     }
                 }
+            }
+        }
+
+        // A message payload is a body someone publishes or asserts on, so it is exposed
+        // wherever its schema was written.
+        for (AsyncChannel channel : model.channels()) {
+            for (AsyncMessage message : channel.messages()) {
+                if (message.payload() == null) continue;
+                String fragment = message.payload().provenance().fragmentPath();
+                candidates.stream()
+                        .filter(c -> c.origin == Origin.SCHEMA && c.provenance.fragmentPath() != null
+                                && c.provenance.fragmentPath().equals(fragment))
+                        .forEach(c -> {
+                            c.exposed = true;
+                            if (c.schema != null) exposedSchemas.addAll(topLevelReferences(c.schema));
+                        });
             }
         }
 

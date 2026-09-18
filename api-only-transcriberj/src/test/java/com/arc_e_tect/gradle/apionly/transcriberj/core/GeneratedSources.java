@@ -60,6 +60,25 @@ final class GeneratedSources {
         return new GeneratedSources(sources, report);
     }
 
+    /** Both of a contract's documents, generated into one tree. */
+    static GeneratedSources generate(Path contract, Path asyncContract, String version, Path into,
+                                     Settings settings, List<Emitter> emitters) {
+        Path sources = into.resolve("sources");
+        GenerationReport report = Generation.run(contract, asyncContract, version, "a".repeat(64), settings,
+                sources, emitters, null);
+        return new GeneratedSources(sources, report);
+    }
+
+    /** The simple name of every class generated, in no particular order. */
+    List<String> names() {
+        try (Stream<Path> walk = Files.walk(sources)) {
+            return walk.filter(p -> p.toString().endsWith(".java"))
+                    .map(p -> p.getFileName().toString().replace(".java", "")).toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     static GeneratedSources generate(String yaml, Path into, List<Emitter> emitters) {
         try {
             Path contract = into.resolve("openapi.yaml");

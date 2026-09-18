@@ -15,5 +15,9 @@ public enum Origin {
     /** A schema written inline in an operation's response. */
     INLINE_RESPONSE,
     /** An operation: a method on a path, with its responses. */
-    OPERATION
+    OPERATION,
+    /** A channel of the contract's AsyncAPI document: an address messages travel over. */
+    CHANNEL,
+    /** An operation of that document: an application sending or receiving on a channel. */
+    ASYNC_OPERATION
 }

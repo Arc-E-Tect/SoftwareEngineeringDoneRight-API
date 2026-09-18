@@ -4,6 +4,9 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.CanonicalJson;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Const;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Constraints;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Construct;
+import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncChannel;
+import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncMessage;
+import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncOperation;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.ContractModel;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.MediaType;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Operation;
@@ -87,9 +90,12 @@ final class CoreEmitter implements Emitter {
                 "depth", String.valueOf(context.settings().recursionDepth()))));
         context.writeJava(pkg, "ContractManifest", manifest(context, header, pkg));
         for (GeneratedClass generated : names.all()) {
-            String source = generated.origin() == Origin.OPERATION
-                    ? operationClass(context, generated, header)
-                    : new ClassWriter(context, generated, header).write();
+            String source = switch (generated.origin()) {
+                case OPERATION -> operationClass(context, generated, header);
+                case CHANNEL -> channelClass(context, generated, header);
+                case ASYNC_OPERATION -> asyncOperationClass(context, generated, header);
+                default -> new ClassWriter(context, generated, header).write();
+            };
             context.writeJava(pkg, generated.simpleName(), source);
         }
     }
@@ -161,7 +167,7 @@ final class CoreEmitter implements Emitter {
             case RESPONSE -> "/components/responses/" + Shapes.escape(g.key());
             case PARAMETER -> "/components/parameters/" + Shapes.escape(g.key());
             case REQUEST_BODY -> "/components/requestBodies/" + Shapes.escape(g.key());
-            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION -> g.key();
+            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION, CHANNEL, ASYNC_OPERATION -> g.key();
         };
     }
 
@@ -169,6 +175,94 @@ final class CoreEmitter implements Emitter {
      * An operation's class: what a test needs to call it -- its method, its path and
      * a way to fill in its placeholders -- and, per response, its status and content type.
      */
+    /**
+     * A channel's class: where its messages travel, and which fragment says so.
+     *
+     * <p>Narrower than an HTTP operation's class on purpose: a channel has an address
+     * and the messages it carries, and none of the status codes or path parameters
+     * that make the HTTP shape what it is.
+     */
+    private String channelClass(EmitterContext context, GeneratedClass generated, String header) {
+        AsyncChannel channel = context.model().channels().stream()
+                .filter(c -> c.location().equals(generated.key())).findFirst().orElseThrow();
+        String name = generated.simpleName();
+        StringBuilder out = new StringBuilder(header);
+        out.append("package ").append(context.settings().basePackage()).append(";\n\n");
+        out.append("/**\n * Generated from channel ").append(JavaText.comment(channel.location()));
+        if (channel.description() != null) {
+            out.append(".\n *\n * <p>").append(JavaText.comment(channel.description().strip()));
+        }
+        out.append(".\n */\n");
+        out.append("public final class ").append(name).append(" {\n\n");
+        if (channel.address() != null) {
+            constant(out, "The address messages of this channel travel over.", "String", "ADDRESS",
+                    JavaText.literal(channel.address()));
+        }
+        constant(out, "Where, in the contract, the channel is written.", "String", "LOCATION",
+                JavaText.literal(channel.location()));
+        constant(out, "The fragment this class was generated from.", "String", "FRAGMENT_PATH",
+                JavaText.literal(channel.provenance().fragmentPath()));
+        constant(out, "The SHA-256 of that fragment as bundled, in RFC 8785 canonical JSON.", "String",
+                "FRAGMENT_SHA256", JavaText.literal(channel.provenance().sha256()));
+        constant(out, "The version of the contract this class was generated from.", "String", "CONTRACT_VERSION",
+                JavaText.literal(context.model().version()));
+        out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n");
+        out.append("}\n");
+        return out.toString();
+    }
+
+    /** An AsyncAPI operation's class: what it does, where, and with which message. */
+    private String asyncOperationClass(EmitterContext context, GeneratedClass generated, String header) {
+        AsyncOperation operation = context.model().asyncOperations().stream()
+                .filter(o -> o.location().equals(generated.key())).findFirst().orElseThrow();
+        AsyncChannel channel = context.model().channels().stream()
+                .filter(c -> c.key().equals(operation.channelKey())).findFirst().orElse(null);
+        List<AsyncMessage> messages = channel == null ? List.of() : channel.messages().stream()
+                .filter(m -> operation.messageKeys().isEmpty() || operation.messageKeys().contains(m.key()))
+                .toList();
+        String name = generated.simpleName();
+        StringBuilder out = new StringBuilder(header);
+        out.append("package ").append(context.settings().basePackage()).append(";\n\n");
+        out.append("/**\n * Generated from operation ").append(JavaText.comment(operation.operationId()));
+        if (operation.summary() != null) {
+            out.append(".\n *\n * <p>").append(JavaText.comment(operation.summary().strip()));
+        }
+        out.append(".\n */\n");
+        out.append("public final class ").append(name).append(" {\n\n");
+        constant(out, "The operation's id, as the contract writes it.", "String", "OPERATION_ID",
+                JavaText.literal(operation.operationId()));
+        if (operation.action() != null) {
+            constant(out, "What this application does on the channel: send, or receive.", "String", "ACTION",
+                    JavaText.literal(operation.action()));
+        }
+        if (channel != null && channel.address() != null) {
+            constant(out, "The address of the channel this operation acts on.", "String", "CHANNEL_ADDRESS",
+                    JavaText.literal(channel.address()));
+        }
+        List<String> contentTypes = messages.stream().map(AsyncMessage::contentType)
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        if (contentTypes.size() == 1) {
+            constant(out, "The content type of the message this operation carries.", "String", "CONTENT_TYPE",
+                    JavaText.literal(contentTypes.get(0)));
+        } else if (contentTypes.size() > 1) {
+            constant(out, "Every content type the messages of this operation are sent as.",
+                    "java.util.List<String>", "CONTENT_TYPES", listOf(contentTypes));
+        }
+        if (messages.size() == 1 && messages.get(0).name() != null) {
+            constant(out, "The name of the message this operation carries.", "String", "MESSAGE_NAME",
+                    JavaText.literal(messages.get(0).name()));
+        }
+        constant(out, "Where, in the contract, the operation is written.", "String", "LOCATION",
+                JavaText.literal(operation.location()));
+        constant(out, "The SHA-256 of what this class was generated from, in RFC 8785 canonical JSON.", "String",
+                "OPERATION_SHA256", JavaText.literal(generated.provenance().sha256()));
+        constant(out, "The version of the contract this class was generated from.", "String", "CONTRACT_VERSION",
+                JavaText.literal(context.model().version()));
+        out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n");
+        out.append("}\n");
+        return out.toString();
+    }
+
     private String operationClass(EmitterContext context, GeneratedClass generated, String header) {
         Operation operation = context.model().operations().stream()
                 .filter(o -> CoreClassNames.operationLocation(o).equals(generated.key()))
@@ -374,7 +468,8 @@ final class CoreEmitter implements Emitter {
                 case REQUEST_BODY -> "Generated from request body " + from + ".";
                 case INLINE_REQUEST -> "Generated from the request body schema at " + from + ".";
                 case INLINE_RESPONSE -> "Generated from the response schema at " + from + ".";
-                case OPERATION -> throw new IllegalStateException("an operation's class is not a schema's");
+                case OPERATION, CHANNEL, ASYNC_OPERATION ->
+                        throw new IllegalStateException("an operation's or channel's class is not a schema's");
             };
         }
 
@@ -390,7 +485,8 @@ final class CoreEmitter implements Emitter {
                         .findFirst().map(b -> b.value().description()).orElse(null);
                 case PARAMETER -> model.parameters().stream().filter(p -> p.name().equals(generated.key()))
                         .findFirst().map(p -> p.value().description()).orElse(null);
-                case OPERATION -> throw new IllegalStateException("an operation's class is not a schema's");
+                case OPERATION, CHANNEL, ASYNC_OPERATION ->
+                        throw new IllegalStateException("an operation's or channel's class is not a schema's");
             };
         }
 

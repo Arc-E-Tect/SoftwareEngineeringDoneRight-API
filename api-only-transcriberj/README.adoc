@@ -64,6 +64,8 @@ It applies the API-Only Subscriber, which it depends on.
 * Gradle 9; it is tested with 9.7.1, with the configuration cache on.
 * An OpenAPI 3 contract bundled by the API-Only Publisher with `defaults.openapi.fragmentPaths` left on, so that every component carries `x-fragment-path`.
 A contract without it is refused: a class is named after the fragment it came from, never after the key a bundler chose for it.
+* Where the contract also has an AsyncAPI 3 document, the same of `defaults.asyncapi.fragmentPaths`.
+A contract without an AsyncAPI document generates from its OpenAPI document alone.
 * For the IDE wiring in <<ide,In the IDE §>>, nothing extra: Gradle's own `idea` and `eclipse` plugins, and,
 for IntelliJ's sync hook, `org.jetbrains.gradle.plugin.idea-ext`, which the plugin reads reflectively rather
 than compiling against, so its version is the build's choice. It is tested with 1.4.1.
@@ -241,6 +243,15 @@ Everything goes in the base package, flat, whatever directory a fragment was in.
 |Named after the operation: `<OperationId>Request`, `<OperationId>Response<Status>`.
 An operation without an `operationId` is named after its method and path.
 A `oneOf` or `anyOf` whose branches are all references gets no class: each branch already has one.
+
+|A message payload, from the contract's AsyncAPI document
+|Named after its fragment's file, exactly as a schema component is: `RegistrationInitiatedEventV1.yaml` is `RegistrationInitiatedEventV1`.
+
+|A channel of that document
+|Named after its fragment's file, followed by `Channel`: `AuditV1.yaml` is `AuditV1Channel`.
+
+|An operation of that document
+|Named after its `operationId`, followed by `Operation`: `publishRegistrationInitiated` is `PublishRegistrationInitiatedOperation`.
 |===
 
 Two fragments with the same file name are told apart by the nearest directory in which their paths differ: `iff/user-account/schemas/UserV1.yaml` and `iff/other/schemas/UserV1.yaml` become `UserAccountUserV1` and `OtherUserV1`.
@@ -249,6 +260,37 @@ Names that still collide stop generation.
 
 A class is public when code outside the package needs it: it is a request or response body, a parameter's schema, a non-schema component, or something a public `body(...)` takes as an argument.
 Otherwise it is package-private, like a base schema only ever composed with `allOf`.
+
+[#asyncapi]
+=== The AsyncAPI document
+
+A contract is one contract however its messages travel, so both of its documents are read into one model and generated together.
+
+A message payload is a schema component like any other: it carries the same constants, the same constraints, the same provenance and the same `body(...)` methods a response body does.
+What an event needs from its contract is narrower than what an HTTP call does, so a channel's class and an operation's class are narrower too -- no status codes, no path parameters:
+
+[cols="2,3", options="header"]
+|===
+|Class |Holds
+
+|`<Channel>Channel`
+|`ADDRESS`, the address its messages travel over; `LOCATION`; and the provenance every class carries.
+
+|`<OperationId>Operation`
+|`OPERATION_ID`; `ACTION`, `send` or `receive`; `CHANNEL_ADDRESS`; `CONTENT_TYPE` and `MESSAGE_NAME` where the operation carries one message, or `CONTENT_TYPES` where it carries several; `LOCATION`; and `OPERATION_SHA256`.
+|===
+
+[#shared-fragments]
+==== A fragment both documents use is one class
+
+A specification library shares fragments between its two documents: an event payload references the schema of a username the HTTP responses use, so that a username means the same thing over a broker and over HTTP.
+
+Both documents are bundled with `x-fragment-path`, so the same fragment is recognisable in both, and it becomes one class, generated once.
+That is what makes the two documents generable into one package at all: generating them apart would produce two classes of the same name.
+
+A fragment the two documents bundle as *different* bytes is reported rather than silently taken from one of them: the class could only match one document, and which one is not the generator's to decide.
+
+The contract's AsyncAPI document needs `defaults.asyncapi.fragmentPaths` left on, as the OpenAPI document needs its own key; the link:../api-only-publisher/README.adoc#fragment-paths-asyncapi[Publisher's README →] describes what it stamps.
 
 [#members]
 === What each class holds
