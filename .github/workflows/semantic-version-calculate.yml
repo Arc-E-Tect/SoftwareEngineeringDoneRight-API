@@ -58,6 +58,11 @@ jobs:
         with:
           node-version: "lts/*"
 
+      - name: Test the shared release scripts
+        # Every module's version and release notes are worked out through release/, so a
+        # broken filter there must fail here, before it can choose a version.
+        run: node --test release/*.test.js
+
       - name: Set PROJECT_DIR environment variable
         if: ${{ inputs.project_dir != '' }}
         run: echo "PROJECT_DIR=${{ inputs.project_dir }}" >> "$GITHUB_ENV"
