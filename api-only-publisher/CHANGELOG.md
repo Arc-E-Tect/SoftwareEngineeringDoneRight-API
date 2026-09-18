@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.6.0...api-only-publisher-v0.6.1) (2026-09-18)
+
+
+### 📝 Documentation
+
+* **api-only-publisher:** update README version to 0.6.0 [skip ci] ([6d2bf92](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/6d2bf92ca686d523041fe72fd50e9c7f8bd36017))
+
 # [0.6.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.5.0...api-only-publisher-v0.6.0) (2026-09-18)
 
 
