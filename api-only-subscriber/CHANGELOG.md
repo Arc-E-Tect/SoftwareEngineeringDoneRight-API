@@ -1,3 +1,15 @@
+## [0.3.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.3...api-only-subscriber-v0.3.4) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-subscriber:** call the contract version apiContractVersion everywhere, and let the command line override it ([#31](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/31)) ([14e47e7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/14e47e7ae165d9084070e2db5a7342458b0d8450)), closes [#31](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/31) [#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32) [#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32)
+
+
+### 🔧 Misc
+
+* **api-only-subscriber:** update README version to 0.3.3 [skip ci] ([fef85c3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/fef85c3cf81d05d49a92b9bbdab5616a954bb9f7))
+
 ## [0.3.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.2...api-only-subscriber-v0.3.3) (2026-09-18)
 
 
