@@ -4,8 +4,9 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
-// The component versions this document describes; change them here only.
-:api-only-transcriberj-version: 0.0.1
+// The released version of this component: its snippets use it. The release
+// workflow updates it; do not change it by hand.
+:api-only-transcriberj-version: 0.3.3
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj]
@@ -490,13 +491,19 @@ A choice between values rather than objects, such as a string or an integer, is 
 |`discriminator` |Represented |
 |`additionalProperties`, `patternProperties` |Represented |Recorded as `open`; a map is a subsection.
 |A recursive `$ref` |Represented |To `recursionDepth`.
-|`type` naming several types, such as `[string, 'null']` |Degraded |No rule decided yet.
-|A schema written as `true` or `false` |Degraded |No rule decided yet.
-|Any other keyword the model does not type |Reported |Kept, and listed as undecided.
-|Security schemes, headers and other component types |Reported |Kept, and listed as undecided.
+|`type` naming several types, such as `[string, 'null']` |Undecided, and degrades what reaches it |No rule decided yet.
+Always listed as undecided; a `body(...)` or `fields(...)` that reaches it also degrades.
+One that nothing reaches, such as a member of a map's values, degrades nothing.
+|A schema written as `true` or `false` |Undecided, and degrades what reaches it |As for several types.
+|Any other keyword the model does not type |Undecided |Kept, and listed as undecided.
+The model types `$ref`, `type`, `format`, `description`, `const`, `enum`, `required`, `properties`, `patternProperties`, `items`, `additionalProperties`, `allOf`, `oneOf`, `anyOf`, `discriminator` and the constraint keywords, and keeps `title`, `default`, `examples`, `example`, `readOnly`, `writeOnly`, `deprecated`, `externalDocs`, `xml`, `$comment`, `contentMediaType`, `contentEncoding` and every `x-` key as annotations; anything else -- `not`, `if`, `prefixItems`, `nullable` -- is listed.
+|Security schemes, headers and other component types |Undecided |Kept, and listed as undecided.
+|One fragment bundled as different bytes in two places, such as the contract's two documents |Undecided |One class is generated, from the copy read first -- the OpenAPI document's when the fragment is in both -- so it may not match the other; listed as undecided, as <<shared-fragments,A fragment both documents use is one class §>> describes.
 |===
 
-Every degraded method, every recommendation and every undecided construct is listed in `build/reports/transcriberj/<contract>.txt`, and the build log gives the counts.
+The report lists every degraded method, every recommendation and every undecided construct in `build/reports/transcriberj/<contract>.txt`, and the build log gives the counts.
+A construct can appear in both lists: *undecided* says the contract uses it, *degraded* names each method it made throw.
+A report with undecided constructs and no degraded method means nothing generated was affected.
 A schema written inline in an operation is generated, and also listed with the recommendation to make it a component.
 
 [#depth-warnings]
