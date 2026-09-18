@@ -90,6 +90,23 @@ public abstract class TranscriberJSubscription implements Named {
     public abstract Property<String> getDescriptionPlaceholder();
 
     /**
+     * The base name of a {@link java.util.ResourceBundle} the generated classes resolve
+     * their descriptions through, such as {@code docs.Descriptions}. The project owns the
+     * text; what generation produced -- the contract's description, or the placeholder --
+     * is the fallback for a key the bundle does not carry.
+     *
+     * <p>Unset by default, and then the generated classes are the ones generated before
+     * there were bundles: the text is compiled into them, and nothing is resolved.
+     *
+     * <p>{@code -Dapionly.descriptions.bundle} names another bundle for one run, and
+     * {@code -Dapionly.descriptions.locale} the locale to resolve in, which is what a
+     * documentation build rendering several languages from one generated tree uses.
+     *
+     * @return the bundle's base name
+     */
+    public abstract Property<String> getDescriptionBundle();
+
+    /**
      * The endpoint index the generation writes: the path of every generated operation and
      * inline schema class, keyed {@code ClassName.PATH}. Read-only; it carries the
      * generation task, so a tool reading it runs after the generation.

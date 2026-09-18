@@ -89,6 +89,15 @@ final class GeneratedSources {
         }
     }
 
+    /** Where {@link #compile()} puts the classes, and so what their class loader reads. */
+    Path classesDirectory() {
+        try {
+            return Files.createDirectories(sources.resolveSibling("classes"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     String source(String simpleName) {
         return source(PACKAGE, simpleName);
     }
