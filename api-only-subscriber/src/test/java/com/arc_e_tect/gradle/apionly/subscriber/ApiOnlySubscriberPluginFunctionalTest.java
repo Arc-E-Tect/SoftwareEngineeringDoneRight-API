@@ -503,6 +503,16 @@ class ApiOnlySubscriberPluginFunctionalTest {
         }
 
         @Test
+        @DisplayName("fetches, locks and verifies on the oldest Gradle it supports, 8.5, the first that runs on Java 21")
+        void worksOnTheOldestSupportedGradle() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            buildFile(subscribingBuild("1.0.0", ""));
+
+            runner("check", "--configuration-cache").withGradleVersion("8.5").build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 1.0.0");
+        }
+
+        @Test
         @DisplayName("-PapiContractVersion on the command line overrides every version set in the build, for the implemented contract")
         void commandLineOverridesTheBuild() throws Exception {
             publish("customer-orders", "1.0.0", OPENAPI);

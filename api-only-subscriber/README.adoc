@@ -64,14 +64,19 @@ com.arc-e-tect.api-only-subscriber
 [#requirements]
 == Requirements
 
-[cols="1,1",options="header"]
+[cols="1,2",options="header"]
 |===
-| Requirement | Version
-| Gradle      | 8.x +; 8.2 + for the Kotlin DSL examples below
-| Java        | 21 +
+|Requirement |Version
+
+|Java
+|21 or newer
+
+|Gradle
+|8.5 or newer, the first Gradle that runs on Java 21.
+Tested with 8.5 and 9.7.1, with the configuration cache on.
 |===
 
-The Kotlin DSL examples assign properties with `=`, as the Groovy ones do, which Gradle supports from 8.2 on; with 8.0 or 8.1, write `.set(...)` instead.
+The Kotlin DSL examples assign properties with `=`, as the Groovy ones do, which every supported Gradle version accepts.
 
 The plugin is compatible with Gradle's configuration cache.
 
