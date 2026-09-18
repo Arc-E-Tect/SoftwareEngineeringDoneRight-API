@@ -1,3 +1,25 @@
+# [0.6.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.5.0...api-only-publisher-v0.6.0) (2026-09-18)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** resolve descriptions through a project's ResourceBundle ([#21](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/21)) ([46a61c6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/46a61c60fe56a60e29f5dc8d31f51c49b702a077)), closes [#21](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/21)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** generate a oneOf body the way its branches allow ([#25](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/25)) ([e1acbe0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e1acbe0d3bce9c64ca5869ca0bb3c1586922e19f)), closes [#25](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/25)
+* Integrate refreshVersions plugin for dependency management ([#22](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/22)) ([4f9b5b7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/4f9b5b7a58cc6ef298cdc4c46855af3e728ed4a0)), closes [#22](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/22)
+* **api-only-transcriberj:** resolve a description in the locale asked for, not the JVM's ([#23](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/23)) ([705b86b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/705b86b249ae25b5fe5259d4b142dcb2dc9308ad)), closes [#23](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/23)
+
+
+### 📝 Documentation
+
+* **api-only-transcriberj:** add a guide to description bundles ([#24](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/24)) ([e4a6031](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e4a60316e769618ff4874f1cb28e521863e28508)), closes [#24](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/24)
+* **api-only-transcriberj:** add a guide to hand-written contract tests ([#27](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/27)) ([e569da7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e569da74285c458ae9935764f62ea1c671da9e67)), closes [#27](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/27) [#26](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/26)
+* add a reference on authoring a specification library, and keep versions current ([#28](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/28)) ([b8bb842](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b8bb842de22e545137f816ce0429822792e2fff4)), closes [#28](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/28)
+* **api-only-transcriberj:** say where hand-written test code goes and what it owns ([#26](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/26)) ([ca36e43](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ca36e4327094933d159c9a11fbf99468191c8729)), closes [#26](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/26) [#25](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/25)
+
 # [0.5.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.4.2...api-only-publisher-v0.5.0) (2026-09-18)
 
 
