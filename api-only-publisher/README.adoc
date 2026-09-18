@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-publisher-version: 0.6.1
+:api-only-publisher-version: 0.6.2
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
@@ -201,6 +201,7 @@ An OpenAPI document's components each carry the path of the fragment they came f
 A `publish: false` target keeps the version its source declares.
 
 . **Lint** the finished document, so a broken fragment surfaces against the target it actually affects.
+`build` prints the linter's output only when the lint fails, and writes no report; to see warnings, and to write each document's report under `reports.lint`, run `lint`.
 
 [#versions]
 == Versions
@@ -297,7 +298,7 @@ Declare the members and the aggregate's own identity:
 portfolio:
   publish: false
   asyncapi:
-    bundle: portfolio_asyncapi_structure.yaml
+    bundle: bundles/portfolio_asyncapi_structure.yaml
     aggregate:
       - orders
       - payments
@@ -371,20 +372,25 @@ Adapting the tool to another project means editing configuration.
 
 [source,yaml]
 ----
+# The version of this file's own format -- which keys apionly.yaml has and what
+# they mean -- not of any API. This Publisher understands 1, and refuses others.
 schemaVersion: 1
 
 sources:
   root: specs          # staged wholesale; the kinds share fragments
-  openapi: openapi
+  openapi: openapi     # each kind's directory under root; bundle paths start here
   asyncapi: asyncapi
 
 defaults:
   openapi:
     lint: .redocly.yaml
+    # The file name of every built OpenAPI document: build/dist/<target>/openapi.yaml.
+    # The Subscriber looks for exactly this name.
     outputName: openapi.yaml
     fragmentPaths: true  # x-fragment-path on every component; the default
   asyncapi:
-    outputName: asyncapi.yaml
+    outputName: asyncapi.yaml  # as for OpenAPI: build/dist/<target>/asyncapi.yaml
+    fragmentPaths: true  # x-fragment-path on every fragment; the default
   placeholders:
     strict: true       # an unresolved {{token}} fails the build
 
@@ -410,16 +416,35 @@ targets:
     # versionFile: versions/orders.properties
     #              default: orders.bundle.properties beside the first bundle root
     openapi:
-      bundle: bundles/orders.yaml
+      # The bundle root the document is built from, relative to specs/openapi/.
+      # It is built into build/dist/orders/openapi.yaml, named by outputName.
+      bundle: bundles/orders_openapi_structure.yaml
     asyncapi:
-      bundle: orders_asyncapi.yaml
+      # Relative to specs/asyncapi/; built into build/dist/orders/asyncapi.yaml.
+      bundle: bundles/orders_asyncapi_structure.yaml
   portfolio:
     publish: false     # built and linted, never published
     openapi:
-      bundle: bundles/portfolio.yaml
+      bundle: bundles/portfolio_openapi_structure.yaml
 ----
 
 `targets` is the single source of truth for what gets built.
+
+A target's `bundle` and a kind's `outputName` are the two ends of one build: the bundle root is what a document is built *from*, in the library, and `outputName` is what it is built *to*, in `<build.dist>/<target>/`.
+Every target's document of one kind has the same `outputName`; keep the defaults, `openapi.yaml` and `asyncapi.yaml`, because the Subscriber looks for exactly those names.
+
+[#bundle-roots]
+=== Where bundle roots go
+
+Put every bundle root in a `bundles/` directory of its kind's source directory, named `<target>_<kind>_structure.yaml`: `specs/openapi/bundles/orders_openapi_structure.yaml` and `specs/asyncapi/bundles/orders_asyncapi_structure.yaml`.
+The `init` scaffold lays out its OpenAPI bundle root this way.
+
+* A bundle root is a table of contents rather than a fragment, and a `bundles/` directory keeps the two apart.
+* The name says which target and which kind, so the two roots of one target are never confused, in the tree or in a review.
+* The version file's default place is beside the target's first bundle root (<<versions,Versions §>>), so it lands in `bundles/` too.
+
+The Publisher does not require it: a bundle path is any path relative to the kind's source directory.
+A bundle root moved into or out of `bundles/` needs its relative `$ref`s adjusted by one `../`, since they resolve against the file's own directory; the built document is otherwise the same.
 
 [#pinning-the-bundlers]
 === Pinning the bundlers
@@ -465,6 +490,11 @@ Any other YAML file under the source root counts.
 [#version-stamping]
 === Version stamping edits one scalar
 
+Stamping sets `info.version` in the *built* document, `<build.dist>/<target>/<outputName>`, after bundling.
+The value it replaces comes from the bundle root's `info` block, written in the bundle root or `$ref`'d from a fragment, which the bundler puts into the document: every bundle root therefore needs an `info` block with a `version`, conventionally `0.0.0`.
+The `init` scaffold's bundle root refers to `specs/openapi/shared/info.yaml`, which declares `version: 0.0.0`.
+The version that replaces it is the target's version file's (<<versions,Versions §>>).
+
 `info.version` is located structurally and that one scalar is spliced.
 It is deliberately not a re-serialisation: re-emitting a document reformats everything around the edit, because the AsyncAPI CLI wraps long descriptions at a width no YAML emitter reproduces.
 Splicing keeps every other byte exactly as the bundler wrote it.
@@ -494,12 +524,14 @@ It is how the API-Only TranscriberJ ties generated code to the fragment it came 
 It is on by default, for both specification kinds.
 `defaults.openapi.fragmentPaths: false` and `defaults.asyncapi.fragmentPaths: false` turn it off, each for its own kind.
 
-How it is done::
+How it is done, for OpenAPI::
 The bundler is not told anything; it is shown stamped fragments, in copies of the staged tree under `<build.staging>/fragment-paths/<target>/`.
 The first bundle is built with every fragment stamped, to learn which fragments become components.
 The second, the one that is published, is built with only those stamped.
 So a document differs from one built with `fragmentPaths: false` by exactly one line per component, and in no other byte.
 The cost is a second bundler run per OpenAPI target.
++
+An AsyncAPI target is stamped differently, in one run and with every fragment stamped, because its bundler inlines rather than hoists: <<fragment-paths-asyncapi,AsyncAPI, where the bundler inlines rather than hoists §>> describes it.
 
 What stops the build::
 A fragment that writes `x-fragment-path` itself: the Publisher sets that key and nothing else may.
@@ -542,7 +574,9 @@ A stamp in the built document that names no file in the library, which would mea
 [#fragment-path-versions]
 ==== What a change to `x-fragment-path` means for a contract's version
 
-Semantic versioning describes the contract, so the version follows from what a change does to the contract's promises:
+Semantic versioning describes the contract, so the version follows from what a change does to the contract's promises.
+The Publisher does not decide it: it stamps whatever the target's version file declares.
+Choosing the next version is the API designer's responsibility, and this table is their guideline:
 
 [cols="2,1,3", options="header"]
 |===
@@ -596,11 +630,11 @@ In order of what usually needs changing:
 |The lint rules
 |`defaults.openapi.lint`
 
-|Whether components carry `x-fragment-path`
-|`defaults.openapi.fragmentPaths`, defaulting to `true`
+|Whether built documents carry `x-fragment-path`
+|`defaults.openapi.fragmentPaths` and `defaults.asyncapi.fragmentPaths`, each defaulting to `true`
 
 |Where lint reports go
-|`reports.lint`, defaulting to `build/reports/lint/<target>/<kind>.txt`
+|`reports.lint`, a directory, defaulting to `build/reports/lint`: each document's report is `<target>/<kind>.txt` in it, beside `unreferenced.txt`
 
 |Where built documents go
 |`build.dist`
@@ -624,6 +658,14 @@ A library with no `{{token}}` anywhere simply has nothing substituted.
 
 The tool does not police them.
 `changed` tells a release which targets a commit altered, and every manifest records the closure hash of what was published, so the hooks a diff gate would need already exist, but the gate itself is deliberately not built.
+
+[IMPORTANT]
+.The API designer defines the contract's version, not the Publisher
+====
+The Publisher reads a target's version from its version file and stamps it; it refuses a version that is not a semantic release version, and nothing else.
+It never works out a version from what changed, and never checks that a version matches the change.
+Whether a change is major, minor or patch is the API designer's decision, and so is its consequence: raising the version in the target's version file.
+====
 
 A breaking change is declared where it is made: the major version in the target's version file changes in the same commit as the fragments it breaks.
 A specification library should write down its own policy for what counts as breaking.
