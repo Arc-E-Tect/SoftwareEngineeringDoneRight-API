@@ -1,3 +1,15 @@
+## [0.3.6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.5...api-only-transcriberj-v0.3.6) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** empty descriptions without generateDocs, an update DSL task, Gradle 8.5, and a README that says so ([#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32)) ([972f815](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/972f8155a7fb698a2a9a5dc7f3a893c4f37a8c24)), closes [#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.3.5 [skip ci] ([a3b90f7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a3b90f7b84847977e1db831365dc25f9e8aae538))
+
 ## [0.3.5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.4...api-only-transcriberj-v0.3.5) (2026-09-18)
 
 
