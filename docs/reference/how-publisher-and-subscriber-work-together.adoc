@@ -255,7 +255,7 @@ With `publish: false`, the package is only packed into `directory`.
 |`manifest.target`; `target` in `apionly.lock`; the archive's name
 
 |`version` in the target's version file
-|The subscription's `version`, else `apiOnlySubscriber.version`, else the `apiContractVersion` project property; for an API the project calls, only the subscription's `version`
+|`apiContractVersion`: `-PapiContractVersion` on the command line, else the subscription's, else `apiOnlySubscriber`'s, else the project property; for an API the project calls, only the subscription's own
 |`info.version` in the documents; `manifest.version`; `version` in `apionly.lock`
 
 |`--pre-release <ids>` on `build` and `publish`
@@ -308,13 +308,15 @@ The file uses Java properties syntax, and its `version` must be a semantic relea
 Every version a command needs is resolved before the command builds or ships anything.
 A `publish: false` target needs no version file.
 
-On the Subscriber side, the version of a subscription is the first of these that is set:
+On the Subscriber side, `apiContractVersion` is the version of the contract a project implements, and the first of these that is set is resolved:
 
-. the subscription's own `version`;
-. `apiOnlySubscriber.version`;
-. the `apiContractVersion` property of the project the plugin is applied to, which includes that project's own `gradle.properties`, `-PapiContractVersion` and `ORG_GRADLE_PROJECT_apiContractVersion`.
+. `-PapiContractVersion=...` on the command line, which overrides every other;
+. the subscription's own `apiContractVersion`;
+. `apiOnlySubscriber.apiContractVersion`;
+. the `apiContractVersion` property of the project the plugin is applied to: from that project's own `gradle.properties`, from the build script's `ext`, or from `ORG_GRADLE_PROJECT_apiContractVersion`.
 
-A subscription for an API the project calls, declared with `subscribeAsClient`, takes only its own `version`: the other two are the version of the contract the project implements.
+A subscription for an API the project calls, declared with `subscribeAsClient`, takes only its own `apiContractVersion`, and the command line does not change it: the others are the version of the contract the project implements.
+link:../../api-only-subscriber/README.adoc#version-precedence[Where a subscription's version comes from →] has the details.
 
 [#checks]
 == Every check, and where it lives

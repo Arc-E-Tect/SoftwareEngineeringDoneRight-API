@@ -76,7 +76,7 @@ class UpdateApiOnlySubscriberDslTaskTest {
 
         assertThat(Files.readString(buildFile()))
             .contains(LOCKFILE_DEFAULT)
-            .contains("version = findProperty('apiContractVersion')")
+            .contains("apiContractVersion = findProperty('apiContractVersion')")
             .contains("// Where resolved contract versions and file hashes are recorded.")
             .contains("type = 'file'");
         assertThat(Files.readString(backup())).isEqualTo(original);
@@ -88,7 +88,7 @@ class UpdateApiOnlySubscriberDslTaskTest {
         String original = written("""
             apiOnlySubscriber {
                 lockfile = file('contracts.lock')
-                version = '1.0.0'
+                apiContractVersion = '1.0.0'
             }
             """);
 
