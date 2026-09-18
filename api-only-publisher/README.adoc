@@ -42,6 +42,8 @@ It is the producer half of a pair.
 The consumer half, the link:../api-only-subscriber/README.adoc[API-Only Subscriber →], fetches a published document into an implementation project and verifies that it has not drifted.
 The two are coupled only by the published artifact and its manifest; neither knows anything else about the other.
 
+The link:../api-only-transcriberj/README.adoc[API-Only TranscriberJ →] builds on what the Subscriber fetched: it generates Java classes for contract tests from the published document, named after the fragments the Publisher stamps into it with `x-fragment-path`.
+
 A *target* is whatever gets its own contract document: a microservice, a modular monolith, a backend-for-frontend, or a documentation aggregate spanning all of them.
 It need not be a deployable, which is why this is not called `services`.
 

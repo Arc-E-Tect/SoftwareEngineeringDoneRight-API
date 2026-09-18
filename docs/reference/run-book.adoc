@@ -242,7 +242,7 @@ A second `subscribe` to a different contract fails the build, and the message su
 === Calling other APIs
 
 A project may call any number of APIs, next to the contract it implements.
-It declares each with `subscribeAsClient('<target>') { version = '<version>' }`.
+It declares each with `subscribeAsClient('<target>') { apiContractVersion = '<version>' }`.
 Each gets every check the implemented contract gets: the manifest check, its own entry in `apionly.lock`, the refusal of changed bytes under a locked version, and `verifyApiSpec` as part of `check`.
 Its documents are on the classpath under `contracts/<target>/`, and it sets its own version, because `apiContractVersion` is the implemented contract's.
 When its provider publishes somewhere else than the project's other contracts, it sets a `channel { }` of its own; every setting it leaves out comes from the project's channel.
@@ -349,7 +349,7 @@ The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`
 |Message |Meaning |What to do
 
 |`subscription '<t>' declares no version`
-|No version from the subscription, `apiOnlySubscriber.version` or `apiContractVersion`.
+|No `apiContractVersion` from the command line, the subscription, `apiOnlySubscriber` or the project property.
 |Set `apiContractVersion` in `gradle.properties`.
 
 |`subscription '<t>' resolves the pre-release version <v>`
@@ -402,5 +402,5 @@ The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`
 
 |`client subscription '<t>' declares no version`
 |An API the project calls has no version of its own.
-|Set `version` in its `subscribeAsClient` block; <<calling-apis,Calling other APIs §>>.
+|Set `apiContractVersion` in its `subscribeAsClient` block; <<calling-apis,Calling other APIs §>>.
 |===

@@ -51,10 +51,10 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
             apiOnlySubscriber {
                 subscribeAsClient('order-payments') {
-                    version = '1.4.0'
+                    apiContractVersion = '1.4.0'
                 }
                 subscribeAsClient('billing-api') {
-                    version = '2.0.0'
+                    apiContractVersion = '2.0.0'
                 }
             }
             """;
@@ -94,7 +94,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
                     directory = '%s'
                 }
                 subscribe('customer-orders') {
-                    version = '%s'
+                    apiContractVersion = '%s'
                     %s
                 }
             }
@@ -151,7 +151,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
                 apiOnlySubscriber {
                     subscribe('order-payments') {
-                        version = '1.0.0'
+                        apiContractVersion = '1.0.0'
                     }
                 }
                 """);
@@ -242,7 +242,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
                 apiOnlySubscriber {
                     subscribeAsClient('order-payments') {
-                        version = '1.4.0'
+                        apiContractVersion = '1.4.0'
                         channel {
                             type = 'maven'
                             groupId = 'com.example.contracts'
@@ -295,7 +295,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
         @Test
         @DisplayName("a subscription with no version is refused, naming the subscription")
         void versionIsRequired() throws Exception {
-            buildFile(subscribingBuild("1.0.0", "").replace("version = '1.0.0'", ""));
+            buildFile(subscribingBuild("1.0.0", "").replace("apiContractVersion = '1.0.0'", ""));
 
             BuildResult result = runner("fetchApiSpec").buildAndFail();
 
@@ -500,6 +500,100 @@ class ApiOnlySubscriberPluginFunctionalTest {
             BuildResult upgraded =
                 runner(":svc:fetchApiSpec", "--configuration-cache", "-PapiContractVersion=2.0.0").build();
             assertThat(upgraded.getOutput()).contains("Updated customer-orders from 1.0.0 to 2.0.0");
+        }
+
+        @Test
+        @DisplayName("fetches, locks and verifies on the oldest Gradle it supports, 8.5, the first that runs on Java 21")
+        void worksOnTheOldestSupportedGradle() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            buildFile(subscribingBuild("1.0.0", ""));
+
+            runner("check", "--configuration-cache").withGradleVersion("8.5").build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 1.0.0");
+        }
+
+        @Test
+        @DisplayName("-PapiContractVersion on the command line overrides every version set in the build, for the implemented contract")
+        void commandLineOverridesTheBuild() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("customer-orders", "2.0.0", OPENAPI.replace("version: 1.0.0", "version: 2.0.0"));
+            buildFile(subscribingBuild("1.0.0", ""));
+            Files.writeString(projectDir.resolve("gradle.properties"), "apiContractVersion=1.0.0\n");
+
+            runner("fetchApiSpec", "--configuration-cache").build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 1.0.0");
+
+            runner("fetchApiSpec", "--configuration-cache", "-PapiContractVersion=2.0.0").build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 2.0.0");
+        }
+
+        @Test
+        @DisplayName("the command line does not change the version of an API the project calls, nor does the environment override the build")
+        void commandLineLeavesClientsAlone() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("customer-orders", "2.0.0", OPENAPI.replace("version: 1.0.0", "version: 2.0.0"));
+            buildFile("""
+                plugins {
+                    id 'java'
+                    id 'com.arc-e-tect.api-only-subscriber'
+                }
+
+                apiOnlySubscriber {
+                    channel {
+                        type = 'file'
+                        directory = '%s'
+                    }
+                    subscribeAsClient('customer-orders') {
+                        apiContractVersion = '1.0.0'
+                    }
+                }
+                """.formatted(channelDir.toString().replace("\\", "\\\\")));
+
+            runner("fetchApiSpec", "-PapiContractVersion=2.0.0").build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 1.0.0");
+
+            buildFile(subscribingBuild("1.0.0", ""));
+            Files.delete(projectDir.resolve("apionly.lock"));
+            runner("fetchApiSpec").withEnvironment(java.util.Map.of("ORG_GRADLE_PROJECT_apiContractVersion", "2.0.0")).build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 1.0.0");
+        }
+
+        @Test
+        @DisplayName("the Kotlin DSL sets apiContractVersion by assignment, as the Groovy DSL does")
+        void kotlinDslAssigns() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            Files.writeString(projectDir.resolve("settings.gradle"), "");
+            Files.delete(projectDir.resolve("settings.gradle"));
+            Files.writeString(projectDir.resolve("settings.gradle.kts"), "rootProject.name = \"consumer\"\n");
+            Files.writeString(projectDir.resolve("build.gradle.kts"), """
+                plugins {
+                    java
+                    id("com.arc-e-tect.api-only-subscriber")
+                }
+
+                apiOnlySubscriber {
+                    channel {
+                        type = "file"
+                        directory = "%s"
+                    }
+                    subscribe("customer-orders") {
+                        apiContractVersion = "1.0.0"
+                    }
+                }
+                """.formatted(channelDir.toString().replace("\\", "\\\\")));
+
+            runner("fetchApiSpec", "--configuration-cache").build();
+            assertThat(Files.readString(projectDir.resolve("apionly.lock"))).contains("version 1.0.0");
+        }
+
+        @Test
+        @DisplayName("an old build that still sets version fails, and says what it is called now")
+        void oldVersionPropertyFails() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            buildFile(subscribingBuild("1.0.0", "").replace("apiContractVersion = '1.0.0'", "version = '1.0.0'"));
+
+            BuildResult result = runner("fetchApiSpec").buildAndFail();
+            assertThat(result.getOutput()).contains("version was renamed to apiContractVersion");
         }
 
         @Test

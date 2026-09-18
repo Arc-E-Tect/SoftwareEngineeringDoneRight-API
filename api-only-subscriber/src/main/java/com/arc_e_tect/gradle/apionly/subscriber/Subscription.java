@@ -108,17 +108,32 @@ public abstract class Subscription {
     /**
      * The version of this target's contract to build against.
      *
-     * <p>Defaults to {@link ApiOnlySubscriberExtension#getVersion()}, which in turn
-     * defaults to the {@code apiContractVersion} project property; one of the three
-     * must be set. A pre-release version is refused unless
-     * {@link #getAllowPrerelease()} is set.</p>
+     * <p>Defaults to {@link ApiOnlySubscriberExtension#getApiContractVersion()}, which
+     * in turn defaults to the {@code apiContractVersion} project property; one of the
+     * three must be set. {@code -PapiContractVersion=...} on the command line
+     * overrides all three for the contract the project implements. A pre-release
+     * version is refused unless {@link #getAllowPrerelease()} is set.</p>
      *
-     * <p>A subscription for an API the project calls has no default, and sets its
-     * own: those two are the version of the contract the project implements.</p>
+     * <p>A subscription for an API the project calls has no default, sets its own,
+     * and is not overridden from the command line: the project's
+     * {@code apiContractVersion} is the version of the contract it implements.</p>
      *
      * @return the version to resolve
      */
-    public abstract Property<String> getVersion();
+    public abstract Property<String> getApiContractVersion();
+
+    /**
+     * Refuses the property's old name. Without it, a build script that still sets
+     * {@code version} on a subscription would set the project's own version instead,
+     * silently.
+     *
+     * @param version ignored
+     * @throws org.gradle.api.GradleException always, naming the new property
+     */
+    public void setVersion(Object version) {
+        throw new org.gradle.api.GradleException("subscription '" + getTarget() + "': version was renamed to "
+            + "apiContractVersion. Set apiContractVersion = '" + version + "' on it instead.");
+    }
 
     /**
      * Overrides {@link ChannelSpec#getGroupId()} for this one target.

@@ -39,6 +39,8 @@ It is the consumer half of a pair.
 The link:../api-only-publisher/README.adoc[API-Only Publisher →] builds and publishes the documents; this fetches and verifies them.
 The two are coupled only by the published artifact and its `manifest.json`, and neither knows anything else about the other.
 
+The link:../api-only-transcriberj/README.adoc[API-Only TranscriberJ →] builds on this plugin, which it applies: it generates Java classes for contract tests from the documents a subscription fetched, and from nothing else.
+
 Its users are implementation projects: both the provider implementing a contract, and genuine API clients generating stubs from one.
 
 [TIP]
@@ -62,12 +64,19 @@ com.arc-e-tect.api-only-subscriber
 [#requirements]
 == Requirements
 
-[cols="1,1",options="header"]
+[cols="1,2",options="header"]
 |===
-| Requirement | Version
-| Gradle      | 8.x +
-| Java        | 21 +
+|Requirement |Version
+
+|Java
+|21 or newer
+
+|Gradle
+|8.5 or newer, the first Gradle that runs on Java 21.
+Tested with 8.5 and 9.7.1, with the configuration cache on.
 |===
+
+The Kotlin DSL examples assign properties with `=`, as the Groovy ones do, which every supported Gradle version accepts.
 
 The plugin is compatible with Gradle's configuration cache.
 
@@ -127,9 +136,10 @@ apiOnlySubscriber {
     // Default: apionly.lock, beside the build file
     // lockfile = layout.projectDirectory.file('apionly.lock')
 
-    // The version of the contract this project implements, unless its subscription sets its own.
+    // The version of the contract this project implements, unless its subscription sets
+    // its own. See "Where a subscription's version comes from".
     // Default: the apiContractVersion project property; unset when that is not defined
-    // version = findProperty('apiContractVersion')
+    // apiContractVersion = findProperty('apiContractVersion')
 
     channel {
         // Which kind of channel to resolve through: 'maven' or 'file'.
@@ -155,8 +165,8 @@ apiOnlySubscriber {
     // The contract this project implements. At most one.
     subscribe('orders') {
         // The version of this target's contract to build against.
-        // Default: apiOnlySubscriber.version
-        version = '2.1.0'
+        // Default: apiOnlySubscriber.apiContractVersion
+        apiContractVersion = '2.1.0'
 
         // Whether this subscription may resolve a pre-release contract.
         // Default: false
@@ -185,9 +195,9 @@ apiOnlySubscriber {
     }
 
     // An API this project calls, rather than implements. Any number of them.
-    // Every property above applies, except that version has no default.
+    // Every property above applies, except that apiContractVersion has no default.
     subscribeAsClient('payments') {
-        version = '1.4.0'
+        apiContractVersion = '1.4.0'
     }
 }
 ----
@@ -196,12 +206,75 @@ apiOnlySubscriber {
 [source,kotlin]
 ----
 apiOnlySubscriber {
+
+    // Where the resolved versions and file hashes are recorded. Commit this file:
+    // it is what verifyApiSpec checks against, and what makes "which contract is
+    // this project building against?" answerable by reading the repository.
+    // Default: apionly.lock, beside the build file
+    // lockfile = layout.projectDirectory.file("apionly.lock")
+
+    // The version of the contract this project implements, unless its subscription sets
+    // its own. See "Where a subscription's version comes from".
+    // Default: the apiContractVersion project property; unset when that is not defined
+    // apiContractVersion = findProperty("apiContractVersion")?.toString()
+
     channel {
-        type.set("maven")
-        groupId.set("com.example.contracts")
+        // Which kind of channel to resolve through: "maven" or "file".
+        // Default: maven
+        type = "maven"
+
+        // The Maven group the contracts are published under. Required by the
+        // maven channel.
+        // Default: unset
+        groupId = "com.example.contracts"
+
+        // The artifact extension the contracts are published with, used to form
+        // the dependency notation group:name:version@extension.
+        // Default: tgz
+        // extension = "tgz"
+
+        // The directory the file channel reads from. Archives are expected at
+        // <directory>/<target>/<version>/<target>-<version>.tgz.
+        // Default: unset
+        // directory = "$rootDir/build/publish"
     }
+
+    // The contract this project implements. At most one.
     subscribe("orders") {
-        version.set("2.1.0")
+        // The version of this target's contract to build against.
+        // Default: apiOnlySubscriber.apiContractVersion
+        apiContractVersion = "2.1.0"
+
+        // Whether this subscription may resolve a pre-release contract.
+        // Default: false
+        // allowPrerelease = false
+
+        // Overrides channel.groupId for this one target, when it is published
+        // somewhere else than the rest.
+        // Default: unset, meaning channel.groupId applies
+        // groupId = "com.example.other-contracts"
+
+        // Overrides the artifact name this target is published under.
+        // Default: the target name
+        // artifactId = "orders"
+
+        // Where this subscription's documents land.
+        // Default: build/api-spec/<target>
+        // into = layout.buildDirectory.dir("api-spec/orders")
+
+        // A channel of this subscription's own. Every setting it leaves out
+        // comes from the project's channel above.
+        // Default: the project's channel
+        // channel {
+        //     type = "file"
+        //     directory = "$rootDir/contracts/build/publish"
+        // }
+    }
+
+    // An API this project calls, rather than implements. Any number of them.
+    // Every property above applies, except that apiContractVersion has no default.
+    subscribeAsClient("payments") {
+        apiContractVersion = "1.4.0"
     }
 }
 ----
@@ -209,15 +282,15 @@ apiOnlySubscriber {
 [#version-precedence]
 === Where a subscription's version comes from
 
-The first of these that is set is the one resolved:
+`apiContractVersion` is the version of the contract a project implements.
+It can be set in four places, and for the contract the project implements the first of these that is set is the one resolved:
 
-. `version` on the subscription;
-. `version` on `apiOnlySubscriber`, for every subscription that does not set its own;
-. the `apiContractVersion` project property.
+. `-PapiContractVersion=...` on the command line, which overrides every other;
+. `apiContractVersion` on the subscription;
+. `apiContractVersion` on `apiOnlySubscriber`;
+. the `apiContractVersion` project property: from the project's `gradle.properties` -- in a multi-project build, the subproject's own -- from the build script's `ext` (`extra` in the Kotlin DSL), or from `ORG_GRADLE_PROJECT_apiContractVersion` in the environment.
 
-The property is read through the project the plugin is applied to.
-It can therefore come from that project's own `gradle.properties` (in a multi-project build, the subproject's) as well as from `-PapiContractVersion=...` or `ORG_GRADLE_PROJECT_apiContractVersion`.
-That lets each project in a multi-project build pin its own contract version in its own `gradle.properties`, with no version in its build file at all:
+The property is read through the project the plugin is applied to, which is why each project in a multi-project build can pin its own contract version in its own `gradle.properties`, with no version in its build file at all:
 
 .orders/gradle.properties
 [source,properties]
@@ -225,7 +298,7 @@ That lets each project in a multi-project build pin its own contract version in 
 apiContractVersion=2.1.0
 ----
 
-.orders/build.gradle
+.Groovy DSL: orders/build.gradle
 [source,groovy]
 ----
 apiOnlySubscriber {
@@ -233,9 +306,21 @@ apiOnlySubscriber {
 }
 ----
 
-A subscription that gets a version from none of them fails the build, and the message names all three.
+.Kotlin DSL: orders/build.gradle.kts
+[source,kotlin]
+----
+apiOnlySubscriber {
+    subscribe("orders")
+}
+----
 
-A subscription for an API the project calls takes only its own `version`, as <<api-clients,Calling other APIs §>> explains.
+The command line is the way to build against another version once, without editing anything: `./gradlew fetchApiSpec -PapiContractVersion=2.2.0`.
+
+A subscription that gets a version from none of them fails the build, and the message names where to set one.
+
+An API the project calls is not affected by any of these: it sets its own `apiContractVersion` on its `subscribeAsClient`, and the command line does not change it, as <<api-clients,Calling other APIs §>> explains.
+
+The property was called `version` before; setting `version` on `apiOnlySubscriber` or on a subscription now fails the build and names `apiContractVersion`, rather than silently setting the project's own version, which is what a build script would otherwise resolve `version` to.
 
 [#channels]
 === Channels
@@ -270,10 +355,29 @@ apiOnlySubscriber {
     }
     subscribe('billing')
     subscribeAsClient('orders') {
-        version = '2.1.0'
+        apiContractVersion = '2.1.0'
         channel {
             type = 'maven'
             groupId = 'com.example.contracts'
+        }
+    }
+}
+----
+
+.Kotlin DSL
+[source,kotlin]
+----
+apiOnlySubscriber {
+    channel {
+        type = "file"
+        directory = "$rootDir/contracts/build/publish"
+    }
+    subscribe("billing")
+    subscribeAsClient("orders") {
+        apiContractVersion = "2.1.0"
+        channel {
+            type = "maven"
+            groupId = "com.example.contracts"
         }
     }
 }
@@ -300,7 +404,16 @@ Working against one is a deliberate, reviewable line:
 [source,groovy]
 ----
 subscribe('orders') {
-    version = '1.1.0-rc.1'
+    apiContractVersion = '1.1.0-rc.1'
+    allowPrerelease = true
+}
+----
+
+.Kotlin DSL
+[source,kotlin]
+----
+subscribe("orders") {
+    apiContractVersion = "1.1.0-rc.1"
     allowPrerelease = true
 }
 ----
@@ -321,7 +434,7 @@ Both the SemVer spelling (`-rc.1`, `-alpha.3`) and Maven's `-SNAPSHOT` count as 
 | `updateApiOnlySubscriberDSL` | api only subscriber | Adds missing `apiOnlySubscriber` properties with their defaults to `build.gradle`.
 |===
 
-`<Target>` is the target name in camel case: `customer-orders` gives `fetchApiSpecCustomerOrders`.
+`<Target>` is the target name in PascalCase: `customer-orders` gives `fetchApiSpecCustomerOrders`.
 
 `verifyApiSpec` **is** wired into `check`, so contract drift fails an ordinary build rather than waiting for someone to look.
 `processResources` depends on the fetch, so a build that packages resources fetches them first.
@@ -352,13 +465,16 @@ A build that also runs the fetch, such as `./gradlew check` in a project with th
 == Using the fetched documents
 
 Each subscription exposes its documents as providers derived from the fetch task, so anything wired to them carries the task dependency automatically.
-For example, generating code from the contract with the https://openapi-generator.tech/docs/plugins/[OpenAPI Generator Gradle plugin ↗]:
+
+The link:../api-only-transcriberj/README.adoc[API-Only TranscriberJ →] is built on exactly that: it applies this plugin, and generates the Java classes for contract tests -- bodies, field descriptions and constants -- from the documents of the subscription it is configured with, with nothing to wire by hand.
+
+Any other generator is wired to the providers directly, such as the https://openapi-generator.tech/docs/plugins/[OpenAPI Generator Gradle plugin ↗], whose `inputSpec` takes the document itself (checked with 7.25.0):
 
 .Groovy DSL
 [source,groovy]
 ----
 openApiGenerate {
-    inputSpec = apiOnlySubscriber.subscription('orders').openapi.map { it.asFile.path }
+    inputSpec = apiOnlySubscriber.subscription('orders').openapi
 }
 ----
 
@@ -366,7 +482,7 @@ openApiGenerate {
 [source,kotlin]
 ----
 openApiGenerate {
-    inputSpec.set(apiOnlySubscriber.subscription("orders").openapi.map { it.asFile.path })
+    inputSpec = apiOnlySubscriber.subscription("orders").openapi
 }
 ----
 
@@ -410,14 +526,21 @@ A project that calls `payments` rather than implementing it declares it with `su
 When a project really implements two contracts, put each in a project of its own, in a multi-project build.
 Each project applies the Subscriber, subscribes to its own contract, and declares that contract's version in its own `gradle.properties`:
 
-.settings.gradle
+.Groovy DSL: settings.gradle
 [source,groovy]
 ----
 rootProject.name = 'shop'
 include 'orders', 'payments'
 ----
 
-.build.gradle
+.Kotlin DSL: settings.gradle.kts
+[source,kotlin]
+----
+rootProject.name = "shop"
+include("orders", "payments")
+----
+
+.Groovy DSL: build.gradle
 [source,groovy,subs="attributes+"]
 ----
 plugins {
@@ -425,7 +548,15 @@ plugins {
 }
 ----
 
-.orders/build.gradle
+.Kotlin DSL: build.gradle.kts
+[source,kotlin,subs="attributes+"]
+----
+plugins {
+    id("com.arc-e-tect.api-only-subscriber") version "{api-only-subscriber-version}" apply false
+}
+----
+
+.Groovy DSL: orders/build.gradle
 [source,groovy]
 ----
 plugins {
@@ -442,6 +573,23 @@ apiOnlySubscriber {
 }
 ----
 
+.Kotlin DSL: orders/build.gradle.kts
+[source,kotlin]
+----
+plugins {
+    java
+    id("com.arc-e-tect.api-only-subscriber")
+}
+
+apiOnlySubscriber {
+    channel {
+        type = "maven"
+        groupId = "com.example.contracts"
+    }
+    subscribe("orders")
+}
+----
+
 .orders/gradle.properties
 [source,properties]
 ----
@@ -449,7 +597,7 @@ apiOnlySubscriber {
 apiContractVersion=2.1.0
 ----
 
-`payments/build.gradle` and `payments/gradle.properties` are the same, with `payments` and its own version.
+The `payments` project's build file and `gradle.properties` are the same, with `payments` and its own version.
 Each project then has its own `apionly.lock`, its own `fetchApiSpec` and `verifyApiSpec` tasks, and its contract at the root of its own classpath, as `/openapi.yaml`.
 Code both projects share, such as a domain model, goes in a third project that both depend on.
 
@@ -472,11 +620,34 @@ apiOnlySubscriber {
 
     // The APIs it calls, each at its own version.
     subscribeAsClient('orders') {
-        version = '2.1.0'
+        apiContractVersion = '2.1.0'
     }
     subscribeAsClient('payments') {
-        version = '1.4.0'
+        apiContractVersion = '1.4.0'
         groupId = 'com.example.payments'   // published by another provider
+    }
+}
+----
+
+.Kotlin DSL
+[source,kotlin]
+----
+apiOnlySubscriber {
+    channel {
+        type = "maven"
+        groupId = "com.example.contracts"
+    }
+
+    // The contract this project implements, at apiContractVersion.
+    subscribe("billing")
+
+    // The APIs it calls, each at its own version.
+    subscribeAsClient("orders") {
+        apiContractVersion = "2.1.0"
+    }
+    subscribeAsClient("payments") {
+        apiContractVersion = "1.4.0"
+        groupId = "com.example.payments"   // published by another provider
     }
 }
 ----
@@ -503,8 +674,9 @@ Every check the implemented contract gets:
 The root is the implemented contract's.
 With the `java` plugin, the documents of an API the project calls are copied to `/contracts/<target>/`, so any number of them fit side by side: `/contracts/orders/openapi.yaml`, `/contracts/payments/openapi.yaml`.
 * **A shared version.**
-`apiContractVersion` and `apiOnlySubscriber.version` are the version of the contract the project implements.
-Each called API sets its own `version`, because its provider releases it on its own schedule; without one, the build fails with `client subscription '<target>' declares no version`.
+`apiContractVersion` on `apiOnlySubscriber`, the project property and `-PapiContractVersion` on the command line are the version of the contract the project implements.
+Each called API sets its own `apiContractVersion`, because its provider releases it on its own schedule; without one, the build fails with `client subscription '<target>' declares no version`.
+
 [#lockfile]
 == The lockfile
 
@@ -585,7 +757,39 @@ apiOnlySubscriber {
         groupId = 'com.example.contracts'
     }
     subscribe('orders') {
-        version = '2.1.0'
+        apiContractVersion = '2.1.0'
+    }
+}
+----
+
+.build.gradle.kts
+[source,kotlin,subs="attributes+"]
+----
+plugins {
+    java
+    id("com.arc-e-tect.api-only-subscriber") version "{api-only-subscriber-version}"
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "apiContracts"
+        url = uri("https://maven.pkg.github.com/example/contracts")
+        // Gradle reads apiContractsUsername and apiContractsPassword from
+        // gradle.properties, or from ORG_GRADLE_PROJECT_apiContracts* in the
+        // environment. Nothing about the credential is named in the build file,
+        // which is the point: a build file gets committed.
+        credentials(PasswordCredentials::class)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = "maven"
+        groupId = "com.example.contracts"
+    }
+    subscribe("orders") {
+        apiContractVersion = "2.1.0"
     }
 }
 ----
