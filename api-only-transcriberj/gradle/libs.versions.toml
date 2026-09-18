@@ -19,6 +19,9 @@ jackson3        = "3.1.1"
 spring-restdocs = "4.0.1"
 snakeyaml-engine = "3.1.1"
 api-only-subscriber = "0.2.1"
+# The marker annotation every generated class carries, so a coverage rule does not
+# measure code nobody wrote. The plugin manages it for the projects it generates into.
+sedr-library = "1.0.0"
 # Only the tests use it: the plugin reacts to idea-ext when a build applies it,
 # and reaches its model reflectively, so it compiles against nothing of it.
 gradle-idea-ext = "1.4.1"
@@ -31,6 +34,7 @@ assertj-core                 = { module = "org.assertj:assertj-core",           
 jackson-databind             = { module = "com.fasterxml.jackson.core:jackson-databind",      version.ref = "jackson" }
 jackson3-databind            = { module = "tools.jackson.core:jackson-databind",              version.ref = "jackson3" }
 api-only-subscriber          = { module = "com.arc-e-tect:api-only-subscriber",               version.ref = "api-only-subscriber" }
+sedr-library                 = { module = "com.arc-e-tect.sedr.utils:sedr-library",            version.ref = "sedr-library" }
 snakeyaml-engine             = { module = "org.snakeyaml:snakeyaml-engine",                   version.ref = "snakeyaml-engine" }
 spring-restdocs-core         = { module = "org.springframework.restdocs:spring-restdocs-core", version.ref = "spring-restdocs" }
 gradle-idea-ext              = { module = "gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext", version.ref = "gradle-idea-ext" }

@@ -112,6 +112,8 @@ dependencies {
     testImplementation libs.assertj.core
     testImplementation libs.jackson.databind
     testImplementation libs.gradle.idea.ext
+    // Generated code carries the marker annotation, so the tests compile against it.
+    testImplementation libs.sedr.library
     testRuntimeOnly    libs.junit.platform.launcher
 }
 

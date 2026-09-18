@@ -128,7 +128,8 @@ final class GeneratedSources {
             try (StandardJavaFileManager fileManager =
                          compiler.getStandardFileManager(diagnostics, null, StandardCharsets.UTF_8)) {
                 boolean ok = compiler.getTask(null, fileManager, diagnostics,
-                        List.of("-d", classes.toString(), "-Xlint:all", "-Xdoclint:all,-missing", "--release", "21"),
+                        List.of("-d", classes.toString(), "-classpath", System.getProperty("java.class.path"),
+                                "-Xlint:all", "-Xdoclint:all,-missing", "--release", "21"),
                         null, fileManager.getJavaFileObjectsFromPaths(files)).call();
                 List<String> problems = diagnostics.getDiagnostics().stream()
                         .filter(d -> d.getKind() == Diagnostic.Kind.ERROR || d.getKind() == Diagnostic.Kind.WARNING
