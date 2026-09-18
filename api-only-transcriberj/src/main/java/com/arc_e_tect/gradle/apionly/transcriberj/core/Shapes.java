@@ -146,6 +146,37 @@ final class Shapes {
         return schema.allOf() != null && schema.allOf().stream().anyMatch(b -> isObject(b, seen));
     }
 
+    /**
+     * Whether a class of this schema writes a body. An object does. A choice -- a
+     * {@code oneOf} or {@code anyOf} that is the whole of a schema -- does when one of its
+     * branches is an object written inline, and then degrades, since no rule represents it;
+     * a choice whose branches are all references is written by its branches instead.
+     */
+    boolean bodyShaped(Schema schema) {
+        Schema s = follow(schema);
+        List<Schema> choice = choice(s);
+        if (choice != null) {
+            return choice.stream().anyMatch(b -> b.ref() == null) && choice.stream().anyMatch(this::isObject);
+        }
+        return isObject(schema);
+    }
+
+    /**
+     * The components a choice names as its branches, following references: those whose
+     * bodies a caller writes when it writes one of this schema.
+     */
+    List<String> branches(Schema schema) {
+        List<Schema> choice = choice(follow(schema));
+        if (choice == null) return List.of();
+        return choice.stream().filter(b -> b.ref() != null).map(Schema::ref).toList();
+    }
+
+    /** The branches of a schema that is nothing but a choice, or null. */
+    private static List<Schema> choice(Schema schema) {
+        if (schema.properties() != null || schema.allOf() != null) return null;
+        return schema.oneOf() != null ? schema.oneOf() : schema.anyOf();
+    }
+
     /** Whether a schema describes a list, following references. */
     boolean isArray(Schema schema) {
         Schema target = follow(schema);
