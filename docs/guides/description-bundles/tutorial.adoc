@@ -1,0 +1,658 @@
+= Tutorial: descriptions a project owns, in English and Dutch
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-transcriberj-version: 0.3.2
+:api-only-transcriberj-restdocs-version: 0.1.1
+:api-only-publisher-version: 0.5.0
+:example-url: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/description-bundles
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial gives the classes the API-Only TranscriberJ generates for an `orders` contract descriptions of the project's own, in English and in Dutch.
+Every file below is copied from {example-url}[the worked example ↗], and every command was run in it, with API-Only TranscriberJ {api-only-transcriberj-version}, its REST Docs emitter {api-only-transcriberj-restdocs-version} and API-Only Publisher {api-only-publisher-version}.
+The example is built in CI, so what you read here is what it does.
+
+It assumes a Gradle project that already generates classes from a contract with the TranscriberJ.
+How the contract gets there -- built by the Publisher, fetched by the Subscriber -- is link:../../use-cases/provider/1-contract-in-the-implementing-project/tutorial.adoc[provider use case 1 →], and the example does exactly that; this tutorial does not repeat it.
+link:../../../api-only-transcriberj/README.adoc#description-bundles[The TranscriberJ's README →] is the reference for every setting used here.
+
+[#before-you-start]
+== Before you start
+
+[cols="1,2", options="header"]
+|===
+|You need |Version
+
+|Java
+|21 or newer
+
+|Node.js and npm, for the Publisher that builds the example's contract
+|Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`
+
+|The API-Only TranscriberJ
+|{api-only-transcriberj-version} or newer
+|===
+
+To follow along in the example itself:
+
+[source,console]
+----
+git clone https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library.git
+cd SoftwareEngineeringDoneRight-Library/examples/api-only-transcriberj/description-bundles
+./gradlew test
+----
+
+[#when]
+== Step 0: Decide whether you need a bundle
+
+The TranscriberJ has three sources for a description, and a bundle is only one of them:
+
+[cols="2,3", options="header"]
+|===
+|Configuration |Every class and field is described by
+
+|Neither setting
+|The placeholder `INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE`.
+Right for a tree that only contract tests use.
+
+|`generateDocs = true`
+|The contract's own description.
+Right when the contract is written for the readers of the documentation, in their language.
+
+|`descriptionBundle = '...'`
+|The bundle's text where it has a key, and otherwise what one of the two rows above would give.
+|===
+
+Reach for a bundle only when the text readers should see is not the contract's: because someone other than the contract's authors owns it, or because it is needed in another language.
+If the contract's descriptions are fine as they are, `generateDocs = true` is all you need, and there is nothing to keep in step.
+
+[#contract]
+== Step 1: The contract
+
+The example's contract has one operation, `GET /orders/{orderId}`, which answers with an `OrderV1`, or a `ProblemV1` when there is no such order.
+`OrderV1` has what makes keys interesting: a nested object, `customer.address`, and an array of objects, `lines`.
+
+`src/main/api/openapi/components/schemas/OrderV1.yaml`:
+
+[source,yaml]
+----
+type: object
+description: An order a customer placed.
+required:
+  - id
+  - customer
+  - lines
+properties:
+  id:
+    type: string
+    description: The order's identifier.
+  customer:
+    type: object
+    description: Who placed the order.
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        description: The customer's name.
+      address:
+        type: object
+        description: Where the order is delivered.
+        properties:
+          street:
+            type: string
+            description: The street and house number.
+          city:
+            type: string
+            description: The city.
+  lines:
+    type: array
+    description: What was ordered, one line per product.
+    items:
+      type: object
+      required:
+        - sku
+        - quantity
+      properties:
+        sku:
+          type: string
+          description: The product's stock-keeping unit.
+        quantity:
+          type: integer
+          description: How many were ordered.
+----
+
+`src/main/api/openapi/components/schemas/ProblemV1.yaml`, the error, has an array too:
+
+[source,yaml]
+----
+type: object
+description: What went wrong with a request.
+required:
+  - title
+  - status
+properties:
+  title:
+    type: string
+    description: A short summary of the problem.
+  status:
+    type: integer
+    description: The HTTP status code.
+  errors:
+    type: array
+    description: The individual problems, one per field.
+    items:
+      type: object
+      properties:
+        field:
+          type: string
+          description: The field that was wrong.
+        message:
+          type: string
+          description: What was wrong with it.
+----
+
+Every field is described, in English, for the developers who implement the contract.
+The shop's customer service team wants some of them worded for customers, and the Dutch site needs them in Dutch.
+
+[#configure]
+== Step 2: Name the bundle
+
+The TranscriberJ, and the REST Docs emitter the documentation uses, are in `gradle/libs.versions.toml`:
+
+[source,toml,subs="attributes+"]
+----
+[versions]
+api-only-transcriberj = "{api-only-transcriberj-version}"
+api-only-transcriberj-restdocs = "{api-only-transcriberj-restdocs-version}"
+junit = "6.1.3"
+assertj = "3.27.7"
+
+[libraries]
+api-only-transcriberj-restdocs = { module = "com.arc-e-tect:api-only-transcriberj-restdocs", version.ref = "api-only-transcriberj-restdocs" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+api-only-transcriberj = { id = "com.arc-e-tect.api-only-transcriberj", version.ref = "api-only-transcriberj" }
+----
+
+In `build.gradle`, the subscription names the bundle:
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.contract'
+        // The contract's own descriptions are the fallback for any key the bundle lacks.
+        generateDocs = true
+        // src/test/resources/docs/Descriptions.properties, and one file per language.
+        descriptionBundle = 'docs.Descriptions'
+    }
+}
+----
+
+`descriptionBundle` is a `ResourceBundle` base name: `docs.Descriptions` is `docs/Descriptions.properties`, `docs/Descriptions_nl.properties` and so on, found on the classpath of whatever uses the generated classes.
+The tree goes to the test source set, so the files go under `src/test/resources`.
+
+What to consider::
+* **`generateDocs` decides the fallback.**
+With it, a key the bundle lacks is described by the contract; without it, by the placeholder.
+Turn it on unless you want every description the bundle does not cover to show up, visibly, as the placeholder.
+* **The bundle is read when a description is asked for, not when the classes are generated.**
+Editing a properties file needs no regeneration, and the generated sources do not change with it.
+* **Without `descriptionBundle`, nothing changes**: the classes are the ones generated before bundles existed, with their descriptions compiled in.
+
+[#keys]
+== Step 3: Read the keys the tree asks for
+
+Generate the classes:
+
+[source,console]
+----
+./gradlew generateContractSourcesOrders
+----
+
+The generated `ContractDescriptions` lists every key a bundle for this contract may carry:
+
+[source,console]
+----
+grep -A16 'List<String> KEYS' build/generated/sources/transcriberj/orders/com/example/contract/ContractDescriptions.java
+----
+
+[source,java]
+----
+    private static final List<String> KEYS = List.of(
+        "OrderV1",
+        "OrderV1.id",
+        "OrderV1.customer",
+        "OrderV1.customer.name",
+        "OrderV1.customer.address",
+        "OrderV1.customer.address.street",
+        "OrderV1.customer.address.city",
+        "OrderV1.lines",
+        "OrderV1.lines[].sku",
+        "OrderV1.lines[].quantity",
+        "ProblemV1",
+        "ProblemV1.title",
+        "ProblemV1.status",
+        "ProblemV1.errors",
+        "ProblemV1.errors[].field",
+        "ProblemV1.errors[].message");
+----
+
+The scheme has two rules:
+
+* **A class's key is its class name**: `OrderV1`, `ProblemV1`.
+* **A field's key is `<ClassName>.<path>`**, and the path is exactly the one the field reports, and REST Docs documents:
+** a top-level field is its name: `OrderV1.id`;
+** a field of a nested object adds a dot per level: `OrderV1.customer.address.street`;
+** a field of the objects in an array puts `[]` after the array's name: `OrderV1.lines[].sku`, `ProblemV1.errors[].message`;
+** the nested object and the array are fields too, with keys of their own: `OrderV1.customer.address`, `OrderV1.lines`.
+
+A field whose type is another generated class -- a `$ref` to a reusable schema -- is described by that class, under the class's key, so a shared schema is described once however many places use it.
+
+Each generated description is a call that carries its key and its fallback, as `OrderV1.java` shows:
+
+[source,java]
+----
+        fields.add(new ContractField(prefix + "lines" + "[]" + "." + "sku", "string", optional, ContractDescriptions.of("OrderV1.lines[].sku", "The product's stock-keeping unit.", locale), false, false));
+----
+
+The generation report, `build/reports/transcriberj/orders.txt`, says the same in a line:
+
+[source,text]
+----
+API-Only TranscriberJ: orders 1.0.0
+0 degraded method(s), 0 recommendation(s), 0 undecided construct(s), 0 warning(s)
+
+Notes:
+  Descriptions resolve through the bundle docs.Descriptions, with 16 key(s) it may carry; what generation produced is the fallback. ContractDescriptions.keys() lists them, missing() what nothing covers, and untranslated(locale) what one language has no text of its own for.
+----
+
+[#base]
+== Step 4: Write the base bundle
+
+The base file is the language the project writes in, and has only the keys whose text should change.
+`src/test/resources/docs/Descriptions.properties`:
+
+[source,properties]
+----
+# The descriptions this project writes itself, in English, the contract's language.
+# Only some keys are here on purpose: every other description is the contract's own.
+#
+# A class's key is its name; a field's is <ClassName>.<path>, with the path the field reports.
+
+# The class itself.
+OrderV1=An order, as the shop's customer service team explains it.
+
+# A field inside a nested object.
+OrderV1.customer.address.street=The street and house number, exactly as the customer typed them.
+
+# A field of the objects in an array: the array's name, then [], then the field.
+OrderV1.lines[].sku=The product code printed on the shelf label.
+
+# The same, in an error schema.
+ProblemV1.errors[].message=A sentence the client can show to the person who filled in the form.
+----
+
+What to consider::
+* **Copy keys, do not type them.** Take them from `KEYS`; a key with a typo is never asked for, and its text never shows.
+<<orphans,Step 9 §>> adds a test that catches one.
+* **Leave out what the contract says well.** Every key in the bundle is text to maintain when the contract changes.
+* **A blank entry is no entry.** `OrderV1.id=` falls back like a missing key; to delete a description, delete the line.
+* **The files are read as UTF-8**, since Java 9, so accented characters need no escaping.
+
+[#test]
+== Step 5: Test what readers see
+
+The test sits beside the generated tree, in `src/test/java/com/example/orders/DescriptionsTest.java`.
+It asks for descriptions in a locale, and checks both sides of the overlay:
+
+[source,java]
+----
+    private static final Locale ENGLISH = Locale.ENGLISH;
+    private static final Locale DUTCH = Locale.of("nl");
+----
+
+[source,java]
+----
+    /** Every field of a body, as path and description. */
+    private static Map<String, String> described(List<ContractField> fields) {
+        return fields.stream().collect(Collectors.toMap(ContractField::path, ContractField::description));
+    }
+
+    @Test
+    void theBundleDescribesWhatItCarriesAndTheContractDescribesTheRest() {
+        Map<String, String> english = described(OrderV1.fields("", ENGLISH));
+
+        // In the bundle: the project's own words.
+        assertThat(OrderV1.description(ENGLISH))
+                .isEqualTo("An order, as the shop's customer service team explains it.");
+        assertThat(english.get("customer.address.street"))
+                .isEqualTo("The street and house number, exactly as the customer typed them.");
+        assertThat(english.get("lines[].sku")).isEqualTo("The product code printed on the shelf label.");
+
+        // Not in the bundle: the contract's words.
+        assertThat(english.get("id")).isEqualTo("The order's identifier.");
+        assertThat(english.get("customer.address.city")).isEqualTo("The city.");
+    }
+----
+
+[source,console]
+----
+./gradlew test
+----
+
+[#fallback]
+== Step 6: Add a language, and see the fallback order
+
+`src/test/resources/docs/Descriptions_nl.properties` is the Dutch file, and deliberately incomplete:
+
+[source,properties]
+----
+# Dezelfde beschrijvingen, in het Nederlands. Ook deze vertaling is bewust onvolledig:
+# een sleutel die hier ontbreekt, valt terug op de Engelse bundel en daarna op het contract.
+
+OrderV1=Een bestelling, zoals de klantenservice van de winkel die uitlegt.
+OrderV1.id=De unieke code van de bestelling.
+OrderV1.customer.name=De naam van de klant.
+OrderV1.customer.address.street=De straat en het huisnummer, precies zoals de klant ze intypte.
+OrderV1.lines[].quantity=Hoeveel stuks er besteld zijn.
+ProblemV1.errors[].message=Een zin die de client kan tonen aan wie het formulier invulde.
+----
+
+A description in a locale resolves in this order, and the first text that is there and not blank wins:
+
+. the locale's own file: `Descriptions_nl_BE.properties` for `nl-BE`;
+. its parents' files: `Descriptions_nl.properties`;
+. the base file, `Descriptions.properties`;
+. what generation produced: the contract's text with `generateDocs = true`, the placeholder without it.
+
+The JVM's own locale is never part of that chain: on a machine whose default locale is Dutch, English is still answered from the base file, never from the Dutch one.
+
+The same generated tree answers in Dutch, and falls back one step at a time:
+
+[source,java]
+----
+    @Test
+    void theSameTreeDocumentsTheContractInDutch() {
+        Map<String, String> english = described(OrderV1.fields("", ENGLISH));
+        Map<String, String> dutch = described(OrderV1.fields("", DUTCH));
+
+        assertThat(OrderV1.description(DUTCH))
+                .isEqualTo("Een bestelling, zoals de klantenservice van de winkel die uitlegt.")
+                .isNotEqualTo(OrderV1.description(ENGLISH));
+        assertThat(dutch.get("customer.address.street"))
+                .isEqualTo("De straat en het huisnummer, precies zoals de klant ze intypte.")
+                .isNotEqualTo(english.get("customer.address.street"));
+        assertThat(dutch.get("lines[].quantity")).isEqualTo("Hoeveel stuks er besteld zijn.");
+
+        // Not translated: the English bundle's text, and after that the contract's.
+        assertThat(dutch.get("lines[].sku")).isEqualTo("The product code printed on the shelf label.");
+        assertThat(dutch.get("customer.address.city")).isEqualTo("The city.");
+    }
+----
+
+`lines[].sku` has no Dutch text, so it gets the base file's English; `customer.address.city` is in neither file, so it gets the contract's.
+An error schema works the same way:
+
+[source,java]
+----
+    @Test
+    void anErrorSchemaIsDescribedTheSameWay() {
+        Map<String, String> dutch = described(ProblemV1.fields("", DUTCH));
+
+        assertThat(dutch.get("errors[].message"))
+                .isEqualTo("Een zin die de client kan tonen aan wie het formulier invulde.");
+        assertThat(dutch.get("title")).isEqualTo("A short summary of the problem.");
+    }
+----
+
+To see the order at work, add `OrderV1.customer.address.city=De plaats.` to `Descriptions_nl.properties` and run `./gradlew test` again.
+Two tests fail, both for the right reason: `theSameTreeDocumentsTheContractInDutch` expected the city to fall back to the contract's English, and `whatTheBundlesDoNotCoverCanBeListed`, from <<missing,step 8 §>>, expected it to be untranslated.
+Remove the line again.
+
+What to consider::
+* **Put the contract's language in the base file**, not in a `_en` file.
+A language with no file of its own then falls back to text a reader can at least understand, rather than straight to the contract.
+* **A partial translation is a working translation.** Nothing fails because a key is not translated yet; <<missing,step 8 §>> is how you find out what is left.
+
+[#per-run]
+== Step 7: Choose the language per run
+
+`description()` and `fields(String)`, without a locale, resolve in the locale of the run: the one the system property `apionly.descriptions.locale` names, and otherwise the JVM's default.
+Anything that calls them without a locale -- the REST Docs companions, for one -- follows that property.
+
+A property on Gradle's command line does not reach the test JVM, so `build.gradle` passes it on, and pins English when the build asks for nothing, so the documentation does not change with the machine it is built on:
+
+[source,groovy]
+----
+tasks.named('test') {
+    useJUnitPlatform()
+    // The language this run documents in, English unless asked: ./gradlew test -PdocsLocale=nl
+    systemProperty 'apionly.descriptions.locale', providers.gradleProperty('docsLocale').getOrElse('en')
+}
+----
+
+A test checks that a class without a locale follows the run:
+
+[source,java]
+----
+    @Test
+    void aClassWithoutALocaleDocumentsInTheLanguageTheBuildAsksFor() {
+        Map<String, String> order = Map.of(
+                "en", "An order, as the shop's customer service team explains it.",
+                "nl", "Een bestelling, zoals de klantenservice van de winkel die uitlegt.");
+
+        assertThat(OrderV1.description()).isEqualTo(order.get(ContractDescriptions.locale().getLanguage()));
+    }
+----
+
+Run it once per language:
+
+[source,console]
+----
+./gradlew test
+./gradlew test -PdocsLocale=nl
+----
+
+Both pass.
+`./gradlew test -PdocsLocale=fr` fails that test: there is no French file, so the description is the base file's English, which the test does not expect for French.
+
+The REST Docs companions have no locale parameter; `OrderV1Docs.fields()` resolves in the run's locale.
+A test that renders more than one language in one run sets the property between them, and gives the run's value back afterwards:
+
+[source,java]
+----
+    /** The locale the build asked for, which a test that sets its own gives back. */
+    private final String runLocale = System.getProperty(ContractDescriptions.LOCALE_PROPERTY);
+
+    @AfterEach
+    void restoreTheLocale() {
+        if (runLocale == null) {
+            System.clearProperty(ContractDescriptions.LOCALE_PROPERTY);
+        } else {
+            System.setProperty(ContractDescriptions.LOCALE_PROPERTY, runLocale);
+        }
+    }
+----
+
+[source,java]
+----
+    @Test
+    void restDocsRendersEachLanguageTheRunAsksFor() {
+        System.setProperty(ContractDescriptions.LOCALE_PROPERTY, "en");
+        Map<String, Object> english = restDocs(OrderV1Docs.fields());
+
+        System.setProperty(ContractDescriptions.LOCALE_PROPERTY, "nl");
+        Map<String, Object> dutch = restDocs(OrderV1Docs.fields());
+
+        assertThat(english.get("customer.name")).isEqualTo("The customer's name.");
+        assertThat(dutch.get("customer.name")).isEqualTo("De naam van de klant.");
+    }
+----
+
+What to consider::
+* **One language per run is simplest** for a documentation build: run the documentation tests once per `-PdocsLocale`, each into its own output directory.
+* **`apionly.descriptions.bundle`** names another bundle for a run in the same way, for a build that keeps, say, an internal and a public wording.
+* **Set the property in the test JVM, not in the build.** The generated classes read it where they run.
+
+[#missing]
+== Step 8: Find what is not covered yet
+
+Two questions, two methods:
+
+* `ContractDescriptions.missing(locale)` -- a reader's question: which descriptions in that locale fall back to the generated text, because no file in the chain has them.
+* `ContractDescriptions.untranslated(locale)` -- a translator's question: which keys that language's own file has no text for, whatever it inherits from the base file.
+
+[source,java]
+----
+    @Test
+    void whatTheBundlesDoNotCoverCanBeListed() {
+        // A reader's question: what falls back to the contract's own text.
+        assertThat(ContractDescriptions.missing(ENGLISH))
+                .contains("OrderV1.id", "OrderV1.customer.address.city", "ProblemV1.title")
+                .doesNotContain("OrderV1", "OrderV1.lines[].sku");
+
+        // A translator's question: what Dutch has no text of its own for.
+        assertThat(ContractDescriptions.untranslated(DUTCH))
+                .contains("OrderV1.lines[].sku", "OrderV1.customer.address.city", "ProblemV1.title")
+                .doesNotContain("OrderV1", "OrderV1.customer.name", "OrderV1.lines[].quantity");
+    }
+----
+
+Nothing in the TranscriberJ fails a build over a missing key or an untranslated one; a partial bundle is a normal state.
+Where the project wants a rule -- "the Dutch site is complete", say -- a test states it: `assertThat(ContractDescriptions.untranslated(DUTCH)).isEmpty()`.
+
+[#contract-changes]
+== Step 9: When the contract changes
+
+The bundle belongs to this project, and the contract changes on its own schedule.
+Two changes are worth knowing before they happen.
+
+[#new-field]
+=== A new field has no key yet
+
+Add a required `currency` to `OrderV1.yaml`, with no description, and raise the contract's version to `1.1.0` in `orders.bundle.properties` and `gradle.properties`:
+
+[source,yaml]
+----
+required:
+  - id
+  - customer
+  - lines
+  - currency
+properties:
+  id:
+    type: string
+    description: The order's identifier.
+  currency:
+    type: string
+----
+
+[source,console]
+----
+./gradlew test
+cat build/reports/transcriberj/orders.txt
+----
+
+The tests pass, and the report has one recommendation:
+
+[source,text]
+----
+API-Only TranscriberJ: orders 1.1.0
+0 degraded method(s), 1 recommendation(s), 0 undecided construct(s), 0 warning(s)
+
+Notes:
+  Descriptions resolve through the bundle docs.Descriptions, with 17 key(s) it may carry; what generation produced is the fallback. ContractDescriptions.keys() lists them, missing() what nothing covers, and untranslated(locale) what one language has no text of its own for.
+
+Recommendations:
+  /components/schemas/OrderV1/properties/currency: no description; give it one, since generateDocs is on and it is documented with the placeholder until then
+----
+
+`OrderV1.currency` is now one of the 17 keys, it is in `missing()` and in every `untranslated(locale)`, and until someone describes it -- in the contract or in the bundle -- it is documented with the placeholder:
+
+[source,java]
+----
+        fields.add(new ContractField(prefix + "currency", "string", optional, ContractDescriptions.of("OrderV1.currency", ContractField.PLACEHOLDER, locale), false, false));
+----
+
+Nothing fails.
+If a new key should fail the build, the test in <<missing,step 8 §>> is where to say so.
+
+[#orphans]
+=== A renamed schema leaves its keys behind
+
+Rename `OrderV1.yaml` to `PurchaseOrderV1.yaml`, update the `$ref` in `paths/Order.yaml`, and raise the contract's version to `2.0.0`, a breaking change.
+
+The first thing you see is a compile error: every test that names `OrderV1` no longer compiles, because the class is now `PurchaseOrderV1`.
+
+The bundles are a different matter.
+Every `OrderV1` key in them is now a key nothing asks for, and nothing notices: `PurchaseOrderV1` falls back to the contract's text, and the old text sits in the files unused.
+The TranscriberJ cannot report it -- it does not read the bundle -- so the example guards it with a test that compares each file's keys with the keys the tree asks for:
+
+[source,java]
+----
+    @Test
+    void everyKeyInTheBundlesNamesSomethingTheContractDescribes() throws Exception {
+        // A renamed schema or a removed field leaves its keys behind, and nothing uses
+        // them again. This is how a project finds them: against the keys the tree asks for.
+        Map<String, Set<String>> orphans = new TreeMap<>();
+        for (String file : List.of("docs/Descriptions.properties", "docs/Descriptions_nl.properties")) {
+            java.util.Properties bundle = new java.util.Properties();
+            try (var in = getClass().getClassLoader().getResourceAsStream(file);
+                 var reader = new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)) {
+                bundle.load(reader);
+            }
+            Set<String> unused = new TreeSet<>(bundle.stringPropertyNames());
+            unused.removeAll(ContractDescriptions.keys());
+            if (!unused.isEmpty()) {
+                orphans.put(file, unused);
+            }
+        }
+        assertThat(orphans).as("keys the contract no longer describes, per file").isEmpty();
+    }
+----
+
+With the tests that name `OrderV1`, as a class or in a key, removed, `./gradlew test` fails on it, and says which keys to move, in every file:
+
+[source,text]
+----
+[keys the contract no longer describes, per file]
+Expecting empty but was: {"docs/Descriptions.properties"=["OrderV1", "OrderV1.customer.address.street", "OrderV1.lines[].sku"], "docs/Descriptions_nl.properties"=["OrderV1",
+    "OrderV1.customer.address.street",
+    "OrderV1.customer.name",
+    "OrderV1.id",
+    "OrderV1.lines[].quantity"]}
+----
+
+Rename those keys to `PurchaseOrderV1...` and the text shows again.
+The same test catches a removed field and a key with a typo.
+
+What to consider::
+* **Rename keys in the same change as the contract version**, so the documentation never has a version where the text silently went back to the contract's.
+* **A field moved into a shared schema changes its key** to the shared class's: `OrderV1.customer.address.street` becomes `AddressV1.street` if `address` becomes a `$ref` to `AddressV1`.
+The orphan test lists the old key, and `missing()` the new one.
+
+[#result]
+== What you have now
+
+* `build.gradle` names the bundle and passes the run's language to the tests.
+* `Descriptions.properties` and `Descriptions_nl.properties` hold the text this project owns, and nothing else.
+* `DescriptionsTest` checks both languages, the fallback, the language a run asks for, what is not covered yet, and that every key still names something.
+
+{example-url}[The worked example ↗] has all of it, with its own README.

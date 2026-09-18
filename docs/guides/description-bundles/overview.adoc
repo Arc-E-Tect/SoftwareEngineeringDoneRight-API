@@ -1,0 +1,83 @@
+= Guide: descriptions a project owns, in one language or several
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+The API-Only TranscriberJ generates a class tree from a contract, and every class and field in it has a description, which is what generated documentation shows -- REST Docs field tables, for one.
+Those descriptions normally come from the contract, or are a placeholder.
+
+With a description bundle, they come from a `ResourceBundle` the project writes: one properties file per language, keyed by class and field.
+The bundle wins where it has a key; everywhere else the generated text still applies.
+One generated tree then documents the contract in as many languages as the bundle has files.
+
+[#fits]
+== When this fits
+
+* **The people who write the documentation are not the people who write the contract.**
+A technical writer, a support team, or a product owner owns the text readers see, and the contract's descriptions are written for the developers who implement it.
+* **The documentation is published in more than one language.**
+One contract, one generated tree, a properties file per language.
+* **Some descriptions need rewording, not all.**
+The bundle covers what it covers; the contract describes the rest.
+
+[#does-not-fit]
+== When it does not
+
+* **The contract's own descriptions are what readers should see.**
+Set `generateDocs = true` and nothing else: the classes are documented with the contract's text, and there is no second place to keep up to date.
+* **Nobody reads documentation generated from this tree.**
+Leave both off.
+The tree exists for contract tests, and the placeholder is fine there.
+* **The contract itself should be translated.**
+A bundle translates what the generated classes say, in this project's build.
+The published contract, and anything else generated from it, keeps the contract's language.
+
+[#what-you-get]
+== What you get
+
+* `description(Locale)` and `fields(String, Locale)` on every generated class, answering in the language asked for.
+* A description that is never empty: a missing bundle, a missing key and a blank entry all fall back to the generated text, and resolving never throws.
+* `ContractDescriptions.keys()`, every key a bundle may carry; `missing(Locale)`, what a reader in a language sees fall back; and `untranslated(Locale)`, what a translator still has to do.
+* A line in the generation report naming the bundle and the number of keys it may carry.
+
+[#what-you-do-not-need]
+== What you do not need
+
+* **A change to the contract.** The bundle belongs to the project that generates from the contract.
+* **A second generated tree per language.** The language is chosen when a description is asked for, not when the classes are generated.
+* **A new dependency.** The generated resolver uses `java.util.ResourceBundle` and nothing else.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Name the bundle** with `descriptionBundle` on the subscription, and decide with `generateDocs` what a missing key falls back to: the contract's text, or the placeholder.
+. **Generate once**, and read the keys the tree asks for in `ContractDescriptions`.
+. **Write the base file** -- `docs/Descriptions.properties` on the test classpath -- with the keys you want to reword, and nothing else.
+. **Add one file per language**, `Descriptions_nl.properties` for Dutch, with as many keys as have been translated.
+. **Test what readers see**: the bundle's text where it has a key, the fallback where it has none, and each language.
+. **Choose the language per run** for a documentation build, by passing `apionly.descriptions.locale` to the test JVM.
+. **Guard the keys** with a test that fails on a key the contract no longer describes, because a renamed schema leaves its keys behind silently.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this step by step on a small `orders` contract, in English and Dutch.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant add description bundles to your own project, starting with the tests.
+* https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/description-bundles[The worked example ↗] is the tutorial's result, built in CI.
+* link:../../../api-only-transcriberj/README.adoc#description-bundles[The TranscriberJ's README →] is the reference for every setting.

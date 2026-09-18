@@ -184,12 +184,29 @@ Every use case, and the migration, has the same four documents, and each stands 
 * the **tutorial** builds it step by step, with every file, every value and what to consider;
 * the **Claude Code prompt** and the **Codex prompt** have an AI coding assistant build it in your own project, starting with the checks that prove it works.
 
+[#guides]
+== Guides
+
+A guide covers one feature across the tools, rather than one way of adopting them, with the same four documents as a use case.
+
+[cols="2,3,1", options="header"]
+|===
+|Guide |What it does |Documents
+
+|**Descriptions a project owns, in one language or several**
+|The classes the API-Only TranscriberJ generates take their descriptions from a `ResourceBundle` the project writes, falling back to the contract's text, so one generated tree documents a contract in as many languages as the bundle has files.
+|link:guides/description-bundles/overview.adoc[Overview →] +
+link:guides/description-bundles/tutorial.adoc[Tutorial →] +
+link:guides/description-bundles/prompt-claude-code.md[Claude Code prompt →] +
+link:guides/description-bundles/prompt-codex.md[Codex prompt →]
+|===
+
 [#reference]
 == Reference
 
 * link:reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →]: which settings, commands, tasks and files correspond, what every check guarantees, and where each part lives in the code.
 * link:reference/run-book.adoc[The run-book →]: how to invoke both tools in normal operation, and what to do when something fails.
-* link:../api-only-publisher/README.adoc[The Publisher's README →] and link:../api-only-subscriber/README.adoc[the Subscriber's README →]: every option of each tool.
+* link:../api-only-publisher/README.adoc[The Publisher's README →], link:../api-only-subscriber/README.adoc[the Subscriber's README →] and link:../api-only-transcriberj/README.adoc[the TranscriberJ's README →]: every option of each tool.
 
 [#prompts]
 == Using the prompts
