@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.2.0...api-only-transcriberj-v0.3.0) (2026-09-18)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** resolve descriptions through a project's ResourceBundle ([#21](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/21)) ([46a61c6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/46a61c60fe56a60e29f5dc8d31f51c49b702a077)), closes [#21](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/21)
+
 # [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.1.1...api-only-transcriberj-v0.2.0) (2026-09-18)
 
 
