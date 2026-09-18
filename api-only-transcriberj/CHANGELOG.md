@@ -1,3 +1,10 @@
+## [0.3.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.1...api-only-transcriberj-v0.3.2) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** resolve a description in the locale asked for, not the JVM's ([#23](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/23)) ([705b86b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/705b86b249ae25b5fe5259d4b142dcb2dc9308ad)), closes [#23](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/23)
+
 ## [0.3.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.0...api-only-transcriberj-v0.3.1) (2026-09-18)
 
 
