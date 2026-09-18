@@ -157,6 +157,28 @@ class DescriptionBundleTest {
     }
 
     @Test
+    void theJvmsOwnLocaleNeverAnswersForAnotherOne(@TempDir Path into) throws Throwable {
+        GeneratedSources generated = generate(into, "docs.Descriptions", true);
+        bundle(generated, "docs.Descriptions", "", "UserV1=A user.");
+        bundle(generated, "docs.Descriptions", "nl", "UserV1=Een gebruiker.");
+        Locale jvm = Locale.getDefault();
+        try {
+            // A Dutch developer's machine, asking for the English text of the contract.
+            Locale.setDefault(Locale.of("nl", "NL"));
+
+            assertThat(generated.call("UserV1", "description", new Class<?>[]{Locale.class}, Locale.ENGLISH))
+                    .isEqualTo("A user.");
+            assertThat(strings(generated.call("ContractDescriptions", "missing",
+                    new Class<?>[]{Locale.class}, Locale.ENGLISH))).doesNotContain("UserV1");
+            // And Dutch is still Dutch.
+            assertThat(generated.call("UserV1", "description", new Class<?>[]{Locale.class}, Locale.of("nl")))
+                    .isEqualTo("Een gebruiker.");
+        } finally {
+            Locale.setDefault(jvm);
+        }
+    }
+
+    @Test
     void aSystemPropertyNamesAnotherBundleAndLocale(@TempDir Path into) throws Throwable {
         GeneratedSources generated = generate(into, "docs.Descriptions", true);
         bundle(generated, "docs.Descriptions", "", "UserV1=A user.");
