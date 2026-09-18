@@ -200,6 +200,7 @@ A field whose type is another class is described by that class, under that class
 
 Another language::
 `description(Locale)` and `fields(String, Locale)` resolve in a locale, so one generated tree documents the contract in as many languages as the bundle has files.
+A locale is looked up in its own file, then its parents' -- `nl_BE`, then `nl` -- then the base bundle, and never in the JVM's own locale: asked for English on a machine set to Dutch, the answer is English.
 `-Dapionly.descriptions.locale=nl` sets the locale for a whole run, and `-Dapionly.descriptions.bundle=docs.Other` names another bundle, which is how a documentation build renders each language in turn.
 Without either, the JVM's locale and the configured bundle apply.
 

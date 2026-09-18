@@ -37,6 +37,13 @@ public final class ContractDescriptions {
     private static final List<String> KEYS = List.of(
 ${keys});
 
+    /**
+     * Resolves a locale, then its parents, then the base bundle -- and never the JVM's own
+     * locale in between, so the language asked for is the language answered.
+     */
+    private static final ResourceBundle.Control NO_JVM_LOCALE =
+            ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT);
+
     private ContractDescriptions() {
     }
 
@@ -144,8 +151,10 @@ ${keys});
             return null;
         }
         try {
+            // No fallback to the JVM's own locale: asked for English on a Dutch machine,
+            // the default Control would answer from the Dutch file before the base one.
             ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale,
-                    ContractDescriptions.class.getClassLoader());
+                    ContractDescriptions.class.getClassLoader(), NO_JVM_LOCALE);
             String text = bundle.getString(key);
             return text.isBlank() ? null : text;
         } catch (MissingResourceException e) {
