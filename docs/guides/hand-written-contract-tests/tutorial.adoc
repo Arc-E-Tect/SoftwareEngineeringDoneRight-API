@@ -1,0 +1,738 @@
+= Tutorial: contract tests the generator cannot write, for a refunds service
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-transcriberj-version: 0.3.3
+:api-only-transcriberj-restdocs-version: 0.1.1
+:api-only-publisher-version: 0.5.0
+:spring-boot-version: 4.1.1
+:example-url: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/hand-written-contract-tests
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial writes the contract tests of a refunds service whose request body the API-Only TranscriberJ cannot generate, on top of the classes it can.
+Every file below is copied from {example-url}[the worked example ↗], and every command was run in it, with API-Only TranscriberJ {api-only-transcriberj-version}, its REST Docs emitter {api-only-transcriberj-restdocs-version}, API-Only Publisher {api-only-publisher-version} and Spring Boot {spring-boot-version}.
+The example is built in CI.
+
+It assumes a Gradle project that already generates classes from its contract with the TranscriberJ; how the contract gets there is link:../../use-cases/provider/1-contract-in-the-implementing-project/tutorial.adoc[provider use case 1 →], and the example does exactly that.
+link:overview.adoc[The overview →] makes the argument this tutorial puts into practice; link:../../../api-only-transcriberj/README.adoc#generated-code[the TranscriberJ's README →] lists everything a generated class holds.
+
+[#before-you-start]
+== Before you start
+
+[cols="1,2", options="header"]
+|===
+|You need |Version
+
+|Java
+|21 or newer
+
+|Node.js and npm, for the Publisher that builds the example's contract
+|Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`
+
+|The API-Only TranscriberJ
+|{api-only-transcriberj-version} or newer, and its REST Docs emitter
+|===
+
+To follow along in the example itself:
+
+[source,console]
+----
+git clone https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library.git
+cd SoftwareEngineeringDoneRight-Library/examples/api-only-transcriberj/hand-written-contract-tests
+./gradlew check
+----
+
+[#boundary]
+== Step 0: Know where the generated tree stops
+
+Three things the generated classes do not do, and that no amount of configuration changes:
+
+* **Constraints are constants, not checks.**
+`AmountV1.MAXIMUM` is a number to build a test from.
+A generated `body(...)` writes the arguments it is given, so a body built from arguments that break a constraint breaks it too.
+* **Field descriptions are a projection.**
+A field is a path, a JSON type, whether it is optional, and a description.
+A response checked against them has the fields the contract describes, of those types; whether it is valid against the schema is not what the check says.
+* **Some constructs degrade.**
+The methods a construct no rule represents reaches are generated as ones that throw `UnsupportedOperationException`, with the reason and the remedy.
+The class, its constants and every other method are still generated, and the build does not stop.
+
+link:../../../api-only-transcriberj/README.adoc#limits[What this cannot do →] and link:../../../api-only-transcriberj/README.adoc#unrepresentable[Constructs no rule represents yet →] are the reference for all three.
+
+[#contract]
+== Step 1: A contract that cannot be generated in full
+
+The service refunds an order, to the card it was paid with or to a bank account.
+The request body says which, with a `oneOf` whose two branches are written inline.
+
+`src/main/api/openapi/components/schemas/RefundRequestV1.yaml`:
+
+[source,yaml]
+----
+type: object
+description: Where a refund goes, and how much of the order it returns.
+oneOf:
+  - type: object
+    description: A refund to the card the order was paid with.
+    required:
+      - destination
+      - amount
+      - cardLast4
+    properties:
+      destination:
+        const: card
+      amount:
+        $ref: AmountV1.yaml
+      cardLast4:
+        $ref: CardLast4V1.yaml
+  - type: object
+    description: A refund to a bank account, for an order paid by bank transfer.
+    required:
+      - destination
+      - amount
+      - iban
+    properties:
+      destination:
+        const: bank-account
+      amount:
+        $ref: AmountV1.yaml
+      iban:
+        $ref: IbanV1.yaml
+----
+
+The amount, the card digits and the IBAN are components of their own, with their constraints, such as `src/main/api/openapi/components/schemas/AmountV1.yaml`:
+
+[source,yaml]
+----
+type: integer
+description: An amount of money, in cents.
+minimum: 1
+maximum: 1000000
+----
+
+The operation, in `src/main/api/openapi/paths/Refunds.yaml`, lists four responses.
+Its description carries two rules the schema cannot: a refund goes back the way the order was paid, and refunds never add up to more than the order.
+A request that breaks one is valid against the schema, and answered with 422:
+
+[source,yaml]
+----
+post:
+  operationId: createRefund
+  summary: Refund part or all of an order.
+  description: >-
+    A refund goes back the way the order was paid, and never exceeds what is
+    left of the order to refund. Neither rule can be written in the schema; a
+    request that breaks one is answered with 422.
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      description: The order's identifier.
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/RefundRequestV1.yaml
+  responses:
+    '201':
+      description: The refund was accepted.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/RefundV1.yaml
+    '400':
+      description: The request does not match the contract.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+    '404':
+      description: No order has that identifier.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+    '422':
+      description: The request matches the contract, but breaks a business rule.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+----
+
+[#report]
+== Step 2: Read what the generator could not write
+
+The generated classes go to the test source set only; the service is written by hand and never imports them.
+`build.gradle`:
+
+[source,groovy]
+----
+dependencies {
+    // The service: hand-written, and it never imports the generated classes.
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+
+    // The tests: the generated classes, their REST Docs companions, and MockMvc.
+    transcriberjEmitters libs.api.only.transcriberj.restdocs
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-restdocs'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+----
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('refunds') {
+        basePackage = 'com.example.contract'
+        // The REST Docs field tables show the contract's descriptions.
+        generateDocs = true
+    }
+}
+----
+
+Generate, and read the report:
+
+[source,console]
+----
+./gradlew generateContractSourcesRefunds
+cat build/reports/transcriberj/refunds.txt
+----
+
+[source,text]
+----
+API-Only TranscriberJ: refunds 1.0.0
+2 degraded method(s), 0 recommendation(s), 0 undecided construct(s), 0 warning(s)
+
+Degraded methods -- these throw UnsupportedOperationException:
+  RefundRequestV1.body(...) [core]: ONE_OF_INLINE_BRANCHES at /components/schemas/RefundRequestV1 (oneOf: <inline #1>, <inline #2>); remedy: name the branches in the specification so that each becomes a component
+  RefundRequestV1.fields(String) [core]: ONE_OF_INLINE_BRANCHES at /components/schemas/RefundRequestV1 (oneOf: <inline #1>, <inline #2>); remedy: name the branches in the specification so that each becomes a component
+----
+
+The report names both methods, the reason, and the remedy.
+`RefundRequestV1.body(...)` takes `Object...`, since its parameters cannot be known, and throws:
+
+[source,java]
+----
+    public static String body(Object... values) {
+        throw new UnsupportedOperationException("RefundRequestV1.body(...) cannot be generated from contract refunds: ONE_OF_INLINE_BRANCHES at /components/schemas/RefundRequestV1 (oneOf: <inline #1>, <inline #2>); name the branches in the specification so that each becomes a component. See the API-Only TranscriberJ report.");
+    }
+----
+
+[#what-is-left]
+== Step 3: Take stock of what is still there
+
+The class whose body cannot be generated still carries its provenance:
+
+[source,java]
+----
+public final class RefundRequestV1 {
+
+    /** The fragment this class was generated from. */
+    public static final String FRAGMENT_PATH = "openapi/components/schemas/RefundRequestV1.yaml";
+
+    /** The SHA-256 of that fragment as bundled, in RFC 8785 canonical JSON. */
+    public static final String FRAGMENT_SHA256 = "f20b627c2a6f8effb19706bfc3bc3b2854a494c0b8bcf79598c46db8666529b6";
+
+    /** The version of the contract this class was generated from. */
+    public static final String CONTRACT_VERSION = "1.0.0";
+
+    /** Whether a body may carry members the contract does not list. */
+    public static final boolean OPEN = false;
+----
+
+The operation's class has everything a request needs except the body:
+
+[source,console]
+----
+grep -h "public static final\|public static String path" build/generated/sources/transcriberj/refunds/com/example/contract/CreateRefundOperation.java
+----
+
+[source,java]
+----
+    public static final String OPERATION_ID = "createRefund";
+    public static final String METHOD = "POST";
+    public static final String PATH = "/orders/{orderId}/refunds";
+    public static final String LOCATION = "/paths/~1orders~1{orderId}~1refunds/post";
+    public static final String OPERATION_SHA256 = "06d2ccf8fa6d3b14002147b2b23848b850aa92ba58a7dbc76915c6c5cdbdb37a";
+    public static final String CONTRACT_VERSION = "1.0.0";
+    public static final String REQUEST_CONTENT_TYPE = "application/json";
+    public static final int STATUS_201 = 201;
+    public static final String CONTENT_TYPE_201 = "application/json";
+    public static final int STATUS_400 = 400;
+    public static final String CONTENT_TYPE_400 = "application/problem+json";
+    public static final int STATUS_404 = 404;
+    public static final String CONTENT_TYPE_404 = "application/problem+json";
+    public static final int STATUS_422 = 422;
+    public static final String CONTENT_TYPE_422 = "application/problem+json";
+    public static String path(String orderId) {
+----
+
+And beyond those:
+
+[cols="2,3", options="header"]
+|===
+|Generated |What a hand-written test takes from it
+
+|`AmountV1.MINIMUM`, `AmountV1.MAXIMUM`, `CardLast4V1.PATTERN`, `IbanV1.PATTERN`
+|Values the contract accepts, and one it rejects.
+
+|`RefundV1Docs.responseFields()`, `ProblemV1Docs.responseFields()`
+|The response side, in full: every field of the refund and of the problem document, as REST Docs descriptors.
+The error side can usually be generated even when the request side cannot.
+
+|`ContractJson`
+|The JSON writer the generated bodies use, so a hand-written body writes JSON the same way.
+|===
+
+`AmountV1`, `CardLast4V1`, `IbanV1` and `ContractJson` are package-private: code outside `com.example.contract` cannot see them.
+That decides where the hand-written body goes.
+
+[#write-it]
+== Step 4: Write the missing part by hand, in the generated package
+
+The missing part is the request body, so that -- and only that -- is written by hand.
+`src/test/java/com/example/contract/RefundRequests.java`, in the *test* source set, in the *generated* package:
+
+[source,java]
+----
+package com.example.contract;
+
+/**
+ * Refund requests, written by hand: {@link RefundRequestV1#body(Object...)} cannot be
+ * generated, because the contract's {@code oneOf} branches are inline.
+ *
+ * <p>It sits in the generated package, in the test source set, so it writes JSON with the
+ * same {@link ContractJson} the generated bodies do, and it takes everything else it can
+ * from the generated classes. The member names and the two {@code destination} values are
+ * the only things typed here; {@link #WRITTEN_AGAINST} is how a change to them is noticed.
+ */
+public final class RefundRequests {
+
+    /**
+     * The {@link RefundRequestV1#FRAGMENT_SHA256} this class was written against. When the
+     * request schema changes, a test fails until this class is checked against it again.
+     */
+    public static final String WRITTEN_AGAINST =
+            "f20b627c2a6f8effb19706bfc3bc3b2854a494c0b8bcf79598c46db8666529b6";
+
+    /** An amount the contract accepts: the smallest. */
+    public static final int SOME_AMOUNT = AmountV1.MINIMUM;
+
+    /** An amount the contract rejects: one more than the largest. */
+    public static final int TOO_LARGE_AN_AMOUNT = AmountV1.MAXIMUM + 1;
+
+    /** Card digits the contract accepts; checked against {@link CardLast4V1#PATTERN}. */
+    public static final String SOME_CARD_LAST4 = "4242";
+
+    /** An account the contract accepts; checked against {@link IbanV1#PATTERN}. */
+    public static final String SOME_IBAN = "NL91ABNA0417164300";
+
+    private RefundRequests() {
+    }
+
+    /**
+     * A refund to the card the order was paid with.
+     *
+     * @param amount    the amount, in cents; see {@link AmountV1}
+     * @param cardLast4 the card's last four digits; see {@link CardLast4V1#PATTERN}
+     * @return the request body
+     */
+    public static String toCard(int amount, String cardLast4) {
+        StringBuilder json = new StringBuilder("{");
+        ContractJson.member(json, "destination", ContractJson.string("card"));
+        ContractJson.member(json, "amount", String.valueOf(amount));
+        ContractJson.member(json, "cardLast4", ContractJson.string(cardLast4));
+        return ContractJson.close(json);
+    }
+
+    /**
+     * A refund to a bank account.
+     *
+     * @param amount the amount, in cents; see {@link AmountV1}
+     * @param iban   the account; see {@link IbanV1#PATTERN}
+     * @return the request body
+     */
+    public static String toBankAccount(int amount, String iban) {
+        StringBuilder json = new StringBuilder("{");
+        ContractJson.member(json, "destination", ContractJson.string("bank-account"));
+        ContractJson.member(json, "amount", String.valueOf(amount));
+        ContractJson.member(json, "iban", ContractJson.string(iban));
+        return ContractJson.close(json);
+    }
+}
+----
+
+What to consider::
+* **Same package, different directory.** The generated classes are in `build/generated/sources/transcriberj/refunds/`, and this class is in `src/test/java/`; both are the test source set's, so Java sees one package, and the package-private constants and `ContractJson` are in reach.
+Generation replaces its own directory on every build and never touches `src/`.
+* **Draw on the generated pieces even where a literal would be shorter.**
+`AmountV1.MAXIMUM + 1` is one more than the contract's maximum today and after the next change; `1000001` is right only until then.
+A hand-written body that references nothing generated never breaks at compile time, and so rots without anyone noticing.
+* **Type only what the contract does not give you.** Here, the member names and the two `destination` values, which live in inline branches no class holds.
+<<guard,Step 5 §>> is how a change to them is noticed.
+
+[#guard]
+== Step 5: Make the hand-written part break when the contract moves
+
+A generated constant that disappears breaks the build at compile time -- the good case.
+What does not break it is a change the hand-written code does not refer to: a member renamed inside the `oneOf`.
+`src/test/java/com/example/contract/RefundRequestsTest.java` covers both that and the day the generator can take over:
+
+[source,java]
+----
+package com.example.contract;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * What keeps the hand-written {@link RefundRequests} honest as the contract moves.
+ */
+class RefundRequestsTest {
+
+    @Test
+    void theHandWrittenBodyWasWrittenAgainstTheRequestSchemaAsItIsNow() {
+        assertThat(RefundRequestV1.FRAGMENT_SHA256)
+                .as("%s changed; check RefundRequests against it, then update WRITTEN_AGAINST",
+                        RefundRequestV1.FRAGMENT_PATH)
+                .isEqualTo(RefundRequests.WRITTEN_AGAINST);
+    }
+
+    @Test
+    void theGeneratorStillCannotWriteThisBody() {
+        // When this fails, the contract names its branches and the generator writes the
+        // body itself: use the generated classes, and delete RefundRequests.
+        assertThatThrownBy(RefundRequestV1::body)
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("ONE_OF_INLINE_BRANCHES");
+    }
+
+    @Test
+    void theSampleValuesAreOnesTheContractAccepts() {
+        // CardLast4V1 and IbanV1 are package-private: nothing public in the generated tree
+        // takes them, because the body that would have is the one that could not be generated.
+        assertThat(RefundRequests.SOME_AMOUNT).isBetween(AmountV1.MINIMUM, AmountV1.MAXIMUM);
+        assertThat(RefundRequests.SOME_CARD_LAST4).matches(CardLast4V1.PATTERN);
+        assertThat(RefundRequests.SOME_IBAN).matches(IbanV1.PATTERN);
+    }
+
+    @Test
+    void itWritesTheMembersEachBranchRequires() {
+        assertThat(RefundRequests.toCard(RefundRequests.SOME_AMOUNT, RefundRequests.SOME_CARD_LAST4))
+                .isEqualTo("{\"destination\":\"card\",\"amount\":1,\"cardLast4\":\"4242\"}\n");
+        assertThat(RefundRequests.toBankAccount(RefundRequests.SOME_AMOUNT, RefundRequests.SOME_IBAN))
+                .isEqualTo("{\"destination\":\"bank-account\",\"amount\":1,\"iban\":\"NL91ABNA0417164300\"}\n");
+    }
+}
+----
+
+* `theHandWrittenBodyWasWrittenAgainstTheRequestSchemaAsItIsNow` pins the body to the fragment's hash, `RefundRequestV1.FRAGMENT_SHA256`.
+Any change to the request schema fails it, with a message that says what to do.
+* `theGeneratorStillCannotWriteThisBody` fails when the contract, or the generator, changes so that the body can be generated; then the hand-written one goes.
+* `theSampleValuesAreOnesTheContractAccepts` keeps the typed sample values inside the constraints.
+
+[#how-many]
+== Step 6: Decide how many tests, and where they go
+
+**A contract test checks the shape of a response, not the behaviour that produced it.**
+
+The contract promises a client a status, a content type and a set of fields for each response it lists.
+One request that gets a 400 is enough to check that the 400 comes back as the contract's problem document.
+A second invalid amount, a third, and every way to get the card digits wrong come back in the same shape; as contract tests they check nothing new about the contract.
+
+*Which* requests the service rejects, and why, is behaviour.
+It belongs with the service, as scenarios: every way to be invalid, every business rule, and what the service does -- tested where they can be stated plainly, without going through HTTP each time.
+
+So the example has two kinds of test:
+
+[cols="1,2,2", options="header"]
+|===
+| |Contract tests |Behaviour tests
+
+|Subject
+|The HTTP answer, against the contract
+|The service's decisions
+
+|How many
+|One per response the contract lists: four
+|One per rule or scenario: as many as there are
+
+|Checks
+|Status, content type, fields
+|Which requests are refused, and the message
+|===
+
+The contract tests, `src/test/java/com/example/refunds/CreateRefundContractTest.java`, check each response against the generated operation constants and REST Docs descriptors:
+
+[source,java]
+----
+/**
+ * The contract tests of {@code createRefund}: one per response the contract lists, each
+ * checking the response's shape -- its status, its content type and its fields -- against
+ * the contract. Which requests the service rejects, and why, is behaviour, and is tested
+ * in {@link RefundsTest}.
+ */
+// The service itself, not a stand-in: the answers are the ones a client gets.
+@WebMvcTest(RefundController.class)
+@Import({Refunds.class, Orders.class})
+@AutoConfigureRestDocs
+class CreateRefundContractTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void anAcceptedRefundIsAnsweredInTheShapeTheContractDescribes() throws Exception {
+        mockMvc.perform(post(CreateRefundOperation.PATH, Orders.PAID_BY_CARD)
+                        .contentType(CreateRefundOperation.REQUEST_CONTENT_TYPE)
+                        .content(RefundRequests.toCard(RefundRequests.SOME_AMOUNT, RefundRequests.SOME_CARD_LAST4)))
+                .andExpect(status().is(CreateRefundOperation.STATUS_201))
+                .andExpect(content().contentType(CreateRefundOperation.CONTENT_TYPE_201))
+                .andDo(document("create-refund", RefundV1Docs.responseFields()));
+    }
+
+    @Test
+    void aRequestTheContractRejectsIsAnsweredWithAProblem() throws Exception {
+        // One example of a request the contract does not allow is enough to see the shape
+        // of the answer. Every other way to be invalid is behaviour: see RefundsTest.
+        mockMvc.perform(post(CreateRefundOperation.PATH, Orders.PAID_BY_CARD)
+                        .contentType(CreateRefundOperation.REQUEST_CONTENT_TYPE)
+                        .content(RefundRequests.toCard(RefundRequests.TOO_LARGE_AN_AMOUNT, RefundRequests.SOME_CARD_LAST4)))
+                .andExpect(status().is(CreateRefundOperation.STATUS_400))
+                .andExpect(content().contentType(CreateRefundOperation.CONTENT_TYPE_400))
+                .andDo(document("create-refund-invalid", ProblemV1Docs.responseFields()));
+    }
+
+    @Test
+    void anUnknownOrderIsAnsweredWithAProblem() throws Exception {
+        mockMvc.perform(post(CreateRefundOperation.PATH, "no-such-order")
+                        .contentType(CreateRefundOperation.REQUEST_CONTENT_TYPE)
+                        .content(RefundRequests.toCard(RefundRequests.SOME_AMOUNT, RefundRequests.SOME_CARD_LAST4)))
+                .andExpect(status().is(CreateRefundOperation.STATUS_404))
+                .andExpect(content().contentType(CreateRefundOperation.CONTENT_TYPE_404))
+                .andDo(document("create-refund-unknown-order", ProblemV1Docs.responseFields()));
+    }
+
+    @Test
+    void aRefundThatBreaksABusinessRuleIsAnsweredWithAProblem() throws Exception {
+        // Valid against the schema, and still refused: the order was paid by card, so its
+        // refund goes back to the card. The schema cannot say that; the 422 is how the
+        // contract tells a client, and its shape is what this test checks.
+        mockMvc.perform(post(CreateRefundOperation.PATH, Orders.PAID_BY_CARD)
+                        .contentType(CreateRefundOperation.REQUEST_CONTENT_TYPE)
+                        .content(RefundRequests.toBankAccount(RefundRequests.SOME_AMOUNT, RefundRequests.SOME_IBAN)))
+                .andExpect(status().is(CreateRefundOperation.STATUS_422))
+                .andExpect(content().contentType(CreateRefundOperation.CONTENT_TYPE_422))
+                .andDo(document("create-refund-rejected", ProblemV1Docs.responseFields()));
+    }
+}
+----
+
+`ProblemV1Docs.responseFields()` fails when the problem document lacks a field the contract requires, or carries one the contract does not list, so these four tests check the shape of every response, error responses included.
+The 422 test needs one request that breaks one rule; it does not test the rule.
+
+The behaviour tests, `src/test/java/com/example/refunds/RefundsTest.java`, test the rules, and are where all the invalid inputs are:
+
+[source,java]
+----
+/**
+ * What the service does with a refund request: which ones it refuses, and why. These are
+ * scenarios, one per rule, and they are the place for every way a request can be wrong --
+ * {@link CreateRefundContractTest} needs only one of them to check the shape of the answer.
+ */
+class RefundsTest {
+
+    private final Refunds refunds = new Refunds(new Orders());
+
+    private static RefundRequest toCard(Integer amount, String cardLast4) {
+        return new RefundRequest("card", amount, cardLast4, null);
+    }
+
+    private static RefundRequest toBankAccount(Integer amount, String iban) {
+        return new RefundRequest("bank-account", amount, null, iban);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', nullValues = "null", textBlock = """
+            no amount            | card   | null    | 4242 | null               | amount    | is required
+            a zero amount        | card   | 0       | 4242 | null               | amount    | must be between 1 and 1000000
+            too large an amount  | card   | 1000001 | 4242 | null               | amount    | must be between 1 and 1000000
+            no card digits       | card   | 100     | null | null               | cardLast4 | must be the last four digits of the card
+            three card digits    | card   | 100     | 424  | null               | cardLast4 | must be the last four digits of the card
+            letters for digits   | card   | 100     | abcd | null               | cardLast4 | must be the last four digits of the card
+            no IBAN              | bank-account | 100 | null | null             | iban      | must be an IBAN without spaces
+            an IBAN with spaces  | bank-account | 100 | null | NL91 ABNA 0417 1643 00 | iban | must be an IBAN without spaces
+            no destination       | null   | 100     | 4242 | null               | destination | must be card or bank-account
+            an unknown destination | cash | 100     | 4242 | null               | destination | must be card or bank-account
+            """)
+    void aRequestTheContractDoesNotAllowIsInvalid(String scenario, String destination, Integer amount,
+                                                  String cardLast4, String iban, String field, String message) {
+        Outcome outcome = refunds.refund(Orders.PAID_BY_CARD, new RefundRequest(destination, amount, cardLast4, iban));
+
+        assertThat(outcome).isEqualTo(new Outcome.Invalid(List.of(new FieldError(field, message))));
+    }
+----
+
+[source,java]
+----
+    @Test
+    void aRefundGoesBackTheWayTheOrderWasPaid() {
+        assertThat(refunds.refund(Orders.PAID_BY_CARD, toBankAccount(100, "NL91ABNA0417164300")))
+                .isEqualTo(new Outcome.Rejected("The order was paid by card, so its refunds go back to the card."));
+        assertThat(refunds.refund(Orders.PAID_BY_BANK_TRANSFER, toCard(100, "4242")))
+                .isEqualTo(new Outcome.Rejected(
+                        "The order was paid by bank-account, so its refunds go back to the bank-account."));
+    }
+----
+
+[source,java]
+----
+    @Test
+    void refundsNeverAddUpToMoreThanTheOrder() {
+        assertThat(refunds.refund(Orders.PAID_BY_CARD, toCard(3000, "4242"))).isInstanceOf(Outcome.Accepted.class);
+
+        assertThat(refunds.refund(Orders.PAID_BY_CARD, toCard(2500, "4242")))
+                .isEqualTo(new Outcome.Rejected("Only 2000 of the order is left to refund."));
+        assertThat(refunds.refund(Orders.PAID_BY_CARD, toCard(2000, "4242"))).isInstanceOf(Outcome.Accepted.class);
+    }
+----
+
+Ten ways to be invalid are ten rows in one behaviour test; they are one contract test.
+
+[#run]
+== Step 7: Run it
+
+[source,console]
+----
+./gradlew check
+----
+
+23 tests pass: 4 contract tests, 4 guards, 15 behaviour tests.
+The REST Docs snippets of the four responses are in `build/generated-snippets/`, and the service's coverage is in `build/reports/jacoco/test/html/index.html`; the generated classes are not measured, since each carries an annotation that JaCoCo skips.
+
+[#contract-changes]
+== Step 8: When the contract changes underneath
+
+[#constant-removed]
+=== A constant the hand-written code uses disappears
+
+Remove `maximum` from `AmountV1.yaml`, raise the contract's version in `refunds.bundle.properties` and `gradle.properties`, and run `./gradlew check`:
+
+[source,text]
+----
+src/test/java/com/example/contract/RefundRequests.java:25: error: cannot find symbol
+    public static final int TOO_LARGE_AN_AMOUNT = AmountV1.MAXIMUM + 1;
+                                                          ^
+  symbol:   variable MAXIMUM
+  location: class AmountV1
+----
+
+The build stops at the line that relied on the contract, before any test runs.
+
+[#member-renamed]
+=== A member the hand-written code types is renamed
+
+Rename `cardLast4` to `lastFourDigits` in `RefundRequestV1.yaml`, raise the version, and run `./gradlew check`.
+Everything compiles.
+Every contract test still passes: the service is unchanged, and still accepts `cardLast4`.
+Only the guard fails:
+
+[source,text]
+----
+[openapi/components/schemas/RefundRequestV1.yaml changed; check RefundRequests against it, then update WRITTEN_AGAINST]
+expected: "f20b627c2a6f8effb19706bfc3bc3b2854a494c0b8bcf79598c46db8666529b6"
+ but was: "f2f323a2ddd3337b792b243b2afe0b1936a0f82036f8d4f820d05ae10c5c962e"
+----
+
+Without that guard, the tests would go on sending a request the contract no longer describes, and passing.
+
+[#remedy]
+== Step 9: Prefer fixing the contract, where you can
+
+The report gave a remedy: name the branches, so each becomes a component.
+Most degradations have one -- an inline branch that could be a named component, an inline request schema that could be a fragment -- and taking it is usually the better fix: every consumer of the contract gets the generated body, not only your tests.
+
+Move each branch to a fragment of its own, `CardRefundV1.yaml` and `BankAccountRefundV1.yaml`, with the branch's content, and refer to them:
+
+[source,yaml]
+----
+type: object
+description: Where a refund goes, and how much of the order it returns.
+oneOf:
+  - $ref: CardRefundV1.yaml
+  - $ref: BankAccountRefundV1.yaml
+----
+
+After raising the version, `./gradlew check` stops at the guard that said this would happen:
+
+[source,text]
+----
+src/test/java/com/example/contract/RefundRequestsTest.java:25: error: invalid method reference
+        assertThatThrownBy(RefundRequestV1::body)
+                           ^
+  cannot find symbol
+----
+
+`RefundRequestV1` no longer has a body of its own; its Javadoc says where it is:
+
+[source,java]
+----
+/**
+ * Generated from schema openapi/components/schemas/RefundRequestV1.yaml.
+ *
+ * <p>A body of it is one of: {@link CardRefundV1}, {@link BankAccountRefundV1}.
+ */
+@com.arc_e_tect.sedr.utils.jacoco.marker.ExcludeFromJacocoGeneratedCodeCoverage(justification = "Generated by API-Only TranscriberJ")
+public final class RefundRequestV1 {
+----
+
+and each branch has one, with its `destination` written for you:
+
+[source,java]
+----
+    public static String body(int amount, String cardLast4) {
+        java.util.Objects.requireNonNull(cardLast4, "cardLast4");
+        StringBuilder json = new StringBuilder("{");
+        ContractJson.member(json, "destination", ContractJson.string(DESTINATION));
+        ContractJson.member(json, "amount", String.valueOf(amount));
+        ContractJson.member(json, "cardLast4", ContractJson.string(cardLast4));
+        return ContractJson.close(json);
+    }
+----
+
+The branches are public, with REST Docs companions, so the contract tests use `CardRefundV1.body(...)` and `BankAccountRefundV1.body(...)` directly.
+Delete `RefundRequests` and its test; the sample values still need the package-private constraint classes, so they stay in the generated package, in a class of their own.
+
+Hand-writing the body is the answer when the contract cannot change: someone else owns it, or the construct is what the API genuinely needs.
+
+[#result]
+== What you have now
+
+* The request body the generator could not write, written by hand from the generated pieces, in the generated package of the test source set.
+* Guards that fail when the request schema changes and when the generator can take over.
+* One contract test per response, checking shape with the generated descriptors.
+* The rules, and every way to break them, in behaviour tests.
+
+{example-url}[The worked example ↗] has all of it, with its own README.
