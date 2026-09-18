@@ -213,6 +213,7 @@ link:guides/hand-written-contract-tests/prompt-codex.md[Codex prompt →]
 
 * link:reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →]: which settings, commands, tasks and files correspond, what every check guarantees, and where each part lives in the code.
 * link:reference/run-book.adoc[The run-book →]: how to invoke both tools in normal operation, and what to do when something fails.
+* link:reference/authoring-a-specification-library.adoc[Authoring a specification library →]: the rules that keep a library clean to build and generate from, each with its reason and the message a tool prints when it is broken, what the tools will not do, and how to read their reports.
 * link:../api-only-publisher/README.adoc[The Publisher's README →], link:../api-only-subscriber/README.adoc[the Subscriber's README →] and link:../api-only-transcriberj/README.adoc[the TranscriberJ's README →]: every option of each tool.
 
 [#prompts]
