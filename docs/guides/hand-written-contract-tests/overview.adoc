@@ -61,6 +61,43 @@ When the request body cannot be generated:
 A request body written by hand from those pieces is still derived from the contract in every part except the one the contract could not express.
 And because it uses them, it still breaks when the contract moves -- which is the property worth protecting.
 
+[#where-it-goes]
+== Where hand-written code goes: a design decision
+
+[IMPORTANT]
+.Hand-written test code goes in the generated package
+====
+Code that builds on the generated classes goes in the subscription's `basePackage`, in the test source set: `src/test/java/<basePackage as a path>/`.
+
+That is deliberate.
+The generated tree makes public only what callers outside its package need; everything else is package-private, including `ContractJson` -- the JSON writer every generated body uses -- and the scalar components that carry constraints such as a maximum or a pattern.
+Hand-written code in the same package reaches all of it, writes JSON the way the generated bodies do, and sits next to what it draws on.
+
+Those package-private members are *not* a published API: they are regenerated on every build and may change when the TranscriberJ is upgraded, in which case the hand-written code that uses them no longer compiles and has to be adjusted.
+====
+
+link:../../../api-only-transcriberj/README.adoc#hand-written-code[Hand-written code beside the generated classes →], in the TranscriberJ's README, is the reference.
+
+[#responsibilities]
+== What you own when you write it
+
+Some of what a contract says is generated nowhere, and hand-written code that needs it types it:
+
+* the members of a schema whose body could not be generated -- their names, which are required, how they nest;
+* `const` values, such as the `destination` that says which branch of a `oneOf` a body is;
+* constraints written inline inside an inline branch; only components a branch refers to carry theirs.
+
+Whatever you type, the project -- not the generator -- is responsible for keeping in line with the contract, and nothing checks it for you: the generator verifies the generated tree, not your code.
+That comes with four duties:
+
+. **Draw on the generated constants wherever they hold the value**, so a change to them breaks the build at the line that used them.
+. **Pin each hand-written part to the hash of the fragment it was written against**, in a test; it is the only thing that fails when a member you typed is renamed.
+When it fails, check your code against the contract, then update the pinned hash.
+. **Assert that the degraded method still throws**, and delete your replacement when it no longer does.
+. **Write only what is missing**, and prefer taking the report's remedy to writing anything at all.
+
+link:../../../api-only-transcriberj/README.adoc#your-responsibilities[What the generated classes do not hold →] is the reference.
+
 [#how-many]
 == How many tests, and where
 
@@ -89,7 +126,7 @@ Its contract test needs one request that breaks the rule; the rule itself, with 
 . **Read the report.** `build/reports/transcriberj/<contract>.txt` lists every method that throws, and why.
 . **Fix the contract where you can.** Most degradations have a remedy -- name the branches of a `oneOf`, make an inline schema a component -- and the report gives it.
 A contract that can be generated is better for every consumer, not just your tests.
-. **Where you cannot, write the missing part by hand**: in the test source set, in the generated package, from the generated constants.
+. **Where you cannot, write the missing part by hand**: in the test source set, in the generated package, from the generated constants -- and own what you type, as <<responsibilities,What you own when you write it §>> says.
 . **Guard it**: pin it to the hash of the fragment it was written against, and assert that the method still throws, so you hear when the contract changes and when the generator can take over.
 . **Write one contract test per response**, checking status, content type and fields with the generated descriptors.
 . **Put every other invalid input in behaviour tests**, as scenarios.

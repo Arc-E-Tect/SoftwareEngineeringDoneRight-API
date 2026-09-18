@@ -65,6 +65,10 @@ Wherever one of these names appears below, in braces, it stands for this version
 - **Visibility**: a class is public when code outside the package needs it (a body, a parameter's schema, a non-schema component, what a public `body(...)` takes, a branch of a `oneOf`/`anyOf` a public body is).
   Everything else is package-private, including scalar components such as a constrained string or integer, and `ContractJson`.
   Hand-written code that needs them goes **in the generated package, in the test source set** (`src/test/java/<basePackage path>/`), next to the generated classes.
+  This is a design decision of the TranscriberJ, not a workaround.
+- **The package-private members are not a published API.** They are regenerated every build and may change when the TranscriberJ is upgraded; hand-written code using them then stops compiling and must be adjusted.
+- **Generated nowhere, so typed by hand and owned by the project**: the members of a schema whose `body(...)` degraded (names, which are required, nesting); `const` values (private in named components, absent for inline branches); constraints written inline inside an inline branch.
+  Nothing verifies hand-written code against the contract: `verifyContractSources<Contract>` checks only the generated tree.
 - `ContractJson` (package-private): `string(value)` quotes a string, `member(json, name, value)` appends a member to a `StringBuilder` started with `"{"`, `close(json)` ends it with `}` and a newline, `embed(body)` nests a body another `body(...)` returned, and `array(values)` joins values already written as JSON -- the same way generated bodies write.
 - A `oneOf`/`anyOf` with an inline object branch degrades `body(...)` and `fields(...)`; remedy: name the branches.
   A choice whose branches are all references has no `body(...)` of its own; each branch has one.
@@ -119,7 +123,8 @@ Show me each of these on a copy, or undo it afterwards:
 ## Step 5: Wrap up
 
 1. Tell me which files to commit, and which remedies to take to the contract's owners.
-2. Offer to add a section like this to `CLAUDE.md`, and write it only if I agree:
+2. List, per hand-written class, every value it types that no generated class holds, and say plainly that keeping those in line with the contract is now this project's responsibility, guarded only by the `WRITTEN_AGAINST` test.
+3. Offer to add a section like this to `CLAUDE.md`, and write it only if I agree:
 
    ```markdown
    ## Contract tests

@@ -302,6 +302,7 @@ The error side can usually be generated even when the request side cannot.
 
 |`ContractJson`
 |The JSON writer the generated bodies use, so a hand-written body writes JSON the same way.
+Package-private, regenerated every build, and not a published API.
 |===
 
 `AmountV1`, `CardLast4V1`, `IbanV1` and `ContractJson` are package-private: code outside `com.example.contract` cannot see them.
@@ -311,6 +312,18 @@ That decides where the hand-written body goes.
 == Step 4: Write the missing part by hand, in the generated package
 
 The missing part is the request body, so that -- and only that -- is written by hand.
+
+[IMPORTANT]
+.A design decision: hand-written test code goes in the generated package
+====
+Hand-written code that builds on the generated classes goes in the subscription's `basePackage`, in the test source set.
+The generated tree makes public only what callers outside the package need, and keeps the rest -- `ContractJson`, and scalar components such as `AmountV1` -- package-private; from the same package, hand-written code reaches all of it.
+
+Those package-private members are regenerated on every build and are *not* a published API.
+An upgrade of the TranscriberJ may change them; hand-written code that uses them then stops compiling, and is adjusted.
+link:../../../api-only-transcriberj/README.adoc#hand-written-code[Hand-written code beside the generated classes →] is the reference.
+====
+
 `src/test/java/com/example/contract/RefundRequests.java`, in the *test* source set, in the *generated* package:
 
 [source,java]
@@ -388,8 +401,37 @@ Generation replaces its own directory on every build and never touches `src/`.
 * **Draw on the generated pieces even where a literal would be shorter.**
 `AmountV1.MAXIMUM + 1` is one more than the contract's maximum today and after the next change; `1000001` is right only until then.
 A hand-written body that references nothing generated never breaks at compile time, and so rots without anyone noticing.
-* **Type only what the contract does not give you.** Here, the member names and the two `destination` values, which live in inline branches no class holds.
-<<guard,Step 5 §>> is how a change to them is noticed.
+* **Type only what the contract does not give you.**
+<<owned,What this class now owns §>> lists what that is here.
+
+[#owned]
+=== What this class now owns
+
+Some of what the contract says is generated nowhere, so `RefundRequests` types it, and from here on the project is responsible for it matching the contract -- nothing else checks it:
+
+[cols="2,3", options="header"]
+|===
+|Typed in `RefundRequests` |Why no generated class holds it
+
+|The members `destination`, `amount`, `cardLast4` and `iban`, and which branch requires which
+|They belong to the inline branches of a `oneOf` whose `body(...)` and `fields(...)` degraded.
+
+|The `destination` values `card` and `bank-account`
+|They are `const` values of inline branches; even a named component keeps its `const` values in a private constant.
+
+|`SOME_CARD_LAST4` and `SOME_IBAN`
+|Sample values, checked against `CardLast4V1.PATTERN` and `IbanV1.PATTERN` in <<guard,Step 5 §>>.
+Had the branches written those patterns inline instead of referring to components, no constant would hold them either.
+|===
+
+That responsibility comes with four duties, and the next step turns three of them into tests:
+
+. draw on the generated constants wherever they hold the value, as `SOME_AMOUNT` and `TOO_LARGE_AN_AMOUNT` do;
+. pin the class to the hash of the fragment it was written against, and check it against the contract whenever that fails;
+. assert that the degraded method still throws, and delete the class when it no longer does;
+. write only what is missing: <<remedy,Step 9 §>> shows the remedy that leaves nothing to type.
+
+link:../../../api-only-transcriberj/README.adoc#your-responsibilities[What the generated classes do not hold →] is the reference.
 
 [#guard]
 == Step 5: Make the hand-written part break when the contract moves
