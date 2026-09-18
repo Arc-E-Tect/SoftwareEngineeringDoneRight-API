@@ -1,3 +1,21 @@
+# [0.5.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.4.2...api-only-publisher-v0.5.0) (2026-09-18)
+
+
+### ✨ New and updated features
+
+* generate a class tree from a contract's AsyncAPI document, and stamp it in the Publisher ([#20](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/20)) ([0f19c57](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/0f19c5773b9a8016f19f6abf2d3b9a15ded477be)), closes [#20](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/20)
+* **api-only-transcriberj:** generate the class tree on IDE sync ([#17](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/17)) ([f9e775d](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/f9e775d8982e8d9b122cc05f7d526b60b17e4a9d)), closes [#17](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/17)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** wire IDE sync from the root project, and never fail a subproject ([#18](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/18)) ([34e78d0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/34e78d0e2a6701fe05be6d95d76b474219231509)), closes [#18](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/18)
+
+
+### 📝 Documentation
+
+* add "Why API-Only" discussion document ([#19](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/19)) ([bc5b3e4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/bc5b3e4510c18780e6972101c8f7c38abba1ae8a)), closes [#19](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/19)
+
 ## [0.4.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.4.1...api-only-publisher-v0.4.2) (2026-09-17)
 
 
