@@ -44,6 +44,9 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
     /** The prefix of each contract's verification task. */
     public static final String VERIFY_TASK = "verifyContractSources";
 
+    /** The task that adds missing {@code apiOnlyTranscriberJ} properties to the build file. */
+    public static final String UPDATE_DSL_TASK = "updateApiOnlyTranscriberJDSL";
+
     /**
      * What the generated code itself needs: the marker annotation every generated class
      * carries, so that a project measuring coverage does not measure code nobody wrote.
@@ -71,6 +74,8 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
 
         ApiOnlyTranscriberJExtension extension = project.getExtensions()
                 .create(ApiOnlyTranscriberJExtension.NAME, ApiOnlyTranscriberJExtension.class);
+        project.getTasks().register(UPDATE_DSL_TASK, UpdateApiOnlyTranscriberJDslTask.class, task ->
+            task.getBuildFile().set(project.getLayout().file(project.provider(project::getBuildFile))));
         extension.getStrictDependencies().convention(false);
 
         // Read once, when first needed: while a source set's dependencies are resolved.

@@ -57,7 +57,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                 apiOnlySubscriber {
                     channel {
                         type = 'file'
-                        directory = file('channel')
+                        directory = file('channel').path
                     }
                     subscribe('user-account') {
                         version = findProperty('contractVersion') ?: '1.0.0'
@@ -74,7 +74,11 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
 
                 // The consumer has test sources but no tests; check still runs test.
                 tasks.named('test') {
-                    failOnNoDiscoveredTests = false
+                    // Gradle 9 fails a test task that discovers no tests; older Gradle has no such
+                    // setting, and this build is also run on the oldest Gradle the plugin supports.
+                    if (it.hasProperty('failOnNoDiscoveredTests')) {
+                        failOnNoDiscoveredTests = false
+                    }
                 }
 
                 tasks.register('useContract', JavaExec) {
@@ -128,6 +132,35 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         args.add("--stacktrace");
         return GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
                 .withArguments(args).forwardOutput();
+    }
+
+    /** The oldest Gradle this plugin supports: the first that runs on Java 21, which it is compiled for. */
+    static final String OLDEST_GRADLE = "8.5";
+
+    @Test
+    void generatesCompilesAndRunsTheClassTreeOnTheOldestSupportedGradle() throws Exception {
+        BuildResult result = runner("useContract", "check").withGradleVersion(OLDEST_GRADLE).build();
+
+        assertThat(result.getOutput())
+                .contains("BODY {\"username\":\"alice\",\"emailAddress\":\"a@example.com\"}")
+                .contains("VERSION 1.0.0");
+    }
+
+    @Test
+    void theDslTaskGeneratesABlockGradleAcceptsAndThatAddsNoSubscription() throws Exception {
+        Files.writeString(projectDir.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'com.arc-e-tect.api-only-transcriberj'
+                }
+                """);
+
+        runner("updateApiOnlyTranscriberJDSL", "--generateApiOnlyTranscriberJDSL").build();
+        assertThat(Files.readString(projectDir.resolve("build.gradle")))
+                .contains("apiOnlyTranscriberJ {").contains("strictDependencies = false").contains("subscriptions {");
+
+        BuildResult tasks = runner("tasks", "--all").build();
+        assertThat(tasks.getOutput()).contains("updateApiOnlyTranscriberJDSL").doesNotContain("generateContractSources");
     }
 
     @Test

@@ -16,7 +16,7 @@ import javax.inject.Inject;
  */
 public abstract class TranscriberJSubscription implements Named {
 
-    /** The description every generated field carries while descriptions are not generated. */
+    /** The description of a class or field the contract does not describe, when descriptions are generated. */
     public static final String DEFAULT_DESCRIPTION_PLACEHOLDER =
             "INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE";
 
@@ -81,7 +81,9 @@ public abstract class TranscriberJSubscription implements Named {
     public abstract Property<Boolean> getGenerateDocs();
 
     /**
-     * The description every field carries while descriptions are not generated.
+     * The description of a class or field the contract does not describe, when
+     * {@link #getGenerateDocs()} is on: it says the description is still to come.
+     * With it off, every description is the empty string, and this is not used.
      *
      * <p>Default: {@value #DEFAULT_DESCRIPTION_PLACEHOLDER}.
      *

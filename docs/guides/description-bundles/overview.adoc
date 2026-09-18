@@ -20,7 +20,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 == In short
 
 The API-Only TranscriberJ generates a class tree from a contract, and every class and field in it has a description, which is what generated documentation shows -- REST Docs field tables, for one.
-Those descriptions normally come from the contract, or are a placeholder.
+Those descriptions normally come from the contract with `generateDocs = true`, and are otherwise empty.
 
 With a description bundle, they come from a `ResourceBundle` the project writes: one properties file per language, keyed by class and field.
 The bundle wins where it has a key; everywhere else the generated text still applies.
@@ -43,7 +43,7 @@ The bundle covers what it covers; the contract describes the rest.
 Set `generateDocs = true` and nothing else: the classes are documented with the contract's text, and there is no second place to keep up to date.
 * **Nobody reads documentation generated from this tree.**
 Leave both off.
-The tree exists for contract tests, and the placeholder is fine there.
+The tree exists for contract tests, and its descriptions are then empty.
 * **The contract itself should be translated.**
 A bundle translates what the generated classes say, in this project's build.
 The published contract, and anything else generated from it, keeps the contract's language.

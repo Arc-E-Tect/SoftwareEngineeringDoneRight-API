@@ -6,8 +6,9 @@ package com.arc_e_tect.gradle.apionly.transcriberj.spi;
  * @param contract               the name of the contract, as the project subscribes to it
  * @param basePackage            the package the core classes go in
  * @param generateDocs           whether descriptions come from the contract; when
- *                               {@code false}, every description is {@code descriptionPlaceholder}
- * @param descriptionPlaceholder the description used when {@code generateDocs} is {@code false}
+ *                               {@code false}, every description is the empty string
+ * @param descriptionPlaceholder the description of what the contract does not describe, when
+ *                               {@code generateDocs} is {@code true}
  * @param recursionDepth         how many times a recursive reference is followed before
  *                               the rest is documented as a subsection
  * @param descriptionBundle      the base name of a {@link java.util.ResourceBundle} the
@@ -30,7 +31,8 @@ public record Settings(
      * @param contract               the name of the contract
      * @param basePackage            the package the core classes go in
      * @param generateDocs           whether descriptions come from the contract
-     * @param descriptionPlaceholder the description used when {@code generateDocs} is false
+     * @param descriptionPlaceholder the description of what the contract does not describe,
+     *                               when {@code generateDocs} is true
      * @param recursionDepth         how many times a recursive reference is followed
      */
     public Settings(String contract, String basePackage, boolean generateDocs, String descriptionPlaceholder,

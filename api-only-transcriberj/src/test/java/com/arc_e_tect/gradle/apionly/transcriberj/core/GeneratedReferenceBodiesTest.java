@@ -136,7 +136,7 @@ class GeneratedReferenceBodiesTest {
 
     private static String field(String path, String type, boolean optional) {
         return "ContractField[path=" + path + ", type=" + type + ", optional=" + optional
-                + ", description=PLACEHOLDER, subsection=false, open=false]";
+                + ", description=, subsection=false, open=false]";
     }
 
     @Test

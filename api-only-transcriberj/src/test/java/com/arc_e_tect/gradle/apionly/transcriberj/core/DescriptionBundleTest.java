@@ -114,12 +114,12 @@ class DescriptionBundleTest {
     }
 
     @Test
-    void withoutGenerateDocsTheBundleStillWinsAndThePlaceholderIsTheFallback(@TempDir Path into) throws Throwable {
+    void withoutGenerateDocsTheBundleStillWinsAndTheFallbackIsEmpty(@TempDir Path into) throws Throwable {
         GeneratedSources generated = generate(into, "docs.Descriptions", false);
         bundle(generated, "docs.Descriptions", "", "UserV1.username=The username, as this project documents it.");
 
         assertThat(descriptions(generated)).contains("username=The username, as this project documents it.");
-        assertThat(generated.call("UserV1", "description", new Class<?>[]{})).isEqualTo("PLACEHOLDER");
+        assertThat(generated.call("UserV1", "description", new Class<?>[]{})).isEqualTo("");
     }
 
     @Test

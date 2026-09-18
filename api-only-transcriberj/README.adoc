@@ -61,15 +61,32 @@ It applies the API-Only Subscriber, which it depends on.
 [#requirements]
 == Requirements
 
-* Java 21 or later.
-* Gradle 9; it is tested with 9.7.1, with the configuration cache on.
-* An OpenAPI 3 contract bundled by the API-Only Publisher with `defaults.openapi.fragmentPaths` left on, so that every component carries `x-fragment-path`.
+[cols="1,2",options="header"]
+|===
+|Requirement |Version
+
+|Java
+|21 or newer
+
+|Gradle
+|8.5 or newer, the first Gradle that runs on Java 21.
+Tested with 8.5 and 9.7.1, with the configuration cache on.
+
+|A contract
+|An OpenAPI 3 document, bundled by the API-Only Publisher with `defaults.openapi.fragmentPaths` left on, so that every component carries `x-fragment-path`.
 A contract without it is refused: a class is named after the fragment it came from, never after the key a bundler chose for it.
-* Where the contract also has an AsyncAPI 3 document, the same of `defaults.asyncapi.fragmentPaths`.
-A contract without an AsyncAPI document generates from its OpenAPI document alone.
-* For the IDE wiring in <<ide,In the IDE §>>, nothing extra: Gradle's own `idea` and `eclipse` plugins, and,
-for IntelliJ's sync hook, `org.jetbrains.gradle.plugin.idea-ext`, which the plugin reads reflectively rather
-than compiling against, so its version is the build's choice. It is tested with 1.4.1.
+
+|Its AsyncAPI document, if it has one
+|An AsyncAPI 3 document, bundled with `defaults.asyncapi.fragmentPaths` left on.
+
+|The IDE wiring in <<ide,In the IDE §>>
+|Nothing extra: Gradle's own `idea` and `eclipse` plugins, and, for IntelliJ's sync hook, `org.jetbrains.gradle.plugin.idea-ext`, which the plugin reads reflectively rather than compiling against, so its version is the build's choice.
+Tested with 1.4.1.
+|===
+
+A contract is one OpenAPI document and, when it also describes events, one AsyncAPI document beside it.
+Most contracts have only the OpenAPI document; from those, the TranscriberJ generates the HTTP side alone.
+When the published archive also holds an `asyncapi.yaml`, the TranscriberJ reads both into one model and generates the event payloads, channels and operations as well, as <<asyncapi,The AsyncAPI document §>> describes.
 
 [#applying]
 == Applying the plugin
@@ -119,12 +136,13 @@ apiOnlyTranscriberJ {
         // Default: 3
         // recursionDepth = 3
 
-        // Whether descriptions come from the contract.
+        // Whether descriptions come from the contract. Off, every description is the
+        // empty string: descriptions exist for documentation, and none was asked for.
         // Default: false
         // generateDocs = true
 
-        // The description of every class and field when generateDocs is off, and of
-        // those the contract does not describe when it is on.
+        // With generateDocs on, the description of a class or field the contract does
+        // not describe, saying one is still to come. Not used with generateDocs off.
         // Default: INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE
         // descriptionPlaceholder = '...'
 
@@ -148,8 +166,8 @@ dependencies {
 [#descriptions]
 === Descriptions
 
-By default every description is the placeholder.
-The class tree exists for contract testing; documentation is usually generated elsewhere, often with text a technical writer owns.
+By default every description is the empty string.
+The class tree exists for contract testing, and a description exists only for documentation; documentation is usually generated elsewhere, often with text a technical writer owns.
 
 With `generateDocs = true`, descriptions come from the contract:
 
@@ -157,7 +175,7 @@ With `generateDocs = true`, descriptions come from the contract:
 * A field's description is its property's.
 A `$ref` property is described by the component it refers to, unless the reference carries a description of its own.
 * The text is used as the contract writes it, trimmed at both ends; line breaks inside it are kept.
-* A class or field the contract does not describe is documented with the placeholder, and the report names it with the advice to describe it.
+* A class or field the contract does not describe is documented with the placeholder, `descriptionPlaceholder`, which says a description is still to come, and the report names it with the advice to describe it.
 It does not fail the build.
 
 [#description-bundles]
@@ -189,7 +207,7 @@ InvalidRequestProblemV1.errors[].message=What was wrong with the request.
 A description resolves in one order, at the moment it is asked for:
 
 . the bundle, if it carries the key and its text is not blank;
-. what generation produced: the contract's text with `generateDocs = true`, the placeholder without it.
+. what generation produced: with `generateDocs = true`, the contract's text, or the placeholder where it has none; without it, the empty string.
 
 So a bundle is an overlay rather than a third mode: it wins where it has a key, and `generateDocs` decides what a key it lacks falls back to.
 A missing bundle, a missing key and a blank entry are all the same thing -- the fallback -- so a description is never empty and resolving one never throws.
@@ -229,7 +247,14 @@ Runs whenever the contract document or the lockfile changes; the fetch runs firs
 |`verifyContractSources<Contract>`
 |Fails when the generated tree was generated from another version or document than the lockfile names.
 `check` runs it.
+
+|`updateApiOnlyTranscriberJDSL`
+|Adds the `apiOnlyTranscriberJ` properties a build file does not set yet, with their defaults, to its existing block, keeping the original as `build.gradle.bak`.
+`--generateApiOnlyTranscriberJDSL` writes the whole block when the build has none, with a commented example of a subscription; `--cleanupApiOnlyTranscriberJDSL` strips the comments inside the block.
 |===
+
+After upgrading the plugin, run `./gradlew updateApiOnlyTranscriberJDSL` to add any new property with its default to the `apiOnlyTranscriberJ {}` block.
+It edits Groovy build files, as the Subscriber's `updateApiOnlySubscriberDSL` does, and never adds a subscription: a subscription names a contract and needs a `basePackage`, which only the build can say.
 
 `<Contract>` is the contract's name as the Subscriber's tasks spell it: `user-account` is `UserAccount`.
 
@@ -271,7 +296,7 @@ IntelliJ reads the task triggers from the root project's model, so that is where
 
 .Considerations
 * **Without idea-ext**, IntelliJ resolves the generated classes after any build that runs the generation task -- `./gradlew generateContractSources<Contract>`, or any `compileTestJava` that depends on it -- and again after every `clean`.
-The three lines above are what makes that automatic.
+Applying idea-ext, as in the `plugins` block above, is what makes that automatic.
 * **Verification stays in `check`.**
 Sync generates; it does not run `verifyContractSources<Contract>`, because a lockfile that has moved on should fail a build rather than a project import.
 * **Eclipse** needs no extra plugin: `eclipse` is part of Gradle, and Buildship runs its synchronisation tasks.
@@ -373,7 +398,7 @@ They are constants only; generated bodies do not enforce them.
 ** a schema written inline in an operation: `OPERATION_ID` where the operation has one, `METHOD`, `PATH` and `CONTENT_TYPE`, and, for a response, `STATUS`, as a string;
 ** a schema component: none of these, even when it is used as a body.
 A schema can be sent under more than one content type and status, so those belong to the operation: its class holds `REQUEST_CONTENT_TYPE` and `CONTENT_TYPE_<status>`, as <<operations,Operations §>> shows.
-* **`description()`**: the placeholder, or the contract's description with `generateDocs` on.
+* **`description()`**: the empty string, or, with `generateDocs` on, the contract's description or the placeholder.
 * **`body(...)`** and **`fields(prefix)`**, when the schema describes an object.
 
 [#operations]
@@ -421,7 +446,8 @@ doppelgangerApiDetector {
 }
 ----
 
-The API-Only Suite's contract-evidence scan resolves `ClassName.FIELD` references through such a file from api-detector-core 1.8.0 on.
+The https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Gradle/tree/main/doppelganger-api-detector[Doppelganger API Detector ↗] reads it, from version 2.10.1 on, to resolve `ClassName.FIELD` references in the tests it scans for contract evidence -- as does the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Gradle/tree/main/api-only-suite[API-Only Suite ↗] from 3.11.1 on, which applies it and passes its `propertyFiles` through.
+Both do so through api-detector-core 1.8.0, which a build does not use directly.
 
 [#bodies]
 === Bodies
@@ -477,6 +503,9 @@ One test can assert that the whole tree corresponds to the locked contract.
 
 Nothing stops the build, and no class is skipped.
 The class and its constants are generated; only a method that cannot represent a construct is generated as one that throws `UnsupportedOperationException`, with the reason and, where there is one, the remedy.
+
+These are the constructs no generation rule covers *yet*: a future version addresses them where a rule is possible and worth having, and the changelog says when one does.
+Until then, the remedy -- usually a change to the contract -- is the way out, and link:../docs/guides/hand-written-contract-tests/overview.adoc[the guide to hand-written contract tests →] covers what to do when the contract cannot change.
 A `body(...)` that cannot be generated takes `Object...`, since its parameters cannot be known.
 
 [cols="2,1,3", options="header"]
@@ -642,7 +671,7 @@ One build, one artifact: the plugin, the built-in core emitter, and the contract
 It is published to the Gradle Plugin Portal as `com.arc-e-tect.api-only-transcriberj`, with the artifact `com.arc-e-tect:api-only-transcriberj`, by `.github/workflows/api-only-transcriberj-release.yml`, under the `api-only-transcriberj-v*` tags.
 `./gradlew publishToMavenLocal` puts it in `mavenLocal` for use before a release.
 
-The tests read shared fixtures from `fixtures/`: the reference library's published contracts, built by this repository's Publisher, and the Publisher's `init` scaffold.
+The tests read shared fixtures from `fixtures/`: the reference library's published contracts, built by this repository's Publisher -- of which only `user-account` has an AsyncAPI document -- and the Publisher's `init` scaffold, which generates an OpenAPI document only, no AsyncAPI one.
 Each directory's `SOURCE.properties` says how to rebuild it.
 
 `src/handwritten` holds the reference implementation's hand-written `testSchemaCommon` classes.

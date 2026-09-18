@@ -97,6 +97,9 @@ sourceSets {
 }
 
 dependencies {
+    // updateApiOnlyTranscriberJDSL, as the Subscriber and every sibling plugin have it.
+    implementation libs.dsl.updater.core
+
     // YAML 1.2, no transitive dependencies: the plugin's runtime classpath is the
     // consumer's build script classpath, so every dependency here is theirs too.
     implementation libs.snakeyaml.engine

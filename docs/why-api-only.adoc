@@ -596,7 +596,7 @@ Each class carries the fragment it came from and that fragment's hash, and a man
 
 **Text stops being maintained twice.**
 Description text that already exists in the specification does not need a properties file beside the tests repeating it.
-Whether descriptions come from the contract at all is a choice: by default the generated descriptors carry a placeholder, because the class tree exists for contract testing and documentation is usually generated elsewhere, from text a technical writer owns.
+Whether descriptions come from the contract at all is a choice: by default the generated descriptors carry an empty description, because the class tree exists for contract testing and documentation is usually generated elsewhere, from text a technical writer owns.
 
 === One vocabulary, every suite
 

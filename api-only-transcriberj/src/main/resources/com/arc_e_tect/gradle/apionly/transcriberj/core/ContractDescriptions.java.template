@@ -11,10 +11,10 @@ import java.util.ResourceBundle;
  * Where this contract's classes get their descriptions.
  *
  * <p>A description resolves in one order, at the moment it is asked for: this project's
- * {@link ResourceBundle} first, then the text generation produced -- the contract's, or
- * the placeholder. A key the bundle does not carry, a bundle that is not on the classpath
- * and an entry that is blank all fall through to that text, so a description is never
- * empty and resolving one never throws.
+ * {@link ResourceBundle} first, then the text generation produced -- the contract's or
+ * the placeholder when descriptions are generated, and the empty string when they are
+ * not. A key the bundle does not carry, a bundle that is not on the classpath and an entry
+ * that is blank all fall through to that text, and resolving one never throws.
  *
  * <p>Resolving at the moment it is asked for is what lets one generated tree document a
  * contract in several languages: ask for a {@link Locale}, or set
@@ -125,7 +125,7 @@ ${keys});
      *
      * @param key       the key, as {@link #keys()} lists it
      * @param generated what generation produced for it
-     * @return the description, never empty
+     * @return the description: the bundle's, or the generated text
      */
     public static String of(String key, String generated) {
         return of(key, generated, locale());
@@ -137,7 +137,7 @@ ${keys});
      * @param key       the key, as {@link #keys()} lists it
      * @param generated what generation produced for it
      * @param locale    the locale to resolve in
-     * @return the description, never empty
+     * @return the description: the bundle's, or the generated text
      */
     public static String of(String key, String generated, Locale locale) {
         String described = fromBundle(key, locale);

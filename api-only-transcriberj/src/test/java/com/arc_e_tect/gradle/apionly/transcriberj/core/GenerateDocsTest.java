@@ -93,13 +93,15 @@ class GenerateDocsTest {
     }
 
     @Test
-    void withoutGenerateDocsNothingIsReportedAboutDescriptions() {
+    void withoutGenerateDocsNothingIsReportedAndEveryDescriptionIsEmpty() {
         GeneratedSources off = GeneratedSources.generate(
                 GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"), "1.0.0",
                 directory.resolve("off"), GeneratedSources.settings("user-account"), List.of());
         assertThat(off.report.recommendations()).extracting(GenerationReport.Recommendation::advice)
                 .noneMatch(a -> a.startsWith("no description"));
-        assertThat(off.source("UsernameV1")).contains("return ContractField.PLACEHOLDER;");
+        // Descriptions exist for documentation; with none asked for, there is nothing to say,
+        // and the placeholder -- which promises a description later -- would be untrue.
+        assertThat(off.source("UsernameV1")).contains("return \"\";").doesNotContain("PLACEHOLDER;");
     }
 
     @Test

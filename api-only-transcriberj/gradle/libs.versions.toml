@@ -4,6 +4,7 @@ plugin-publish              = { id = "com.gradle.plugin-publish",     version.re
 owasp-dependency-check      = { id = "org.owasp.dependencycheck",     version.ref = "owasp-dependency-check" }
 
 [versions]
+dsl-updater-core = "1.0.0"
 
 owasp-dependency-check = "13.0.0"
 plugin-publish  = "2.1.1"
@@ -27,6 +28,7 @@ sedr-library = "1.0.0"
 gradle-idea-ext = "1.4.1"
 
 [libraries]
+dsl-updater-core = { module = "com.arc-e-tect:dsl-updater-core", version.ref = "dsl-updater-core" }
 
 junit-jupiter                = { module = "org.junit.jupiter:junit-jupiter",                  version.ref = "junit-jupiter" }
 junit-platform-launcher      = { module = "org.junit.platform:junit-platform-launcher",       version.ref = "junit-platform" }
