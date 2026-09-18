@@ -1,3 +1,10 @@
+## [0.3.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.2...api-only-subscriber-v0.3.3) (2026-09-18)
+
+
+### 📝 Documentation
+
+* add a reference on authoring a specification library, and keep versions current ([#28](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/28)) ([b8bb842](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b8bb842de22e545137f816ce0429822792e2fff4)), closes [#28](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/28)
+
 ## [0.3.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.1...api-only-subscriber-v0.3.2) (2026-09-17)
 
 
