@@ -162,7 +162,8 @@ It does not fail the build.
 [#description-bundles]
 ==== Descriptions a project owns
 
-A team that writes its own documentation text, or documents a contract in more than one language, supplies a `ResourceBundle` and the generated classes resolve through it:
+A team that writes its own documentation text, or documents a contract in more than one language, supplies a `ResourceBundle` and the generated classes resolve through it.
+link:../docs/guides/description-bundles/tutorial.adoc[The description bundles tutorial →] builds it step by step, in English and Dutch, on https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/description-bundles[a worked example ↗]:
 
 [source,groovy]
 ----
