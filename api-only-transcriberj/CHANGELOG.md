@@ -1,3 +1,15 @@
+# [0.2.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.1.1...api-only-transcriberj-v0.2.0) (2026-09-18)
+
+
+### ✨ New and updated features
+
+* generate a class tree from a contract's AsyncAPI document, and stamp it in the Publisher ([#20](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/20)) ([0f19c57](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/0f19c5773b9a8016f19f6abf2d3b9a15ded477be)), closes [#20](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/20)
+
+
+### 📝 Documentation
+
+* add "Why API-Only" discussion document ([#19](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/19)) ([bc5b3e4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/bc5b3e4510c18780e6972101c8f7c38abba1ae8a)), closes [#19](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/19)
+
 ## [0.1.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.1.0...api-only-transcriberj-v0.1.1) (2026-09-17)
 
 
