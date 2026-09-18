@@ -31,7 +31,13 @@ public enum Construct {
      * A component of a type the model does not type -- anything but schemas,
      * responses, parameters and request bodies -- kept as a raw value.
      */
-    UNMODELLED_COMPONENT_TYPE(Treatment.UNDECIDED, null);
+    UNMODELLED_COMPONENT_TYPE(Treatment.UNDECIDED, null),
+
+    /**
+     * One fragment bundled into the contract's two documents as different bytes, so
+     * that the class generated from it can only match one of them.
+     */
+    FRAGMENT_BUNDLED_DIFFERENTLY(Treatment.UNDECIDED, null);
 
     private static final String NAME_THE_BRANCHES =
             "name the branches in the specification so that each becomes a component";

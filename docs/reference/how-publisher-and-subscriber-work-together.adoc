@@ -285,9 +285,9 @@ With `publish: false`, the package is only packed into `directory`.
 |`subscription('<target>').openapi` and `.asyncapi`, which look for `openapi.yaml` and `asyncapi.yaml`
 |Document names in the archive and in `manifest.files`
 
-|`defaults.openapi.fragmentPaths`
+|`defaults.openapi.fragmentPaths`, `defaults.asyncapi.fragmentPaths`
 |--
-|`x-fragment-path`, the fragment it came from, on every OpenAPI component built from one; part of the documents, and so of their hashes; on by default
+|`x-fragment-path`, the fragment it came from: on every OpenAPI component built from one, and on every fragment an AsyncAPI bundle inlines; part of the documents, and so of their hashes; on by default
 
 |--
 |`apiOnlySubscriber.lockfile`

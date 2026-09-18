@@ -80,6 +80,34 @@ public final class ContractParser {
     }
 
     /**
+     * Parses a contract's two documents into one model.
+     *
+     * <p>A specification library shares fragments between them: an event payload
+     * references the schema of a username the HTTP responses use, so that a username
+     * means the same thing either way. Both documents are therefore read into one
+     * model, keyed by fragment, and a fragment they share is one component of it --
+     * which is what makes it one generated class rather than two of the same name.
+     *
+     * @param openapi  the OpenAPI document
+     * @param asyncapi the AsyncAPI document, or {@code null} when the contract has none
+     * @return the model
+     * @throws IOException            when a file cannot be read
+     * @throws ContractModelException when a document is not what it claims to be
+     */
+    public static ContractModel parse(Path openapi, Path asyncapi) throws IOException {
+        ContractModel http = parse(openapi);
+        if (asyncapi == null) return http;
+        String text = Files.readString(asyncapi, StandardCharsets.UTF_8);
+        Object root;
+        try {
+            root = new Load(LoadSettings.builder().setSchema(new CoreSchema()).build()).loadFromString(text);
+        } catch (YamlEngineException e) {
+            throw new ContractModelException(asyncapi + ": is not valid YAML: " + e.getMessage(), e);
+        }
+        return new ContractParser(asyncapi.toString()).asyncInto(http, root);
+    }
+
+    /**
      * Parses a contract's text.
      *
      * @param text   the contract, as YAML or JSON
@@ -167,7 +195,138 @@ public final class ContractParser {
                 List.copyOf(requestBodies),
                 Collections.unmodifiableMap(otherComponents),
                 List.copyOf(paths),
+                List.of(),
+                List.of(),
                 List.copyOf(findings));
+    }
+
+    // -------------------------------------------------------------- asyncapi
+
+    /** The OpenAPI model, with everything the AsyncAPI document adds to it. */
+    private ContractModel asyncInto(ContractModel http, Object root) {
+        Map<String, Object> document = map(root, "");
+        Object asyncapi = document.get("asyncapi");
+        if (!(asyncapi instanceof String version) || !version.startsWith("3.")) {
+            throw error("", "not an AsyncAPI 3 document (asyncapi: " + asyncapi + ")");
+        }
+        Map<String, Object> info = optionalMap(document.get("info"), "/info");
+        Object contractVersion = info == null ? null : info.get("version");
+        if (contractVersion != null && http.version() != null
+                && !String.valueOf(contractVersion).equals(http.version())) {
+            throw error("/info/version", "says the contract is version " + contractVersion
+                    + ", but its OpenAPI document says " + http.version()
+                    + ". One contract is one version; publish both documents from the same build.");
+        }
+
+        List<Component> components = new ArrayList<>(http.components());
+        List<AsyncChannel> channels = new ArrayList<>();
+        Map<String, Object> channelMap = optionalMap(document.get("channels"), "/channels");
+        if (channelMap != null) {
+            channelMap.forEach((key, raw) -> channels.add(channel(key, raw, components)));
+        }
+
+        List<AsyncOperation> operations = new ArrayList<>();
+        Map<String, Object> operationMap = optionalMap(document.get("operations"), "/operations");
+        if (operationMap != null) {
+            operationMap.forEach((id, raw) -> operations.add(asyncOperation(id, raw)));
+        }
+
+        List<Finding> all = new ArrayList<>(http.findings());
+        all.addAll(findings);
+        return new ContractModel(http.openapi(), http.title(), http.version(), List.copyOf(components),
+                http.responses(), http.parameters(), http.requestBodies(), http.otherComponents(), http.paths(),
+                List.copyOf(channels), List.copyOf(operations), List.copyOf(all));
+    }
+
+    private AsyncChannel channel(String key, Object raw, List<Component> components) {
+        String location = "/channels/" + escape(key);
+        Map<String, Object> channel = map(raw, location);
+        List<AsyncMessage> messages = new ArrayList<>();
+        Map<String, Object> messageMap = optionalMap(channel.get("messages"), location + "/messages");
+        if (messageMap != null) {
+            messageMap.forEach((messageKey, messageRaw) ->
+                    messages.add(message(messageKey, messageRaw, location, components)));
+        }
+        return new AsyncChannel(key, provenance(raw, location),
+                optionalString(channel.get("address"), location + "/address"),
+                optionalString(channel.get("title"), location + "/title"),
+                optionalString(channel.get("description"), location + "/description"),
+                List.copyOf(messages), location);
+    }
+
+    private AsyncMessage message(String key, Object raw, String channelLocation, List<Component> components) {
+        String location = channelLocation + "/messages/" + escape(key);
+        Map<String, Object> message = map(raw, location);
+        Component payload = null;
+        Object payloadRaw = message.get("payload");
+        if (payloadRaw != null) {
+            String payloadLocation = location + "/payload";
+            Component parsed = new Component(key, provenance(payloadRaw, payloadLocation),
+                    schema(withoutFragmentPath(payloadRaw, payloadLocation), payloadLocation), payloadLocation);
+            payload = share(parsed, components);
+        }
+        return new AsyncMessage(key, provenance(raw, location),
+                optionalString(message.get("name"), location + "/name"),
+                optionalString(message.get("title"), location + "/title"),
+                optionalString(message.get("summary"), location + "/summary"),
+                optionalString(message.get("contentType"), location + "/contentType"),
+                payload, location);
+    }
+
+    /**
+     * The component this payload is, added to the model unless its fragment is
+     * already in it: the same fragment is the same component, and one class.
+     */
+    private Component share(Component parsed, List<Component> components) {
+        String fragment = parsed.provenance().fragmentPath();
+        if (fragment == null) {
+            components.add(parsed);
+            return parsed;
+        }
+        for (Component existing : components) {
+            if (!fragment.equals(existing.provenance().fragmentPath())) continue;
+            if (!existing.provenance().sha256().equals(parsed.provenance().sha256())) {
+                findings.add(new Finding(parsed.location(), Construct.FRAGMENT_BUNDLED_DIFFERENTLY,
+                        Treatment.UNDECIDED, fragment));
+            }
+            return existing;
+        }
+        components.add(parsed);
+        return parsed;
+    }
+
+    private AsyncOperation asyncOperation(String operationId, Object raw) {
+        String location = "/operations/" + escape(operationId);
+        Map<String, Object> operation = map(raw, location);
+        String action = optionalString(operation.get("action"), location + "/action");
+        String channelKey = keyOf(operation.get("channel"), "#/channels/", location + "/channel");
+        List<String> messageKeys = new ArrayList<>();
+        Object messages = operation.get("messages");
+        if (messages != null) {
+            List<Object> named = list(messages, location + "/messages");
+            for (int i = 0; i < named.size(); i++) {
+                String key = keyOf(named.get(i), "#/channels/" + escape(channelKey == null ? "" : channelKey)
+                        + "/messages/", location + "/messages/" + i);
+                if (key != null) messageKeys.add(key);
+            }
+        }
+        return new AsyncOperation(operationId, action, channelKey, List.copyOf(messageKeys),
+                optionalString(operation.get("summary"), location + "/summary"),
+                optionalString(operation.get("description"), location + "/description"), location);
+    }
+
+    /** The key a {@code $ref} into this document names, or null when it names something else. */
+    private String keyOf(Object raw, String prefix, String location) {
+        Map<String, Object> reference = optionalMap(raw, location);
+        Object ref = reference == null ? null : reference.get("$ref");
+        if (!(ref instanceof String pointer) || !pointer.startsWith(prefix)) {
+            if (reference != null) {
+                findings.add(new Finding(location, Construct.UNMODELLED_KEYWORD, Treatment.UNDECIDED, "$ref"));
+            }
+            return null;
+        }
+        String rest = pointer.substring(prefix.length());
+        return rest.contains("/") ? null : unescape(rest);
     }
 
     // ------------------------------------------------------------ components
@@ -177,7 +336,7 @@ public final class ContractParser {
         currentComponent = name;
         Schema schema = schema(withoutFragmentPath(raw, location), location);
         currentComponent = null;
-        return new Component(name, provenance(raw, location), schema);
+        return new Component(name, provenance(raw, location), schema, location);
     }
 
     private Provenance provenance(Object raw, String location) {

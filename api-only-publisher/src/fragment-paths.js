@@ -30,9 +30,11 @@ class FragmentPathError extends Error {}
  * alone; nothing that becomes a component looks like that.
  *
  * @param {Set<string>|null} only the root-relative paths to stamp; all when null
+ * @param {Set<string>} except the root-relative paths to leave alone, such as a
+ *        bundle root, which is the document itself rather than a fragment of one
  * @returns {string[]} the root-relative paths stamped, sorted
  */
-function stampFiles(root, { only = null } = {}) {
+function stampFiles(root, { only = null, except = new Set() } = {}) {
     const stamped = [];
     const walk = (dir) => {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
@@ -44,6 +46,7 @@ function stampFiles(root, { only = null } = {}) {
             if (!/\.ya?ml$/.test(entry.name)) continue;
             const rel = path.relative(root, full).split(path.sep).join("/");
             if (only && !only.has(rel)) continue;
+            if (except.has(rel)) continue;
 
             const doc = YAML.parseDocument(fs.readFileSync(full, "utf8"));
             if (!YAML.isMap(doc.contents)) continue;
@@ -78,22 +81,26 @@ function componentPaths(document) {
 }
 
 /**
- * Every stamp in a parsed document that is not directly on a component, with the
- * JSON pointer of the object carrying it.
+ * Every stamp in a parsed document, with the JSON pointer of the object carrying
+ * it, in document order.
+ *
+ * <p>An OpenAPI bundle hoists fragments into components, so a stamp anywhere else
+ * is a fragment inlined where a component was expected. An AsyncAPI bundle inlines
+ * everything, so every stamp sits where its fragment was used: on a channel, a
+ * message, a payload, or a schema a payload references.
  *
  * @returns {Array<{at: string, path: string}>}
  */
-function strayPaths(document) {
-    const stray = [];
+function fragmentStamps(document, { where = () => true } = {}) {
+    const stamps = [];
     const visit = (node, pointer) => {
         if (Array.isArray(node)) {
             node.forEach((item, i) => visit(item, `${pointer}/${i}`));
             return;
         }
         if (!node || typeof node !== "object") return;
-        const onComponent = /^\/components\/[^/]+\/[^/]+$/.test(pointer);
-        if (Object.hasOwn(node, KEY) && !onComponent) {
-            stray.push({ at: pointer || "/", path: node[KEY] });
+        if (Object.hasOwn(node, KEY) && where(pointer)) {
+            stamps.push({ at: pointer || "/", path: node[KEY] });
         }
         for (const [key, value] of Object.entries(node)) {
             if (key === KEY) continue;
@@ -101,7 +108,30 @@ function strayPaths(document) {
         }
     };
     visit(document, "");
-    return stray;
+    return stamps;
 }
 
-module.exports = { stampFiles, componentPaths, strayPaths, FragmentPathError, KEY };
+/**
+ * Every stamp in a parsed document that is not directly on a component, with the
+ * JSON pointer of the object carrying it.
+ *
+ * @returns {Array<{at: string, path: string}>}
+ */
+function strayPaths(document) {
+    return fragmentStamps(document, { where: (pointer) => !/^\/components\/[^/]+\/[^/]+$/.test(pointer) });
+}
+
+/**
+ * The stamps of a parsed document that do not name a file under `root`.
+ *
+ * <p>A stamp is written by this tool from a file it walked, so an unresolved one
+ * means the bundler moved a stamp somewhere its fragment no longer explains, and
+ * the document should not be published.
+ *
+ * @returns {Array<{at: string, path: string}>}
+ */
+function unresolvedStamps(document, root) {
+    return fragmentStamps(document).filter((stamp) => !fs.existsSync(path.join(root, stamp.path)));
+}
+
+module.exports = { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps, FragmentPathError, KEY };

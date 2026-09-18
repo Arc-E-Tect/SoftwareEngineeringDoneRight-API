@@ -7,6 +7,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.workers.WorkAction;
@@ -15,6 +16,7 @@ import org.gradle.workers.WorkParameters;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -35,6 +37,13 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
          * @return the document
          */
         RegularFileProperty getContract();
+
+        /**
+         * The contract's AsyncAPI document, or nothing when it has none.
+         *
+         * @return the document
+         */
+        ConfigurableFileCollection getAsyncContract();
 
         /**
          * The locked version.
@@ -111,6 +120,12 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
     public GenerateContractSourcesAction() {
     }
 
+    /** The AsyncAPI document to read with the OpenAPI one, or null when there is none. */
+    private static Path asyncContract(Parameters parameters) {
+        return parameters.getAsyncContract().getFiles().stream().filter(java.io.File::isFile)
+                .findFirst().map(java.io.File::toPath).orElse(null);
+    }
+
     @Override
     public void execute() {
         Parameters p = getParameters();
@@ -119,7 +134,8 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
                 p.getDescriptionPlaceholder().get(), p.getRecursionDepth().get());
         GenerationReport report;
         try {
-            report = Generation.run(p.getContract().get().getAsFile().toPath(), p.getContractVersion().get(),
+            report = Generation.run(p.getContract().get().getAsFile().toPath(), asyncContract(p),
+                    p.getContractVersion().get(),
                     p.getContractSha256().get(), settings, p.getOutputDirectory().get().getAsFile().toPath(),
                     emitters(GenerateContractSourcesAction.class.getClassLoader()),
                     p.getEndpointIndex().get().getAsFile().toPath());

@@ -18,6 +18,7 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -43,6 +44,15 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
     /** The prefix of each contract's verification task. */
     public static final String VERIFY_TASK = "verifyContractSources";
 
+    /**
+     * What the generated code itself needs: the marker annotation every generated class
+     * carries, so that a project measuring coverage does not measure code nobody wrote.
+     * Managed like an emitter's dependency -- preferred, never forced -- so a project
+     * already using the library keeps its own version.
+     */
+    static final ManagedDependency ANNOTATION =
+            new ManagedDependency("com.arc-e-tect.sedr.utils", "sedr-library", "1.0.0", "2");
+
     /** Creates the plugin. */
     public ApiOnlyTranscriberJPlugin() {
     }
@@ -66,7 +76,12 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
         // Read once, when first needed: while a source set's dependencies are resolved.
         Map<String, List<ManagedDependency>>[] managed = new Map[1];
         Supplier<Map<String, List<ManagedDependency>>> managedDependencies = () -> {
-            if (managed[0] == null) managed[0] = ManagedDependencies.of(emitters.getFiles());
+            if (managed[0] == null) {
+                Map<String, List<ManagedDependency>> all = new LinkedHashMap<>();
+                all.put("the generated code", List.of(ANNOTATION));
+                all.putAll(ManagedDependencies.of(emitters.getFiles()));
+                managed[0] = all;
+            }
             return managed[0];
         };
 
@@ -83,12 +98,17 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
 
             Provider<RegularFile> document = project.provider(() -> subscriber.subscription(contract))
                     .flatMap(Subscription::getOpenapi);
+            // A contract describes events or it does not; the Subscriber only offers the
+            // document when the archive holds one.
+            Provider<RegularFile> asyncDocument = project.provider(() -> subscriber.subscription(contract))
+                    .flatMap(Subscription::getAsyncapi);
 
             TaskProvider<GenerateContractSourcesTask> generate = project.getTasks().register(
                     GENERATE_TASK + suffix, GenerateContractSourcesTask.class, task -> {
                         task.setGroup("api-only");
                         task.setDescription("Generates the class tree of the " + contract + " contract.");
                         task.getContract().set(document);
+                        task.getAsyncContract().setFrom(asyncDocument);
                         task.getLockfile().set(subscriber.getLockfile());
                         task.getContractName().set(contract);
                         task.getBasePackage().set(subscription.getBasePackage());

@@ -103,6 +103,7 @@ dependencies {
     implementation libs.api.only.subscriber
 
     handwrittenImplementation libs.spring.restdocs.core
+    handwrittenImplementation libs.jackson3.databind
 
     testImplementation sourceSets.handwritten.output
     testImplementation libs.spring.restdocs.core
@@ -111,6 +112,8 @@ dependencies {
     testImplementation libs.assertj.core
     testImplementation libs.jackson.databind
     testImplementation libs.gradle.idea.ext
+    // Generated code carries the marker annotation, so the tests compile against it.
+    testImplementation libs.sedr.library
     testRuntimeOnly    libs.junit.platform.launcher
 }
 
@@ -158,6 +161,16 @@ tasks.register('recordHandwrittenFixtures', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenBodyRecorder'
     args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/bodies.json').asFile.absolutePath
+}
+
+// The same, for the hand-written event classes, whose payloads are recorded from the
+// records themselves rather than from a static body(...).
+tasks.register('recordHandwrittenEventPayloads', JavaExec) {
+    description = 'Re-records the expected payloads of the hand-written reference event classes.'
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenEventPayloadRecorder'
+    args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/event-payloads.json').asFile.absolutePath
 }
 
 jacocoTestReport {

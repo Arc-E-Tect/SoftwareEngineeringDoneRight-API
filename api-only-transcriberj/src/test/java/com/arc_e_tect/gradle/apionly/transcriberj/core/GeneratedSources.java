@@ -60,6 +60,25 @@ final class GeneratedSources {
         return new GeneratedSources(sources, report);
     }
 
+    /** Both of a contract's documents, generated into one tree. */
+    static GeneratedSources generate(Path contract, Path asyncContract, String version, Path into,
+                                     Settings settings, List<Emitter> emitters) {
+        Path sources = into.resolve("sources");
+        GenerationReport report = Generation.run(contract, asyncContract, version, "a".repeat(64), settings,
+                sources, emitters, null);
+        return new GeneratedSources(sources, report);
+    }
+
+    /** The simple name of every class generated, in no particular order. */
+    List<String> names() {
+        try (Stream<Path> walk = Files.walk(sources)) {
+            return walk.filter(p -> p.toString().endsWith(".java"))
+                    .map(p -> p.getFileName().toString().replace(".java", "")).toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     static GeneratedSources generate(String yaml, Path into, List<Emitter> emitters) {
         try {
             Path contract = into.resolve("openapi.yaml");
@@ -109,7 +128,8 @@ final class GeneratedSources {
             try (StandardJavaFileManager fileManager =
                          compiler.getStandardFileManager(diagnostics, null, StandardCharsets.UTF_8)) {
                 boolean ok = compiler.getTask(null, fileManager, diagnostics,
-                        List.of("-d", classes.toString(), "-Xlint:all", "-Xdoclint:all,-missing", "--release", "21"),
+                        List.of("-d", classes.toString(), "-classpath", System.getProperty("java.class.path"),
+                                "-Xlint:all", "-Xdoclint:all,-missing", "--release", "21"),
                         null, fileManager.getJavaFileObjectsFromPaths(files)).call();
                 List<String> problems = diagnostics.getDiagnostics().stream()
                         .filter(d -> d.getKind() == Diagnostic.Kind.ERROR || d.getKind() == Diagnostic.Kind.WARNING

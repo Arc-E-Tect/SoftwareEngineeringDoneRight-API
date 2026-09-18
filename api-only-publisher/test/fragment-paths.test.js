@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { stampFiles, componentPaths, strayPaths, FragmentPathError, KEY } = require("../src/fragment-paths");
+const { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps, FragmentPathError, KEY } = require("../src/fragment-paths");
 
 function tree(files) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-fragment-paths-"));
@@ -89,4 +89,63 @@ test("a stamp anywhere but directly on a component is stray, and is reported by 
         { at: "/components/schemas/User/properties/a", path: "nested.yaml" },
     ]);
     assert.deepStrictEqual(strayPaths({ components: { schemas: { User: { [KEY]: "User.yaml" } } } }), []);
+});
+
+test("every stamp in a document is found, wherever it sits", () => {
+    const document = {
+        asyncapi: "3.0.0",
+        channels: {
+            auditV1: {
+                [KEY]: "asyncapi/channels/Audit.yaml",
+                address: "iff.audit.v1",
+                messages: {
+                    registered: {
+                        [KEY]: "asyncapi/messages/Registered.yaml",
+                        payload: {
+                            [KEY]: "asyncapi/components/schemas/RegisteredEvent.yaml",
+                            properties: { username: { [KEY]: "openapi/components/schemas/UsernameV1.yaml" } },
+                        },
+                    },
+                },
+            },
+        },
+        operations: [{ [KEY]: "asyncapi/operations/Publish.yaml" }],
+    };
+
+    assert.deepStrictEqual(fragmentStamps(document), [
+        { at: "/channels/auditV1", path: "asyncapi/channels/Audit.yaml" },
+        { at: "/channels/auditV1/messages/registered", path: "asyncapi/messages/Registered.yaml" },
+        { at: "/channels/auditV1/messages/registered/payload", path: "asyncapi/components/schemas/RegisteredEvent.yaml" },
+        { at: "/channels/auditV1/messages/registered/payload/properties/username", path: "openapi/components/schemas/UsernameV1.yaml" },
+        { at: "/operations/0", path: "asyncapi/operations/Publish.yaml" },
+    ]);
+});
+
+test("a document with no stamps has none", () => {
+    assert.deepStrictEqual(fragmentStamps({ asyncapi: "3.0.0", channels: {} }), []);
+});
+
+test("a stamp that names no file in the library is reported, and one that does is not", () => {
+    const root = tree({ "asyncapi/messages/Registered.yaml": "name: RegisteredV1\n" });
+    const document = {
+        channels: {
+            auditV1: {
+                messages: {
+                    registered: { [KEY]: "asyncapi/messages/Registered.yaml" },
+                    gone: { [KEY]: "asyncapi/messages/Removed.yaml" },
+                },
+            },
+        },
+    };
+
+    assert.deepStrictEqual(unresolvedStamps(document, root), [
+        { at: "/channels/auditV1/messages/gone", path: "asyncapi/messages/Removed.yaml" },
+    ]);
+});
+
+test("the file a stamp is left alone by, such as a bundle root, is never stamped", () => {
+    const root = tree({ "bundles/audit.yaml": "asyncapi: 3.0.0\n", "messages/One.yaml": "name: One\n" });
+
+    assert.deepStrictEqual(stampFiles(root, { except: new Set(["bundles/audit.yaml"]) }), ["messages/One.yaml"]);
+    assert.strictEqual(fs.readFileSync(path.join(root, "bundles/audit.yaml"), "utf8"), "asyncapi: 3.0.0\n");
 });

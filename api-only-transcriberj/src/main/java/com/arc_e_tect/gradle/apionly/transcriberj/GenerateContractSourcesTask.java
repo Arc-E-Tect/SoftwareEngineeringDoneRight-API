@@ -3,12 +3,14 @@ package com.arc_e_tect.gradle.apionly.transcriberj;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
@@ -47,6 +49,20 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getContract();
+
+    /**
+     * The contract's AsyncAPI document, where it has one. Both documents are read
+     * into one model, so a fragment they share is one generated class.
+     *
+     * <p>A file collection rather than a file: whether the contract has an AsyncAPI
+     * document is only known once it has been fetched, and a collection tolerates
+     * the absence where an input file would fail the build.
+     *
+     * @return the document, empty when the contract describes no events
+     */
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getAsyncContract();
 
     /**
      * The Subscriber's lockfile, which names the contract's version and hash.
@@ -153,6 +169,7 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
                 spec.getClasspath().from(getEmitterClasspath()));
         queue.submit(GenerateContractSourcesAction.class, parameters -> {
             parameters.getContract().set(getContract());
+            parameters.getAsyncContract().setFrom(getAsyncContract());
             parameters.getContractVersion().set(locked.version());
             parameters.getContractSha256().set(locked.sha256());
             parameters.getContractName().set(getContractName());
