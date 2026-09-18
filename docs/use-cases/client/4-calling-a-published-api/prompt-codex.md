@@ -49,6 +49,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 |---|---|
 | `{api-only-subscriber-version}` | `0.3.0` |
 
+These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
+
 ## Facts: API-Only Subscriber {api-only-subscriber-version}
 
 - Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer; supports the configuration cache.

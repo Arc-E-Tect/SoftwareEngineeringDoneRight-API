@@ -1,0 +1,496 @@
+= Authoring a specification library: practices and limits
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This document collects the rules that make a specification library work well with the API-Only Publisher and the API-Only TranscriberJ, and says plainly what the two will not do.
+Both tools already report most problems while they build; this is where each report comes from, so a team can follow the rule before a warning tells them they did not.
+
+Every rule has a heading, its reason, and -- where a tool checks it -- the message that tool prints, quoted exactly as the code emits it, with the variable parts in angle brackets.
+Search this page for the text in your build log.
+
+It describes the tools as they are on this repository's main branch.
+Option lists are not repeated here: link:../../api-only-publisher/README.adoc[the Publisher's README →] and link:../../api-only-transcriberj/README.adoc[the TranscriberJ's README →] are the reference for every setting.
+
+[#versions]
+== Versioning
+
+[#version-in-the-filename]
+=== Put a schema's version in its fragment's filename
+
+`UserV1.yaml`, not `v1/User.yaml`.
+
+Versions belong to components, not to the library::
+`UsernameV1` and `UserV2` exist side by side, each evolving at its own pace.
+A version directory would force the two apart, or force every schema in it to a new version together.
+
+The version travels into the code::
+A generated class is named after its fragment's file, so `UserV1.yaml` is `UserV1` and `UserV2.yaml` is `UserV2`: two classes in one package, and a test says which one it means.
+
+A schema that gains a version does not move::
+Every component carries `x-fragment-path`, the path of the fragment it came from, and the TranscriberJ carries it into `FRAGMENT_PATH` and into the hash `FRAGMENT_SHA256`.
+A version directory changes that path whenever the version changes, so the provenance of a schema changes for no reason but its version.
+
+A version directory renames classes that did not change::
+With only `v1/User.yaml`, the class is `User`.
+Add `v2/User.yaml`, and the two collide; the TranscriberJ tells colliding fragments apart by the nearest directory in which their paths differ, so the existing class becomes `V1User` and the new one `V2User`.
+Every test that named `User` stops compiling, although that schema did not change.
+Only colliding classes are renamed, so a version in the filename never causes this.
+
+What is not versioned this way::
+A bundle root is the document itself, versioned by its target's version file (link:../../api-only-publisher/README.adoc#versions[Versions →]).
+Fragments that are not components -- the reference library's `openapi/shared/info.yaml` and `servers.yaml` -- never become classes, and need no version in their name.
+
+[#new-version-for-breaking-changes]
+=== Give a schema a new version only for a breaking change
+
+A new version -- `UserV2` beside `UserV1` -- is for a change a consumer cannot absorb: a member removed or renamed, a type changed, a constraint tightened, a member made required.
+
+Adding an optional member does not earn one.
+A consumer that does not expect the member ignores it, so the schema's promise to existing consumers still holds.
+It still changes the contract, so document it, raise the contract's minor version in its version file, and tell the teams that consume it.
+
+Neither tool polices breaking changes: see <<breaking-changes,Breaking changes are not detected §>>.
+
+[#generation]
+== Keeping generation clean
+
+The TranscriberJ reports what it could not generate cleanly in its report, `build/reports/transcriberj/<contract>.txt`; <<reading-the-reports,Reading the reports §>> explains every section.
+
+[#name-your-schemas]
+=== Name your schemas
+
+Write a request or response schema as a component in a fragment of its own, and `$ref` it from the operation.
+
+Named fragments are reusable, reviewable on their own, and can be referred to from anywhere in the library.
+A schema written inline in an operation is still generated, but its class is named after the operation and its status -- `GetRootResponse200` -- rather than after anything the schema means, and it changes name when the operation does.
+
+The TranscriberJ recommends it, under *Recommendations*:
+
+[source,text]
+----
+<location>: an inline schema; define it as a schema component and $ref it, so that its class is named after its fragment rather than after the operation
+----
+
+[#give-operations-an-operation-id]
+=== Give every operation an `operationId`
+
+An operation's class is named after its `operationId`, followed by `Operation`: `getUser` is `GetUserOperation`.
+Without one, the operation's classes are named after its method and path, which change when the path does.
+
+Recommended under *Recommendations*, when the operation has inline schemas:
+
+[source,text]
+----
+<location>: an operation without an operationId; give it one, since its classes are named after its method and path until it has one
+----
+
+[#name-the-branches]
+=== Name the branches of a `oneOf` or `anyOf`
+
+Write each branch as a component, and refer to it: `oneOf: [{$ref: CardRefundV1.yaml}, {$ref: BankAccountRefundV1.yaml}]`.
+
+A body with several possible shapes cannot be one flat list of fields.
+When every branch is a reference, each branch has its own class, with its own `body(...)` and `fields(...)`, and the schema that is nothing but the choice has neither.
+When a branch is written inline, the `body(...)` and `fields(...)` of the schema that holds it cannot be generated, and are generated to throw.
+
+The report lists them under *Degraded methods*:
+
+[source,text]
+----
+<Class>.body(...) [core]: ONE_OF_INLINE_BRANCHES at <location> (oneOf: <inline #1>, <inline #2>); remedy: name the branches in the specification so that each becomes a component
+----
+
+The same for `ANY_OF_INLINE_BRANCHES`.
+A choice between values rather than objects -- `oneOf: [{type: string}, {type: integer}]` -- is written as a value, and degrades nothing.
+link:../guides/hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] says what to do when the contract cannot change.
+
+[#keep-bodies-shallow]
+=== Keep bodies shallow
+
+A request or response body that nests objects three levels deep -- `order.customer.address` -- is warned about, following references and list items:
+
+[source,text]
+----
+<Class>: its body nests objects <n> levels deep, at <path>; a body this deep is hard to test and easily designed by accident
+----
+
+The warning is about design as much as generation.
+A body that deep is usually an accident: a structure that grew one member at a time, and that no consumer needs whole.
+Two levels -- `customer.address` -- are not warned about.
+Only bodies code outside the generated package can use are checked.
+
+[#keep-cycles-short]
+=== Keep reference cycles short
+
+A schema may refer to itself, directly or through others: a tree node's `children`, say.
+In field descriptions the TranscriberJ follows a recursive reference `recursionDepth` times, 3 by default, and then describes the rest as a subsection.
+
+A cycle through three or more components is warned about:
+
+[source,text]
+----
+<location>: a recursive reference through <n> components (<A> -> <B> -> <C> -> <A>); a cycle this long is easily not noticed
+----
+
+A cycle through one or two components is not warned about; one through three or more is usually an accident nobody noticed.
+
+Following a recursion more than three times is warned about too, whatever the contract:
+
+[source,text]
+----
+recursionDepth is <n>; following a recursion more than 3 times suggests the contract nests deeper than a test should need to
+----
+
+None of these warnings fails the build.
+
+[#reference-shared-definitions]
+=== Reference shared definitions rather than repeating them
+
+A definition used in more than one place -- by two schemas, or by an HTTP response and an event -- belongs in one fragment, referenced from each.
+
+One fragment referenced twice is one thing.
+Two definitions that look alike are two things that happen to agree today, and nothing keeps them agreeing.
+The Publisher stamps what it builds from a fragment with that fragment's path, in the OpenAPI and the AsyncAPI document alike, and the TranscriberJ generates one class per schema fragment, so a `username` in an event and a `username` in a response are the same class -- when they are the same fragment.
+
+When one fragment is bundled as different bytes in two places -- in the contract's two documents, say -- the TranscriberJ generates its class from the copy it read first, the OpenAPI document's when the fragment is in both, and lists it under *Undecided constructs*:
+
+[source,text]
+----
+<location>: FRAGMENT_BUNDLED_DIFFERENTLY (<fragment path>)
+----
+
+Neither tool detects a definition *repeated* in several places, since each copy is a legitimate schema of its own; see <<repeated-definitions,Repeated definitions are not detected §>>.
+
+[#describe-everything]
+=== Describe every schema and field that documentation will show
+
+With `generateDocs = true`, a class or field is described with the contract's text.
+One the contract does not describe is documented with the placeholder, and recommended under *Recommendations*:
+
+[source,text]
+----
+<location>: no description; give it one, since generateDocs is on and it is documented with the placeholder until then
+----
+
+Without `generateDocs`, descriptions are not read, and nothing is recommended.
+
+[#use-typed-keywords]
+=== Prefer keywords the generator types
+
+The TranscriberJ's model types the keywords generation needs, keeps the annotations, and lists every other keyword under *Undecided constructs*, as does a type naming several types and a schema written as `true` or `false`:
+
+[source,text]
+----
+<location>: MULTIPLE_TYPES (type: string, null)
+<location>: BOOLEAN_SCHEMA (<true or false>)
+<location>: UNMODELLED_KEYWORD (<keyword>)
+<location>: UNMODELLED_COMPONENT_TYPE (<component type>)
+----
+
+An undecided construct is kept, and does not fail the build.
+Several types, or a literal schema, also degrades any `body(...)` or `fields(...)` that reaches it; one nothing reaches -- inside a map's values, say -- degrades nothing.
+link:../../api-only-transcriberj/README.adoc#unrepresentable[Constructs no rule represents yet →] lists which keywords are typed.
+
+`type: [string, 'null']` is the one most libraries meet.
+Where a member that has no value can simply be left out, leave it out of `required` instead of allowing `null`: the model types that.
+
+[#leave-no-fragment-unreferenced]
+=== Leave no fragment unreferenced
+
+Every YAML file under the source root is either reached by a target's bundle, or configuration.
+
+A linter checks documents, and a fragment reaches a document only through a `$ref`.
+A fragment nothing references is never linted, so it can be wrong for months and nobody finds out, until the day a target starts to use it.
+And a definition left behind by a change that stopped using it is dead weight that looks alive.
+
+`lint`, run without `--target`, lists every such file in `<reports.lint>/unreferenced.txt`, and fails:
+
+[source,text]
+----
+Error: <n> fragment(s) not reachable from any target, so nothing lints them:
+  <file>
+Reference each one from a target's bundle, or delete it.
+----
+
+`lint.unreferenced: warn` prints the same without failing; `off` does not look.
+The configuration files of lint tools, and the lint configuration `apionly.yaml` names, are skipped wherever they are (link:../../api-only-publisher/README.adoc#unreferenced[A fragment no target reaches fails the lint →]).
+
+[#errors]
+== What stops a build
+
+These are errors: the build stops, because what it would produce would be wrong.
+
+[#publisher-errors]
+=== From the Publisher
+
+The Publisher prints each as `Error: <message>` and exits with 1.
+Those an author causes:
+
+[cols="3,2", options="header"]
+|===
+|Message |Cause, and what to do
+
+|`target '<t>': <fragment> declares x-fragment-path; the Publisher sets that key and a fragment may not`
+|A fragment writes the key itself. Remove it; only the Publisher sets it.
+
+|`target '<t>': a component's fragment is also inlined elsewhere, so x-fragment-path would appear off its component: <location> (<fragment>)`
+|A fragment that becomes a component is also inlined somewhere in the same document. Refer to the component there instead.
+
+|`target '<t>': x-fragment-path names a fragment that is not in the library: <location> (<fragment>)`
+|An AsyncAPI stamp arrived where no library file explains it, which means the bundler moved it. Report it, with the library that reproduces it.
+
+|`<file>: no Markdown file found for {{<token>}}. Searched for <token>.md under <root>.`
+|A placeholder has no snippet. Add `<token>.md` under the source root, or fix the token.
+
+|`$ref target does not exist: <file>`
+|A `$ref` points at a file that is not there. `lint`, `closure` and `changed` say so in these words; `build` fails in the bundler, whose output it prints.
+
+|`target '<t>': no version file at <file>. Create it with a line such as 'version=1.0.0', or point targets.<t>.versionFile at the file that holds its version.`
+|A published target has no version file.
+
+|`target '<t>': <file> declares '<version>', but a version file holds a release version. Declare the release it leads to, and cut the pre-release with --pre-release <identifiers>.`
+|The version file holds a pre-release.
+
+|`target '<t>': <file>: '<version>' is not a semantic version. Contracts are versioned with semver so that consumers can reason about what a bump means.`
+|The version file holds something that is not semver.
+
+|`target '<t>': <file> declares no version`
+|The version file has no `version` line.
+
+|`lint failed for <n> document(s): <target> (<kind>); ...`
+|A lint rule the library's configuration sets to `error` failed. The linter's output, printed above the message, names it.
+|===
+
+link:run-book.adoc[The run-book →] covers the rest, which concern configuration and channels rather than the library's content.
+
+[#transcriberj-errors]
+=== From the TranscriberJ
+
+[cols="3,2", options="header"]
+|===
+|Message |Cause, and what to do
+
+|`These components have no x-fragment-path, so no class can be named after their fragment: <components>. Build the contract with the API-Only Publisher and defaults.openapi.fragmentPaths left on.`
+|The contract was not built with fragment paths, or a component is written directly in a bundle root.
+
+|`Class names collide: <a> and <b> would all be named <Name>. Rename one of the fragments or operations.`
+|A fragment and an inline schema, or two inline schemas, get the same class name. Rename one.
+
+|`Class names collide: <a> and <b> would still all be named <Name> after telling them apart by directory. Rename one of the fragments or operations.`
+|Two fragments with the same file name whose paths do not tell them apart either. Rename one.
+
+|`Class names collide: <fragment> would be named <Name>, which the generated support classes use. Rename one of the fragments or operations.`
+|A fragment is called `ContractJson`, `ContractField` or `ContractManifest`.
+
+|`<Class> would declare <CONSTANT> twice; rename one of the properties of <location> so that their constants differ`
+|Two properties give the same constant name, such as `first-name` and `first_name`, both with a `const` or constraints.
+
+|`<Class> would declare <CONSTANT> twice; the responses of <operation> have status codes that read the same as constant names`
+|Two response keys of one operation give the same constant.
+
+|`Contract <c> is locked at version <v>, but <document> says it is version <w>. Run fetchApiSpec, and check that the document was not edited.`
+|The fetched document does not match the lockfile.
+|===
+
+[#limits]
+== What the tools will not do
+
+[#constraints-are-constants]
+=== Constraints are constants, not checks
+
+`MAX_LENGTH`, `PATTERN` and the other constraint constants are there to build tests from.
+A generated `body(...)` writes the arguments it is given; a body built from arguments that break a constraint breaks it too.
+
+[#fields-are-a-projection]
+=== Field descriptions are a projection
+
+A field is a path, a JSON type, whether it is optional, and a description.
+A test that checks a payload against them proves that the payload has the fields the contract describes, of those types.
+It does not prove that the payload is valid against the schema, and nothing here claims it does.
+
+[#degradation-is-per-method]
+=== Degradation is per method
+
+A construct no rule represents makes the methods that reach it throw `UnsupportedOperationException`, with the reason and, where there is one, the remedy.
+It never fails the build and never skips a class: the class, its constants and every other method are still generated.
+
+[#verification-is-of-the-document]
+=== Contract verification proves the document, not the implementation
+
+The Subscriber's lock and the TranscriberJ's `verifyContractSources<Contract>` prove that the document in the build is the one that was published, and that the generated classes were generated from it.
+They prove nothing about the implementation: whether every documented operation is implemented, whether every implemented one is documented, and whether a test verifies that the implementation honours the contract.
+
+That is what the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Gradle#readme[API-Only Suite ↗] is for: its Shadow, Mirage and Doppelganger API Detectors find the implemented-but-undocumented, the documented-but-unimplemented, and the implemented-but-unverified.
+
+[#breaking-changes]
+=== Breaking changes are not detected
+
+Neither tool compares a contract with its previous release.
+A breaking change is declared where it is made: a new schema version, and the contract's major version in its version file, in the same commit as the fragments it breaks.
+The Publisher's `changed` command and each manifest's closure hash are the hooks a gate would need; the gate itself is deliberately not built (link:../../api-only-publisher/README.adoc#breaking-changes[Breaking changes →]).
+
+[#repeated-definitions]
+=== Repeated definitions are not detected
+
+Two fragments that define the same thing, or a property written out again in several schemas, are each a legitimate schema.
+Neither tool notices, so neither tool notices when the copies drift apart.
+<<reference-shared-definitions,Reference shared definitions rather than repeating them §>> is a rule a review has to keep.
+
+[#reading-the-reports]
+== Reading the reports
+
+[#lint-reports]
+=== The Publisher's lint reports
+
+`build` lints every document it builds, and says nothing about it unless the lint fails; then it prints the linter's output.
+`lint` lints what is already built, prints the linter's output for every document, and writes it to `<reports.lint>/<target>/<kind>.txt` -- `build/reports/lint/orders/openapi.txt` by default.
+Run without `--target`, it also writes `<reports.lint>/unreferenced.txt`.
+So a lint *warning* is seen only by running `lint`: run it in CI, and read its reports.
+
+What is in a lint report comes from Redocly CLI or AsyncAPI CLI, under the lint configuration `defaults.<kind>.lint` names:
+
+* a rule the configuration sets to `error` fails the command: fix it now;
+* a rule set to `warn` is reported and does not fail: it is the library's own backlog, and the library's policy decides when to act on it.
+
+`unreferenced.txt` lists one file per line, and is empty when every fragment is reached.
+
+[#generation-report]
+=== The TranscriberJ's generation report
+
+`generateContractSources<Contract>` writes `build/reports/transcriberj/<contract>.txt`, replacing the previous one.
+This is the one it writes for the reference library's `user-account` contract:
+
+[source,text]
+----
+API-Only TranscriberJ: user-account 1.2.0
+0 degraded method(s), 2 recommendation(s), 2 undecided construct(s), 0 warning(s)
+
+Recommendations:
+  /paths/~1v1/get/responses/200/content/application~1json/schema: an inline schema; define it as a schema component and $ref it, so that its class is named after its fragment rather than after the operation
+  /paths/~1v1~1actuator~1health/get/responses/200/content/application~1json/schema: an inline schema; define it as a schema component and $ref it, so that its class is named after its fragment rather than after the operation
+
+Undecided constructs -- no generation rule exists for these yet:
+  /paths/~1v1/get/responses/200/content/application~1json/schema/properties/dependencies/additionalProperties/properties/versionName: MULTIPLE_TYPES (type: string, null)
+  /paths/~1v1/get/responses/200/content/application~1json/schema/properties/dependencies/additionalProperties/properties/versionCode: MULTIPLE_TYPES (type: number, null)
+----
+
+Every location is a JSON pointer into the contract's document, `~1` standing for `/`.
+The first two lines are the contract, its version, and the count of each section; a section with nothing in it is left out.
+
+[cols="1,2,2", options="header"]
+|===
+|Section |What it means |What to do
+
+|*Warnings*
+|The contract is built in a way that is usually an accident: <<keep-bodies-shallow,a deep body §>>, <<keep-cycles-short,a long cycle §>>, or `recursionDepth` above 3.
+|Look now; change the contract, or accept it knowingly.
+
+|*Notes*
+|Information, not a problem: the description bundle the classes resolve through, and how many keys it may carry.
+|Nothing.
+
+|*Degraded methods -- these throw UnsupportedOperationException*
+|Each line names a method generated to throw, the emitter that generated it in brackets -- `core`, or an emitter such as `restdocs` -- the construct, where, and the remedy.
+|Act on it before a test needs the method: take the remedy, or write that part by hand.
+
+|*Recommendations*
+|A change to the contract that makes the generated code better: <<name-your-schemas,name an inline schema §>>, <<give-operations-an-operation-id,give an operation an operationId §>>, <<describe-everything,describe a field §>>.
+|Plan it; nothing breaks meanwhile.
+
+|*Undecided constructs -- no generation rule exists for these yet*
+|The contract uses something the model does not type. It is kept; a construct listed here may also be listed under *Degraded methods*, which says whether anything generated was affected.
+|Note it. When nothing is degraded, nothing generated is affected; <<use-typed-keywords,prefer typed keywords §>> where you can.
+|===
+
+In the report above, the recommendations name the two inline response schemas, and the two undecided constructs sit inside a map's values, which no generated method reaches, so no method is degraded.
+
+[#build-log]
+=== The build log
+
+Each generation prints one line, and each warning once more:
+
+[source,text]
+----
+API-Only TranscriberJ: <contract> <version>: <n> degraded method(s), <n> recommendation(s), <n> undecided construct(s), <n> warning(s) -- see <report file>
+API-Only TranscriberJ: <contract> <version>: warning: <warning>
+----
+
+[#build-warnings]
+=== Warnings about the build rather than the library
+
+These concern how a project applies the TranscriberJ, not the contract, and are printed in the build log:
+
+[source,text]
+----
+Emitter <emitter>: <group>:<name> <version> in <configuration> is not tested with this plugin version; it is tested with versions below <version>, and adds <version> when the project declares none.
+----
+
+A dependency an emitter's generated code needs resolved to a version the emitter was not tested with.
+With `apiOnlyTranscriberJ.strictDependencies = true` it fails the build instead, with `The build fails on this because apiOnlyTranscriberJ.strictDependencies is set.` appended (link:../../api-only-transcriberj/README.adoc#emitter-dependencies[What the generated code depends on →]).
+
+[source,text]
+----
+The API-Only TranscriberJ found org.jetbrains.gradle.plugin.idea-ext applied without the task triggers it carries, so <task> will not run on IDE sync. Run it by hand, or see the plugin's README.
+The API-Only TranscriberJ could not register <task> as an afterSync trigger of org.jetbrains.gradle.plugin.idea-ext: <reason>. Run the task by hand, or see the plugin's README.
+----
+
+The IDE will not generate the classes on sync (link:../../api-only-transcriberj/README.adoc#ide[In the IDE →]).
+
+[#reference-library]
+== The reference library against these rules
+
+The reference implementation's library, `usable-suspects/` in the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Code[Code repository ↗], built with Publisher 0.5.0 and generated with TranscriberJ 0.3.3:
+
+[cols="2,1,3", options="header"]
+|===
+|Rule |Complies |Notes
+
+|<<version-in-the-filename,Version in the filename §>>
+|Yes
+|Every component's fragment carries its version; only the bundle roots and `shared/info.yaml` and `shared/servers.yaml`, which are not components, do not.
+
+|<<name-your-schemas,Name your schemas §>>
+|No
+|The `GET /v1` and health responses are written inline, in every contract; the report recommends making each a component.
+
+|<<give-operations-an-operation-id,operationId §>>
+|Yes
+|
+
+|<<name-the-branches,Named branches §>>
+|Yes
+|No `oneOf` or `anyOf` with an inline branch; no method is degraded.
+
+|<<keep-bodies-shallow,Shallow bodies §>>, <<keep-cycles-short,short cycles §>>
+|Yes
+|No warnings.
+
+|<<reference-shared-definitions,Shared definitions §>>
+|Partly
+|`username` is one fragment, `UsernameV1`, referenced by HTTP schemas and every event payload alike.
+`emailAddress` is written out nine times instead: in three OpenAPI schemas with `minLength: 6` and `maxLength: 254`, and in six event payloads with neither -- copies that have already drifted apart.
+
+|<<use-typed-keywords,Typed keywords §>>
+|Partly
+|`type: [string, 'null']` and `[number, 'null']` in the root response's `dependencies` map; undecided, and degrading nothing, since nothing reaches a map's values.
+
+|<<leave-no-fragment-unreferenced,No unreferenced fragment §>>
+|Yes
+|`unreferenced.txt` is empty.
+|===
+
+Its lint reports also carry warnings from its own configuration -- `operation-4xx-response` and `required-string-property-missing-min-length` -- which that configuration sets to `warn` on purpose, as documentation-quality rules it does not yet enforce.

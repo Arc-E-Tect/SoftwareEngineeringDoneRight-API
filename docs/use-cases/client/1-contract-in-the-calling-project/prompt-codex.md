@@ -46,6 +46,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 | `{api-only-publisher-version}` | `0.4.0` |
 | `{api-only-subscriber-version}` | `0.3.0` |
 
+These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
+
 ## Facts: API-Only Publisher {api-only-publisher-version}
 
 - npm package `@arc-e-tect/api-only-publisher`, pinned exactly to `{api-only-publisher-version}`; it needs Node.js `^22.14.0`, `^24.10.0` or `>=26.0.0`.

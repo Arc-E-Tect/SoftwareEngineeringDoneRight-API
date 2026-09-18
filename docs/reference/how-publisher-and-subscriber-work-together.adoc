@@ -4,9 +4,6 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
-// The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.0
-:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -23,7 +20,7 @@ This document explains how the two tools fit together: which of their settings, 
 It is written to be read front to back by a person, and to be looked up section by section by a person or an AI assistant working on either tool.
 Every correspondence between the two tools, every Subscriber task and every check is listed; the tools' READMEs list each tool's remaining options.
 
-It describes API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
+It describes the Publisher and the Subscriber as they are on this repository's main branch; the badges at the top of link:../../api-only-publisher/README.adoc[the Publisher's README →] and link:../../api-only-subscriber/README.adoc[the Subscriber's README →] show each one's latest release.
 
 [#at-a-glance]
 == At a glance

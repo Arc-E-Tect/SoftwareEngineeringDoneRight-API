@@ -23,6 +23,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 
 This tutorial gives the classes the API-Only TranscriberJ generates for an `orders` contract descriptions of the project's own, in English and in Dutch.
 Every file below is copied from {example-url}[the worked example ↗], and every command was run in it, with API-Only TranscriberJ {api-only-transcriberj-version}, its REST Docs emitter {api-only-transcriberj-restdocs-version} and API-Only Publisher {api-only-publisher-version}.
+Those are the versions it was verified with; a newer release works the same unless its changelog says otherwise, and the README of link:../../../api-only-publisher/README.adoc[the Publisher →], link:../../../api-only-transcriberj/README.adoc[the TranscriberJ →] and https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-restdocs/README.adoc[the REST Docs emitter ↗] says which release is the latest.
 The example is built in CI, so what you read here is what it does.
 
 It assumes a Gradle project that already generates classes from a contract with the TranscriberJ.

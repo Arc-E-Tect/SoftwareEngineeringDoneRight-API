@@ -143,6 +143,47 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
 
+  Update-README:
+    name: Update README version
+    # After publishing, so the README never names a version the registry does not have
+    # yet. Every snippet in the README uses the one version attribute, so that is the
+    # only line this changes. A README-only commit starts no release of its own.
+    needs: [Calculate-Version, Publish]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+      - name: Update version in api-only-transcriberj README
+        run: |
+          sed -i -E "s/^:api-only-transcriberj-version: .*/:api-only-transcriberj-version: ${{ env.VERSION }}/" api-only-transcriberj/README.adoc
+
+      - name: Upload updated api-only-transcriberj README
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: api-only-transcriberj-readme-${{ env.VERSION }}
+          path: api-only-transcriberj/README.adoc
+
+      - name: Commit and push updated api-only-transcriberj README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add api-only-transcriberj/README.adoc
+          git diff --cached --quiet || git commit -m "docs(api-only-transcriberj): update README version to ${{ env.VERSION }} [skip ci]"
+          git push
+
   Determine-Release-Type:
     needs: [Calculate-Version]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
@@ -150,7 +191,7 @@ jobs:
 
   Workflow-Summary:
     name: Workflow Summary
-    needs: [Build, Publish, Release-Plugin, Determine-Release-Type]
+    needs: [Build, Publish, Update-README, Release-Plugin, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
     steps:

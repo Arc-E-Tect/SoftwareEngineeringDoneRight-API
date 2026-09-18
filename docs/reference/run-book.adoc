@@ -4,9 +4,6 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
-// The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.0
-:api-only-subscriber-version: 0.3.0
 
 [NOTE]
 .Where the links in this document go
@@ -20,7 +17,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 ====
 
 This run-book says how to invoke both tools in normal operation, once a setup from one of the use cases exists, and what to do when something fails.
-It describes API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
+It describes the Publisher and the Subscriber as they are on this repository's main branch; the badges at the top of link:../../api-only-publisher/README.adoc[the Publisher's README →] and link:../../api-only-subscriber/README.adoc[the Subscriber's README →] show each one's latest release.
 link:how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism behind every step.
 
 [#roles]

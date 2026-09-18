@@ -166,6 +166,12 @@ jobs:
           cd api-only-publisher
           npm version "$VERSION" --no-git-tag-version --allow-same-version
 
+      - name: Stamp the released version in the README
+        run: |
+          # npm ships README.adoc inside the package, so the copy on the registry has to
+          # name the version it comes with. Update-README commits the same change to main.
+          sed -i -E "s/^:api-only-publisher-version: .*/:api-only-publisher-version: $VERSION/" api-only-publisher/README.adoc
+
       - name: Publish to npm
         run: |
           # No NPM_TOKEN: authentication is the OIDC exchange this job's
@@ -191,6 +197,47 @@ jobs:
             echo "A newly published version can take a minute to appear through the CDN."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  Update-README:
+    name: Update README version
+    # After publishing, so the README never names a version the registry does not have
+    # yet. Every snippet in the README uses the one version attribute, so that is the
+    # only line this changes. A README-only commit starts no release of its own.
+    needs: [Calculate-Version, Publish]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+      - name: Update version in api-only-publisher README
+        run: |
+          sed -i -E "s/^:api-only-publisher-version: .*/:api-only-publisher-version: ${{ env.VERSION }}/" api-only-publisher/README.adoc
+
+      - name: Upload updated api-only-publisher README
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: api-only-publisher-readme-${{ env.VERSION }}
+          path: api-only-publisher/README.adoc
+
+      - name: Commit and push updated api-only-publisher README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add api-only-publisher/README.adoc
+          git diff --cached --quiet || git commit -m "docs(api-only-publisher): update README version to ${{ env.VERSION }} [skip ci]"
+          git push
+
   Determine-Release-Type:
     needs: [Calculate-Version]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
@@ -198,7 +245,7 @@ jobs:
 
   Workflow-Summary:
     name: Workflow Summary
-    needs: [Build, Publish, Release-Package, Determine-Release-Type]
+    needs: [Build, Publish, Update-README, Release-Package, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
     steps:
