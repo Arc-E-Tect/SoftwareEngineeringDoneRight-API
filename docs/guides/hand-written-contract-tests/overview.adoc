@@ -1,0 +1,140 @@
+= Guide: contract tests the generator cannot write, on top of the classes it does
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+The API-Only TranscriberJ generates, from a contract, the classes a contract test is built from: an operation's path and status codes, a body's constants and constraints, and the fields a response should have.
+It does not write the tests, and it cannot generate everything: some constructs yield a method that throws, with the reason.
+
+This guide is about the tests you write on top of those classes, and in particular the two questions a team meets early:
+
+* **"The generator refused to write this method -- now what?"**
+Almost everything else about the class is still there.
+Write the one missing part by hand, from those pieces, in the generated package, and guard it so that it breaks when the contract moves.
+* **"How many invalid-input tests should I write?"**
+One per error shape the contract describes -- not one per way to be wrong.
+<<how-many,How many tests, and where §>> says why.
+
+[#where-it-stops]
+== Where the generated tree stops
+
+Knowing the boundary is what makes it workable; discovering it by surprise makes the tool look broken.
+
+* **Constraints are constants, not checks.**
+`AmountV1.MAXIMUM` is there to build a test from; a generated `body(...)` writes whatever it is given, so a body built from arguments that break a constraint breaks it too.
+* **Field descriptions are a projection.**
+A field is a path, a type, whether it is optional, and a description.
+A test that checks a response against them proves the response has the fields the contract describes, of those types -- not that it is valid against the schema.
+* **Some constructs degrade.**
+A construct no rule represents yet, such as a `oneOf` with a branch written inline, turns the methods it reaches into ones that throw `UnsupportedOperationException`, with the reason and, where there is one, the remedy.
+The build never stops over it; the generation report lists every such method.
+
+link:../../../api-only-transcriberj/README.adoc#limits[What this cannot do →] and link:../../../api-only-transcriberj/README.adoc#unrepresentable[Constructs no rule represents yet →], in the TranscriberJ's README, are the reference.
+
+[#what-is-left]
+== What you still have when a method refuses
+
+A degraded `body(...)` does not mean an empty class.
+When the request body cannot be generated:
+
+* the body's class still has its provenance -- the fragment it came from and that fragment's hash -- and its description;
+* the operation's class still has the path, the method, the request's content type, and every status code and content type it answers with;
+* the components the body is built from still have their constraints: a minimum, a maximum, a pattern;
+* the *responses* are usually generated in full, error responses included, with their REST Docs descriptors.
+
+A request body written by hand from those pieces is still derived from the contract in every part except the one the contract could not express.
+And because it uses them, it still breaks when the contract moves -- which is the property worth protecting.
+
+[#where-it-goes]
+== Where hand-written code goes: a design decision
+
+[IMPORTANT]
+.Hand-written test code goes in the generated package
+====
+Code that builds on the generated classes goes in the subscription's `basePackage`, in the test source set: `src/test/java/<basePackage as a path>/`.
+
+That is deliberate.
+The generated tree makes public only what callers outside its package need; everything else is package-private, including `ContractJson` -- the JSON writer every generated body uses -- and the scalar components that carry constraints such as a maximum or a pattern.
+Hand-written code in the same package reaches all of it, writes JSON the way the generated bodies do, and sits next to what it draws on.
+
+Those package-private members are *not* a published API: they are regenerated on every build and may change when the TranscriberJ is upgraded, in which case the hand-written code that uses them no longer compiles and has to be adjusted.
+====
+
+link:../../../api-only-transcriberj/README.adoc#hand-written-code[Hand-written code beside the generated classes →], in the TranscriberJ's README, is the reference.
+
+[#responsibilities]
+== What you own when you write it
+
+Some of what a contract says is generated nowhere, and hand-written code that needs it types it:
+
+* the members of a schema whose body could not be generated -- their names, which are required, how they nest;
+* `const` values, such as the `destination` that says which branch of a `oneOf` a body is;
+* constraints written inline inside an inline branch; only components a branch refers to carry theirs.
+
+Whatever you type, the project -- not the generator -- is responsible for keeping in line with the contract, and nothing checks it for you: the generator verifies the generated tree, not your code.
+That comes with four duties:
+
+. **Draw on the generated constants wherever they hold the value**, so a change to them breaks the build at the line that used them.
+. **Pin each hand-written part to the hash of the fragment it was written against**, in a test; it is the only thing that fails when a member you typed is renamed.
+When it fails, check your code against the contract, then update the pinned hash.
+. **Assert that the degraded method still throws**, and delete your replacement when it no longer does.
+. **Write only what is missing**, and prefer taking the report's remedy to writing anything at all.
+
+link:../../../api-only-transcriberj/README.adoc#your-responsibilities[What the generated classes do not hold →] is the reference.
+
+[#how-many]
+== How many tests, and where
+
+**A contract test checks the shape of a response, not the behaviour that produced it.**
+
+A contract promises a client what it will get back: this status, this content type, these fields.
+A contract test holds the service to that promise.
+One invalid username is enough to see that a 400 comes back as the contract's problem document, with the fields the contract lists.
+A second invalid username tests nothing new about the contract: the answer has the same shape.
+
+*Which* usernames are rejected, and with which message, is behaviour -- the service's rules, not the contract's shape.
+It belongs in the tests of the service's behaviour, as scenarios: each rule, each way to break it, and what the service does.
+Written as contract tests instead, those scenarios become a long list of near-identical HTTP calls, each re-checking the same response shape, slow to run and brittle when a message is reworded -- and still worse at stating the rules than a scenario is.
+
+So:
+
+* **one contract test per response the contract lists**: 201, 400, 404 and 422 are four tests, whatever number of ways there are to get each;
+* **one behaviour test per rule**, or per scenario, where all the ways to be invalid live -- with the service, not the HTTP contract, as the subject.
+
+A 422 whose trigger is a business rule the schema cannot carry is the clearest case.
+Its contract test needs one request that breaks the rule; the rule itself, with its edge cases, is behaviour.
+
+[#adoption]
+== Adoption in broad strokes
+
+. **Read the report.** `build/reports/transcriberj/<contract>.txt` lists every method that throws, and why.
+. **Fix the contract where you can.** Most degradations have a remedy -- name the branches of a `oneOf`, make an inline schema a component -- and the report gives it.
+A contract that can be generated is better for every consumer, not just your tests.
+. **Where you cannot, write the missing part by hand**: in the test source set, in the generated package, from the generated constants -- and own what you type, as <<responsibilities,What you own when you write it §>> says.
+. **Guard it**: pin it to the hash of the fragment it was written against, and assert that the method still throws, so you hear when the contract changes and when the generator can take over.
+. **Write one contract test per response**, checking status, content type and fields with the generated descriptors.
+. **Put every other invalid input in behaviour tests**, as scenarios.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds this step by step on a refunds service whose request body the generator cannot write.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant do the same in your own project.
+* https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/hand-written-contract-tests[The worked example ↗] is the tutorial's result, built in CI.
+* link:../../../api-only-transcriberj/README.adoc#generated-code[The TranscriberJ's README →] lists what each generated class holds.

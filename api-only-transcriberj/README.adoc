@@ -616,6 +616,7 @@ It does not prove that the payload is valid against the schema, and nothing here
 Constraints are constants, not checks.
 Generated bodies are built from the arguments given, and a body built from arguments that violate a constraint violates it too.
 Invalid and partial bodies, for the tests of 4xx responses, are written by hand.
+link:../docs/guides/hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] says how to write them, and anything else the generator could not, on top of the generated classes -- and how many to write.
 
 [#development]
 == Development

@@ -199,6 +199,13 @@ A guide covers one feature across the tools, rather than one way of adopting the
 link:guides/description-bundles/tutorial.adoc[Tutorial →] +
 link:guides/description-bundles/prompt-claude-code.md[Claude Code prompt →] +
 link:guides/description-bundles/prompt-codex.md[Codex prompt →]
+
+|**Contract tests the generator cannot write, on top of the classes it does**
+|What to do when a generated method throws, how to write that part by hand from the generated pieces so that it still breaks when the contract moves, and why a contract test needs one example per error response rather than one per invalid input.
+|link:guides/hand-written-contract-tests/overview.adoc[Overview →] +
+link:guides/hand-written-contract-tests/tutorial.adoc[Tutorial →] +
+link:guides/hand-written-contract-tests/prompt-claude-code.md[Claude Code prompt →] +
+link:guides/hand-written-contract-tests/prompt-codex.md[Codex prompt →]
 |===
 
 [#reference]
