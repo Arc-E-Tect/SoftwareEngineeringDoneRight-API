@@ -366,7 +366,12 @@ The hash is SHA-256 over the component as bundled, `x-fragment-path` included, i
 * **Constraints**, as public constants: `MIN_LENGTH`, `MAX_LENGTH`, `PATTERN`, `FORMAT`, `ENUM`, `MINIMUM` and the rest.
 An object's are prefixed with the property: `EMAIL_ADDRESS_MIN_LENGTH`.
 They are constants only; generated bodies do not enforce them.
-* **Where it is sent**: `CONTENT_TYPE` and `CONTENT_TYPES` for bodies; `NAME`, `IN` and `REQUIRED` for a parameter; `OPERATION_ID`, `METHOD`, `PATH` and `STATUS` for an inline schema.
+* **Where it is sent**, depending on what the class was generated from:
+** a reusable request body or response, from `components/requestBodies` or `components/responses`: `CONTENT_TYPES`, every content type it may be sent as, and `CONTENT_TYPE` as well when there is exactly one;
+** a parameter: `NAME`, `IN` and `REQUIRED`, and `SCHEMA` when its schema is a reference;
+** a schema written inline in an operation: `OPERATION_ID` where the operation has one, `METHOD`, `PATH` and `CONTENT_TYPE`, and, for a response, `STATUS`, as a string;
+** a schema component: none of these, even when it is used as a body.
+A schema can be sent under more than one content type and status, so those belong to the operation: its class holds `REQUEST_CONTENT_TYPE` and `CONTENT_TYPE_<status>`, as <<operations,Operations §>> shows.
 * **`description()`**: the placeholder, or the contract's description with `generateDocs` on.
 * **`body(...)`** and **`fields(prefix)`**, when the schema describes an object.
 
@@ -550,6 +555,55 @@ The core generated code declares one of its own, on the same terms: `com.arc-e-t
 
 After resolution, a version at or above the untested one is warned about: "not tested with this plugin version", naming the emitter, the library and the version.
 `strictDependencies = true` makes that a build failure instead.
+
+[#hand-written-code]
+== Hand-written code beside the generated classes
+
+The generated tree does not cover every test: a degraded method throws, and an invalid body for a 4xx test is never generated.
+The code a project writes to fill those gaps goes beside the generated classes, and how it does so is a design decision, not an accident.
+
+[IMPORTANT]
+.Hand-written test code goes in the generated package
+====
+Put hand-written code that builds on the generated classes in the subscription's `basePackage`, in a source set that compiles the generated tree: for the default, `src/test/java/<basePackage as a path>/`.
+
+The generated tree keeps its public surface to what callers outside the package need (<<coverage,which classes are public §>>).
+Everything else is package-private, and so is only in reach from that package:
+
+* `ContractJson`, the JSON writer every generated `body(...)` uses: `string(value)`, `member(json, name, value)` on a `StringBuilder` begun with `{`, `close(json)`, `embed(body)` and `array(values)`;
+* scalar components, such as a constrained string or number, with their constraint constants;
+* any other class nothing outside the package needs.
+
+Generation replaces its own output directory on every build and never touches `src/`, so the two sit in one package without either overwriting the other.
+
+These package-private members are *not* a published API.
+They are generated with the tree on every build, so they always match the generated bodies, but an upgrade of the TranscriberJ may change them.
+Hand-written code that uses them then fails to compile, and has to be adjusted.
+====
+
+[#your-responsibilities]
+=== What the generated classes do not hold, and what that makes your responsibility
+
+Some of what a contract says is not generated anywhere.
+Hand-written code that needs it types it, and from then on the project -- not the generator -- is responsible for it matching the contract:
+
+* **The members of a schema whose `body(...)` degraded**: their names, which are required, and how they nest.
+* **`const` values.** A named component writes its `const` members itself, from a private constant; a branch written inline holds its `const` values nowhere.
+A body that must carry one -- the `destination` that says which branch a `oneOf` body is -- types it.
+* **Constraints written inline inside an inline branch.**
+Only components a branch refers to carry their constraints as constants; a `pattern` or `maxLength` written in the branch itself is generated nowhere.
+* **That the hand-written code matches the contract at all.**
+`verifyContractSources<Contract>` checks the generated tree against the lockfile; nothing checks hand-written code.
+
+So a project that writes its own tests on top of the generated classes takes on four duties:
+
+. **Draw on the generated classes wherever they hold the value**: `AmountV1.MAXIMUM + 1`, not `1000001`.
+A generated constant that disappears then breaks the build at the line that used it; a literal goes on compiling while it drifts from the contract.
+. **Pin each hand-written part to what it was written against**: a test that compares the class's `FRAGMENT_SHA256` (or, for an inline schema, `SCHEMA_SHA256`) with the value it had when the code was written.
+It is the only signal that a typed value may have changed, since nothing else fails when a member is renamed.
+When it fails, check the hand-written code against the contract, then update the pinned value.
+. **Assert that a degraded method still throws**, and delete the hand-written replacement when it no longer does: a contract that improves, or a TranscriberJ that learns the construct, makes it redundant.
+. **Write only what is missing.** Where the report gives a remedy, taking it -- naming the branches of a `oneOf`, making an inline schema a component -- makes the contract generable for every consumer, and leaves nothing to type.
 
 [#limits]
 == What this cannot do
