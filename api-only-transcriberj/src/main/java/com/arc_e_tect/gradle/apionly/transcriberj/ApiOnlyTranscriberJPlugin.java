@@ -115,6 +115,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getRecursionDepth().set(subscription.getRecursionDepth());
                         task.getGenerateDocs().set(subscription.getGenerateDocs());
                         task.getDescriptionPlaceholder().set(subscription.getDescriptionPlaceholder());
+                        task.getDescriptionBundle().set(subscription.getDescriptionBundle());
                         task.getEmitterClasspath().from(emitters);
                         task.getOutputDirectory().set(subscription.getInto());
                         task.getReportFile().set(

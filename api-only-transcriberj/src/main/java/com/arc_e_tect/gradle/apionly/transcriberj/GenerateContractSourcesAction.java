@@ -95,6 +95,14 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         Property<String> getDescriptionPlaceholder();
 
         /**
+         * The base name of the bundle descriptions resolve through, or absent when the
+         * project supplies none.
+         *
+         * @return the bundle's base name
+         */
+        Property<String> getDescriptionBundle();
+
+        /**
          * Where the sources go.
          *
          * @return the directory
@@ -131,7 +139,8 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         Parameters p = getParameters();
         Settings settings = new Settings(p.getContractName().get(), p.getBasePackage().get(),
                 p.getGenerateDocs().get(),
-                p.getDescriptionPlaceholder().get(), p.getRecursionDepth().get());
+                p.getDescriptionPlaceholder().get(), p.getRecursionDepth().get(),
+                p.getDescriptionBundle().getOrNull());
         GenerationReport report;
         try {
             report = Generation.run(p.getContract().get().getAsFile().toPath(), asyncContract(p),

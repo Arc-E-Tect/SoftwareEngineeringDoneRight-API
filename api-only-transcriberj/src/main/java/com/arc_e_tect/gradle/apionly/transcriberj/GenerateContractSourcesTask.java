@@ -65,6 +65,16 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     public abstract ConfigurableFileCollection getAsyncContract();
 
     /**
+     * The base name of the {@code ResourceBundle} the generated classes resolve their
+     * descriptions through, or absent when the project supplies none.
+     *
+     * @return the bundle's base name
+     */
+    @Input
+    @Optional
+    public abstract Property<String> getDescriptionBundle();
+
+    /**
      * The Subscriber's lockfile, which names the contract's version and hash.
      *
      * @return the lockfile
@@ -177,6 +187,7 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             parameters.getRecursionDepth().set(getRecursionDepth());
             parameters.getGenerateDocs().set(getGenerateDocs());
             parameters.getDescriptionPlaceholder().set(getDescriptionPlaceholder());
+            parameters.getDescriptionBundle().set(getDescriptionBundle());
             parameters.getOutputDirectory().set(getOutputDirectory());
             parameters.getReportFile().set(getReportFile());
             parameters.getEndpointIndex().set(getEndpointIndex());

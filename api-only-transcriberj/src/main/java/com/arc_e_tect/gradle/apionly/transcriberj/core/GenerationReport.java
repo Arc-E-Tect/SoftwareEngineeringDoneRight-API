@@ -36,6 +36,7 @@ public final class GenerationReport {
     private final List<Recommendation> recommendations = new ArrayList<>();
     private final List<Finding> undecided = new ArrayList<>();
     private final List<String> warnings = new ArrayList<>();
+    private final List<String> notes = new ArrayList<>();
 
     /** Creates an empty report. */
     public GenerationReport() {
@@ -100,6 +101,31 @@ public final class GenerationReport {
      * @param version  the contract's version
      * @return the text
      */
+    /**
+     * Records something worth saying about this generation that is not a problem.
+     *
+     * @param note the note
+     */
+    public void note(String note) {
+        notes.add(note);
+    }
+
+    /**
+     * What this generation had to say about itself.
+     *
+     * @return the notes, in the order they were made
+     */
+    public List<String> notes() {
+        return List.copyOf(notes);
+    }
+
+    /**
+     * The report as text, for a file and a build log.
+     *
+     * @param contract the contract's name
+     * @param version  the contract's version
+     * @return the text
+     */
     public String render(String contract, String version) {
         StringBuilder out = new StringBuilder();
         out.append("API-Only TranscriberJ: ").append(contract).append(' ').append(version).append('\n');
@@ -110,6 +136,10 @@ public final class GenerationReport {
         if (!warnings.isEmpty()) {
             out.append("\nWarnings:\n");
             warnings.forEach(w -> out.append("  ").append(w).append('\n'));
+        }
+        if (!notes.isEmpty()) {
+            out.append("\nNotes:\n");
+            notes.forEach(n -> out.append("  ").append(n).append('\n'));
         }
         if (!degraded.isEmpty()) {
             out.append("\nDegraded methods -- these throw UnsupportedOperationException:\n");

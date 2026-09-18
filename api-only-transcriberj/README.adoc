@@ -159,6 +159,59 @@ A `$ref` property is described by the component it refers to, unless the referen
 * A class or field the contract does not describe is documented with the placeholder, and the report names it with the advice to describe it.
 It does not fail the build.
 
+[#description-bundles]
+==== Descriptions a project owns
+
+A team that writes its own documentation text, or documents a contract in more than one language, supplies a `ResourceBundle` and the generated classes resolve through it:
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.contract'
+        descriptionBundle = 'docs.Descriptions'
+    }
+}
+----
+
+`docs/Descriptions.properties`, anywhere on the test classpath:
+
+[source,properties]
+----
+UserV1=A user of the shop.
+UserV1.username=The name the user signs in with.
+UserV1.address.street=The street, house number included.
+InvalidRequestProblemV1.errors[].message=What was wrong with the request.
+----
+
+A description resolves in one order, at the moment it is asked for:
+
+. the bundle, if it carries the key and its text is not blank;
+. what generation produced: the contract's text with `generateDocs = true`, the placeholder without it.
+
+So a bundle is an overlay rather than a third mode: it wins where it has a key, and `generateDocs` decides what a key it lacks falls back to.
+A missing bundle, a missing key and a blank entry are all the same thing -- the fallback -- so a description is never empty and resolving one never throws.
+
+The keys::
+A class's key is its class name.
+A field's key is `<ClassName>.<path>`, where the path is the one the field reports: `address.street` for a nested object, `errors[].message` for the members of an array's items.
+A field whose type is another class is described by that class, under that class's own key, so a shared schema is described once.
+`ContractDescriptions.keys()` lists every key the tree asks for.
+
+Another language::
+`description(Locale)` and `fields(String, Locale)` resolve in a locale, so one generated tree documents the contract in as many languages as the bundle has files.
+`-Dapionly.descriptions.locale=nl` sets the locale for a whole run, and `-Dapionly.descriptions.bundle=docs.Other` names another bundle, which is how a documentation build renders each language in turn.
+Without either, the JVM's locale and the configured bundle apply.
+
+What is not covered yet::
+`ContractDescriptions.missing()` lists the keys nothing covers, so their descriptions are the generated text -- a reader's question.
+`ContractDescriptions.untranslated(locale)` lists the keys that locale has no text of its own for, whatever it inherits from the base bundle -- a translator's question.
+A test of your own can fail on either; nothing here fails a build.
+The generation report names the configured bundle and how many keys it may carry.
+
+Without `descriptionBundle`::
+Nothing resolves and nothing is generated to resolve with: the classes are the ones generated before bundles existed, with their descriptions compiled in.
+
 [#tasks]
 == Tasks
 
