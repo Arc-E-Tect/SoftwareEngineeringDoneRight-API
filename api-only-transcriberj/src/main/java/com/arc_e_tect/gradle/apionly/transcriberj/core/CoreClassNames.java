@@ -137,7 +137,7 @@ final class CoreClassNames implements ClassNames {
 
         for (Candidate c : candidates) {
             GeneratedClass generated = new GeneratedClass(c.name, c.origin, c.key, c.exposed, c.provenance,
-                    c.schema, c.schema != null && shapes.isObject(c.schema));
+                    c.schema, c.schema != null && shapes.bodyShaped(c.schema));
             classes.add(generated);
             if (c.path != null) paths.put(generated, c.path);
             if (c.origin == Origin.OPERATION || c.origin == Origin.CHANNEL
@@ -388,14 +388,17 @@ final class CoreClassNames implements ClassNames {
             }
         }
 
-        // Whatever an exposed body takes rendered JSON of must be exposed too.
+        // Whatever an exposed body takes rendered JSON of must be exposed too, and so must
+        // the branches it is one of, since those are what a caller writes.
         List<Schema> pending = new ArrayList<>();
         candidates.stream().filter(c -> c.exposed && c.schema != null).forEach(c -> pending.add(c.schema));
         exposedSchemas.forEach(name -> shapes.component(name).ifPresent(pending::add));
         Set<String> visited = new HashSet<>();
         while (!pending.isEmpty()) {
             Schema schema = pending.remove(pending.size() - 1);
-            for (String name : shapes.renderedReferences(schema)) {
+            Set<String> reached = new java.util.LinkedHashSet<>(shapes.renderedReferences(schema));
+            reached.addAll(shapes.branches(schema));
+            for (String name : reached) {
                 exposedSchemas.add(name);
                 if (visited.add(name)) shapes.component(name).ifPresent(pending::add);
             }

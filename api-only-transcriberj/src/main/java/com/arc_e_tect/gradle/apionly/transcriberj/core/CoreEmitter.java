@@ -461,7 +461,7 @@ final class CoreEmitter implements Emitter {
         String write() {
             String name = generated.simpleName();
             out.append(header).append("package ").append(context.settings().basePackage()).append(";\n\n");
-            out.append("/**\n * ").append(JavaText.comment(origin())).append("\n */\n");
+            out.append("/**\n * ").append(JavaText.comment(origin())).append(branches()).append("\n */\n");
             out.append(excludeFromCoverage());
             out.append(generated.exposed() ? "public final class " : "final class ").append(name).append(" {\n\n");
 
@@ -515,6 +515,17 @@ final class CoreEmitter implements Emitter {
             }
             out.append("}\n");
             return out.toString();
+        }
+
+        /** For a choice its branches write, which ones: where to find the body it has not. */
+        private String branches() {
+            if (generated.schema() == null || generated.bodyShaped()) return "";
+            List<String> links = shapes.branches(generated.schema()).stream()
+                    .map(ref -> names.component(Origin.SCHEMA, ref))
+                    .flatMap(java.util.Optional::stream)
+                    .map(branch -> "{@link " + branch.simpleName() + "}")
+                    .toList();
+            return links.isEmpty() ? "" : "\n *\n * <p>A body of it is one of: " + String.join(", ", links) + ".";
         }
 
         private String origin() {

@@ -476,6 +476,104 @@ class CoreEmitterTest {
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
+    // --------------------------------------------------------- composition
+
+    private static String requestBody(String component) {
+        return """
+                /refunds:
+                  post:
+                    requestBody:
+                      content:
+                        application/json:
+                          schema: {$ref: '#/components/schemas/%s'}
+                    responses: {}
+                """.formatted(component);
+    }
+
+    private static final String BRANCHES = schema("Card", "openapi/Card.yaml", """
+            type: object
+            required: [destination, digits]
+            properties:
+              destination: {const: card}
+              digits: {type: string}
+            """) + schema("Bank", "openapi/Bank.yaml", """
+            type: object
+            required: [destination, iban]
+            properties:
+              destination: {const: bank-account}
+              iban: {type: string}
+            """);
+
+    @Test
+    void aChoiceWithAnInlineObjectBranchDegradesItsBodyWhetherOrNotItSaysItIsAnObject() {
+        GeneratedSources g = generate(contract(requestBody("Bare"), "schemas:\n" + (
+                schema("Bare", "openapi/Bare.yaml", """
+                        oneOf:
+                          - {type: object, properties: {digits: {type: string}}}
+                          - {type: object, properties: {iban: {type: string}}}
+                        """) + schema("Typed", "openapi/Typed.yaml", """
+                        type: object
+                        anyOf:
+                          - {type: object, properties: {digits: {type: string}}}
+                          - {$ref: '#/components/schemas/Bank'}
+                        """) + schema("Scalar", "openapi/Scalar.yaml", """
+                        oneOf: [{type: string}, {type: integer}]
+                        """) + BRANCHES).indent(2)));
+
+        assertThatThrownBy(() -> g.call("Bare", "body", new Class<?>[]{Object[].class}, (Object) new Object[0]))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("ONE_OF_INLINE_BRANCHES at /components/schemas/Bare");
+        assertThatThrownBy(() -> g.call("Bare", "fields", new Class<?>[]{String.class}, ""))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> g.call("Typed", "body", new Class<?>[]{Object[].class}, (Object) new Object[0]))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("ANY_OF_INLINE_BRANCHES at /components/schemas/Typed");
+        // A choice between values, not objects, is no body: it is written as a value.
+        assertThat(g.source("Scalar")).doesNotContain("body(").doesNotContain("fields(");
+
+        assertThat(g.report.degraded()).extracting(d -> d.className() + "." + d.method())
+                .containsExactlyInAnyOrder("Bare.body(...)", "Bare.fields(String)",
+                        "Typed.body(...)", "Typed.fields(String)");
+    }
+
+    @Test
+    void aChoiceOfNamedBranchesIsWrittenByItsBranches() throws Throwable {
+        GeneratedSources g = generate(contract(requestBody("Refund") + requestBody("Bare").replace("/refunds", "/bare"),
+                "schemas:\n" + (schema("Refund", "openapi/Refund.yaml", """
+                        type: object
+                        oneOf:
+                          - {$ref: '#/components/schemas/Card'}
+                          - {$ref: '#/components/schemas/Bank'}
+                        """) + schema("Bare", "openapi/Bare.yaml", """
+                        anyOf:
+                          - {$ref: '#/components/schemas/Card'}
+                        """) + BRANCHES).indent(2)));
+
+        // Not an empty object that matches neither branch: no body at all.
+        assertThat(g.source("Refund")).doesNotContain("body(").doesNotContain("fields(")
+                .contains("{@link Card}", "{@link Bank}");
+        assertThat(g.source("Bare")).doesNotContain("body(").doesNotContain("fields(");
+        assertThat(g.report.degraded()).isEmpty();
+
+        // The branches are what a caller writes, so they are as public as the body they make up.
+        assertThat(Modifier.isPublic(g.type("Card").getModifiers())).isTrue();
+        assertThat(Modifier.isPublic(g.type("Bank").getModifiers())).isTrue();
+        assertThat(g.call("Card", "body", new Class<?>[]{String.class}, "4242"))
+                .isEqualTo("{\"destination\":\"card\",\"digits\":\"4242\"}\n");
+    }
+
+    @Test
+    void theBranchesOfAChoiceNothingPublicUsesStayPackagePrivate() {
+        GeneratedSources g = generate(contract("{}", "schemas:\n" + (schema("Refund", "openapi/Refund.yaml", """
+                type: object
+                oneOf:
+                  - {$ref: '#/components/schemas/Card'}
+                  - {$ref: '#/components/schemas/Bank'}
+                """) + BRANCHES).indent(2)));
+
+        assertThat(Modifier.isPublic(g.type("Card").getModifiers())).isFalse();
+    }
+
     // ----------------------------------------------------------- recursion
 
     @Test

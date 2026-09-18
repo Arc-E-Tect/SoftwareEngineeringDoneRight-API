@@ -324,7 +324,7 @@ What the generated code does is checked where it is produced: by this plugin's o
 
 The plugin adds `sedr-library` to each configured source set the way it adds an emitter's dependencies: at a version it *prefers*, never forces, so a project already using the library keeps its own.
 
-A class is public when code outside the package needs it: it is a request or response body, a parameter's schema, a non-schema component, or something a public `body(...)` takes as an argument.
+A class is public when code outside the package needs it: it is a request or response body, a parameter's schema, a non-schema component, something a public `body(...)` takes as an argument, or a branch of a `oneOf` or `anyOf` that a public body is one of.
 Otherwise it is package-private, like a base schema only ever composed with `allOf`.
 
 [#asyncapi]
@@ -477,8 +477,11 @@ A `body(...)` that cannot be generated takes `Object...`, since its parameters c
 |===
 |Construct |Treatment |Note
 
-|`oneOf`/`anyOf` whose branches are all references |Represented |Each branch has its own class.
-|`oneOf`/`anyOf` with an inline branch |Degraded |Remedy: name the branches, so each becomes a component.
+|`oneOf`/`anyOf` whose branches are all references |Represented |Each branch has its own class, with its own `body(...)`.
+A schema that is nothing but such a choice has no `body(...)` or `fields(...)` of its own, and its Javadoc names the branches.
+|`oneOf`/`anyOf` with an inline branch |Degraded |Whether or not the schema says `type: object`.
+Remedy: name the branches, so each becomes a component.
+A choice between values rather than objects, such as a string or an integer, is written as a value and has no body to degrade.
 |`discriminator` |Represented |
 |`additionalProperties`, `patternProperties` |Represented |Recorded as `open`; a map is a subsection.
 |A recursive `$ref` |Represented |To `recursionDepth`.
