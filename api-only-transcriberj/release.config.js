@@ -35,7 +35,7 @@ module.exports = {
         ["@semantic-release/npm", {
             "npmPublish": false,
         }],
-        ["@semantic-release/release-notes-generator", {
+        ["../release/component-release-notes", {
             preset: 'angular',
             parserOpts: {
                 noteKeywords: ['BREAKING CHANGE', 'BREAKING CHANGES', 'BREAKING'],

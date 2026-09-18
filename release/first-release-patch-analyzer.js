@@ -7,6 +7,8 @@
 // with process.cwd() set to that module's directory, so resolving from there - rather than from
 // this file's location - is what actually finds it.
 const commitAnalyzer = require(require.resolve('@semantic-release/commit-analyzer', { paths: [process.cwd()] }));
+// Only the commits that change this module count for its version: see component-commits.js.
+const { forComponent } = require('./component-commits');
 
 // New plugins are seeded with a baseline tag (e.g. api-only-subscriber-v0.0.0)
 // specifically so semantic-release finds a lastRelease and increments from it instead
@@ -23,6 +25,6 @@ module.exports = {
     if (!context.lastRelease || !context.lastRelease.version || context.lastRelease.version === SEED_VERSION) {
       return 'patch';
     }
-    return commitAnalyzer.analyzeCommits(pluginConfig, context);
+    return commitAnalyzer.analyzeCommits(pluginConfig, forComponent(context));
   }
 };
