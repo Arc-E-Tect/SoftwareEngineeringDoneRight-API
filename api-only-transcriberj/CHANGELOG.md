@@ -1,3 +1,15 @@
+## [0.3.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.2...api-only-transcriberj-v0.3.3) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** generate a oneOf body the way its branches allow ([#25](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/25)) ([e1acbe0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e1acbe0d3bce9c64ca5869ca0bb3c1586922e19f)), closes [#25](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/25)
+
+
+### 📝 Documentation
+
+* **api-only-transcriberj:** add a guide to description bundles ([#24](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/24)) ([e4a6031](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e4a60316e769618ff4874f1cb28e521863e28508)), closes [#24](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/24)
+
 ## [0.3.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.1...api-only-transcriberj-v0.3.2) (2026-09-18)
 
 
