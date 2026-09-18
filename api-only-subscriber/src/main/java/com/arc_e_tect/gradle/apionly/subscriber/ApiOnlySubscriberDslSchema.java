@@ -26,8 +26,8 @@ final class ApiOnlySubscriberDslSchema {
             List.of(
                     DslPropertySpec.scalar("lockfile", "layout.projectDirectory.file('apionly.lock')",
                             "Where resolved contract versions and file hashes are recorded."),
-                    DslPropertySpec.scalar("version", "findProperty('apiContractVersion')",
-                            "The contract version every subscription resolves unless it sets its own."),
+                    DslPropertySpec.scalar("apiContractVersion", "findProperty('apiContractVersion')",
+                            "The version of the contract this project implements, unless its subscription sets its own."),
                     DslPropertySpec.container("channel",
                             "The channel used to resolve every subscribed contract.",
                             CHANNEL_STUB)

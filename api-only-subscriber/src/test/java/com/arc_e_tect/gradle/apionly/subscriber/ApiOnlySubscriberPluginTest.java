@@ -60,7 +60,7 @@ class ApiOnlySubscriberPluginTest {
     }
 
     private Subscription subscribe(String target, String version) {
-        return extension().subscribe(target, s -> s.getVersion().set(version));
+        return extension().subscribe(target, s -> s.getApiContractVersion().set(version));
     }
 
     @Nested
@@ -116,7 +116,7 @@ class ApiOnlySubscriberPluginTest {
         }
 
         @Test
-        @DisplayName("turns every separator in a target name into a camel-case task suffix")
+        @DisplayName("turns every separator in a target name into a PascalCase task suffix")
         void capitalizesAcrossSeparators() {
             // One contract per project, so each target gets a project of its own.
             java.util.Map.of(
@@ -127,7 +127,7 @@ class ApiOnlySubscriberPluginTest {
                 Project own = ProjectBuilder.builder().build();
                 own.getPlugins().apply(ApiOnlySubscriberPlugin.class);
                 own.getExtensions().getByType(ApiOnlySubscriberExtension.class)
-                    .subscribe(target, s -> s.getVersion().set("1.0.0"));
+                    .subscribe(target, s -> s.getApiContractVersion().set("1.0.0"));
 
                 assertThat(own.getTasks().findByName(task)).isNotNull();
             });
@@ -169,11 +169,11 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("subscribing the same target twice configures one subscription, not two")
         void subscribingIsIdempotent() {
-            extension().subscribe("customer-orders", s -> s.getVersion().set("1.0.0"));
-            extension().subscribe("customer-orders", s -> s.getVersion().set("2.0.0"));
+            extension().subscribe("customer-orders", s -> s.getApiContractVersion().set("1.0.0"));
+            extension().subscribe("customer-orders", s -> s.getApiContractVersion().set("2.0.0"));
 
             assertThat(extension().getSubscriptions()).hasSize(1);
-            assertThat(extension().subscription("customer-orders").getVersion().get()).isEqualTo("2.0.0");
+            assertThat(extension().subscription("customer-orders").getApiContractVersion().get()).isEqualTo("2.0.0");
         }
 
         @Test
@@ -207,8 +207,8 @@ class ApiOnlySubscriberPluginTest {
         @DisplayName("a project may call any number of APIs, next to the one contract it implements")
         void clientsNextToTheImplementedContract() {
             subscribe("customer-orders", "1.0.0");
-            Subscription payments = extension().subscribeAsClient("order-payments", s -> s.getVersion().set("1.4.0"));
-            Subscription billing = extension().subscribeAsClient("billing-api", s -> s.getVersion().set("2.0.0"));
+            Subscription payments = extension().subscribeAsClient("order-payments", s -> s.getApiContractVersion().set("1.4.0"));
+            Subscription billing = extension().subscribeAsClient("billing-api", s -> s.getApiContractVersion().set("2.0.0"));
 
             assertThat(extension().subscription("customer-orders").isClient()).isFalse();
             assertThat(payments.isClient()).isTrue();
@@ -220,7 +220,7 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("a project may call APIs without implementing one")
         void clientsOnly() {
-            extension().subscribeAsClient("order-payments", s -> s.getVersion().set("1.4.0"));
+            extension().subscribeAsClient("order-payments", s -> s.getApiContractVersion().set("1.4.0"));
             extension().subscribeAsClient("billing-api");
 
             assertThat(extension().getSubscriptions()).hasSize(2).allMatch(Subscription::isClient);
@@ -229,18 +229,18 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("subscribing to the same API as a client twice configures one subscription")
         void clientSubscribingIsIdempotent() {
-            extension().subscribeAsClient("order-payments", s -> s.getVersion().set("1.0.0"));
-            extension().subscribeAsClient("order-payments", s -> s.getVersion().set("2.0.0"));
+            extension().subscribeAsClient("order-payments", s -> s.getApiContractVersion().set("1.0.0"));
+            extension().subscribeAsClient("order-payments", s -> s.getApiContractVersion().set("2.0.0"));
 
             assertThat(extension().getSubscriptions()).hasSize(1);
-            assertThat(extension().subscription("order-payments").getVersion().get()).isEqualTo("2.0.0");
+            assertThat(extension().subscription("order-payments").getApiContractVersion().get()).isEqualTo("2.0.0");
         }
 
         @Test
         @DisplayName("a contract is either implemented or called, never both")
         void implementedOrCalled() {
             subscribe("customer-orders", "1.0.0");
-            extension().subscribeAsClient("order-payments", s -> s.getVersion().set("1.0.0"));
+            extension().subscribeAsClient("order-payments", s -> s.getApiContractVersion().set("1.0.0"));
 
             assertThatThrownBy(() -> extension().subscribeAsClient("customer-orders"))
                 .isInstanceOf(InvalidUserDataException.class)
@@ -326,7 +326,7 @@ class ApiOnlySubscriberPluginTest {
         @DisplayName("an API the project calls is not a resources directory of its own, and processResources still waits for it")
         void clientDocumentsAreCopiedNotRooted() {
             project.getPlugins().apply("java");
-            Subscription payments = extension().subscribeAsClient("order-payments", s -> s.getVersion().set("1.0.0"));
+            Subscription payments = extension().subscribeAsClient("order-payments", s -> s.getApiContractVersion().set("1.0.0"));
 
             SourceSet main = project.getExtensions().getByType(JavaPluginExtension.class)
                 .getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
@@ -365,7 +365,7 @@ class ApiOnlySubscriberPluginTest {
         void clientVersionIsRequired() {
             extension().getChannel().getType().set("file");
             extension().getChannel().getDirectory().set(projectDir.toString());
-            extension().getVersion().set("2.0.0");
+            extension().getApiContractVersion().set("2.0.0");
             extension().subscribeAsClient("account");
 
             assertThat(resolving("account"))
@@ -434,7 +434,7 @@ class ApiOnlySubscriberPluginTest {
         void subscriptionGroupIdWins() {
             extension().getChannel().getGroupId().set("com.example.all");
             extension().subscribe("account", s -> {
-                s.getVersion().set("1.0.0");
+                s.getApiContractVersion().set("1.0.0");
                 s.getGroupId().set("com.example.special");
             });
 
@@ -448,7 +448,7 @@ class ApiOnlySubscriberPluginTest {
         void subscriptionChannelWins() {
             extension().getChannel().getGroupId().set("com.example.all");
             extension().subscribe("account", s -> {
-                s.getVersion().set("1.0.0");
+                s.getApiContractVersion().set("1.0.0");
                 s.channel(c -> {
                     c.getType().set("file");
                     c.getDirectory().set(projectDir.toString());
@@ -469,7 +469,7 @@ class ApiOnlySubscriberPluginTest {
             extension().getChannel().getDirectory().set(projectDir.toString());
             Subscription account = subscribe("account", "1.0.0");
             Subscription payments = extension().subscribeAsClient("payments", s -> {
-                s.getVersion().set("1.0.0");
+                s.getApiContractVersion().set("1.0.0");
                 s.channel(c -> c.getGroupId().set("com.example.payments"));
             });
 
@@ -487,17 +487,17 @@ class ApiOnlySubscriberPluginTest {
         @Test
         @DisplayName("a subscription that sets no version takes the one set on apiOnlySubscriber")
         void subscriptionTakesTheProjectVersion() {
-            extension().getVersion().set("2.0.0");
+            extension().getApiContractVersion().set("2.0.0");
 
-            assertThat(extension().subscribe("account").getVersion().get()).isEqualTo("2.0.0");
+            assertThat(extension().subscribe("account").getApiContractVersion().get()).isEqualTo("2.0.0");
         }
 
         @Test
         @DisplayName("a subscription's own version wins over the one set on apiOnlySubscriber")
         void subscriptionVersionWins() {
-            extension().getVersion().set("2.0.0");
+            extension().getApiContractVersion().set("2.0.0");
 
-            assertThat(subscribe("account", "1.4.0").getVersion().get()).isEqualTo("1.4.0");
+            assertThat(subscribe("account", "1.4.0").getApiContractVersion().get()).isEqualTo("1.4.0");
         }
 
         @Test
@@ -505,23 +505,36 @@ class ApiOnlySubscriberPluginTest {
         void versionDefaultsToProjectProperty() {
             project.getExtensions().getExtraProperties().set("apiContractVersion", "3.1.0");
 
-            assertThat(extension().getVersion().get()).isEqualTo("3.1.0");
-            assertThat(extension().subscribe("account").getVersion().get()).isEqualTo("3.1.0");
+            assertThat(extension().getApiContractVersion().get()).isEqualTo("3.1.0");
+            assertThat(extension().subscribe("account").getApiContractVersion().get()).isEqualTo("3.1.0");
         }
 
         @Test
         @DisplayName("with no version anywhere, a subscription's version stays unset")
         void noVersionAnywhere() {
-            assertThat(extension().getVersion().isPresent()).isFalse();
-            assertThat(extension().subscribe("account").getVersion().isPresent()).isFalse();
+            assertThat(extension().getApiContractVersion().isPresent()).isFalse();
+            assertThat(extension().subscribe("account").getApiContractVersion().isPresent()).isFalse();
+        }
+
+        @Test
+        @DisplayName("version was renamed to apiContractVersion, and setting it fails rather than setting something else")
+        void versionIsRenamed() {
+            // Without this, Groovy and Kotlin build scripts resolve `version` to the project's own
+            // version: an old build would set that, silently, and resolve some other contract version.
+            assertThatThrownBy(() -> extension().setVersion("2.0.0"))
+                .isInstanceOf(org.gradle.api.GradleException.class)
+                .hasMessageContaining("apiOnlySubscriber.version was renamed to apiContractVersion");
+            assertThatThrownBy(() -> extension().subscribe("account").setVersion("2.0.0"))
+                .isInstanceOf(org.gradle.api.GradleException.class)
+                .hasMessageContaining("subscription 'account': version was renamed to apiContractVersion");
         }
 
         @Test
         @DisplayName("an API the project calls does not take the version of the contract the project implements")
         void clientTakesNoProjectVersion() {
-            extension().getVersion().set("2.0.0");
+            extension().getApiContractVersion().set("2.0.0");
 
-            assertThat(extension().subscribeAsClient("account").getVersion().isPresent()).isFalse();
+            assertThat(extension().subscribeAsClient("account").getApiContractVersion().isPresent()).isFalse();
         }
     }
 }

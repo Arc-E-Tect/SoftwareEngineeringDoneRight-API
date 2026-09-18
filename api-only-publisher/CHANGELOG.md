@@ -1,3 +1,15 @@
+## [0.6.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.6.1...api-only-publisher-v0.6.2) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** make the README say what the configuration means, and who versions a contract ([#30](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/30)) ([a558fca](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a558fcafd0141671561795445bc7906ee1981e68)), closes [#30](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/30) [#20](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/20)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.6.1 [skip ci] ([8af7563](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/8af75639f7c93894a38ca4e97da05178b6fa2912))
+
 ## [0.6.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.6.0...api-only-publisher-v0.6.1) (2026-09-18)
 
 

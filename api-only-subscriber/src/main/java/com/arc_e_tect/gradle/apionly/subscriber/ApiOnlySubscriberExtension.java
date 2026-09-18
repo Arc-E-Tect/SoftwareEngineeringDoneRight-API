@@ -163,14 +163,14 @@ public abstract class ApiOnlySubscriberExtension {
      *
      * <pre>{@code
      * subscribeAsClient('order-payments') {
-     *     version = '1.4.0'
+     *     apiContractVersion = '1.4.0'
      * }
      * }</pre>
      *
      * <p>A project may call any number of APIs, next to the one contract it
      * implements. A client subscription is fetched, checked against its archive's
      * manifest, locked and verified exactly like the implemented contract. It
-     * differs in two ways. It sets its own version, because {@link #getVersion()}
+     * differs in two ways. It sets its own version, because {@link #getApiContractVersion()}
      * and {@code apiContractVersion} are the version of the contract this project
      * implements. And with the {@code java} plugin, its documents reach the
      * classpath under {@code contracts/<target>/}, leaving the root to that
@@ -299,22 +299,36 @@ public abstract class ApiOnlySubscriberExtension {
     public abstract RegularFileProperty getLockfile();
 
     /**
-     * The contract version every subscription in this project resolves, unless it
-     * sets its own.
+     * The version of the contract this project implements, unless its subscription
+     * sets its own. An API the project calls is not affected.
      *
      * <p>Defaults to the {@code apiContractVersion} project property, so the version
      * can live in {@code gradle.properties} -- in a multi-project build, the
-     * subproject's own -- or be given with {@code -PapiContractVersion=...} or
-     * {@code ORG_GRADLE_PROJECT_apiContractVersion}.</p>
+     * subproject's own -- in the build script's {@code ext}, or in
+     * {@code ORG_GRADLE_PROJECT_apiContractVersion}. Given on the command line, with
+     * {@code -PapiContractVersion=...}, the property overrides every version the
+     * build sets for the implemented contract.</p>
      *
      * <pre>{@code
      * apiOnlySubscriber {
-     *     version = '2.1.0'
+     *     apiContractVersion = '2.1.0'
      *     subscribe('customer-orders')
      * }
      * }</pre>
      *
      * @return the default contract version; unset when the property is not defined
      */
-    public abstract Property<String> getVersion();
+    public abstract Property<String> getApiContractVersion();
+
+    /**
+     * Refuses the property's old name. Without it, a build script that still sets
+     * {@code version} here would set the project's own version instead, silently.
+     *
+     * @param version ignored
+     * @throws org.gradle.api.GradleException always, naming the new property
+     */
+    public void setVersion(Object version) {
+        throw new org.gradle.api.GradleException("apiOnlySubscriber.version was renamed to apiContractVersion. Set "
+            + "apiOnlySubscriber { apiContractVersion = '" + version + "' } instead.");
+    }
 }

@@ -45,7 +45,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
     /** The DSL-updating task registered by this plugin. */
     public static final String UPDATE_DSL_TASK = "updateApiOnlySubscriberDSL";
 
-    /** The project property {@code apiOnlySubscriber.version} defaults to: {@value}. */
+    /** The project property {@code apiOnlySubscriber.apiContractVersion} defaults to, and that the command line overrides it with: {@value}. */
     public static final String CONTRACT_VERSION_PROPERTY = "apiContractVersion";
 
     /**
@@ -75,7 +75,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         // Read through the project, not providers.gradleProperty(...): that does not
         // see a subproject's own gradle.properties, which is exactly where a service
         // in a multi-project build keeps its version.
-        extension.getVersion().convention(project.provider(() -> {
+        extension.getApiContractVersion().convention(project.provider(() -> {
             Object version = project.findProperty(CONTRACT_VERSION_PROPERTY);
             return version == null ? null : version.toString();
         }));
@@ -119,10 +119,10 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
 
         subscription.getInto().convention(
             project.getLayout().getBuildDirectory().dir("api-spec/" + target));
-        // apiOnlySubscriber.version, and apiContractVersion behind it, are the version
-        // of the contract this project implements. An API it calls sets its own.
+        // apiOnlySubscriber.apiContractVersion, and the project property behind it, are
+        // the version of the contract this project implements. An API it calls sets its own.
         if (!subscription.isClient()) {
-            subscription.getVersion().convention(extension.getVersion());
+            subscription.getApiContractVersion().convention(extension.getApiContractVersion());
         }
 
         // A subscription's own channel states only what differs from the project's.
@@ -142,7 +142,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
                 task.setDescription("Fetches the " + target + " API description into this build.");
                 task.getArchive().from(archive);
                 task.getTarget().set(target);
-                task.getVersion().set(subscription.getVersion());
+                task.getVersion().set(resolvedVersion(project, subscription));
                 task.getChannel().set(subscription.getChannel().getType());
                 task.getInto().set(subscription.getInto());
                 task.getLockfile().set(extension.getLockfile());
@@ -193,6 +193,23 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
     }
 
     /**
+     * The version a subscription resolves. For the contract the project implements,
+     * {@code -PapiContractVersion} given on the command line overrides every version the
+     * build sets: the subscription's own, {@code apiOnlySubscriber}'s, and the project
+     * property from {@code gradle.properties}, the build script or the environment.
+     * Otherwise it is the subscription's own {@code apiContractVersion}, with those
+     * behind it as conventions. An API the project calls is never overridden.
+     */
+    private static Provider<String> resolvedVersion(Project project, Subscription subscription) {
+        String commandLine = project.getGradle().getStartParameter().getProjectProperties()
+            .get(CONTRACT_VERSION_PROPERTY);
+        if (commandLine != null && !subscription.isClient()) {
+            return project.provider(() -> commandLine);
+        }
+        return subscription.getApiContractVersion();
+    }
+
+    /**
      * Where the archive comes from.
      *
      * The maven channel declares a dependency and lets Gradle resolve it, which
@@ -206,16 +223,16 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
     ) {
         String type = subscription.getChannel().getType().getOrElse("maven");
         String target = subscription.getTarget();
-        String version = subscription.getVersion().getOrElse(null);
+        String version = resolvedVersion(project, subscription).getOrElse(null);
         if (version == null && subscription.isClient()) {
-            throw new GradleException("client subscription '" + target + "' declares no version. Set version on "
-                + "the subscription: an API this project calls sets its own, because apiOnlySubscriber.version and "
-                + "the " + CONTRACT_VERSION_PROPERTY + " project property are the version of the contract this "
-                + "project implements.");
+            throw new GradleException("client subscription '" + target + "' declares no version. Set "
+                + "apiContractVersion on the subscription: an API this project calls sets its own, because "
+                + "apiOnlySubscriber.apiContractVersion and the " + CONTRACT_VERSION_PROPERTY + " project property "
+                + "are the version of the contract this project implements.");
         }
         if (version == null) {
-            throw new GradleException("subscription '" + target + "' declares no version. Set version on the "
-                + "subscription, set version on apiOnlySubscriber for every subscription, or define the "
+            throw new GradleException("subscription '" + target + "' declares no version. Set apiContractVersion "
+                + "on the subscription, set apiContractVersion on apiOnlySubscriber, or define the "
                 + CONTRACT_VERSION_PROPERTY + " project property.");
         }
         if (isPrerelease(version) && !subscription.getAllowPrerelease().get()) {
