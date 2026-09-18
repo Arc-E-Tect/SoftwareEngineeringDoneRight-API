@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.0...api-only-transcriberj-v0.3.1) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* Integrate refreshVersions plugin for dependency management ([#22](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/22)) ([4f9b5b7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/4f9b5b7a58cc6ef298cdc4c46855af3e728ed4a0)), closes [#22](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/22)
+
 # [0.3.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.2.0...api-only-transcriberj-v0.3.0) (2026-09-18)
 
 
