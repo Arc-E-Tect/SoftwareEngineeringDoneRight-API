@@ -202,6 +202,7 @@ Find out before committing the upgrade:
 
 From Publisher 0.3.0 or earlier, every OpenAPI document with components built from fragments gains an `x-fragment-path` on each such component.
 That is an addition to the contract: raise the minor version of each of those contracts, or set `defaults.openapi.fragmentPaths: false` in `apionly.yaml` until you do.
+From Publisher 0.4.x or earlier, every AsyncAPI document gains an `x-fragment-path` on each fragment the bundler inlined, likewise: raise the minor version of each contract with an AsyncAPI document, or set `defaults.asyncapi.fragmentPaths: false` until you do.
 link:../../api-only-publisher/README.adoc#fragment-path-versions[What a change to `x-fragment-path` means for a contract's version →] explains why.
 
 A Subscriber upgrade does not change the contracts, so `apionly.lock` should not change; if it does, read the Subscriber's release notes before committing it.
