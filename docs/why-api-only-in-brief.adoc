@@ -1,0 +1,149 @@
+= Do you have an API description problem?
+:toc:
+:icons: font
+:source-highlighter: rouge
+
+// Intended location: docs/why-api-only-in-brief.adoc.
+// The short version, for readers who have not decided they need any of this.
+// The full argument is why-api-only.adoc.
+
+This is the five-minute version.
+It does not argue for anything until the last section, because the first question is whether you have the problem at all.
+
+Quite possibly you do not.
+
+[#questions]
+== Five questions
+
+Answer them about a real API in your organisation, not a hypothetical one.
+
+**1. Which version of your API is the team that calls it building against?**
+Can you answer without asking them?
+Can they answer without checking a Jira ticket, a Slack thread, a Teams channel, a text message or an email?
+
+**2. You added a field to a response last quarter.
+Which consumers know?**
+Not "were told" — know, in the sense that something in their build changed.
+
+**3. Your contract tests pass.
+Does that mean they are testing the current contract?**
+Or the contract as it was on the day someone wrote the test?
+If a schema gained a required field and the test class did not, what happens?
+
+**4. A new team needs your API description.
+What do you send them?**
+And how did you send it to them?
+When it changes, what happens to the copy they now have?
+
+**5. How many APIs does your organisation have?**
+How long does it take to find out, and how much would you bet on the number?
+
+If all five have quick, confident answers, stop reading.
+This tooling solves problems you do not have — or problems you have already solved, in which case I would rather like to hear how.
+
+Most people find that three or four of them have the same answer: _it depends who you ask_, or _we would have to go and look_.
+And that the answer to question 4 is the reason question 1 has no answer.
+
+[#common]
+== What the five have in common
+
+In each case the API description is a **file**.
+
+A file has no version, no provenance, no integrity check and no notification.
+You cannot tell when it arrived, where it came from, whether it is complete, or whether a newer one exists.
+So every copy of it drifts, quietly, and the first sign of trouble is something failing for a reason nobody connects back to a stale document.
+
+Now compare how you ship a library.
+Nobody emails a `.jar` around.
+It has a version, it comes from a repository, its bytes are checksummed, and when a new one is published an update bot opens a pull request in every project that uses it.
+
+**An API description has exactly the requirements of a library, and almost nobody treats it like one.**
+
+That is the whole observation.
+Everything else follows from taking it seriously.
+
+[#shift]
+== What taking it seriously looks like
+
+Three moves, and a fourth that people do not expect.
+
+**The description lives outside both the implementation and the clients.**
+Not in the service's repository, not in a client's.
+A description that lives inside the implementation cannot disagree with it — and a description that cannot disagree with an implementation is not a specification, it is a report.
+
+**It is built, versioned and published, one artifact per API.**
+Its own version number, moving when that API's promises move and not when anything else does.
+
+**Consumers declare a version and fetch it.**
+Exactly as they declare any other dependency, with a committed lockfile recording what arrived and its hash, re-checked on every build.
+
+**And the tests derive from it rather than restating it.**
+This is the one that surprises people, and it is question 3 above.
+A contract test has to say what the contract says: the fields, the types, which are optional, the path, the status codes.
+Written by hand, that is a second copy of the contract sitting inside your test suite — and it is the copy that decides whether the implementation passes.
+Generate it from the fetched contract instead, and a test cannot be checking a contract that no longer exists.
+
+[#changes]
+== What actually changes
+
+Concretely, in the working week:
+
+* "Which version are you on?" is answered by a file in the repository, not by asking someone.
+* A contract change arrives in every consuming project as a pull request from an update bot, in the ordinary flow of dependency maintenance.
+* Naming an endpoint wrongly fails to compile, instead of throwing halfway through a test run.
+* A schema gaining a required field fails the contract test, instead of passing and quietly documenting last year's shape.
+* Sharing an API with an external supplier is a credential and a version, not a copy of a file and a promise to tell them when it changes.
+* Asking what the organisation exposes is a question with one place to look.
+
+[#costs]
+== What it costs
+
+Four things, and they are real:
+
+* **A contract change becomes a release.**
+Slower than editing a file in the service you were already editing.
+* **Two reviews where there was one.**
+Although the one being added is the review of the specification, before anything is built against it — which is the review that should have been happening anyway.
+* **Somebody has to judge what is breaking.**
+No tool makes that call for you.
+* **Another piece of toolchain** to keep working and keep current.
+
+Anyone telling you a change of this shape is free is selling something.
+
+[#not-for-you]
+== You may not need this
+
+A single team, with one service, whose contract changes twice a week, with no external consumer, should not do any of this.
+The costs land immediately and the benefits need a second party to exist at all.
+
+It becomes worth it the moment there is someone on the other side of the interface who is not you.
+A second team, a supplier, a mobile client, a public API, a rewrite where two implementations must satisfy the same contract for a while.
+Your own test suite counts as a party, which is why question 3 tends to be the one that lands first.
+
+The honest framing is that the separation does not pay in the steady state.
+It pays at the moments when "there is exactly one implementation and one caller, and that will not change" stops being true — moments that are individually rare and collectively certain, and where the entire cost of not having separated is paid at once.
+
+[#smallest]
+== The smallest version you could try
+
+You do not adopt a governance programme to find out whether this helps.
+
+The smallest setup is one project.
+The API description lives in the project as a set of fragments, gets built and published to a directory inside `build/`, and the same build subscribes to it and generates its test classes from it.
+No registry, no second repository, no release process, no infrastructure, nobody else involved.
+
+Every guarantee described above works at that size — the version, the lockfile, the verification, the derived tests.
+And nothing about it has to be undone when the description later moves to a repository of its own and other teams start consuming it.
+
+That is deliberate: the interesting question is whether treating a description as an artifact changes how your team works, and you can answer it in an afternoon, in one project, without asking anyone's permission.
+
+[#more]
+== If you want the argument
+
+link:why-api-only.adoc[Why API-Only →] makes the full case: where the idea comes from, what a shared specification library buys and what it risks, what becomes possible that simply is not otherwise — standards with several implementers, third parties building tooling against your contract, suppliers who work from a contract rather than from access — and a balance sheet of gains against costs.
+
+link:README.adoc[The documentation →] skips the argument and asks two questions instead: does your project implement the API or call it, and where does the contract come from.
+It sends you to one of eight situations, each with a tutorial.
+
+The three tools are the link:../api-only-publisher/README.adoc[Publisher →], which builds and publishes; the link:../api-only-subscriber/README.adoc[Subscriber →], which fetches and verifies; and the link:../api-only-transcriberj/README.adoc[TranscriberJ →], which turns a fetched contract into the classes your tests use.
+You can stop after any one of them.

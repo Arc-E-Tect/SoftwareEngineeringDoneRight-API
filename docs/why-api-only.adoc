@@ -1,0 +1,765 @@
+= Why API-Only
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:sectanchors:
+:icons: font
+:source-highlighter: rouge
+
+// Intended location: docs/why-api-only.adoc, linked from the repository README
+// above the component table, and from docs/README.adoc.
+
+The other documents in this repository say what the tools do and how to use them.
+This one says why they exist, what problem they solve, and where the approach costs you something.
+
+It is the argument, not the manual.
+If the argument lands, link:README.adoc[the documentation →] will get you running.
+
+[#api-only]
+== Why "API-Only" and not "API-First"
+
+API-First is normally stated as a claim about order: design the API before writing the code.
+
+Order alone is unenforceable.
+You can design first, produce a beautiful document, and then let three years of implementation drift away from it — which is, empirically, the common outcome.
+Nothing about having gone first constrains what happens next.
+
+What makes it real is not sequence but **direction of dependency**.
+The implementation depends on the specification; the specification depends on nothing.
+That is a property of a build, not of a process, and a build can check it.
+Concretely: the implementing project declares a contract version, fetches it, verifies it, and fails when what arrived is not what it expected.
+The contract is an input to the build in exactly the way a library is.
+And the test code that decides whether the implementation conforms is generated from that same input, so the dependency runs one way through the tests as well.
+That is what the tools described in <<what,the next section §>> do, and it is the only part of API-First that a machine can hold you to.
+
+"First" carries a second problem, and it is the one that names this project.
+"First" implies a follow-up — that a client is coming, presently, and that the API is being designed ahead of it.
+Teams who hear it that way design for that client.
+The endpoints match its screens, the payloads match its view models, the pagination matches its scroll behaviour, and the specification is quietly coupled to one consumer instead of to one implementation.
+That is the same mistake as generating the specification from the code, with a different partner.
+Either way the description ends up belonging to one party to the interface instead of standing outside both.
+
+**API-Only** says what actually matters: the specification is the only authority.
+Not first among several.
+Not a design document that the code later supersedes.
+The one artifact that says what the interface is, independent of who implements it and independent of who calls it.
+
+This repository exists to make that paradigm practical.
+Everything that follows is what it takes, what it buys, and where it costs you something.
+
+[#what]
+== What these tools are
+
+Three tools, one design.
+
+The **API-Only Publisher** is a command-line tool.
+It takes a library of OpenAPI and AsyncAPI fragments — one schema, one path, one channel, one message per file — and builds from it a single self-contained document per API: resolved, linted, and stamped with that API's own version.
+It then packs each one as an archive with a manifest of hashes, and publishes it to a directory, a Maven repository, npm, or a GitHub release.
+
+The **API-Only Subscriber** is a Gradle plugin.
+It fetches such an archive at the version the build declares, verifies it against a committed lockfile, puts it on the classpath, and fails the build when what arrived is not what was expected.
+
+The **API-Only TranscriberJ** is a Gradle plugin that builds on the Subscriber.
+It generates a Java class tree from the fetched contract: the body of every schema, the description of every field, the path and method and status codes of every operation, and the constraints each property declares.
+Tests use those instead of restating the contract by hand.
+The `J` is for Java; the design leaves room for the same idea in another language.
+
+Between them, they make an API description something a build *depends on* at a known version — the way it depends on a library — rather than a file someone copied in at some point for reasons nobody recorded.
+
+=== Useful
+
+A product is useful when it solves a problem you actually have, or makes something you already do more pleasant.
+
+The problem these tools solve is that an API description is treated as a file.
+Files get copied, and copies go stale, and nobody finds out.
+Files have no version, so "which version of the API is this?" has no answer.
+Files live inside whichever project happens to hold them, so the description of an interface ends up owned by one of the parties to it.
+
+<<problem,The problem in detail §>> makes the case that this is your problem too, even if you have never framed it that way — which is likely, because until the description is a versioned artifact there is nothing you could have done about it.
+
+=== Usable
+
+A product is usable when the cost of adopting it is clearly smaller than what adopting it gives you.
+That is a harder bar than being useful, and it is the one most tooling fails.
+
+Five things are done specifically to clear it.
+
+**It starts small and stays small.**
+The smallest useful setup is one project: fragments under `src/main/api/`, a version file, publish to a directory inside `build/`, subscribe to it in the same build.
+No registry, no second repository, no release process, no infrastructure.
+Everything the tools guarantee — versioning, verification, drift detection — works at that size, and nothing about it has to be undone later to grow.
+
+**You take only the parts you need.**
+The Publisher is useful without the Subscriber, the Subscriber without the TranscriberJ, and the TranscriberJ without any emitter beyond the plain classes.
+Each layer is additive, and none of them is on your classpath unless you asked for it.
+
+**Adoption is documented as a small number of situations, not as a product surface.**
+link:README.adoc[The documentation →] asks two questions — does your project implement the API or call it, and where does the contract come from — and sends you to one of eight use cases.
+Each has an overview, a tutorial that builds it step by step, and a prompt that has an AI coding assistant build it in your project, tests first.
+You read the one that is yours.
+
+**It uses machinery your build already has.**
+Contracts are published to Maven, npm, or a release, so consumers resolve them exactly as they resolve anything else, with the caching, the credentials and the update bots they already run.
+Nothing new to host, nothing new to operate.
+
+**It refuses to fail quietly.**
+An unresolved placeholder fails the build rather than emitting a marker into a shipped document.
+A hand-edited contract fails verification.
+A fragment no contract references is reported, because a fragment nothing references is never linted.
+A construct the generator cannot represent produces a method that says so, rather than one that quietly checks less than you think.
+The failure modes it is possible to have are ones you find out about.
+
+[#problem]
+== The problem: a specification that is a file
+
+The usual arrangement puts an API description inside the project that implements it.
+It sits beside the code, often generated from annotations in that code, and it ships when the service ships.
+
+This is convenient, and it is where nearly every project starts.
+It also quietly makes four things true.
+
+**The description becomes a report rather than a constraint.**
+If the document is generated from the implementation, it cannot disagree with the implementation.
+A specification that cannot disagree with an implementation is not a specification; it is a mirror.
+Everything it tells you, you already knew.
+
+**The implementation owns the promise.**
+Whoever can merge to the service's repository can change what the service promises, in the same commit that changes what it does, reviewed by the same people, released on the same cadence.
+There is no moment at which someone must agree to the promise separately from agreeing to the code.
+
+**Consumers get copies.**
+A tester needs the document, a client team needs the document, a supplier needs the document.
+They get a `.yaml` file by whatever means — a copy, a download, a `curl` against a running instance.
+Each copy is undated, unversioned and unverifiable.
+When one of them is wrong, nobody finds out until something fails in a way nobody connects back to a stale file.
+
+**Nobody can answer "what APIs do we have?"**
+The answer is spread across every repository anyone ever created, in a format that differs per team, at a freshness that differs per repository.
+Organisations respond by building a portal, and then discover the portal has the same problem one level up: it is a copy too.
+
+All four follow from one decision that is almost never made deliberately — that the specification is a *file in a project* rather than an *artifact with a life of its own*.
+
+=== The problem recurs, one level down
+
+There is a fifth instance of the same problem, and it hides in the place you would least like to find it.
+
+A test that checks an implementation against its contract has to state what the contract says.
+Which fields a payload carries, which are optional, what type each one is, which path the operation lives at, which status codes it returns, what the error envelope looks like.
+Written by hand, that statement is a second copy of the contract — undated, unversioned, unverifiable, sitting inside the test suite.
+
+This copy is worse than the others in one specific way: it is the oracle.
+It is the thing that decides whether the implementation passes.
+
+The failure is quiet and complete.
+A schema gains a field; the hand-written descriptor does not.
+The contract test passes, documents the previous shape, and reports success.
+Nothing anywhere says that the test is checking a contract that no longer exists.
+
+The same holds for every string a test uses to name an endpoint.
+A path written as a literal, or looked up from a properties file the team maintains alongside the specification, is a copy of something the contract already states — and a typo in it fails at run time, in the middle of a test run, rather than at compilation.
+
+[#how]
+== How the tools address it
+
+Each facet of the problem has a specific answer, and the later sections argue why each answer is the right one.
+
+[cols="2,3,1", options="header"]
+|===
+|Facet of the problem |What the tools do about it |Argued in
+
+|A description that only reports what the code does
+|The contract is built from a fragment library that no implementation owns, and the implementing build *fetches* it and fails when it is not what was declared.
+The dependency runs one way, and a build checks it.
+|<<api-only,Why API-Only §>>
+
+|The implementation owning the promise
+|The specification is a separate artifact with its own version and its own review.
+Changing what a service promises becomes a different act from changing what it does.
+|<<three-roles,Three roles §>>
+
+|Undated, unverifiable copies
+|One archive per target, with a manifest of hashes, published to a registry.
+The consumer records what it fetched in a committed lockfile and re-verifies on every build.
+|<<registry-not-copy,Why a registry, not a copy §>>
+
+|Not knowing what exists
+|One library holds every fragment, every contract is built from it, and a whole-landscape document is another target in the same configuration — so it cannot fall behind.
+|<<library,The specification library §>>
+
+|Definitions drifting apart
+|A fragment is one file.
+The REST endpoint and the event that both carry a username reference that same file, so it means the same thing in both — enforced, not agreed.
+|<<library,The specification library §>>
+
+|Not knowing what a change affects
+|`changed` resolves each contract's reference graph and reports which contracts a commit actually reaches, so only those are released — and so review can be routed to exactly the people affected.
+|<<risks,Risks, and what manages them §>>
+
+|Being unable to share a contract outside the organisation
+|A contract is a package.
+It goes to a supplier, a standards consumer or a third party as coordinates and a version, with no access to anything else.
+|<<payoff,What the separation makes possible §>>
+
+|The test suite holding its own copy of the contract
+|Bodies, field descriptions, operation constants and constraints are generated from the fetched contract, into the build directory, regenerated whenever the contract or the lockfile changes.
+There is no second copy to fall behind.
+|<<derive,Derive, don't copy §>>
+
+|A test naming an endpoint as a string
+|The path is a generated constant on the operation's class, so a wrong name fails to compile rather than at run time.
+|<<derive,Derive, don't copy §>>
+
+|Bundling losing the structure the fragments were authored in
+|The Publisher stamps every component with the fragment file it came from, so a downstream tool can name things the way their authors named them, from the published artifact alone.
+|<<bundles,Why bundles §>>
+|===
+
+[#three-roles]
+== Three roles, not two
+
+The correction starts by noticing that three different things are usually collapsed into two.
+
+A **specification** describes what an interface promises.
+A **provider** implements that promise.
+A **client** relies on it.
+
+These look like a chain, and the chain framing is where the trouble begins, because a chain suggests the specification belongs to whichever end of it is nearest.
+They are better understood as three independent things, each with its own lifecycle:
+
+* A specification can have no implementations, one, or many.
+* An implementation can be rewritten, replaced, moved to another language or another supplier, without the specification changing at all.
+* A client depends on the specification, and should never depend on the implementation — not on its version, its technology, or its repository.
+
+If those are true, then the specification cannot live inside the provider's project, and it cannot live inside a client's project.
+It has to be its own thing: its own project, its own version, published on its own terms, belonging to neither party to the interface it describes.
+
+That is the whole of it.
+A description that lives inside the provider reports on the provider.
+A description that lives inside a client describes what that client happens to need.
+Only a description that lives outside both can be a specification, because only then is there something both parties are answerable to, rather than something one of them produces.
+
+This is unpersuasive at the moment you first hear it, and for a good reason.
+In most organisations, most of the time, there is exactly one implementation of any given API, and it will be the only one for years.
+Under that condition the separation looks like ceremony — a project, a version, a release, all to serve a relationship with one participant on each side.
+
+The separation does not pay for itself in the steady state.
+It pays at the moments when the assumption breaks: a rewrite, a second implementation, a supplier, an acquisition, a standard, a sandbox.
+Those moments are individually rare and collectively certain, and the whole cost of not having separated is paid at that moment, when it is most expensive.
+
+[#library]
+== The specification library
+
+If a specification is an artifact rather than a file, the next question is where it is authored.
+
+The position these tools are built around is that an organisation keeps its API descriptions in one place: a specification library of fragments — schemas, paths, channels, messages, tags — from which one contract document is built per bounded context.
+
+The library is where this ends up when it is worth it.
+It is not where you have to start; <<starting,starting without one §>> describes the smaller shapes, and all of them grow into it without rework.
+
+=== What it buys you
+
+**A real answer to "what do we have?"**
+Not a portal that reflects reality with a lag, but the place reality is authored.
+The portal, if you want one, is generated from it.
+
+**Definitions that are shared because they are the same, not because they were copied.**
+This is the strongest argument and the easiest to underrate.
+When a username is one fragment, the REST endpoint that accepts it and the event that carries it reference that same file, so a username means the same thing over HTTP and over a message broker.
+Synchronous and asynchronous contracts stop being two parallel vocabularies that drift.
+
+**Cross-cutting concerns defined once.**
+The error schema, the pagination envelope, the authentication scheme, the correlation header.
+These are what every team reinvents slightly differently, and the cost of the difference is paid by every consumer forever.
+In one library they are one fragment each, and changing the organisation's error format is one commit.
+
+**Refactoring at landscape scale.**
+Renaming a shared schema, splitting an overloaded type, correcting a mistake made across forty contracts: ordinary code changes in one repository, and near-impossible across forty.
+
+**Governance that is mechanical rather than aspirational.**
+Lint rules apply to everything.
+Review routing is `CODEOWNERS`.
+Consistency stops being a guideline in a wiki and becomes something a pull request fails.
+
+**A whole-landscape view for free.**
+Because every contract is built from the same fragments, a document describing the entire estate is another target in the same configuration — built and linted like the rest, and incapable of falling behind the contracts it summarises.
+
+[#risks]
+=== Risks, and what manages them
+
+A shared library concentrates decisions, and concentrated decisions have failure modes.
+None of these is a reason not to have one.
+All are reasons to set one up deliberately, and most are addressed by a single structural choice — **scoping each contract to a bounded context**, so that a contract, the team that owns it, and the service that implements it are all the same boundary.
+
+**Distance between the contract and the code.**
+Changing an API and its implementation was one commit; with a separate library it is two changes and two reviews.
+
+_What manages it:_ look at which review is actually being added.
+The code review was always going to happen, as part of the ordinary pull or merge request.
+The one being added is the review *of the specification*, before anything is built against it — and that is the review that should have been happening all along and usually was not.
+
+What happens instead, today, is that the specification gets reviewed as part of the code review, because that is the only review there is.
+By then it is already implemented.
+Every correction found at that point — a field with the wrong name, a status code that should not be there, a resource modelled at the wrong granularity — invalidates work that has already been done, and the pressure is to let the specification match the code rather than the other way round.
+
+So the second review is not new work so much as the first review finally being separated out and moved to where it is cheap.
+Beyond that: the library only leaves the implementing repository when there is a reason for it to, and a pre-release version lets implementation start before the contract is final.
+
+**Review becoming a queue, and then a gatekeeper.**
+One library can mean one central group reviewing everything, which is a bottleneck, and bottlenecks acquire opinions.
+
+_What manages it:_ bounded-context scoping plus `CODEOWNERS`.
+A change to a context's own fragments is reviewed by that context's owners — the same people who own the service implementing it — not by a central board.
+Only a change reaching *shared* fragments needs wider review, and the tooling says precisely when that is: `changed` resolves each contract's reference graph, so "which contracts does this fragment change reach, and therefore whose approval does it need?" has a computed answer rather than a guessed one.
+That is also how the `CODEOWNERS` file gets derived rather than negotiated.
+
+**Ownership becoming unclear.**
+In a per-service repository ownership is obvious; in a shared library it has to be stated.
+
+_What manages it:_ the same scoping.
+If a bundle corresponds to a bounded context, and a bounded context corresponds to a service with an owner, then the owner of that service is the required reviewer of every change reaching that service's bundle.
+Ownership of fragments follows from ownership of the contracts they build, which follows from ownership of the services that implement them.
+
+**Cheap reuse turning into false coupling.**
+The library's best feature is that a definition can be shared; the risk is two contexts sharing one because it looked the same at the time.
+A shared `Address` that two contexts each bend toward their own needs is worse than two that were always allowed to differ.
+
+_What manages it:_ making context-local the default and shared the exception.
+A fragment starts inside its context.
+Promoting it to shared is a deliberate change that, by the previous point, needs the agreement of everyone it would reach — which is exactly the conversation that should happen before two bounded contexts commit to one definition.
+And when that conversation concludes the other way, `split` exists for it: it resolves each part's closure and materialises it whole, so the parts still build after separating.
+
+**Read access being library-wide.**
+Anyone with a checkout of the library can read every contract in it.
+
+_What manages it:_ first, noticing how few people need a checkout at all.
+Neither the projects that implement a contract nor the projects that call one need access to the library.
+Both subscribe to published artifacts, at declared versions, and see only the contracts they asked for.
+That covers nearly everyone who touches an API.
+
+Who is left is the people designing APIs, and they should have the whole library — not in spite of the risk, but because breadth is the point.
+You cannot reuse a definition you cannot see, and you cannot propose promoting a context-local fragment to a shared one without knowing what is already shared.
+A designer with a partial view will reinvent what already exists, which is the problem the library was built to solve.
+
+So the question is much smaller than it first appears: it concerns the design population rather than the engineering population, and for that population broad access is the feature.
+Where an organisation genuinely cannot grant even that, repository-level controls are as fine-grained as your platform allows — path-based rules, protected directories, or genuinely separate repositories treated as one logical library, which is what `split` supports.
+
+**Silence, which is the hardest to see.**
+If a contract change takes three days, people stop proposing contract changes.
+They add an undocumented field or an undeclared endpoint and tell themselves they will specify it later.
+The specification ossifies while the implementation moves — precisely the condition the library exists to prevent, now with a governance process on top reporting that everything is compliant.
+
+_What manages it:_ watch the *rate* of contract changes as well as their conformance — but read it against the contract's phase, because the same number means opposite things at different times.
+
+While a contract is being implemented for the first time, no changes is a warning.
+Implementing a specification almost always surfaces something the design missed, and a contract that survives its own first implementation untouched is more likely being worked around than being right.
+
+Once it is in production, the signal inverts.
+A contract that has stopped changing is a contract that got it right, and that is the goal rather than a symptom.
+Shared fragments that have been stable across several contexts and several releases are the strongest candidates you have for treating as de-facto standards.
+
+And detect the bypass directly, rather than inferring it, which is a different problem from the one the publishing tools solve — see <<proved,what is proved, and by what §>>.
+
+**Consistency is not correctness.**
+A library makes contracts consistent, discoverable and governable.
+None of those is good design, and the confidence governance produces can make a badly designed landscape harder to notice.
+
+_What manages it:_ mostly nothing mechanical, and it is worth being plain about that.
+Lint is a floor.
+Design review is still design review, and the library makes it possible — every contract in one place, reviewable by people who can see the others — without making it happen.
+
+There is one modest mechanical signal, and it is a side effect rather than a feature.
+A tool that has to express a contract in another form finds out where the contract is awkward: bodies nested three or more levels deep, references that cycle through three components before returning, schemas written anonymously inline in an operation instead of being named, constructs no rule represents.
+The TranscriberJ reports all of those, because it has to.
+That is not a design review, and none of it fails a build.
+It is a list of places worth looking, produced by something that had no opinion about your design and simply could not represent parts of it cleanly.
+
+[#starting]
+=== Starting without one
+
+None of this requires adopting the whole position at once, and the tools are built for that.
+
+A single team with one service, whose contract changes several times a week and has no external consumer, should not start with a central library.
+The distance costs land immediately, and the benefits — discovery, reuse, cross-context consistency — need more than one context to exist at all.
+
+So the first use case on each side keeps the fragments in the implementing project and publishes to a directory inside the build.
+The second puts a library and the projects that use it in one repository.
+The third gives the library its own repository.
+The fourth consumes a contract that somebody else publishes entirely.
+
+The same versioning, the same verification and the same lockfile apply at every step, and nothing built at one step has to be undone to reach the next.
+
+[#payoff]
+== What the separation makes possible
+
+The arguments so far are about tidiness.
+These are about things that are structurally impossible when the specification lives inside an implementation.
+
+=== A specification can be a standard
+
+A formal standard — published by a standards body — or a de-facto one, published by whoever got there first and got adopted.
+
+A standard has properties an implementation-owned document cannot have.
+Its version means something to people with no relationship to each other.
+It is implemented by different organisations, in different languages, on different schedules, with no shared repository and often nothing else shared at all.
+It outlives any particular implementation, including the first.
+
+If the document lives in a service's source tree, none of this is available, and not for a process reason.
+There is no artifact to standardise.
+"Version 2.1.0 of the specification" has no referent independent of "whatever that team's main branch said when you looked."
+
+Published as a versioned artifact, the same document can be implemented by anyone, verified against by anyone, and depended on by people who will never meet.
+
+=== Third parties can build tooling against it
+
+This follows directly, and it is where a distributable artifact earns its keep.
+
+Once a contract is a versioned, checksummed artifact, someone outside the organisation can write a conformance suite, a certification harness, a mock server, a client generator or a traffic validator — against version 2.1.0, meaning exactly one immutable thing.
+They need no access to any implementation, and no relationship with whoever wrote it.
+
+Compare the alternative: a conformance tool built against "the current specification" has to define what current means, and every answer to that is a negotiation with somebody's release process.
+
+The TranscriberJ is itself an instance of this, which is the most direct evidence available that the property is real.
+It consumes nothing but the published archive and its manifest.
+It never reads the specification library, and a project using it never needs access to one.
+Everything it produces — class names, packages, bodies, field descriptions, endpoint constants — is derived from what the artifact carries.
+Anyone could have written it, for any language, against any organisation's contracts.
+
+Its emitters make the same point one level further in.
+The classes the TranscriberJ generates depend on nothing; an emitter turns them into a dialect — Spring REST Docs descriptors today, WireMock stubs or another framework's idiom tomorrow — and an emitter is an ordinary library implementing a published interface.
+Adding a dialect does not require touching the generator, and does not require the generator's author to have anticipated it.
+
+This is how an ecosystem forms around an interface.
+It does not form around a file.
+
+=== You can contract out an implementation without giving away your architecture
+
+An organisation specifies an API and contracts a supplier to implement it.
+
+The specification stays where it is, owned and versioned by the organisation.
+The supplier receives contract version 3.2.0 as an artifact, from a registry either side can host.
+They build against it; the organisation tests their delivery against the same artifact; both parties can point at a checksum when there is a disagreement about what was agreed.
+
+Two consequences matter commercially.
+The organisation can replace the supplier without renegotiating the interface, because the interface was never theirs.
+And acceptance becomes mechanical: conformance to a named version, rather than to a reading of a requirements document.
+
+=== You can contract out a client the same way
+
+The inverse case, and the more common one.
+
+An organisation has a web application and contracts a supplier to build a mobile application alongside it.
+The supplier needs the contracts of the APIs the mobile app will call.
+They do not need, and should not have, the source of the services implementing them.
+
+So the organisation publishes the relevant contracts to a registry the supplier can read — the organisation's own, or the supplier's package registry, since either is Maven or npm coordinates behind a credential.
+The supplier's build declares the versions it depends on, exactly as it declares any other dependency.
+
+What this changes is the failure mode of the engagement.
+When the organisation revises a contract, the supplier sees a version bump — a pull request from an update bot, in the ordinary course of dependency maintenance — rather than a surprise at integration.
+When the supplier reports a defect, both sides can establish which contract version the failing build used, because it is in a committed lockfile.
+"Which version of the API were you building against?" stops being a conversation.
+
+=== An implementation can be replaced without the contract moving
+
+The general case, of which both supplier scenarios are instances.
+
+Replacing a monolith with services, rewriting a service in another language, splitting one implementation in two, running a sandbox implementation beside a production one, deploying regional implementations of one interface — all ordinary when the contract is separate, and all migrations of the contract itself when it is not.
+
+The strangler pattern depends on this particularly.
+Old and new implementations must satisfy the *same* contract while both serve traffic, which is straightforward when there is one contract that neither owns, and a negotiation when the contract lives inside the thing being strangled.
+
+[#bundles]
+== Why bundles, scoped per context
+
+Three conventions are worth justifying, because all of them look arbitrary until the reason is stated.
+
+**Fragments are how people author; bundles are how machines consume.**
+A library of small files — one schema, one path, one channel each — is how a specification stays reviewable, reusable and refactorable.
+It is also unusable to a consumer, who would have to reproduce the library's entire directory structure for the `$ref`s to resolve.
+So the published artifact is a bundle: one self-contained document, every reference resolved, valid on its own, readable by any tool that reads OpenAPI or AsyncAPI.
+Authoring and consumption have different requirements, and satisfying both with one representation gives you either a library nobody can consume or a document nobody can maintain.
+
+**Provenance survives the flattening.**
+Resolving every reference into one document necessarily discards the structure the fragments were authored in.
+Every component lands in a single namespace, and the bundler picks the keys — mangling them where two files share a name.
+That is fine for a document a person reads, and not fine for a tool that wants to call things what their authors called them.
+So the Publisher stamps each component with the path of the fragment it came from.
+It is inert to every other OpenAPI tool, and it is what lets a generated class be named after `UserV1.yaml` rather than after whichever key a bundler happened to choose.
+Without it, a downstream tool would have to read the specification library to make sense of the artifact — which would undo the access model the whole approach rests on.
+
+**A consumer receives its own contract, not the landscape.**
+Each bounded context gets a document describing what it implements or calls, and nothing else.
+Smaller blast radius, narrower access, and — most importantly — a version number that means something.
+"Contract version 2.1.0" is informative when it refers to one context's promises.
+It is meaningless when it refers to an entire estate, because it changes whenever anything anywhere changes and tells a consumer nothing about whether the change affected them.
+
+This is also why the unit is called a *target* rather than a *service*.
+It is whatever gets its own contract: a microservice, a modular monolith, a backend-for-frontend, a https://zenodo.org/records/19827976[Micro-Frontend Adapter ↗], a documentation aggregate.
+Scoping follows the contract, not the deployment.
+
+**Each target versions independently.**
+The corollary, and what makes per-context scoping worth its machinery.
+A change to one context's schema has no business making every other context's consumers take a new version.
+The cost is that the release has to work out which contracts a commit actually changed — resolving each contract's reference graph and comparing what it reaches — rather than releasing everything on every commit.
+That computation is the price of version numbers that mean something, and it pays for itself twice over, because the same closure is what routes review to the right owners.
+
+[#registry-not-copy]
+== Why a registry, and not a copy
+
+The distribution argument is short, because the industry settled it elsewhere years ago.
+
+A copied file has no version, no provenance, no integrity check and no notification.
+You cannot tell when it arrived, where it came from, whether it is complete, or whether a newer one exists.
+Every one of those is something package managers were built to provide, and they provide them for libraries without anyone finding it remarkable.
+
+A specification has the same requirements as a library.
+So it is packaged the same way: one archive per target, containing that target's built documents and a manifest of their hashes, published to Maven, npm or a release — whichever the consumer's ecosystem already understands.
+
+Three properties follow, and they are the whole reason for the mechanism.
+
+**Immutability.**
+Version 2.1.0 is one set of bytes, permanently.
+"The spec changed under me" stops being something that can happen.
+
+**Verifiability.**
+A committed lockfile records what was fetched and its hash.
+A hand-edited contract in a build directory fails the build rather than silently becoming the thing the tests were written against.
+
+**Notification.**
+Publishing where update bots can see it means a new contract version arrives as a pull request in every consuming repository, in the ordinary flow of dependency maintenance.
+Without this, a registry is a place where new versions go to be ignored.
+
+[#derive]
+== The last mile: derive, don't copy
+
+Distribution gets the contract as far as the build, verified, at a known version.
+Something still has to read it, and in practice that something is test code.
+
+This is where <<problem,the problem recurs §>>.
+A contract test has to state what the contract says — the fields, their types, which are optional, the path, the status codes, the error envelope — and stating it by hand puts a second copy of the contract inside the test suite.
+That copy is the oracle.
+It decides whether the implementation passes, and when it falls behind, the test passes anyway and reports the previous shape as though it were current.
+
+The answer is the same as it was one level up, applied recursively: do not copy the contract, derive from it.
+
+That answer was not arrived at by building a generator.
+It was arrived at by hand, in three stages, and the generator is only the third.
+
+A contract test starts by naming its expectations inline — `fieldWithPath("username").description("The unique username of the account.")` — and the test then says what the payload contains without saying where that came from.
+Read it a year later and you cannot tell that the shape is `UserV1`'s, or that changing `UserV1` should have changed this test.
+The obvious correction is to give each schema in the contract a matching class, named after it, and have tests reference that: `UserV1.responseFields()`.
+The mapping between specification and test code becomes one-to-one and visible, the same definition serves every test that touches that schema, and a reader can follow a test straight back to the fragment it is testing.
+
+That is a substantial improvement and most teams never get that far.
+It is also where the practice stops on its own, because the last step cannot be taken by hand.
+The one-to-one mapping is maintained by discipline, so it holds for almost every schema, almost all of the time — and the exceptions are silent, because a class that has fallen a field behind its schema still compiles and still passes.
+Generating the classes is what turns "almost one-to-one, maintained carefully" into "one-to-one, by construction".
+
+So what the tool automates is not an idea it introduced.
+It is the last step of a practice that was already worth the effort when every step of it was manual.
+
+The TranscriberJ generates, from the fetched artifact, what a test would otherwise restate: a body writer for each schema, a field description for each property, path and method and status constants for each operation, and each constraint the contract declares as a constant.
+The test names those instead.
+
+What changes is small to read and large in effect.
+
+[source,java]
+----
+// before: the endpoint as a string the team maintains, the fields as a hand-written list
+client().get().uri(ApiEndpoints.get("users.by-username"), "alice")
+        .exchange()
+        .expectBody()
+        .consumeWith(document(id, UserV1.responseFields()));
+
+// after: both derived from the contract the build locked
+client().get().uri(GetUserOperation.PATH, "alice")
+        .exchange()
+        .expectBody()
+        .consumeWith(document(id, UserV1Docs.responseFields()));
+----
+
+Four properties follow.
+
+**A contract change cannot pass unnoticed.**
+When a schema gains a required field, the generated descriptor gains it too, and the test fails until the implementation provides it.
+Before, that was the case that passed.
+
+**Wrong endpoints fail at compile time.**
+`GetUserOperation.PATH` is a constant on a class that exists only because the contract declares that operation.
+Rename the operation, move the path, or mistype the name, and the build stops.
+A key looked up from a properties file fails at run time, in the middle of a test run, with an exception about a missing key.
+
+**Nothing is committed, so nothing can go stale.**
+The classes are generated into the build directory and regenerated whenever the contract document or the lockfile changes.
+There is no file for anyone to edit, no file to forget to regenerate, and a `clean` removes all of it.
+Each class carries the fragment it came from and that fragment's hash, and a manifest lets a single test assert that the whole tree corresponds to the version the lockfile names.
+
+**Text stops being maintained twice.**
+Description text that already exists in the specification does not need a properties file beside the tests repeating it.
+Whether descriptions come from the contract at all is a choice: by default the generated descriptors carry a placeholder, because the class tree exists for contract testing and documentation is usually generated elsewhere, from text a technical writer owns.
+
+=== One vocabulary, every suite
+
+The class tree is easy to mistake for contract-test scaffolding.
+It is worth more than that, and the reason is a failure mode that contract tests alone cannot prevent.
+
+Contract tests are not the only tests that construct requests and read responses.
+System tests do too, and so do the stubs that stand in for a service while its consumers are built.
+If each of those states the payload's shape in its own way, they can all pass while disagreeing with the contract and with each other.
+That is the worst case available: a system test suite reporting green over payloads that the specification would reject, discovered only when the contract tests are finally made to pass and every system test has to be rewritten to match.
+
+Deriving the vocabulary once removes the possibility rather than reducing the odds.
+The same generated classes build the bodies the stubs return, the bodies the system tests send, and the descriptors the contract tests assert on.
+There is no version of the payload's shape that one suite holds and another does not, because there is only one.
+
+This also changes what the suites are worth together.
+Contract tests check that the implementation matches the contract; system tests check that the behaviour is the one anybody wanted.
+When both speak the same derived vocabulary, passing system tests are evidence about behaviour *and* carry the contract's shape with them, rather than being evidence about behaviour that may or may not have been exercised through a compliant payload.
+
+=== One derivation, many dialects
+
+The generated classes depend on nothing.
+A body is a `String`; a field description is a small record of a path, a type, whether it is optional, and whether it stands for a subsection.
+
+A dialect is added by an emitter — an ordinary library implementing a published interface, added as a dependency — which turns those into whatever a particular framework wants.
+Spring REST Docs descriptors and snippets today; WireMock stubs, another test framework, or another language on the same principle.
+
+That separation is what keeps the core honest.
+The thing being derived is the contract's meaning; how it is spoken is a separate, replaceable concern.
+It also means a project pays only for the dialects it asks for: no emitter is present unless it was declared, and the libraries an emitter's generated code needs are added at a version it was tested with, which the project can override.
+
+=== It is still a projection
+
+Derivation removes the copy.
+It does not make the test a proof.
+
+A generated field description says a path, a type and whether the field is optional; a JSON Schema says considerably more.
+Constraints are emitted as constants, not as checks — a body built from arguments that violate `minLength` violates it too.
+Tests for invalid payloads are written by hand, deliberately, because a generator that could produce contract-violating bodies would undermine the guarantee that generated ones conform.
+
+What that leaves is set out next.
+
+[#proved]
+== What is proved, and by what
+
+Three different questions get asked about a contract, and it is worth keeping them apart, because each has its own mechanism and the confidence from one says nothing about the others.
+
+**Is the contract in my build the one that was published?**
+The Subscriber answers this: a committed lockfile, a hash per file, re-verified on every build.
+A hand-edited document in a build directory fails rather than quietly becoming the thing the tests were written against.
+
+**Does my test suite's idea of the contract match the contract?**
+The TranscriberJ answers this by making the question vacuous.
+There is no second idea to compare, because the descriptors, bodies and endpoint constants are generated from the locked document.
+
+This question was invisible before, and neither of the other two mechanisms could see it.
+A lockfile verifies a document nobody's tests are obliged to read.
+A detector comparing code against a contract cannot tell that the *test* was written against a contract from eighteen months ago.
+
+**Does the code honour the contract?**
+Neither of the first two answers this at all.
+Verification proves the document is the one that was published; derivation proves the test speaks the same contract.
+Neither proves anything whatsoever about the implementation.
+
+An undeclared endpoint, an undocumented field, a response carrying one more property than the schema admits — all of these coexist happily with a green build, a verified lockfile, generated descriptors and a pipeline that looks entirely compliant.
+That is the silent bypass described under <<risks,the risks §>>, and it needs something that inspects the implementation and compares it against the contract.
+
+The https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-suite[Arc-E-Tect API-Only Suite ↗] is a Gradle plugin bundling three detectors, one for each way an implementation and its contract can disagree:
+
+* **Shadow API Detector** finds endpoints the code implements that the contract does not declare.
+* **Mirage API Detector** finds endpoints the contract declares that the code does not implement.
+* **Doppelganger API Detector** finds endpoints that are declared and implemented, but have not a single test verifying that the implementation conforms to the contract.
+
+That last one is worth reading precisely: it checks that at least one conformance test exists per endpoint, not that the set of them is complete.
+No tool can tell you that your tests cover the contract; this one tells you where nothing is checking at all.
+
+The three mechanisms are built to compose rather than merely to coexist, and the seams show it.
+The detectors validate against the contract the Subscriber fetched, so what they compare the code to is a checksum-verified artifact at a known version rather than a file whose provenance the build cannot see.
+And because a detector reads test sources one file at a time, without a classpath, it cannot see what `GetUserOperation.PATH` holds — so the TranscriberJ writes an index of every generated endpoint constant for the detectors to resolve them through.
+
+Together they answer: this is the published contract, at this version; the tests speak that contract and no other; and the code implements what the contract declares, no more, with something checking each endpoint.
+
+None of that is a claim that the payloads are valid against the schema, that the tests are thorough, or that the contract is well designed.
+Those remain yours.
+
+[#balance]
+== The balance sheet
+
+Both sides in one place, because the summary of a balanced argument should be balanced too.
+
+.What you get
+[cols="1,3", options="header"]
+|===
+|Gain |What it means in practice
+
+|A specification that can disagree with the code
+|The document constrains the implementation instead of reporting on it, and a build enforces the direction.
+
+|Versions that mean something
+|Per target, so a version change tells a consumer that something they depend on changed.
+
+|Verifiable delivery
+|A manifest and a lockfile, so the contract a build used is known, recorded and re-checked on every build.
+
+|Tests that cannot fall behind the contract
+|Descriptors, bodies and endpoint constants are derived from the locked contract, so a contract change shows up as a failing test rather than a silent pass.
+
+|Mistakes that move from run time to compile time
+|A wrong endpoint name, a renamed operation or a removed field breaks the build instead of surfacing mid-run.
+
+|Discovery and reuse
+|One library, one definition per concept, one landscape view that cannot fall behind.
+
+|Change routed to the people it affects
+|The reference closure computes which contracts a fragment change reaches, which is both what gets released and who reviews it.
+
+|Distribution beyond the organisation
+|Standards, third-party tooling, and supplier engagements on either side of the interface.
+
+|Replaceable implementations
+|Rewrites, strangler migrations and second implementations without touching the contract.
+|===
+
+.What it costs
+[cols="1,3", options="header"]
+|===
+|Cost |What it means in practice
+
+|A contract change is a release
+|Slower than editing a file.
+Pre-release versions reduce this; they do not remove it.
+
+|Two changes where there was one
+|Softened by the fact that the added review is one that should precede implementation anyway — but it is still two.
+
+|A version scheme, and judgement
+|Something has to decide what is breaking.
+No tool makes that call for you.
+
+|A toolchain to keep working
+|Node to build, Gradle to consume, a registry to publish into, credentials to rotate, emitter libraries and their dependencies to keep current.
+
+|Generated code in the build
+|Less pleasant to step through than code someone wrote, and a construct the generator cannot represent yields a method that refuses rather than one that works.
+
+|A new way to be wrong
+|Teams can build with full confidence against a contract version nobody has looked at in a year.
+|===
+
+The costs are real, and they are bounded.
+Most of the gains are unavailable by any other route.
+That is the trade, and it is worth making once more than one party depends on the interface — which is earlier than most teams assume, because a test suite is a party and a second team is a party.
+
+[#summary]
+== In short
+
+An API description is not documentation of an implementation.
+It is a promise that exists before the implementation, outlives it, and constrains it.
+
+Treat it that way — an artifact with a version, a checksum and a publication, rather than a file in somebody's repository — and a set of things that were structurally impossible become ordinary: standards with multiple implementers, third-party conformance tooling, suppliers who build against a contract rather than against access, and implementations that can be replaced without renegotiating what they promised.
+
+Then apply the same rule to everything downstream of it.
+Wherever something restates what the contract already says — a descriptor, an endpoint string, a field list, a snippet of description text — that restatement is a copy, and copies go stale silently.
+Derive it instead, and the question of whether your tests are testing the current contract stops being a question.
+
+Treat it the usual way, and none of it is available, for reasons that have nothing to do with anyone's diligence.
