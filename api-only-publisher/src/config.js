@@ -161,8 +161,9 @@ function load(configPath) {
                 requireString(this.sources[kind], `sources.${kind}`),
                 this.targets[target][kind].bundle);
         },
-        // Whether built documents of this kind carry x-fragment-path on each
-        // component. On unless turned off; OpenAPI only.
+        // Whether built documents of this kind carry x-fragment-path: on each
+        // component of an OpenAPI document, on each fragment of an AsyncAPI one.
+        // On unless turned off, for both kinds.
         fragmentPaths(kind) {
             if (kind !== "openapi" && kind !== "asyncapi") return false;
             const configured = (this.defaults[kind] || {}).fragmentPaths;
