@@ -50,6 +50,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 | `{api-only-transcriberj-version}` | `0.3.3` |
 | `{api-only-transcriberj-restdocs-version}` | `0.1.1` |
 
+These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
+
 ## Facts: API-Only TranscriberJ {api-only-transcriberj-version}
 
 - The generated tree is in `build/generated/sources/transcriberj/<contract>/`, in the subscription's `basePackage`, compiled by the source sets in `sourceSets` (`test` by default).

@@ -22,6 +22,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 This tutorial migrates a Gradle project, `orders-service`, that has a committed `src/main/resources/openapi.yaml` describing the `orders` API it implements.
 At the end, that document is generated on every build, verified against a lockfile, and no copy of it is committed.
 Every file and every command below was run exactly as shown, with API-Only Publisher {api-only-publisher-version} and API-Only Subscriber {api-only-subscriber-version}.
+Those are the versions it was verified with; a newer release works the same unless its changelog says otherwise, and the README of link:../../../api-only-publisher/README.adoc[the Publisher →] and link:../../../api-only-subscriber/README.adoc[the Subscriber →] says which release is the latest.
 
 The four phases are separate pull requests.
 After each one the repository works, so you can stop, and pick the next one up later.

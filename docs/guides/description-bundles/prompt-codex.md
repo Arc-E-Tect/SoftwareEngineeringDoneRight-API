@@ -52,6 +52,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 | `{api-only-transcriberj-version}` | `0.3.2` |
 | `{api-only-transcriberj-restdocs-version}` | `0.1.1` |
 
+These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
+
 ## Facts: API-Only TranscriberJ {api-only-transcriberj-version}
 
 - Gradle plugin `id 'com.arc-e-tect.api-only-transcriberj' version '{api-only-transcriberj-version}'`.

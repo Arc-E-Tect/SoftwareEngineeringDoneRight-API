@@ -21,6 +21,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 
 This tutorial sets up client use case 4 from nothing: a Gradle project, `storefront`, that calls version 1.1.0 of an `orders` API and version 1.0.0 of a `payments` API, whose contracts another team publishes to a Maven repository.
 Every file and every command below was run exactly as shown, with API-Only Subscriber {api-only-subscriber-version}, against archives produced by API-Only Publisher {api-only-publisher-version}.
+Those are the versions it was verified with; a newer release works the same unless its changelog says otherwise, and the README of link:../../../../api-only-publisher/README.adoc[the Publisher →] and link:../../../../api-only-subscriber/README.adoc[the Subscriber →] says which release is the latest.
 The archives came from the library in link:../../provider/2-specification-library-in-the-same-repository/tutorial.adoc[provider use case 2's tutorial →]: `payments` at 1.0.0, `orders` at 1.1.0 with its summary changed to `List every order.`, and a `1.1.0-rc.1` pre-release of `orders`.
 Only the repository differs: the run used a Maven repository on disk, which takes no credentials.
 
