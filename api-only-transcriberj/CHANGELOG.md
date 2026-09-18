@@ -1,3 +1,10 @@
+## [0.3.5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.4...api-only-transcriberj-v0.3.5) (2026-09-18)
+
+
+### 📝 Documentation
+
+* **api-only-transcriberj:** update README version to 0.3.4 [skip ci] ([01b7917](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/01b7917a205cc752b78ef2716799b754bce3eb8a))
+
 ## [0.3.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.3...api-only-transcriberj-v0.3.4) (2026-09-18)
 
 
