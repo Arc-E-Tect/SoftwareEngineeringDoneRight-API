@@ -27,7 +27,7 @@ public record ContractField(
         boolean subsection,
         boolean open) {
 
-    /** The description of every field when the contract's descriptions are not used. */
+    /** The description of a class or field the contract does not describe, when its descriptions are used. */
     public static final String PLACEHOLDER = ${placeholder};
 
     /** How many times a recursive reference is followed before the rest is a subsection. */

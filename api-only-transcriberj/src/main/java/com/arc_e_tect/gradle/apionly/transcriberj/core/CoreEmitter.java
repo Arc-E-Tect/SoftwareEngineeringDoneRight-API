@@ -566,12 +566,12 @@ final class CoreEmitter implements Emitter {
         }
 
         /**
-         * The Java expression a description is written as: the contract's text when
-         * descriptions are generated and it has one, and the placeholder otherwise --
-         * reported, when descriptions are generated.
+         * The Java expression a description is written as. Without generateDocs, the empty
+         * string: a description is only for documentation, and none was asked for. With it,
+         * the contract's text, or -- reported -- the placeholder where the contract has none.
          */
         private String describe(String text, String at) {
-            if (!context.settings().generateDocs()) return "ContractField.PLACEHOLDER";
+            if (!context.settings().generateDocs()) return JavaText.literal("");
             if (text == null || text.isBlank()) {
                 report.recommend(at, NO_DESCRIPTION);
                 return "ContractField.PLACEHOLDER";

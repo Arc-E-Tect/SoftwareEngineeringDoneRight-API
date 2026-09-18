@@ -320,25 +320,25 @@ class CoreEmitterTest {
 
         List<?> fields = (List<?>) g.call("Everything", "fields", new Class<?>[]{String.class}, "p.");
         assertThat(fields).extracting(Object::toString).contains(
-                "ContractField[path=p.child, type=object, optional=false, description=PLACEHOLDER, "
+                "ContractField[path=p.child, type=object, optional=false, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.child.id, type=string, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.child.id, type=string, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.children[].id, type=string, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.children[].id, type=string, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.inline.deep, type=string, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.inline.deep, type=string, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.alias, type=string, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.alias, type=string, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.list[].id, type=string, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.list[].id, type=string, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.anything, type=varies, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.anything, type=varies, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.either, type=varies, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.either, type=varies, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.raw, type=array, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.raw, type=array, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.nothing, type=null, optional=true, description=PLACEHOLDER, "
+                "ContractField[path=p.nothing, type=null, optional=true, description=, "
                         + "subsection=false, open=false]");
     }
 
