@@ -269,3 +269,37 @@ test("an AsyncAPI fragment that sets x-fragment-path itself fails the build, aga
     assert.throws(() => build(config, { versionOf: () => "1.0.0" }), (error) =>
         /target 'audit'/.test(error.message) && /the Publisher sets that key and a fragment may not/.test(error.message));
 });
+
+function portfolioLibrary() {
+    const { DEFAULTS } = require("../src/init");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-e2e-"));
+    init(dir, { values: { ...DEFAULTS, target: "orders" } });
+    init(dir, { values: { ...DEFAULTS, target: "payments" } });
+    const configFile = path.join(dir, "apionly.yaml");
+    fs.writeFileSync(configFile, `${fs.readFileSync(configFile, "utf8")}  portfolio:
+    openapi:
+      aggregate:
+        - orders
+        - payments
+`);
+    return loadFrom(dir);
+}
+
+test("an OpenAPI portfolio, built for real, prefixes, pushes security down and lints clean", { timeout: 300000 }, () => {
+    const config = portfolioLibrary();
+
+    const results = build(config, { versionOf: (target) => (target === "portfolio" ? null : "1.0.0") });
+
+    const portfolioResult = results.find((r) => r.target === "portfolio");
+    assert.ok(portfolioResult, "the portfolio must be built");
+    assert.strictEqual(portfolioResult.distributed, null, "an aggregate is never published");
+
+    const document = YAML.parse(fs.readFileSync(portfolioResult.file, "utf8"));
+    assert.deepStrictEqual(Object.keys(document.paths).sort(), ["/orders/v1/examples", "/payments/v1/examples"]);
+    assert.strictEqual(document.paths["/orders/v1/examples"].get.operationId, "OrderslistExamples");
+    assert.strictEqual(document.paths["/payments/v1/examples"].get.operationId, "PaymentslistExamples");
+    assert.deepStrictEqual(document.paths["/orders/v1/examples"].get.security, [{ bearerAuth: [] }]);
+    assert.strictEqual(document.security, undefined);
+    assert.match(document.info.description, /moved onto the operations it contributes/);
+    assert.deepStrictEqual(Object.keys(document.components.securitySchemes), ["bearerAuth"]);
+});
