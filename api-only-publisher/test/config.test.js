@@ -151,6 +151,23 @@ test("the unreferenced-fragment report sits with the lint reports", () => {
     assert.strictEqual(load(file).unreferencedReport(), path.join(path.dirname(file), "build/reports/lint/unreferenced.txt"));
 });
 
+test("lint.examples.<kind> defaults to warn per kind, and refuses a mode it does not know", () => {
+    assert.strictEqual(load(write(MINIMAL)).lintExamples("openapi"), "warn");
+    assert.strictEqual(load(write(MINIMAL)).lintExamples("asyncapi"), "warn");
+    const config = load(write(MINIMAL + "lint:\n  examples:\n    asyncapi: error\n"));
+    assert.strictEqual(config.lintExamples("asyncapi"), "error");
+    assert.strictEqual(config.lintExamples("openapi"), "warn", "asyncapi's setting must not leak into openapi's");
+    assert.strictEqual(load(write(MINIMAL + "lint:\n  examples:\n    openapi: off\n")).lintExamples("openapi"), "off");
+    assert.throws(
+        () => load(write(MINIMAL + "lint:\n  examples:\n    openapi: loud\n")).lintExamples("openapi"),
+        (e) => e instanceof ConfigError && /lint\.examples\.openapi must be error, warn or off/.test(e.message));
+});
+
+test("an unknown key under lint.examples is refused, like everywhere else in apionly.yaml", () => {
+    assert.throws(() => load(write(MINIMAL + "lint:\n  examples:\n    grpc: error\n")),
+        (e) => e instanceof ConfigError && /unknown key 'grpc' in lint\.examples/.test(e.message));
+});
+
 test("x-fragment-path stamping is on by default, for both specification kinds", () => {
     const config = load(write(MINIMAL));
     assert.strictEqual(config.fragmentPaths("openapi"), true);

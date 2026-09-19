@@ -229,6 +229,45 @@ Reference each one from a target's bundle, or delete it.
 `lint.unreferenced: warn` prints the same without failing; `off` does not look.
 The configuration files of lint tools, and the lint configuration `apionly.yaml` names, are skipped wherever they are (link:../../api-only-publisher/README.adoc#unreferenced[A fragment no target reaches fails the lint →]).
 
+[#give-every-operation-an-example]
+=== Give every operation an example
+
+An operation with no example is an operation nobody has worked through concretely.
+Writing one forces a decision about the data -- what a real username looks like, what a real event's payload holds -- during design, which is where that decision is cheapest.
+Leaving it for later usually means leaving it for whoever hits the gap downstream.
+
+Microcks is what makes the omission visible, not what makes it a problem: it builds its async mocks and its conformance tests from a message's own `examples`, so a message with none cannot be used for Microcks-based conformance testing at all.
+Both specifications make examples optional, and Redocly CLI and AsyncAPI CLI are right to accept their absence -- this is not a specification-validity rule, is never run as a Redocly plugin or a Spectral ruleset, and is reported apart from either linter's own findings.
+`build` prints it after lint, once per operation, naming the fragment where provenance makes that possible:
+
+[source,text]
+----
+AsyncAPI operation '<operationId>': message '<messageKey>' (<fragment, or where in the bundle>) carries no example, so this bundle cannot be used for Microcks-based conformance testing.
+OpenAPI operation '<operationId>': <request body, or response <status>> (<fragment, or where in the bundle>) carries no example, which makes the generated documentation harder to read.
+----
+
+The two messages claim different things on purpose.
+Nothing today reads an OpenAPI example -- the TranscriberJ processes a body without one perfectly well, bodies take arguments and constraints become constants -- so its message never says the bundle cannot be used, only that the generated documentation is weaker without one.
+Overstating that would be the failure mode: a warning that cries wolf gets suppressed, and the AsyncAPI one gets suppressed alongside it.
+
+An AsyncAPI message counts as having an example when its own `examples` array (an array of `{name, summary, payload}`, sibling to `payload`) is not empty -- a payload schema's property-level `examples`, used for documentation, is a different field and does not count.
+An OpenAPI request body or response counts as having one when a media type declares `example` or `examples` directly, or when the schema its `schema` resolves to carries its own top-level `examples` -- a property inside that schema does not count.
+A body or response with no `content` at all, such as a `204`, has nothing to exemplify and is never reported.
+
+Both default to `warn`: examples are never mandatory, and a library that has not adopted the Microcks path should not fail its publish over an omission the specification permits.
+`lint.examples.asyncapi: error` and `lint.examples.openapi: error` make either fail the build instead -- for a library that *has* adopted Microcks, publishing a bundle its own toolchain cannot use is a real defect.
+`off` does not look.
+
+[source,yaml]
+----
+lint:
+  examples:
+    asyncapi: error   # this library ships Microcks-based conformance tests
+    openapi: warn      # the default; omit the key to get it
+----
+
+link:../../api-only-publisher/README.adoc#examples-check[An operation with no example is reported apart from lint →].
+
 [#errors]
 == What stops a build
 
@@ -491,6 +530,15 @@ The reference implementation's library, `usable-suspects/` in the https://github
 |<<leave-no-fragment-unreferenced,No unreferenced fragment §>>
 |Yes
 |`unreferenced.txt` is empty.
+
+|<<give-every-operation-an-example,Every operation has an example §>> -- AsyncAPI
+|Yes
+|All fourteen of `user-account`'s message fragments carry `examples`; building it prints no such warning.
+
+|<<give-every-operation-an-example,Every operation has an example §>> -- OpenAPI
+|No
+|Every operation's responses, and two operations' request bodies, warn: the library uses property-level `examples` on request and response schemas in only a few places, and none of its response schemas carry a top-level one.
+This is recorded here rather than fixed, per the rule's own default: the warning is a backlog, not a build failure, until a library adopts `lint.examples.openapi: error`.
 |===
 
 Its lint reports also carry warnings from its own configuration -- `operation-4xx-response` and `required-string-property-missing-min-length` -- which that configuration sets to `warn` on purpose, as documentation-quality rules it does not yet enforce.
