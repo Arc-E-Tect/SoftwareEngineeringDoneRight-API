@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-transcriberj-version: 0.3.7
+:api-only-transcriberj-version: 0.4.0
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj]
