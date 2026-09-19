@@ -37,7 +37,8 @@ class DesignWarningsTest {
                   schemas:
                 """ + schemas.indent(4));
         return Generation.run(contract, "1.0.0", "x",
-                new Settings("c", "a.b", false, "p", recursionDepth), directory.resolve("out"), List.of(), null);
+                new Settings("c", "a.b", false, "p", recursionDepth), directory.resolve("out"),
+                directory.resolve("resources"), List.of(), null);
     }
 
     private static String schema(String name, String body) {

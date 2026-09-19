@@ -142,6 +142,14 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     public abstract DirectoryProperty getOutputDirectory();
 
     /**
+     * Where a resource an emitter writes goes.
+     *
+     * @return the directory
+     */
+    @OutputDirectory
+    public abstract DirectoryProperty getResourceDirectory();
+
+    /**
      * Where the path of every generated operation and inline schema class goes, keyed
      * {@code ClassName.PATH}: a properties file for tools that read test sources without
      * a classpath, such as the API-Only Suite's contract-evidence scan.
@@ -189,6 +197,7 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             parameters.getDescriptionPlaceholder().set(getDescriptionPlaceholder());
             parameters.getDescriptionBundle().set(getDescriptionBundle());
             parameters.getOutputDirectory().set(getOutputDirectory());
+            parameters.getResourceDirectory().set(getResourceDirectory());
             parameters.getReportFile().set(getReportFile());
             parameters.getEndpointIndex().set(getEndpointIndex());
         });

@@ -75,6 +75,8 @@ class ApiOnlyTranscriberJPluginTest {
                 .isEqualTo(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
         assertThat(subscription.getInto().get().getAsFile())
                 .isEqualTo(projectDir.resolve("build/generated/sources/transcriberj/user-account").toFile());
+        assertThat(subscription.getIntoResources().get().getAsFile())
+                .isEqualTo(projectDir.resolve("build/generated/resources/transcriberj/user-account").toFile());
 
         GenerateContractSourcesTask generate = (GenerateContractSourcesTask)
                 project.getTasks().getByName("generateContractSourcesUserAccount");
@@ -95,6 +97,8 @@ class ApiOnlyTranscriberJPluginTest {
         for (String name : List.of("main", "test")) {
             assertThat(sourceSets.getByName(name).getJava().getSrcDirs())
                     .contains(projectDir.resolve("build/generated/sources/transcriberj/user-account").toFile());
+            assertThat(sourceSets.getByName(name).getResources().getSrcDirs())
+                    .contains(projectDir.resolve("build/generated/resources/transcriberj/user-account").toFile());
         }
     }
 
@@ -160,6 +164,7 @@ class ApiOnlyTranscriberJPluginTest {
         task.getDescriptionPlaceholder().set("P");
         task.getEmitterClasspath().from(jar.toFile());
         task.getOutputDirectory().set(projectDir.resolve("out").toFile());
+        task.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
         task.getReportFile().set(projectDir.resolve("report.txt").toFile());
         task.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
 
@@ -196,6 +201,7 @@ class ApiOnlyTranscriberJPluginTest {
         parameters.getGenerateDocs().set(false);
         parameters.getDescriptionPlaceholder().set("p");
         parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
+        parameters.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
         parameters.getReportFile().set(projectDir.resolve("report.txt").toFile());
         parameters.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
         GenerateContractSourcesAction action = new GenerateContractSourcesAction() {

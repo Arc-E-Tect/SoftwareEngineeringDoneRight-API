@@ -38,6 +38,20 @@ public interface EmitterContext {
     void writeJava(String packageName, String simpleName, String source);
 
     /**
+     * Writes one resource file, replacing any file already written at that path in
+     * this run -- a properties file a generated or hand-written class reads through
+     * {@code getResourceAsStream}, for instance.
+     *
+     * <p>{@code path} is {@code /}-separated and relative to the resource root, and
+     * may nest in directories, such as {@code "META-INF/emitter/service.properties"}.
+     * It may not be absolute, and may not use empty, {@code .} or {@code ..} segments.
+     *
+     * @param path    the resource's path within the resource root
+     * @param content the resource's content, written UTF-8
+     */
+    void writeResource(String path, String content);
+
+    /**
      * Records that a generated method cannot represent a construct, and returns the
      * statement its body consists of instead: one that throws
      * {@link UnsupportedOperationException} with the reason and, where there is one,
