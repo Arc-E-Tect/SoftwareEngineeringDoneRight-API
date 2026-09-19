@@ -437,11 +437,11 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`main`, `parseArgs`
 
 |`src/config.js`
-|Loads and validates `apionly.yaml`, and derives every path from it: staging, dist, reports, bundle roots, version files, lint settings.
+|Loads and validates `apionly.yaml` -- every key against what its level allows, and every rule an aggregate target must satisfy -- and derives every path from it: staging, dist, reports, bundle roots, generated portfolio roots, version files, lint settings, portfolio strategies.
 |`load`, `loadFrom`, `ConfigError`
 
 |`src/pipeline.js`
-|Stage, substitute, bundle, stamp, lint and distribute; `prepare` stages without bundling.
+|Stage, substitute, generate an aggregate's bundle root, bundle, push an OpenAPI aggregate's operation ids and security down onto its own bundled output, stamp, lint and distribute; `prepare` stages and generates without bundling.
 |`build`, `prepare`, `lint`, `BuildError`
 
 |`src/placeholders.js`
@@ -449,8 +449,8 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`substitute`, `substituteFile`, `PlaceholderError`
 
 |`src/aggregate.js`
-|Generated AsyncAPI aggregate bundle roots.
-|`generateAsyncApi`, `isAggregate`
+|Generated aggregate bundle roots, both kinds, sharing one merge-conflict engine (`unique`, `agree`, `reconcile`); OpenAPI's own path/operation-id prefixing and security push-down, which need the aggregate's own bundled output to run against.
+|`generateAsyncApi`, `generateOpenApi`, `openapiPushDown`, `isAggregate`, `mergeSection`, `AggregateError`
 
 |`src/version.js`
 |Splices `info.version` into a bundled document.
@@ -497,8 +497,12 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`resolveValues`
 
 |`src/init-config.js`
-|Adds to an existing apionly.yaml whatever configuration slot a kind needs and it lacks, leaving every value, key and comment already there untouched.
+|Adds to an existing apionly.yaml whatever configuration slot a kind, or a portfolio section a caller resolved, needs and it lacks, leaving every value, key and comment already there untouched.
 |`addMissingConfig`
+
+|`src/config-command.js`
+|The `config` command's one section so far, `portfolio`: its questions, offering what is already configured as each default, and a document-preserving writer for the keys asked about.
+|`resolvePortfolioValues`, `writePortfolioSection`
 |===
 
 Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` for every command and `build.e2e.test.js` against the real bundlers.
