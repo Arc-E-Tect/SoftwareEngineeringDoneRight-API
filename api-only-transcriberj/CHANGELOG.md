@@ -1,3 +1,15 @@
+# [0.5.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.4.0...api-only-transcriberj-v0.5.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** carry the AsyncAPI document's own title on ContractModel ([#40](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/40)) ([0a19afd](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/0a19afd5f487e2062bc8179e3152190079826d50)), closes [#40](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/40)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.4.0 [skip ci] ([42538d6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/42538d65b09c936ec39ced5d1a46dbf417742cfb))
+
 # [0.4.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.7...api-only-transcriberj-v0.4.0) (2026-09-19)
 
 
