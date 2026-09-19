@@ -603,18 +603,19 @@ class CoreEmitterTest {
     void theRunRefusesWhatItCannotGenerateFrom() throws Exception {
         Path contract = GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml");
         Path out = directory.resolve("out");
+        Path resources = directory.resolve("resources");
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
-                new Settings("c", "not a package", false, "p", 1), out, List.of(), null))
+                new Settings("c", "not a package", false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage not a package");
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
-                new Settings("c", null, false, "p", 1), out, List.of(), null))
+                new Settings("c", null, false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage null");
         assertThatThrownBy(() -> Generation.run(contract, "2.0.0", "x",
-                new Settings("c", "a.b", false, "p", 1), out, List.of(), null))
+                new Settings("c", "a.b", false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(GenerationException.class)
                 .hasMessageContaining("locked at version 2.0.0, but " + contract + " says it is version 1.0.0");
         assertThatThrownBy(() -> Generation.run(directory.resolve("missing.yaml"), "1.0.0", "x",
-                new Settings("c", "a.b", false, "p", 1), out, List.of(), null))
+                new Settings("c", "a.b", false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(java.io.UncheckedIOException.class);
     }
 
@@ -661,6 +662,41 @@ class CoreEmitterTest {
                 GeneratedSources.FIXTURES.resolve("scaffold/openapi.yaml"), "0.1.0", directory, List.of(bad)))
                 .isInstanceOf(GenerationException.class)
                 .hasMessageContaining("Emitter counting wrote a class with an invalid name: a.b.Not.Valid");
+    }
+
+    @Test
+    void anEmitterWritesAResourceIntoTheResourceDirectory() throws Exception {
+        var withResource = new TestEmitter() {
+            @Override
+            public void emit(com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext context) {
+                context.writeResource("META-INF/emitter/service.properties", "SERVICE_NAME=test\n");
+            }
+        };
+
+        GeneratedSources g = GeneratedSources.generate(
+                GeneratedSources.FIXTURES.resolve("scaffold/openapi.yaml"), "0.1.0", directory, List.of(withResource));
+
+        Path resource = g.resources.resolve("META-INF/emitter/service.properties");
+        assertThat(resource).exists();
+        assertThat(Files.readString(resource)).isEqualTo("SERVICE_NAME=test\n");
+    }
+
+    @Test
+    void anEmitterMayNotWriteAResourceWithAnInvalidPath() {
+        for (String path : List.of("/absolute.properties", "../escape.properties", "a/../b.properties",
+                "a//b.properties", "", "trailing/")) {
+            var bad = new TestEmitter() {
+                @Override
+                public void emit(com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext context) {
+                    context.writeResource(path, "x");
+                }
+            };
+            assertThatThrownBy(() -> GeneratedSources.generate(
+                    GeneratedSources.FIXTURES.resolve("scaffold/openapi.yaml"), "0.1.0", directory, List.of(bad)))
+                    .as("path " + path)
+                    .isInstanceOf(GenerationException.class)
+                    .hasMessageContaining("Emitter counting wrote a resource with an invalid path: " + path);
+        }
     }
 
     @Test
