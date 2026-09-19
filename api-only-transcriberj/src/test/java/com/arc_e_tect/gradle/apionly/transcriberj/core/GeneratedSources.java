@@ -31,11 +31,13 @@ final class GeneratedSources {
     static final Path FIXTURES = Path.of(System.getProperty("transcriberj.fixtures"));
 
     final Path sources;
+    final Path resources;
     final GenerationReport report;
     private ClassLoader loader;
 
-    private GeneratedSources(Path sources, GenerationReport report) {
+    private GeneratedSources(Path sources, Path resources, GenerationReport report) {
         this.sources = sources;
+        this.resources = resources;
         this.report = report;
     }
 
@@ -55,18 +57,20 @@ final class GeneratedSources {
     static GeneratedSources generate(Path contract, String version, Path into, Settings settings,
                                      List<Emitter> emitters, Path endpointIndex) {
         Path sources = into.resolve("sources");
-        GenerationReport report = Generation.run(contract, version, "a".repeat(64), settings, sources, emitters,
-                endpointIndex);
-        return new GeneratedSources(sources, report);
+        Path resources = into.resolve("resources");
+        GenerationReport report = Generation.run(contract, version, "a".repeat(64), settings, sources, resources,
+                emitters, endpointIndex);
+        return new GeneratedSources(sources, resources, report);
     }
 
     /** Both of a contract's documents, generated into one tree. */
     static GeneratedSources generate(Path contract, Path asyncContract, String version, Path into,
                                      Settings settings, List<Emitter> emitters) {
         Path sources = into.resolve("sources");
+        Path resources = into.resolve("resources");
         GenerationReport report = Generation.run(contract, asyncContract, version, "a".repeat(64), settings,
-                sources, emitters, null);
-        return new GeneratedSources(sources, report);
+                sources, resources, emitters, null);
+        return new GeneratedSources(sources, resources, report);
     }
 
     /** The simple name of every class generated, in no particular order. */

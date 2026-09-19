@@ -100,6 +100,8 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                     .convention(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
             subscription.getInto().convention(
                     project.getLayout().getBuildDirectory().dir("generated/sources/transcriberj/" + contract));
+            subscription.getIntoResources().convention(
+                    project.getLayout().getBuildDirectory().dir("generated/resources/transcriberj/" + contract));
 
             Provider<RegularFile> document = project.provider(() -> subscriber.subscription(contract))
                     .flatMap(Subscription::getOpenapi);
@@ -123,6 +125,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getDescriptionBundle().set(subscription.getDescriptionBundle());
                         task.getEmitterClasspath().from(emitters);
                         task.getOutputDirectory().set(subscription.getInto());
+                        task.getResourceDirectory().set(subscription.getIntoResources());
                         task.getReportFile().set(
                                 project.getLayout().getBuildDirectory().file("reports/transcriberj/" + contract + ".txt"));
                         task.getEndpointIndex().set(project.getLayout().getBuildDirectory()
@@ -132,7 +135,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             // The IDE indexes what is on disk at sync time, so it is told which task
             // produces the sources and which directory holds them. The endpoint index is
             // not offered: it is a properties file read by a Gradle task, not source.
-            IdeIntegration.wire(project, generate, subscription.getInto());
+            IdeIntegration.wire(project, generate, subscription.getInto(), subscription.getIntoResources());
 
             subscription.getEndpointIndex().set(generate.flatMap(GenerateContractSourcesTask::getEndpointIndex));
             subscription.getEndpointIndex().disallowChanges();
@@ -157,6 +160,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                 for (String name : subscription.getSourceSets().get()) {
                     SourceSet set = sourceSets.getByName(name);
                     set.getJava().srcDir(generate.flatMap(GenerateContractSourcesTask::getOutputDirectory));
+                    set.getResources().srcDir(generate.flatMap(GenerateContractSourcesTask::getResourceDirectory));
                     manage(p, set, managedDependencies, extension);
                 }
             }));

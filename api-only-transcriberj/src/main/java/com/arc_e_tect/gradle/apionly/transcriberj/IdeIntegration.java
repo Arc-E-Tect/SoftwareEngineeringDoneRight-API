@@ -37,13 +37,17 @@ final class IdeIntegration {
     /**
      * Wires one contract's generation task into whichever IDE integrations the build has.
      *
-     * @param project  the project the TranscriberJ is applied to
-     * @param generate the contract's generation task
-     * @param sources  where that task writes the class tree
+     * @param project   the project the TranscriberJ is applied to
+     * @param generate  the contract's generation task
+     * @param sources   where that task writes the class tree
+     * @param resources where that task writes a resource an emitter wrote
      */
     static void wire(Project project, TaskProvider<GenerateContractSourcesTask> generate,
-                     Provider<Directory> sources) {
-        project.getPluginManager().withPlugin("idea", applied -> markGenerated(project, sources));
+                     Provider<Directory> sources, Provider<Directory> resources) {
+        project.getPluginManager().withPlugin("idea", applied -> {
+            markGenerated(project, sources);
+            markGenerated(project, resources);
+        });
         // IntelliJ reads the task triggers from the root project's model, so that is where
         // they are registered however deep the project is, and whichever project applies
         // idea-ext. Registering is idempotent, so both reactions below can fire.

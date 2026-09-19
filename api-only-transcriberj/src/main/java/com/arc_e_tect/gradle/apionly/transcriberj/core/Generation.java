@@ -13,6 +13,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -38,20 +39,21 @@ public final class Generation {
      * @param contract        the fetched contract document
      * @param contractVersion the version the build locked the contract at
      * @param contractSha256  the SHA-256 the build locked the document at
-     * @param settings        how the project asked for the classes
-     * @param outputDirectory where the sources go
-     * @param emitters        the emitters to run after the core emitter
-     * @param endpointIndex   where to write the path of every operation class and inline
-     *                        schema class, keyed {@code ClassName.PATH}, for tools that read
-     *                        test sources without a classpath; {@code null} to write none
+     * @param settings          how the project asked for the classes
+     * @param outputDirectory   where the sources go
+     * @param resourceDirectory where a resource an emitter writes goes
+     * @param emitters          the emitters to run after the core emitter
+     * @param endpointIndex     where to write the path of every operation class and inline
+     *                          schema class, keyed {@code ClassName.PATH}, for tools that read
+     *                          test sources without a classpath; {@code null} to write none
      * @return what could not be generated in full
      * @throws GenerationException when no sources can be generated from the contract
      */
     public static GenerationReport run(Path contract, String contractVersion, String contractSha256,
-                                       Settings settings, Path outputDirectory, List<Emitter> emitters,
-                                       Path endpointIndex) {
-        return run(contract, null, contractVersion, contractSha256, settings, outputDirectory, emitters,
-                endpointIndex);
+                                       Settings settings, Path outputDirectory, Path resourceDirectory,
+                                       List<Emitter> emitters, Path endpointIndex) {
+        return run(contract, null, contractVersion, contractSha256, settings, outputDirectory, resourceDirectory,
+                emitters, endpointIndex);
     }
 
     /**
@@ -65,18 +67,19 @@ public final class Generation {
      *                        contract has none
      * @param contractVersion the version the build locked the contract at
      * @param contractSha256  the SHA-256 the build locked the document at
-     * @param settings        how the project asked for the classes
-     * @param outputDirectory where the sources go
-     * @param emitters        the emitters to run after the core emitter
-     * @param endpointIndex   where to write the path of every operation class and inline
-     *                        schema class, keyed {@code ClassName.PATH}, for tools that read
-     *                        test sources without a classpath; {@code null} to write none
+     * @param settings          how the project asked for the classes
+     * @param outputDirectory   where the sources go
+     * @param resourceDirectory where a resource an emitter writes goes
+     * @param emitters          the emitters to run after the core emitter
+     * @param endpointIndex     where to write the path of every operation class and inline
+     *                          schema class, keyed {@code ClassName.PATH}, for tools that read
+     *                          test sources without a classpath; {@code null} to write none
      * @return what could not be generated in full
      * @throws GenerationException when no sources can be generated from the contract
      */
     public static GenerationReport run(Path contract, Path asyncContract, String contractVersion,
                                        String contractSha256, Settings settings, Path outputDirectory,
-                                       List<Emitter> emitters, Path endpointIndex) {
+                                       Path resourceDirectory, List<Emitter> emitters, Path endpointIndex) {
         if (settings.basePackage() == null || !PACKAGE.matcher(settings.basePackage()).matches()) {
             throw new GenerationException("Contract " + settings.contract() + ": basePackage "
                     + settings.basePackage() + " is not a Java package name.");
@@ -94,6 +97,7 @@ public final class Generation {
         }
 
         clean(outputDirectory);
+        clean(resourceDirectory);
         GenerationReport report = new GenerationReport();
         report.findings(model.findings());
         Shapes shapes = new Shapes(model);
@@ -101,9 +105,10 @@ public final class Generation {
         DesignWarnings.check(model, settings, shapes, names, report);
 
         CoreEmitter core = new CoreEmitter(shapes, names, contractSha256, report);
-        core.emit(new Context(model, settings, names, outputDirectory, report, core.id()));
+        core.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report, core.id()));
         for (Emitter emitter : emitters) {
-            emitter.emit(new Context(model, settings, names, outputDirectory, report, emitter.id()));
+            emitter.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report,
+                    emitter.id()));
         }
         if (endpointIndex != null) {
             writeEndpointIndex(endpointIndex, settings, model, names);
@@ -165,7 +170,8 @@ public final class Generation {
 
     /** What one emitter is given. */
     private record Context(ContractModel model, Settings settings, ClassNames names, Path outputDirectory,
-                           GenerationReport report, String emitter) implements EmitterContext {
+                           Path resourceDirectory, GenerationReport report, String emitter)
+            implements EmitterContext {
 
         @Override
         public void writeJava(String packageName, String simpleName, String source) {
@@ -181,6 +187,29 @@ public final class Generation {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
+        }
+
+        @Override
+        public void writeResource(String path, String content) {
+            if (!isValidResourcePath(path)) {
+                throw new GenerationException("Emitter " + emitter + " wrote a resource with an invalid path: "
+                        + path);
+            }
+            Path file = resourceDirectory.resolve(path);
+            try {
+                Files.createDirectories(file.getParent());
+                Files.writeString(file, content, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        private static boolean isValidResourcePath(String path) {
+            if (path.isEmpty() || path.startsWith("/") || path.endsWith("/") || path.contains("\\")) {
+                return false;
+            }
+            return Arrays.stream(path.split("/", -1))
+                    .noneMatch(segment -> segment.isEmpty() || segment.equals(".") || segment.equals(".."));
         }
 
         @Override

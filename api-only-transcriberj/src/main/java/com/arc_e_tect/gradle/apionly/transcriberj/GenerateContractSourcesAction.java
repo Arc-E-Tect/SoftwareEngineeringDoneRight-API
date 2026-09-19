@@ -110,6 +110,13 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         DirectoryProperty getOutputDirectory();
 
         /**
+         * Where a resource an emitter writes goes.
+         *
+         * @return the directory
+         */
+        DirectoryProperty getResourceDirectory();
+
+        /**
          * Where the endpoint index goes.
          *
          * @return the index
@@ -146,6 +153,7 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
             report = Generation.run(p.getContract().get().getAsFile().toPath(), asyncContract(p),
                     p.getContractVersion().get(),
                     p.getContractSha256().get(), settings, p.getOutputDirectory().get().getAsFile().toPath(),
+                    p.getResourceDirectory().get().getAsFile().toPath(),
                     emitters(GenerateContractSourcesAction.class.getClassLoader()),
                     p.getEndpointIndex().get().getAsFile().toPath());
         } catch (GenerationException e) {

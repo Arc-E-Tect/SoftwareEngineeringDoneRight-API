@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-transcriberj-version: 0.3.7
+:api-only-transcriberj-version: 0.5.0
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj]
@@ -151,6 +151,10 @@ apiOnlyTranscriberJ {
         // Where the sources are generated.
         // Default: build/generated/sources/transcriberj/<contract>
         // into = layout.buildDirectory.dir('generated/sources/transcriberj/orders')
+
+        // Where a resource an emitter writes is generated.
+        // Default: build/generated/resources/transcriberj/<contract>
+        // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders')
     }
 }
 
@@ -576,11 +580,13 @@ public interface Emitter {
     String id();                              // "restdocs": its package, and its name in reports
     List<ManagedDependency> dependencies();   // what its generated code needs
     Set<Construct> represents();              // which classified constructs it handles in full
-    void emit(EmitterContext context);        // model, settings, class names, writeJava, degraded
+    void emit(EmitterContext context);        // model, settings, class names, writeJava, writeResource, degraded
 }
 ----
 
 `EmitterContext.names()` gives every core class's name, so a companion always matches the class it belongs to.
+`EmitterContext.writeResource(path, content)` writes a non-Java file -- a properties file a generated or hand-written class reads through `getResourceAsStream`, for instance -- to the resource root the project's source sets read from, the way `writeJava` writes a class to the sources root.
+`path` is `/`-separated and relative, such as `"META-INF/restdocs/service.properties"`; it may not be absolute, and may not use `.` or `..` segments.
 `EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
 
 [#emitter-dependencies]

@@ -131,4 +131,13 @@ public abstract class TranscriberJSubscription implements Named {
      * @return the directory
      */
     public abstract DirectoryProperty getInto();
+
+    /**
+     * Where a resource an emitter writes is generated.
+     *
+     * <p>Default: {@code build/generated/resources/transcriberj/<contract>}.
+     *
+     * @return the directory
+     */
+    public abstract DirectoryProperty getIntoResources();
 }

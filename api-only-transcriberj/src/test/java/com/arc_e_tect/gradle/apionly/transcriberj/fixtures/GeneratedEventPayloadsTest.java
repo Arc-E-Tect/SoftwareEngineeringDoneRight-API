@@ -46,7 +46,8 @@ class GeneratedEventPayloadsTest {
         Path sources = directory.resolve("sources");
         Generation.run(FIXTURES.resolve("contracts/user-account/openapi.yaml"),
                 FIXTURES.resolve("contracts/user-account/asyncapi.yaml"), "1.0.0", "x",
-                new Settings("user-account", PACKAGE, false, "PLACEHOLDER", 3), sources, List.of(), null);
+                new Settings("user-account", PACKAGE, false, "PLACEHOLDER", 3), sources,
+                directory.resolve("resources"), List.of(), null);
 
         Path classes = Files.createDirectories(directory.resolve("classes"));
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();

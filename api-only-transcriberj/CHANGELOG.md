@@ -1,3 +1,27 @@
+# [0.5.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.4.0...api-only-transcriberj-v0.5.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** carry the AsyncAPI document's own title on ContractModel ([#40](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/40)) ([0a19afd](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/0a19afd5f487e2062bc8179e3152190079826d50)), closes [#40](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/40)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.4.0 [skip ci] ([42538d6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/42538d65b09c936ec39ced5d1a46dbf417742cfb))
+
+# [0.4.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.7...api-only-transcriberj-v0.4.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** let an emitter write a resource file ([#39](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/39)) ([f0ae3c4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/f0ae3c4c6b66e0d4b50d6d01256a750a5489e173)), closes [#39](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/39)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.3.7 [skip ci] ([da27524](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/da27524136c6e0eb610549c32831be08a90cba1c))
+
 ## [0.3.7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.6...api-only-transcriberj-v0.3.7) (2026-09-19)
 
 
