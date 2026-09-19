@@ -9,7 +9,7 @@ const YAML = require("yaml");
 
 const { substituteFile } = require("./placeholders");
 const { stampFile } = require("./version");
-const { generateAsyncApi, isAggregate } = require("./aggregate");
+const { generateAsyncApi, generateOpenApi, openapiPushDown, isAggregate } = require("./aggregate");
 const { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps, FragmentPathError, KEY } = require("./fragment-paths");
 
 class BuildError extends Error {}
@@ -85,7 +85,7 @@ function substituteTree(config, kind, log) {
 }
 
 function bundle(config, target, kind, outFile, log, { stagingRoot } = {}) {
-    const source = config.bundlePath(target, kind, stagingRoot);
+    const source = config.bundleRootPath(target, kind, stagingRoot);
     if (!fs.existsSync(source)) {
         throw new BuildError(`target '${target}': bundle root not found at ${source}`);
     }
@@ -130,7 +130,7 @@ function bundleWithFragmentPaths(config, target, kind, outFile, log) {
         return YAML.parse(fs.readFileSync(file, "utf8"));
     };
 
-    log(`-- Bundling ${path.basename(config.bundlePath(target, kind))} with ${KEY}`);
+    log(`-- Bundling ${path.basename(config.bundleRootPath(target, kind))} with ${KEY}`);
     const discovered = componentPaths(pass("discover", null));
     const fragments = new Set([...discovered.values()].filter(Boolean));
     const document = pass("stamp", fragments);
@@ -169,7 +169,7 @@ function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
     const root = path.join(scratch, "stamp");
     fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
 
-    const bundleRoot = path.relative(root, config.bundlePath(target, kind, root)).split(path.sep).join("/");
+    const bundleRoot = path.relative(root, config.bundleRootPath(target, kind, root)).split(path.sep).join("/");
     try {
         stampFiles(root, { except: new Set([bundleRoot]) });
     } catch (error) {
@@ -177,7 +177,7 @@ function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
         throw error;
     }
 
-    log(`-- Bundling ${path.basename(config.bundlePath(target, kind))} with ${KEY}`);
+    log(`-- Bundling ${path.basename(config.bundleRootPath(target, kind))} with ${KEY}`);
     const file = path.join(scratch, "stamp.yaml");
     bundle(config, target, kind, file, () => {}, { stagingRoot: root });
     const document = YAML.parse(fs.readFileSync(file, "utf8"));
@@ -240,8 +240,11 @@ function prepare(config, { kinds = ["openapi", "asyncapi"], log = () => {} } = {
         stage(config, kind, log);
         substituteTree(config, kind, log);
         for (const target of targets) {
-            if (isAggregate(config, target, kind) && kind === "asyncapi") {
+            if (!isAggregate(config, target, kind)) continue;
+            if (kind === "asyncapi") {
                 generateAsyncApi(config, target, { log });
+            } else {
+                generateOpenApi(config, target, { log });
             }
         }
     }
@@ -269,20 +272,31 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
             log(`\n=== ${target} (${kind}) ===`);
             // An aggregate has no hand-written bundle root; it is synthesised from
             // its members into the staged tree, so it can never fall behind them.
+            let openapiOwners = null;
             if (isAggregate(config, target, kind)) {
-                if (kind !== "asyncapi") {
-                    throw new BuildError(
-                        `target '${target}': aggregate is only supported for asyncapi; ` +
-                        `an OpenAPI portfolio is a hand-written table of contents of $refs`
-                    );
+                if (kind === "asyncapi") {
+                    generateAsyncApi(config, target, { log });
+                } else {
+                    openapiOwners = generateOpenApi(config, target, { log }).owners;
                 }
-                generateAsyncApi(config, target, { log });
             }
             const outFile = path.join(config.distDir(target), config.outputName(kind));
             if (config.fragmentPaths(kind)) {
                 bundleWithFragmentPaths(config, target, kind, outFile, log);
             } else {
                 bundle(config, target, kind, outFile, log);
+            }
+            if (openapiOwners) {
+                // Pass 2: only once bundling has resolved every $ref does an
+                // operation's id, or whether it already sets its own security,
+                // become visible at all.
+                const { text, reconciled } = openapiPushDown(fs.readFileSync(outFile, "utf8"), openapiOwners, {
+                    operationIdStrategy: config.portfolioOperationIdStrategy(),
+                });
+                fs.writeFileSync(outFile, text);
+                for (const r of reconciled) {
+                    log(`-- Reconciled tag '${r.key}': two members describe it differently; kept the first's`);
+                }
             }
             const version = versionOf(target);
             if (version) {

@@ -338,6 +338,64 @@ test("init adds a missing kind's configuration to an existing library, without -
     assert.match(config, /bundle: bundles\/orders_asyncapi_structure\.yaml/);
 });
 
+test("init writes the portfolio section, with documented defaults, only once a second target arrives", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    const first = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    assert.ok(!first.printed.some((line) => line.includes("portfolio")), "one target: not even worth mentioning");
+    let config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.doesNotMatch(config, /portfolio:/, "one target is nothing to aggregate yet");
+
+    const { printed } = await runWith(
+        ["init", "lib", "-C", parent, "--openapi", "--target", "payments"], { interactive: false });
+
+    assert.ok(printed.some((line) => line.startsWith("  updated") && line.includes("portfolio")));
+    config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.match(config, /portfolio:\n {2}openapi:\n {4}paths: target-prefix\n {4}operationIds: target-prefix\n {4}tags: reconcile\n {2}security: push-down\n {2}location: portfolios/);
+});
+
+test("init at a terminal asks about the portfolio once a second target arrives, and takes the flag given for it", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+
+    const { io, shown } = terminal("", "");
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "payments", "--portfolio-location", "aggregates"], io);
+
+    assert.ok(shown.some((text) => text.startsWith("Path prefix strategy for a portfolio")));
+    assert.ok(!shown.some((text) => text.startsWith("Where a portfolio's generated bundle root lands")),
+        "given as a flag, so not asked");
+    const config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.match(config, /location: aggregates/);
+});
+
+test("init never asks about, or touches, a portfolio section that already exists", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "payments"], { interactive: false });
+    const configFile = path.join(parent, "lib", "apionly.yaml");
+    const portfolioSection = () => fs.readFileSync(configFile, "utf8").match(/portfolio:\n(?:.+\n)*/)[0];
+    const before = portfolioSection();
+    assert.match(before, /location: portfolios/);
+
+    const { io, shown } = terminal();
+    const { printed } = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "invoices"], io);
+
+    assert.ok(!shown.some((text) => text.startsWith("Path prefix strategy")));
+    assert.ok(printed.some((line) => line.startsWith("  present") && line.includes("portfolio")));
+    assert.strictEqual(portfolioSection(), before);
+});
+
+test("a malformed apionly.yaml never crashes the portfolio check -- init just does not ask", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    const configFile = path.join(parent, "lib", "apionly.yaml");
+    fs.writeFileSync(configFile, `${fs.readFileSync(configFile, "utf8")}\n: : : not valid yaml [[[\n`);
+
+    const { io, shown } = terminal();
+    const { code } = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "payments"], io);
+    assert.strictEqual(code, 0);
+    assert.ok(!shown.some((text) => text.startsWith("Path prefix strategy")));
+});
+
 test("init --force at a terminal lists only what still differs after the additive update, not what it completed", async () => {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
     const values = [
@@ -375,6 +433,65 @@ test("init refuses more than one target, and an invalid value given as a flag, w
     await assert.rejects(runWith(["init", "-C", dir, "--target", "Orders"], { interactive: false }),
         /--target 'Orders' is not a target name/);
     assert.deepStrictEqual(fs.readdirSync(dir), []);
+});
+
+test("config portfolio without a terminal takes the documented defaults, and writes them", async () => {
+    const dir = library();
+    const { code } = await runWith(["config", "portfolio", "-C", dir], { interactive: false });
+    assert.strictEqual(code, 0);
+    const config = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    assert.match(config, /portfolio:\n {2}openapi:\n {4}paths: target-prefix\n {2}location: portfolios/);
+});
+
+test("config portfolio at a terminal shows what is already configured, and Enter keeps it", async () => {
+    const dir = library();
+    // First run writes location: aggregates; the second must show it as the default.
+    await runWith(["config", "portfolio", "-C", dir, "--portfolio-location", "aggregates"], { interactive: false });
+
+    const { io, shown } = terminal();
+    await runWith(["config", "portfolio", "-C", dir], io);
+    assert.ok(shown.some((text) => text.includes("[target-prefix]")));
+    assert.ok(shown.some((text) => text.includes("[aggregates]")));
+    const config = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    assert.match(config, /location: aggregates/);
+});
+
+test("config portfolio changes only the keys it asked about, and keeps every comment in the file", async () => {
+    const dir = library({
+        ...LIBRARY,
+        "apionly.yaml": `# A library's own comment.\n${LIBRARY["apionly.yaml"]}portfolio:\n  openapi:\n    tags: reconcile\n  security: push-down\n`,
+    });
+    await runWith(["config", "portfolio", "-C", dir, "--portfolio-paths", "none"], { interactive: false });
+    const config = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    assert.match(config, /# A library's own comment\./);
+    assert.match(config, /paths: none/);
+    assert.match(config, /tags: reconcile/);
+    assert.match(config, /security: push-down/);
+});
+
+test("config refuses an unknown section, and config --yes asks nothing", async () => {
+    const dir = library();
+    await assert.rejects(runWith(["config", "nonsense", "-C", dir], { interactive: false }),
+        /'nonsense' is not a configurable section; there is: portfolio/);
+
+    const { io, shown } = terminal();
+    const { code } = await runWith(["config", "portfolio", "-C", dir, "--yes"], io);
+    assert.strictEqual(code, 0);
+    assert.deepStrictEqual(shown, []);
+});
+
+test("config with no section walks every configurable section -- today, just portfolio", async () => {
+    const dir = library();
+    const { printed } = await runWith(["config", "-C", dir], { interactive: false });
+    assert.ok(printed.some((line) => line.startsWith("Configured portfolio:")));
+});
+
+test("config's flags are refused by name when invalid, and nothing is written", async () => {
+    const dir = library();
+    const before = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    await assert.rejects(runWith(["config", "portfolio", "-C", dir, "--portfolio-paths", "sideways"], { interactive: false }),
+        /--portfolio-paths use target-prefix or none/);
+    assert.strictEqual(fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8"), before);
 });
 
 test("targets lists every target, its kinds, and which are not published", async () => {

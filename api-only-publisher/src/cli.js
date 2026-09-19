@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("fs");
 const path = require("path");
+const YAML = require("yaml");
 
 const { loadFrom, ConfigError } = require("./config");
 const { build, prepare, BuildError } = require("./pipeline");
 const { init, scaffold, plan } = require("./init");
 const { resolveValues } = require("./init-questions");
+const { resolvePortfolioValues, writePortfolioSection } = require("./config-command");
 const { PlaceholderError } = require("./placeholders");
 const { VersionError } = require("./version");
 const { forTargets, ClosureError } = require("./closure");
@@ -26,6 +29,8 @@ Usage:
                           [--contact-name <text>] [--contact-url <url>]
                           [--license <spdx-id>] [--license-url <url>]
                           [--server-url <url>] [--broker-host <host[:port]>]
+  api-only-publisher config [section] [--yes] [--portfolio-paths <target-prefix|none>]
+                            [--portfolio-location <dir>]
   api-only-publisher build [--target <name>]... [--pre-release <ids>] [--openapi|--asyncapi]
   api-only-publisher lint  [--target <name>]...
   api-only-publisher targets
@@ -44,14 +49,16 @@ Options:
   --asyncapi        Only build AsyncAPI documents.
   --force           init only: overwrite files that differ from the scaffold;
                     at a terminal, after listing them and asking once.
-  -y, --yes         init only: ask nothing, even at a terminal; take the defaults
-                    for every value no flag gives. Without a terminal, init never asks.
+  -y, --yes         init/config only: ask nothing, even at a terminal; take the
+                    current or default value for anything no flag gives.
   --openapi, --asyncapi
                     init: the kinds of document the library holds; both flags for both.
   --target <name>   init: the target's name, in lowercase kebab-case.
   --title, --contract-version, --contact-name, --contact-url, --license,
   --license-url, --server-url, --broker-host
                     init only: the value of that question; a flag always wins.
+  --portfolio-paths <target-prefix|none>, --portfolio-location <dir>
+                    config only: the value of that question; a flag always wins.
   --since <ref>     changed only: the git ref to compare the working tree against.
   --out <dir>       pack/publish/split: where to write.
   --channel <name>  publish only: repeat for several. Default: every configured channel.
@@ -69,13 +76,14 @@ function parseArgs(argv) {
     const options = {
         targets: [], kinds: null, preRelease: null, quiet: false, force: false,
         dir: process.cwd(), since: null, out: null, channels: null, by: "kind",
-        yes: false, init: {},
+        yes: false, init: {}, config: {},
     };
     const INIT_VALUES = {
         "--title": "title", "--contract-version": "contractVersion", "--contact-name": "contactName",
         "--contact-url": "contactUrl", "--license": "license", "--license-url": "licenseUrl",
         "--server-url": "serverUrl", "--broker-host": "brokerHost",
     };
+    const CONFIG_VALUES = { "--portfolio-paths": "paths", "--portfolio-location": "location" };
     const positional = [];
 
     for (let i = 0; i < argv.length; i++) {
@@ -109,6 +117,10 @@ function parseArgs(argv) {
                     options.init[INIT_VALUES[arg]] = next();
                     break;
                 }
+                if (CONFIG_VALUES[arg]) {
+                    options.config[CONFIG_VALUES[arg]] = next();
+                    break;
+                }
                 if (arg.startsWith("-")) throw new ConfigError(`unrecognized option '${arg}'`);
                 positional.push(arg);
         }
@@ -134,6 +146,28 @@ function versionsOf(config, names, preRelease) {
 /** The kinds --openapi and --asyncapi name, in the order the scaffold writes them. */
 function initKinds(kinds) {
     return kinds ? ["openapi", "asyncapi"].filter((kind) => kinds.includes(kind)) : undefined;
+}
+
+/**
+ * Whether init should ask about the portfolio section this run: "ask", once the
+ * library is about to have more than one target -- there is nothing to aggregate
+ * with just one -- and it does not have a portfolio section yet; "present" the
+ * same way, but the section is already there, which init never changes, and
+ * reports rather than silently doing nothing about; "not-yet" while there is
+ * still only one target, which is not worth mentioning at all.
+ *
+ * @returns {"ask"|"present"|"not-yet"}
+ */
+function portfolioStatus(dir, target) {
+    const file = path.join(dir, "apionly.yaml");
+    if (!fs.existsSync(file)) return "not-yet";
+    const doc = YAML.parseDocument(fs.readFileSync(file, "utf8"));
+    if (doc.errors.length > 0) return "not-yet";
+    const targets = doc.get("targets", true);
+    const names = YAML.isMap(targets) ? new Set(targets.items.map((pair) => String(pair.key))) : new Set();
+    names.add(target);
+    if (names.size <= 1) return "not-yet";
+    return doc.hasIn(["portfolio"]) ? "present" : "ask";
 }
 
 /**
@@ -163,20 +197,81 @@ async function runInit(options, positional, io, log) {
             ask: terminal && ((question) => terminal.question(question)),
             tell: (message) => output.write(`${message}\n`),
         });
+
+        // Asked, or defaulted, the same way a kind's own questions are -- but only
+        // once there is something to aggregate. A section already there is never
+        // asked about or changed, and reported as present rather than passed over
+        // in silence.
+        const portfolioStatusThisRun = portfolioStatus(dir, values.target);
+        let portfolio = null;
+        if (portfolioStatusThisRun === "ask") {
+            portfolio = await resolvePortfolioValues({
+                given: options.config,
+                current: { paths: "target-prefix", location: "portfolios" },
+                ask: terminal && ((question) => terminal.question(question)),
+                tell: (message) => output.write(`${message}\n`),
+            });
+        }
+
         log(`Scaffolding a specification library in ${dir}`);
         let force = options.force;
         if (terminal && force) {
             // Asked, --force means "after showing me": it overwrites what differs only
             // once the list has been seen and agreed to.
-            const differing = plan(dir, scaffold(values), values).filter((entry) => entry.status === "differs");
+            const differing = plan(dir, scaffold(values), values, portfolio).filter((entry) => entry.status === "differs");
             if (differing.length > 0) {
                 output.write(`These files differ from the scaffold:\n${differing.map((d) => `  ${d.rel}\n`).join("")}`);
                 const answer = await terminal.question(`Overwrite these ${differing.length} file(s)? [y/N] `);
                 force = /^y(es)?$/i.test(answer.trim());
             }
         }
-        init(dir, { values, force, log });
+        init(dir, { values, force, log, portfolio });
+        if (portfolioStatusThisRun === "present") log("  present    portfolio (already configured; init never changes it)");
         log(`\nNext: api-only-publisher build -C ${dir}`);
+    } finally {
+        if (terminal) terminal.close();
+    }
+    return 0;
+}
+
+const CONFIGURABLE_SECTIONS = ["portfolio"];
+
+/**
+ * Reconfigures a section of apionly.yaml. Unlike init, this always asks -- at a
+ * terminal, each question shows what is already configured, or the documented
+ * default when there is nothing yet, and Enter keeps it -- and always rewrites
+ * the keys it asked about, whatever else the section or the file holds.
+ */
+async function runConfig(options, positional, io, log) {
+    const section = positional[1];
+    if (section !== undefined && !CONFIGURABLE_SECTIONS.includes(section)) {
+        throw new ConfigError(
+            `'${section}' is not a configurable section; there is: ${CONFIGURABLE_SECTIONS.join(", ")}`
+        );
+    }
+    const config = loadFrom(options.dir);
+    const input = io.input || process.stdin;
+    const output = io.output || process.stdout;
+    const interactive = io.interactive !== undefined ? io.interactive : Boolean(input.isTTY && output.isTTY);
+    const terminal = interactive && !options.yes
+        ? require("node:readline/promises").createInterface({ input, output })
+        : null;
+    try {
+        for (const name of section ? [section] : CONFIGURABLE_SECTIONS) {
+            // The only configurable section today; a second one gets its own current
+            // values, its own given-flags and its own writer, called the same way.
+            const current = { paths: config.portfolioPathStrategy(), location: config.portfolioLocation() };
+            const given = { ...options.config };
+            for (const key of Object.keys(given)) if (given[key] === undefined) delete given[key];
+
+            const values = await resolvePortfolioValues({
+                given, current,
+                ask: terminal && ((question) => terminal.question(question)),
+                tell: (message) => output.write(`${message}\n`),
+            });
+            fs.writeFileSync(config.path, writePortfolioSection(fs.readFileSync(config.path, "utf8"), values));
+            log(`Configured ${name}: paths=${values.paths}, location=${values.location}`);
+        }
     } finally {
         if (terminal) terminal.close();
     }
@@ -195,6 +290,7 @@ async function main(argv, io = {}) {
     const log = options.quiet ? () => {} : (message) => console.log(message);
 
     if (command === "init") return runInit(options, positional, io, log);
+    if (command === "config") return runConfig(options, positional, io, log);
 
     const config = loadFrom(options.dir);
     const targets = options.targets.length > 0 ? options.targets : null;
@@ -236,7 +332,6 @@ async function main(argv, io = {}) {
             // Lint without rebuilding, for fast local feedback on what is already
             // in dist/. Every selected document is linted even when one fails, so
             // one run reports every failure rather than only the first.
-            const fs = require("fs");
             const { lint } = require("./pipeline");
             const failures = [];
             let linted = 0;

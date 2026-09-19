@@ -84,22 +84,33 @@ function place(doc, parentPath, key, value, before) {
  * already there survives unchanged; a slot already present, however it reads, is
  * never touched, and neither is anything inside it.
  *
+ * `portfolio`, unlike a kind, is never added on its own account: whether a
+ * library is about to have more than one target, and so whether the question is
+ * even asked, is the caller's decision, made once, before this runs -- give the
+ * strategies it resolved here to have the section written with them, or leave
+ * this out entirely to leave the section alone, present or not.
+ *
  * @param {string} text apionly.yaml, as it is on disk
  * @param {object} v the values scaffold(values) was given, resolved: every value
  *     DEFAULTS has, `values`' own where it gives one -- the shape scaffold() itself
  *     works from, so a caller that already has that object need not rebuild it
+ * @param {{paths: string, location: string}} [portfolio] the portfolio section to
+ *     add, with every strategy resolved, when it is missing; omitted, the section
+ *     is never considered at all, whether or not the file already has one
  * @returns {{text: string, added: string[]}} the edited text, and the slots added, in
- *     the order scaffold() declares them; `added` is empty, and `text` is `text`
- *     itself, when nothing was missing.
+ *     the order scaffold() declares them, portfolio last; `added` is empty, and
+ *     `text` is `text` itself, when nothing was missing.
  */
-function addMissingConfig(text, v) {
+function addMissingConfig(text, v, portfolio) {
     const doc = YAML.parseDocument(text);
     const added = [];
 
-    // Not every file that differs is a library with a kind missing -- one that does not
-    // even declare sources.root is not an apionly.yaml this can complete, whatever it
-    // holds instead; force, or a person, is what that file needs.
-    if (!doc.hasIn(["sources", "root"])) return { text, added };
+    // Not every file that differs is a library with a kind missing. One with a YAML
+    // error cannot be edited at all -- parseDocument does not throw on one, it just
+    // records it, and a document with errors refuses to be stringified back. One that
+    // does not even declare sources.root, whatever it parses to, is not an apionly.yaml
+    // this can complete either way; force, or a person, is what either file needs.
+    if (doc.errors.length > 0 || !doc.hasIn(["sources", "root"])) return { text, added };
 
     for (const kind of ["openapi", "asyncapi"].filter((k) => v.kinds.includes(k))) {
         for (const slot of slotsFor(kind, v)) {
@@ -107,6 +118,15 @@ function addMissingConfig(text, v) {
             place(doc, slot.path, slot.key, slot.value, slot.before);
             added.push(slotName(slot));
         }
+    }
+
+    if (portfolio && !doc.hasIn(["portfolio"])) {
+        doc.setIn(["portfolio"], {
+            openapi: { paths: portfolio.paths, operationIds: "target-prefix", tags: "reconcile" },
+            security: "push-down",
+            location: portfolio.location,
+        });
+        added.push("portfolio");
     }
 
     return added.length === 0 ? { text, added } : { text: doc.toString(), added };

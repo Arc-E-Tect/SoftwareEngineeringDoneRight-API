@@ -322,17 +322,19 @@ const CONFIG_FILE = "apionly.yaml";
  * completion is measured against; without it, apionly.yaml is compared as every
  * other file is.
  *
+ * @param {{paths: string, location: string}} [portfolio] the portfolio section to
+ *     add when apionly.yaml lacks one; see addMissingConfig for what it does with it
  * @returns {{rel: string, status: "missing"|"identical"|"differs", added?: string[], text?: string}[]}
  *     `added` and `text` -- the completed content -- are there only for apionly.yaml,
  *     and only when something was missing from it.
  */
-function plan(targetDir, files, values) {
+function plan(targetDir, files, values, portfolio) {
     return Object.entries(files).map(([rel, content]) => {
         const file = path.join(targetDir, rel);
         if (!fs.existsSync(file)) return { rel, status: "missing" };
         const onDisk = fs.readFileSync(file, "utf8");
         if (rel === CONFIG_FILE && values) {
-            const completed = addMissingConfig(onDisk, { ...DEFAULTS, ...values });
+            const completed = addMissingConfig(onDisk, { ...DEFAULTS, ...values }, portfolio);
             if (completed.added.length > 0) {
                 const status = normalised(completed.text) === normalised(content) ? "identical" : "differs";
                 return { rel, status, added: completed.added, text: completed.text };
@@ -356,13 +358,17 @@ function plan(targetDir, files, values) {
  * comment already there exactly as it was. A kind already declared, however it
  * reads, is never touched -- what is already there is not changed, only what is
  * not there is added.
+ *
+ * `portfolio`, given, is added the same way, as one more slot: whether the
+ * library is about to have more than one target -- and so whether this is worth
+ * asking about at all -- is decided before init is called, not here.
  */
-function init(targetDir, { values = DEFAULTS, force = false, log = () => {} } = {}) {
+function init(targetDir, { values = DEFAULTS, force = false, log = () => {}, portfolio = null } = {}) {
     const files = scaffold(values);
     const report = { created: [], overwritten: [], identical: [], differing: [], updated: [] };
     const updates = [];
 
-    for (const { rel, status, added, text } of plan(targetDir, files, values)) {
+    for (const { rel, status, added, text } of plan(targetDir, files, values, portfolio)) {
         if (added && !force) {
             fs.writeFileSync(path.join(targetDir, rel), text);
             report.updated.push(rel);

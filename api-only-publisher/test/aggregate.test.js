@@ -49,9 +49,7 @@ targets:
     asyncapi:
       bundle: beta.yaml
   portfolio:
-    publish: false
     asyncapi:
-      bundle: portfolio.yaml
       aggregate:
         - alpha
         - beta

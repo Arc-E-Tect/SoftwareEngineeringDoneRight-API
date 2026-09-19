@@ -78,7 +78,7 @@ test("a target declaring neither specification type is refused", () => {
 });
 
 test("a target with no bundle path is refused", () => {
-    const bad = MINIMAL + "  gamma:\n    openapi:\n      lint: x.yaml\n";
+    const bad = MINIMAL + "  gamma:\n    openapi: {}\n";
     assert.throws(() => load(write(bad)),
         (e) => e instanceof ConfigError && /targets\.gamma\.openapi\.bundle/.test(e.message));
 });

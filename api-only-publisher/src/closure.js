@@ -104,7 +104,7 @@ function forTargets(config, kinds = ["openapi", "asyncapi"], only = null) {
     for (const kind of kinds) {
         for (const target of config.targetsFor(kind)) {
             if (only && !only.includes(target)) continue;
-            const entry = config.bundlePath(target, kind);
+            const entry = config.bundleRootPath(target, kind);
             if (!fs.existsSync(entry)) {
                 throw new ClosureError(
                     `target '${target}': ${kind} bundle root not found at ${entry}; stage the tree first`

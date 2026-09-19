@@ -142,6 +142,10 @@ However the Publisher itself is started, it fetches them with `npx`, at the vers
 |Scaffold `apionly.yaml` and a reference directory layout that builds as it stands: OpenAPI, AsyncAPI or both.
 At a terminal it asks for each value first, as <<init,Scaffolding a library §>> describes.
 
+|`config [section] [--yes] [value flags]`
+|Reconfigure a section of `apionly.yaml` that already exists -- `portfolio`, today.
+At a terminal it asks the same shape of question `init` would, offering what is already configured as each default, as <<init-additive,Adding a kind to an existing library §>> and <<aggregates,Aggregates §>> describe.
+
 |`build [--target <t>]... [--pre-release <ids>] [--openapi\|--asyncapi]`
 |Stage, substitute placeholders, bundle, stamp each published target's version, and lint.
 
@@ -303,6 +307,17 @@ $ api-only-publisher init . --yes --openapi --asyncapi --target orders
 Nothing is asked before completing `apionly.yaml`: unlike `--force`, an additive update never discards anything, so there is nothing to confirm.
 Run `init` again with the same kinds, and it reports nothing left to add.
 
+The one slot that is asked about, when it applies, is `portfolio` -- see <<aggregates,Aggregates §>> for what it configures, and why growing past one target is what makes it apply.
+
+[source,console]
+----
+$ api-only-publisher init . --yes --openapi --target payments
+Path prefix strategy for a portfolio: target-prefix or none [target-prefix]:
+Where a portfolio's generated bundle root lands, as a directory beside bundles/ [portfolios]:
+  created    specs/openapi/...
+  updated    apionly.yaml (added targets.payments.openapi, portfolio)
+----
+
 `--force` is the other tool for an apionly.yaml that differs, and it does the opposite of the additive update: it reinitialises the file wholesale, exactly as a first run with these values would write it -- any target or key it holds that these values would not produce is gone, additive or not.
 Use it to discard a customisation on purpose; use a plain `init` to add a kind without touching anything else.
 
@@ -410,31 +425,176 @@ Where that matters, promote the fragment to a contract of its own, published and
 [#aggregates]
 == Aggregates
 
-A whole-landscape OpenAPI view is just another bundle root: every path body already lives in a `$ref`'d fragment, so a portfolio costs one hand-written table of contents and duplicates no contract text.
+A whole-landscape view -- a portfolio -- used to be maintained by hand for OpenAPI: every path body already lives in a `$ref`'d fragment, so it can be one table of contents that duplicates no contract text.
+It can be written that way, but it does not follow that it should be: nothing stops it silently falling behind the members it lists, the moment a service grows an endpoint and nobody remembers the table of contents is a second place to add it.
 
-AsyncAPI cannot be written that way.
+AsyncAPI never had the choice.
 Its operations use document-root pointers (`channel: {$ref: '#/channels/orderPlacedV1'}`), and `#` resolves against whichever file contains it, so moving an operation into a fragment breaks it.
 A hand-written async portfolio would have to copy every operation verbatim, and that copy would start rotting the moment a member changed.
 
-So it is generated instead.
-Declare the members and the aggregate's own identity:
+So both are generated.
+Declare the members on the target that is the aggregate; nothing here says where its generated root lands, because that is the tool's decision, not the author's -- see <<portfolio-location,Where a generated portfolio lands §>>:
+
+[source,yaml]
+----
+targets:
+  orders:
+    openapi:
+      bundle: bundles/orders_openapi_structure.yaml
+  payments:
+    openapi:
+      bundle: bundles/payments_openapi_structure.yaml
+  portfolio:
+    openapi:
+      aggregate:
+        - orders
+        - payments
+      info:
+        title: Everything, together
+        version: 0.0.0
+----
+
+The bundle root is synthesised into the staging tree immediately before bundling, so nothing is duplicated in the source and the view cannot fall behind its members.
+`info` is the aggregate's own identity; omit it and a generated one names the members instead.
+Where every member agrees, an AsyncAPI aggregate looks the same, with `asyncapi.aggregate` in place of `openapi.aggregate`.
+
+[#aggregates-merge]
+=== How members merge
+
+A repeated key across members is not always the same kind of event, so there are three modes:
+
+[cols="1,2,2", options="header"]
+|===
+|Mode |A repeat with an identical value |A repeat that differs
+
+|`unique` (the default)
+|Error.
+Ownership would be ambiguous even when both members agree, because one of the two would silently not appear in the aggregate.
+|Error.
+
+|`agree`
+|Merges silently.
+Several services publishing to one broker, or defining the same shared security scheme, is the ordinary case, not a conflict.
+|Error, naming both members.
+Members may share a definition; they may not define it differently.
+
+|`reconcile`
+|Merges silently.
+|Merges too: reported, and the first contributing member's value wins, deterministically -- an inconsistency to notice and fix, not a defect that fails the build.
+|===
+
+What each section of an OpenAPI aggregate uses:
+
+[cols="1,2", options="header"]
+|===
+|Section |Mode
+
+|`paths`
+|Prefixed with the member's target, so a repeat is unreachable in practice; `unique` regardless, so a member listed twice is still caught by name.
+
+|`tags`
+|`reconcile`, keyed by the tag's `name`.
+Two members `$ref`ing the same shared tag fragment -- the ordinary case -- are one tag in the portfolio; two members describing a tag of the same name differently are reconciled, reported, and the first wins.
+
+|`servers`
+|`agree`, the same as an AsyncAPI aggregate already used.
+
+|`security`
+|Not merged at all -- pushed down. See <<aggregates-security,Security §>>.
+
+|`components.securitySchemes`
+|`agree`. A pushed-down operation's `security` names a scheme, so the name has to mean one thing; rename one of them if two members disagree.
+
+|`components.*` (every other sub-map)
+|`agree`, per sub-map.
+|===
+
+Every operation id is prefixed with its path's member too, in PascalCase: `orders` contributes `OrdersGetOrder`, `payments` contributes `PaymentsGetOrder`, however each member itself spelled its own id.
+Two members sharing an operation id is coincidence rather than intent -- an operation id identifies an operation within its own document -- so this is not configurable.
+
+Paths and operation ids are pass-2 work: the merge above happens on what a member's bundle root shows unresolved, before the aggregate's own output is bundled, because that is the only point at which it is still known which member a path came from.
+Prefixing paths and pushing security down happen afterwards, on the aggregate's own bundled document, once every `$ref` -- the members' and its own -- has resolved into something with a name to prefix, reconcile or push onto.
+Neither pass changes a fragment: this only ever merges documents.
+
+Prefixing paths assumes path-based routing -- a gateway mapping `/orders/**` to that service.
+Where routing is by host instead, and a prefixed path would exist nowhere, `portfolio.openapi.paths: none` leaves every path exactly as its member wrote it; a repeated path is then a genuine, reachable conflict, refused by name.
+
+[#aggregates-security]
+=== Security
+
+Root-level `security` is an array of Security Requirement Objects -- an OR, where any one entry satisfies the requirement, and AND within one entry, across several schemes.
+`security: []` means explicitly nothing required.
+Operation-level `security` *replaces* the root's value; it does not merge with it.
+
+Members legitimately differ: one service requires a bearer token, another's login endpoint cannot.
+Three ways to merge that were rejected, and the one that is used:
+
+* *Union the arrays.* Looks natural, and is dangerous: because the array is OR, unioning `[{bearerAuth: []}]` with `[]` says every operation may be called with a bearer token *or with nothing*, weakening every member to its least-authenticated one.
+* *Intersect the arrays.* Wrong for the same family of reasons: it silently strips a requirement a member actually has.
+* *Require every member to agree* (`agree` mode, as `servers` uses). Safe, but different services legitimately having different authentication is normal, not a mistake, so this would make an ordinary landscape unbuildable.
+* *Push each member's root security down onto the operations it contributes* (used). Meaning is preserved exactly, per operation: the portfolio keeps no root `security`, and every operation carries its own -- its member's root, unless the operation already declared one of its own, in which case that one is left alone, since it already replaces the root.
+A member whose root is explicitly `security: []` has `[]` pushed down explicitly too, rather than left absent: absent means "inherit", and inheriting from an absent root only *coincidentally* means the same thing.
+
+The portfolio is more verbose than its members for this, which is the fair price of being accurate about each one.
+Because a YAML comment does not survive bundling -- it parses and re-serialises -- the portfolio says so twice: `info.description` gains a line, for a reader, and `x-security-note` carries the same text machine-readably.
+
+[#aggregates-never-published]
+=== An aggregate is never published
+
+A portfolio is a catalogue.
+You do not ship a catalogue; you ship the things in it, each on its own, with its own version and its own owner.
+
+* Declaring `aggregate` for a kind means the target is never published for that kind, whatever `publish` says; writing `publish: false` beside it is accepted but no longer necessary.
+* `publish: true` alongside an aggregate is refused, naming why: prefixed operation ids match no member's, so a subscriber locking one builds against a name nothing uses; the TranscriberJ names a class after `operationId`, so transcribing a portfolio makes `OrdersGetOrderOperation` where the member makes `GetOrderOperation`; and a portfolio's version answers no useful question, since it moves whenever anything anywhere moves.
+A combined surface that genuinely needs publishing is a bundle somebody authors deliberately, with its own owner and version, not a by-product of aggregation.
+* A target may not declare both `aggregate` and `bundle` for the same kind: an aggregate is generated whole, so there is no hand-written base to merge into.
+* A target aggregating one kind must aggregate every kind it declares; mixing an aggregate for one kind with a hand-written bundle for another is refused.
+Somebody who wants a hand-written AsyncAPI portfolio writes an ordinary bundle that happens to look like one, in the bundles location, as an ordinary published target -- which is then a bundle, not a portfolio, the honest description of what they made.
+* An aggregate cannot list itself, directly or through another aggregate: nesting is not supported, so listing one aggregate as another's member is refused by name.
+
+[#portfolio-location]
+=== Where a generated portfolio lands
+
+Outside the bundles directory, at the same depth: `specs/openapi/portfolios/` beside `specs/openapi/bundles/`, `specs/asyncapi/portfolios/` beside `specs/asyncapi/bundles/`.
+
+That depth matters more than it looks.
+The merged document carries each member's `$ref` strings over verbatim -- `../paths/common/RootV1.yaml` -- and those resolve correctly only from the same directory depth the member's own bundle root sat at.
+Putting the generated root anywhere else would mean rewriting every such reference, which is work with a subtle failure mode and no benefit, so the directory is fixed at that depth instead.
+
+Keeping generated portfolios out of `bundles/` also makes them visibly separate from what is hand-authored -- nothing hand-written should ever `$ref` into a portfolio, since it is regenerated, and can change shape, on every build.
+
+[#portfolio-config]
+=== Configuring a portfolio
+
+Every strategy above has a documented default and a name in `apionly.yaml`'s `portfolio` section, which is absent by default -- an aggregate with no section builds on the defaults, and needs none added to work:
 
 [source,yaml]
 ----
 portfolio:
-  publish: false
-  asyncapi:
-    bundle: bundles/portfolio_asyncapi_structure.yaml
-    aggregate:
-      - orders
-      - payments
-    info:
-      title: Everything, together
-      version: 0.0.0
+  openapi:
+    paths: target-prefix       # target-prefix (default) | none
+    operationIds: target-prefix  # the only value today; named for room to grow
+    tags: reconcile               # the only value today
+  security: push-down             # the only value today
+  location: portfolios            # the directory name, beside bundles/, under each kind
 ----
 
-The bundle root is synthesised into the staging tree immediately before bundling, so nothing is duplicated in the source and the view cannot fall behind its members.
-Two members contributing the same channel or operation key is an error rather than a silent overwrite.
+Because a portfolio is regenerated on every build, changing a setting here needs no migration: the next build simply produces a different portfolio.
+
+`init` writes this section -- asking, at a terminal, about `paths` and `location` -- once a library is about to have more than one target and does not have the section yet, the same way it writes a kind's own configuration; see <<init-additive,Adding a kind to an existing library §>>.
+It never changes a section that already exists, and says so rather than passing over it in silence: `  present    portfolio (already configured; init never changes it)`.
+
+`config portfolio` is the other side of that: it always asks, offering what is already configured as each default, and always rewrites the keys it asked about, whatever else the section or the file holds:
+
+[source,console]
+----
+$ api-only-publisher config portfolio
+Path prefix strategy for a portfolio: target-prefix or none [target-prefix]: none
+Where a portfolio's generated bundle root lands, as a directory beside bundles/ [portfolios]:
+Configured portfolio: paths=none, location=portfolios
+----
+
+`--portfolio-paths` and `--portfolio-location` answer those questions from the command line, for both `init` and `config`, the same way `init`'s other value flags do.
 
 [#channels]
 == Channels
@@ -549,12 +709,20 @@ targets:
       # Relative to specs/asyncapi/; built into build/dist/orders/asyncapi.yaml.
       bundle: bundles/orders_asyncapi_structure.yaml
   portfolio:
-    publish: false     # built and linted, never published
     openapi:
-      bundle: bundles/portfolio_openapi_structure.yaml
+      # Generated, not hand-written: never a bundle, never published -- see
+      # Aggregates §, below.
+      aggregate:
+        - orders
+
+portfolio:                # absent is fine; an aggregate builds on documented defaults
+  location: portfolios    # see Aggregates §
 ----
 
 `targets` is the single source of truth for what gets built.
+
+Every key here is checked against what that level of `apionly.yaml` allows -- a `portfolio:` block that lands under `build:` by a bad indent is `unknown key 'portfolio' in build`, not a silently ignored typo.
+`channels` and `toolchain` are the two exceptions: a channel's settings depend on its type and a tool's name is whatever the author calls it, so neither has a closed vocabulary to check against.
 
 A target's `bundle` and a kind's `outputName` are the two ends of one build: the bundle root is what a document is built *from*, in the library, and `outputName` is what it is built *to*, in `<build.dist>/<target>/`.
 Every target's document of one kind has the same `outputName`; keep the defaults, `openapi.yaml` and `asyncapi.yaml`, because the Subscriber looks for exactly those names.
