@@ -1,3 +1,15 @@
+# [0.8.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.7.1...api-only-publisher-v0.8.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** generate the OpenAPI portfolio from its member bundles ([#38](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/38)) ([222f83e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/222f83e990c2be280d4754bee18e800d9bfb656e)), closes [#38](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/38) [#37](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/37) [Arc-E-Tect/SoftwareEngineeringDoneRight-Code#255](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Code/issues/255) [#255](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/255)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.7.1 [skip ci] ([65fc34f](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/65fc34fd75ed22d56e85f6bf4e1a4fd5dd836963))
+
 ## [0.7.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.7.0...api-only-publisher-v0.7.1) (2026-09-19)
 
 
