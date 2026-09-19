@@ -687,6 +687,9 @@ reports:
   lint: build/reports/lint
 lint:
   unreferenced: error  # a fragment no target reaches: error, warn or off
+  examples:
+    asyncapi: warn      # a message with no example: error, warn (the default) or off
+    openapi: warn       # a request body or response with no example: error, warn (the default) or off
 
 toolchain:
   redocly: "@redocly/cli@2.52.0"
@@ -780,6 +783,32 @@ Any other YAML file under the source root counts.
 `lint --target` does not look, because an unreferenced fragment belongs to no target.
 
 `lint` lints every document even when one of them fails, and names every failure at the end, so a single run reports all of them.
+
+[#examples-check]
+=== An operation with no example is reported apart from lint
+
+`build` also checks, after linting, whether each operation's example is one the rest of the API-Only toolchain could use -- and reports that separately from lint's own findings, since "your contract is wrong" and "your contract limits what you can do with it downstream" are different claims.
+Neither specification requires an example, and this is not a specification-validity rule: it is never run as a Redocly plugin or a Spectral ruleset.
+
+For AsyncAPI, it is whether a message's own `examples` array is non-empty -- what Microcks reads to build its async mocks and its conformance tests:
+
+[source,text]
+----
+AsyncAPI operation '<operationId>': message '<messageKey>' (<fragment, or where in the bundle>) carries no example, so this bundle cannot be used for Microcks-based conformance testing.
+----
+
+For OpenAPI, it is whether a request body's or response's media type declares `example`/`examples`, or the schema it references carries its own top-level `examples`.
+Nothing downstream currently reads an OpenAPI example, so the message never claims the bundle cannot be used -- only that the generated documentation is weaker without one:
+
+[source,text]
+----
+OpenAPI operation '<operationId>': <request body, or response <status>> (<fragment, or where in the bundle>) carries no example, which makes the generated documentation harder to read.
+----
+
+A body or response with no `content` at all, such as a `204`, has nothing to exemplify and is never reported.
+
+`lint.examples.asyncapi` and `lint.examples.openapi` each default to `warn`; `error` fails the build, `off` does not look.
+A library that has adopted the Microcks-based conformance emitter will usually want `lint.examples.asyncapi: error`: publishing a bundle its own toolchain cannot use is a real defect there, not merely a gap (link:../docs/reference/authoring-a-specification-library.adoc#give-every-operation-an-example[Give every operation an example →]).
 
 [#version-stamping]
 === Version stamping edits one scalar

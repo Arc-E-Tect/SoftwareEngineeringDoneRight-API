@@ -11,6 +11,9 @@ const { substituteFile } = require("./placeholders");
 const { stampFile } = require("./version");
 const { generateAsyncApi, generateOpenApi, openapiPushDown, isAggregate } = require("./aggregate");
 const { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps, FragmentPathError, KEY } = require("./fragment-paths");
+const {
+    asyncapiOperationsWithoutExamples, openapiOperationsWithoutExamples, asyncapiMessage, openapiMessage,
+} = require("./examples");
 
 class BuildError extends Error {}
 
@@ -206,6 +209,33 @@ function lint(config, kind, file, log, { report = false, reportFile = null } = {
 }
 
 /**
+ * Reports operations of a built document whose example this kind's toolchain
+ * could use, and does not have -- separately from lint's own findings, since
+ * "your contract is wrong" and "your contract limits what you can do with it
+ * downstream" are different claims and read worse conflated.
+ *
+ * Governed by `lint.examples.<kind>`: `warn`, the default, logs each finding and
+ * continues; `error` logs them and fails the build; `off` does not look.
+ */
+function checkExamples(config, kind, file, log) {
+    const mode = config.lintExamples(kind);
+    if (mode === "off") return;
+
+    const document = YAML.parse(fs.readFileSync(file, "utf8"));
+    const findings = kind === "asyncapi"
+        ? asyncapiOperationsWithoutExamples(document).map(asyncapiMessage)
+        : openapiOperationsWithoutExamples(document).map(openapiMessage);
+    if (findings.length === 0) return;
+
+    for (const message of findings) log(`-- ${message}`);
+    if (mode === "error") {
+        throw new BuildError(
+            `${findings.length} operation(s) in ${path.basename(file)} have no example ` +
+            "(lint.examples." + kind + " is error):\n" + findings.map((m) => `  ${m}`).join("\n"));
+    }
+}
+
+/**
  * Copy a built document to the project that implements the target.
  *
  * Transitional. A producer has no business knowing its consumers' directory
@@ -304,6 +334,7 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
                 stampFile(outFile, version);
             }
             lint(config, kind, outFile, log);
+            checkExamples(config, kind, outFile, log);
 
             let distributed = null;
             if (config.isPublished(target)) {
@@ -317,4 +348,6 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
     return results;
 }
 
-module.exports = { build, prepare, stage, substituteTree, bundle, bundleWithFragmentPaths, lint, distribute, BuildError };
+module.exports = {
+    build, prepare, stage, substituteTree, bundle, bundleWithFragmentPaths, lint, checkExamples, distribute, BuildError,
+};

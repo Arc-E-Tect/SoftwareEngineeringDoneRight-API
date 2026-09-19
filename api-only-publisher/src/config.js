@@ -27,7 +27,8 @@ const DEFAULTS_KIND_KEYS = { openapi: ["lint", "outputName", "fragmentPaths"], a
 const PLACEHOLDERS_KEYS = ["strict"];
 const BUILD_KEYS = ["staging", "dist"];
 const REPORTS_KEYS = ["lint"];
-const LINT_KEYS = ["unreferenced"];
+const LINT_KEYS = ["unreferenced", "examples"];
+const LINT_EXAMPLES_KEYS = ["openapi", "asyncapi"];
 const DISTRIBUTION_KEYS = ["root", "layout"];
 const TARGET_KEYS = ["openapi", "asyncapi", "publish", "versionFile"];
 const TARGET_KIND_KEYS = ["bundle", "aggregate", "info"];
@@ -121,6 +122,7 @@ function load(configPath) {
     checkKeys(reports, REPORTS_KEYS, "reports");
     const lint = parsed.lint || {};
     checkKeys(lint, LINT_KEYS, "lint");
+    if (lint.examples) checkKeys(lint.examples, LINT_EXAMPLES_KEYS, "lint.examples");
     if (parsed.distribution) checkKeys(parsed.distribution, DISTRIBUTION_KEYS, "distribution");
 
     const portfolio = parsed.portfolio || {};
@@ -281,6 +283,20 @@ function load(configPath) {
             const mode = configured === undefined ? "error" : configured === false ? "off" : configured;
             if (!["error", "warn", "off"].includes(mode)) {
                 throw new ConfigError(`lint.unreferenced must be error, warn or off, not ${JSON.stringify(configured)}`);
+            }
+            return mode;
+        },
+        // What the build does about an operation whose example this kind's
+        // toolchain could use, and does not have: `warn`, the default, reports it;
+        // `error` fails the build; `off` does not look. Examples are never
+        // mandatory to the specification, so the default suits a library that has
+        // not adopted Microcks; a library that has wants `error` for asyncapi.
+        lintExamples(kind) {
+            const configured = (this.lint.examples || {})[kind];
+            const mode = configured === undefined ? "warn" : configured;
+            if (!["error", "warn", "off"].includes(mode)) {
+                throw new ConfigError(
+                    `lint.examples.${kind} must be error, warn or off, not ${JSON.stringify(configured)}`);
             }
             return mode;
         },
