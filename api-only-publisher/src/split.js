@@ -111,7 +111,7 @@ function split(config, { by = "kind", outDir, log = () => {} } = {}) {
         // Union of every member's closure.
         const files = new Set();
         for (const { target, kind } of members) {
-            const entry = config.bundlePath(target, kind);
+            const entry = config.bundleRootPath(target, kind);
             if (!fs.existsSync(entry)) {
                 throw new SplitError(
                     `target '${target}': ${kind} bundle root not found at ${entry}; build first so the tree is staged`

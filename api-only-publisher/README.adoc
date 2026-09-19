@@ -582,7 +582,7 @@ portfolio:
 Because a portfolio is regenerated on every build, changing a setting here needs no migration: the next build simply produces a different portfolio.
 
 `init` writes this section -- asking, at a terminal, about `paths` and `location` -- once a library is about to have more than one target and does not have the section yet, the same way it writes a kind's own configuration; see <<init-additive,Adding a kind to an existing library §>>.
-It never changes a section that already exists.
+It never changes a section that already exists, and says so rather than passing over it in silence: `  present    portfolio (already configured; init never changes it)`.
 
 `config portfolio` is the other side of that: it always asks, offering what is already configured as each default, and always rewrites the keys it asked about, whatever else the section or the file holds:
 

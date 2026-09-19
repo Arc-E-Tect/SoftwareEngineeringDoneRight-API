@@ -340,7 +340,8 @@ test("init adds a missing kind's configuration to an existing library, without -
 
 test("init writes the portfolio section, with documented defaults, only once a second target arrives", async () => {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
-    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    const first = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    assert.ok(!first.printed.some((line) => line.includes("portfolio")), "one target: not even worth mentioning");
     let config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
     assert.doesNotMatch(config, /portfolio:/, "one target is nothing to aggregate yet");
 
@@ -379,7 +380,7 @@ test("init never asks about, or touches, a portfolio section that already exists
     const { printed } = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "invoices"], io);
 
     assert.ok(!shown.some((text) => text.startsWith("Path prefix strategy")));
-    assert.ok(!printed.some((line) => line.includes("portfolio")));
+    assert.ok(printed.some((line) => line.startsWith("  present") && line.includes("portfolio")));
     assert.strictEqual(portfolioSection(), before);
 });
 

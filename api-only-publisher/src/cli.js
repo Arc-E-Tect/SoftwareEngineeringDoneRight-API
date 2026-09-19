@@ -149,22 +149,25 @@ function initKinds(kinds) {
 }
 
 /**
- * Whether init should ask about the portfolio section this run: only once the
+ * Whether init should ask about the portfolio section this run: "ask", once the
  * library is about to have more than one target -- there is nothing to aggregate
- * with just one -- and only when it does not already have a portfolio section,
- * which init never changes, present or not.
+ * with just one -- and it does not have a portfolio section yet; "present" the
+ * same way, but the section is already there, which init never changes, and
+ * reports rather than silently doing nothing about; "not-yet" while there is
+ * still only one target, which is not worth mentioning at all.
+ *
+ * @returns {"ask"|"present"|"not-yet"}
  */
-function asksAboutPortfolio(dir, target) {
+function portfolioStatus(dir, target) {
     const file = path.join(dir, "apionly.yaml");
-    if (!fs.existsSync(file)) return false;
+    if (!fs.existsSync(file)) return "not-yet";
     const doc = YAML.parseDocument(fs.readFileSync(file, "utf8"));
-    if (doc.errors.length > 0) return false;
-    if (doc.hasIn(["portfolio"])) return false;
+    if (doc.errors.length > 0) return "not-yet";
     const targets = doc.get("targets", true);
-    if (!YAML.isMap(targets)) return false;
-    const names = new Set(targets.items.map((pair) => String(pair.key)));
+    const names = YAML.isMap(targets) ? new Set(targets.items.map((pair) => String(pair.key))) : new Set();
     names.add(target);
-    return names.size > 1;
+    if (names.size <= 1) return "not-yet";
+    return doc.hasIn(["portfolio"]) ? "present" : "ask";
 }
 
 /**
@@ -196,10 +199,12 @@ async function runInit(options, positional, io, log) {
         });
 
         // Asked, or defaulted, the same way a kind's own questions are -- but only
-        // once there is something to aggregate, and only when nothing is configured
-        // for it yet.
+        // once there is something to aggregate. A section already there is never
+        // asked about or changed, and reported as present rather than passed over
+        // in silence.
+        const portfolioStatusThisRun = portfolioStatus(dir, values.target);
         let portfolio = null;
-        if (asksAboutPortfolio(dir, values.target)) {
+        if (portfolioStatusThisRun === "ask") {
             portfolio = await resolvePortfolioValues({
                 given: options.config,
                 current: { paths: "target-prefix", location: "portfolios" },
@@ -221,6 +226,7 @@ async function runInit(options, positional, io, log) {
             }
         }
         init(dir, { values, force, log, portfolio });
+        if (portfolioStatusThisRun === "present") log("  present    portfolio (already configured; init never changes it)");
         log(`\nNext: api-only-publisher build -C ${dir}`);
     } finally {
         if (terminal) terminal.close();

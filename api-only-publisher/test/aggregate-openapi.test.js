@@ -11,6 +11,9 @@ const { load } = require("../src/config");
 const {
     generateOpenApi, openapiPushDown, isAggregate, mergeSection, pascalCase, AggregateError,
 } = require("../src/aggregate");
+const { prepare } = require("../src/pipeline");
+const { forTargets } = require("../src/closure");
+const { partition } = require("../src/split");
 
 function member(title, pathKey, operationId, extra = "") {
     return `openapi: 3.1.1
@@ -334,4 +337,24 @@ test("pascalCase turns a kebab-case target into a PascalCase identifier prefix",
     assert.strictEqual(pascalCase("user-account"), "UserAccount");
     assert.strictEqual(pascalCase("orders"), "Orders");
     assert.strictEqual(pascalCase("social_network"), "SocialNetwork");
+});
+
+// ---- other commands that read a target's bundle root must find an aggregate's ----
+
+test("closure and split read an aggregate's generated root, not a bundle path it does not have", () => {
+    // prepare() stages and generates before either of these ever reads a bundle
+    // root; both used to call config.bundlePath() directly, which throws for an
+    // aggregate -- it has no `bundle`, only `aggregate` -- rather than finding the
+    // generated one.
+    const config = library();
+    prepare(config, { kinds: ["openapi"] });
+
+    const closures = forTargets(config, ["openapi"]);
+    const portfolioClosure = closures.get("portfolio");
+    assert.ok(portfolioClosure, "the aggregate's own closure must be computable");
+    assert.ok(portfolioClosure.files.some((f) => f.endsWith("portfolio_openapi_structure.yaml")),
+        "the closure walk must start from the aggregate's generated root");
+
+    const parts = partition(config, "target");
+    assert.ok(parts.has("portfolio"), "split must be able to partition the aggregate too");
 });
