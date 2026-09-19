@@ -377,6 +377,65 @@ test("init refuses more than one target, and an invalid value given as a flag, w
     assert.deepStrictEqual(fs.readdirSync(dir), []);
 });
 
+test("config portfolio without a terminal takes the documented defaults, and writes them", async () => {
+    const dir = library();
+    const { code } = await runWith(["config", "portfolio", "-C", dir], { interactive: false });
+    assert.strictEqual(code, 0);
+    const config = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    assert.match(config, /portfolio:\n {2}openapi:\n {4}paths: target-prefix\n {2}location: portfolios/);
+});
+
+test("config portfolio at a terminal shows what is already configured, and Enter keeps it", async () => {
+    const dir = library();
+    // First run writes location: aggregates; the second must show it as the default.
+    await runWith(["config", "portfolio", "-C", dir, "--portfolio-location", "aggregates"], { interactive: false });
+
+    const { io, shown } = terminal();
+    await runWith(["config", "portfolio", "-C", dir], io);
+    assert.ok(shown.some((text) => text.includes("[target-prefix]")));
+    assert.ok(shown.some((text) => text.includes("[aggregates]")));
+    const config = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    assert.match(config, /location: aggregates/);
+});
+
+test("config portfolio changes only the keys it asked about, and keeps every comment in the file", async () => {
+    const dir = library({
+        ...LIBRARY,
+        "apionly.yaml": `# A library's own comment.\n${LIBRARY["apionly.yaml"]}portfolio:\n  openapi:\n    tags: reconcile\n  security: push-down\n`,
+    });
+    await runWith(["config", "portfolio", "-C", dir, "--portfolio-paths", "none"], { interactive: false });
+    const config = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    assert.match(config, /# A library's own comment\./);
+    assert.match(config, /paths: none/);
+    assert.match(config, /tags: reconcile/);
+    assert.match(config, /security: push-down/);
+});
+
+test("config refuses an unknown section, and config --yes asks nothing", async () => {
+    const dir = library();
+    await assert.rejects(runWith(["config", "nonsense", "-C", dir], { interactive: false }),
+        /'nonsense' is not a configurable section; there is: portfolio/);
+
+    const { io, shown } = terminal();
+    const { code } = await runWith(["config", "portfolio", "-C", dir, "--yes"], io);
+    assert.strictEqual(code, 0);
+    assert.deepStrictEqual(shown, []);
+});
+
+test("config with no section walks every configurable section -- today, just portfolio", async () => {
+    const dir = library();
+    const { printed } = await runWith(["config", "-C", dir], { interactive: false });
+    assert.ok(printed.some((line) => line.startsWith("Configured portfolio:")));
+});
+
+test("config's flags are refused by name when invalid, and nothing is written", async () => {
+    const dir = library();
+    const before = fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8");
+    await assert.rejects(runWith(["config", "portfolio", "-C", dir, "--portfolio-paths", "sideways"], { interactive: false }),
+        /--portfolio-paths use target-prefix or none/);
+    assert.strictEqual(fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8"), before);
+});
+
 test("targets lists every target, its kinds, and which are not published", async () => {
     const { printed } = await run(["targets", "-C", library()]);
     assert.deepStrictEqual(printed, ["alpha  [openapi]", "beta  [openapi]  (publish: false)"]);
