@@ -41,7 +41,7 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -60,9 +60,9 @@ These are the versions this prompt was verified with. Use them unless I name new
       // The contract this project implements, at apiContractVersion.
       subscribe('<implemented>')
 
-      // The APIs it calls, each at its own version; version is required.
+      // The APIs it calls, each at its own version; apiContractVersion is required.
       subscribeAsClient('<called>') {
-          version = findProperty('<called>ApiVersion')
+          apiContractVersion = findProperty('<called>ApiVersion')
           // channel {                                  // only when this API comes from elsewhere;
           //     type = 'maven'                         // unset settings come from the project's channel
           //     groupId = '<group>'
@@ -71,7 +71,7 @@ These are the versions this prompt was verified with. Use them unless I name new
   }
   ```
 
-- `subscribe` reads `apiContractVersion` from the project's properties; `subscribeAsClient` reads only its own `version`.
+- `subscribe` falls back to the `apiContractVersion` project property, and `-PapiContractVersion` overrides it; `subscribeAsClient` uses only the `apiContractVersion` set on it, which neither changes.
   In a subproject, read its own `gradle.properties` with `findProperty`; in a single-project build, `providers.gradleProperty` works too.
 - A second `subscribe` to a different target fails the build with `apiOnlySubscriber already implements '<a>', so it cannot also implement '<b>'`; the same target with both methods fails too.
 - Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>` per contract, and `fetchApiSpec` and `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetches.

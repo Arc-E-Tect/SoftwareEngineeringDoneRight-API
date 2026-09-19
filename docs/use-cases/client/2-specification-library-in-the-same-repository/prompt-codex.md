@@ -44,8 +44,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.0` |
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -61,9 +61,9 @@ These are the versions this prompt was verified with. Use them unless I name new
 ## Facts: API-Only Subscriber {api-only-subscriber-version}
 
 - Gradle plugin `com.arc-e-tect.api-only-subscriber`, version `{api-only-subscriber-version}`; Gradle 8 or newer, Java 21 or newer.
-- An API a project calls is declared with `subscribeAsClient('<target>') { version = ... }`; `version` is required, and `apiContractVersion` is not read.
+- An API a project calls is declared with `subscribeAsClient('<target>') { apiContractVersion = ... }`; it is required there, and neither the `apiContractVersion` project property nor `-PapiContractVersion` is read.
 - In a subproject, read its own `gradle.properties` with `findProperty('<name>')`; `providers.gradleProperty` does not see a subproject's own file.
-- Tasks: `fetchApiSpec<Target>`, `verifyApiSpec<Target>` (target in camel case), `fetchApiSpec`, `verifyApiSpec`; `check` depends on `verifyApiSpec`, `processResources` on the fetches, which copies each contract to `contracts/<target>/` on the classpath.
+- Tasks: `fetchApiSpec<Target>`, `verifyApiSpec<Target>` (target in PascalCase), `fetchApiSpec`, `verifyApiSpec`; `check` depends on `verifyApiSpec`, `processResources` on the fetches, which copies each contract to `contracts/<target>/` on the classpath.
 - `apionly.lock`, beside the calling project's build file, holds one entry per subscription.
 - A locked version whose bytes changed is refused: `the published contract for '<target>' <version> is not the one recorded in apionly.lock`.
 
@@ -139,7 +139,7 @@ apiOnlySubscriber {
         directory = rootProject.file('contracts/build/publish').path
     }
     subscribeAsClient('<target-a>') {
-        version = findProperty('<target-a>ApiVersion')
+        apiContractVersion = findProperty('<target-a>ApiVersion')
     }
 }
 tasks.named('fetchApiSpec<TargetA>') { dependsOn ':publishApiContract<TargetA>' }

@@ -50,8 +50,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.0` |
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -112,9 +112,10 @@ These are the versions this prompt was verified with. Use them unless I name new
   }
   ```
 
-- **The version a subscription fetches** is its own `version` if set; otherwise `apiOnlySubscriber.version`; otherwise the project property `apiContractVersion`, which a subproject can set in its **own** `gradle.properties`.
+- **The version a subscription fetches** is `-PapiContractVersion` on the command line, which overrides every other; otherwise the subscription's own `apiContractVersion`; otherwise `apiOnlySubscriber.apiContractVersion`; otherwise the project property `apiContractVersion`, which a subproject can set in its **own** `gradle.properties`.
+  The old name `version` fails the build and names `apiContractVersion`.
   A pre-release is refused unless the subscription sets `allowPrerelease = true`.
-- Tasks, per project: `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the target in camel case, plus the aggregates `fetchApiSpec` and `verifyApiSpec`.
+- Tasks, per project: `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the target in PascalCase, plus the aggregates `fetchApiSpec` and `verifyApiSpec`.
   `check` depends on `verifyApiSpec`, and `processResources` depends on the fetch.
   The fetch task class, for wiring, is `com.arc_e_tect.gradle.apionly.subscriber.FetchApiSpecTask`.
 - The fetch unpacks the documents and `manifest.json` into the project's `build/api-spec/<target>/`, which is added as a resources directory, so the documents sit at the classpath root.

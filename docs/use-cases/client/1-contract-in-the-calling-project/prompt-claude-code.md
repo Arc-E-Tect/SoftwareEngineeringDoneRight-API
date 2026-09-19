@@ -41,8 +41,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.0` |
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -95,15 +95,15 @@ These are the versions this prompt was verified with. Use them unless I name new
           directory = file('build/api-only/publish').path
       }
       subscribeAsClient('<target>') {
-          version = providers.gradleProperty('<target>ApiVersion')   // required: no default
+          apiContractVersion = providers.gradleProperty('<target>ApiVersion')   // required: no default
           // allowPrerelease = false                                  // the default
       }
   }
   ```
 
-- A client subscription sets its own `version`; it does not read `apiContractVersion`, which is the version of a contract the project implements.
+- A client subscription sets its own `apiContractVersion`; it does not read `apiOnlySubscriber.apiContractVersion`, the `apiContractVersion` project property or `-PapiContractVersion`, which are the version of a contract the project implements.
   Without one, the build fails with `client subscription '<target>' declares no version`.
-- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>` (target in camel case), and the aggregates `fetchApiSpec` and `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetch.
+- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>` (target in PascalCase), and the aggregates `fetchApiSpec` and `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetch.
 - The fetch unpacks into `build/api-spec/<target>/`, records the version, the channel and a SHA-256 per document in `apionly.lock`, and, with the `java` plugin, `processResources` copies the documents to `contracts/<target>/` on the classpath.
 - A locked version whose bytes changed is refused: `the published contract for '<target>' <version> is not the one recorded in apionly.lock`.
 - Subscribing to the same target with `subscribe` and `subscribeAsClient` fails the build.
@@ -152,7 +152,7 @@ apiOnlySubscriber {
         directory = file('build/api-only/publish').path
     }
     subscribeAsClient('<target>') {
-        version = providers.gradleProperty('<target>ApiVersion')
+        apiContractVersion = providers.gradleProperty('<target>ApiVersion')
     }
 }
 tasks.named('fetchApiSpec<Target>') { dependsOn publishApiContract }

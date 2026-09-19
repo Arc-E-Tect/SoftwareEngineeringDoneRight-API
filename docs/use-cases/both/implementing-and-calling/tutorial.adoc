@@ -5,8 +5,8 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.0
-:api-only-subscriber-version: 0.3.0
+:api-only-publisher-version: 0.7.0
+:api-only-subscriber-version: 0.3.4
 
 [NOTE]
 .Where the links in this document go
@@ -252,10 +252,10 @@ apiOnlySubscriber {
 
     // The APIs it calls, each at its own version.
     subscribeAsClient('orders') {
-        version = findProperty('ordersApiVersion')
+        apiContractVersion = findProperty('ordersApiVersion')
     }
     subscribeAsClient('payments') {
-        version = findProperty('paymentsApiVersion')
+        apiContractVersion = findProperty('paymentsApiVersion')
     }
 }
 

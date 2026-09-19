@@ -147,7 +147,8 @@ A fragment that stays behind unreferenced fails `lint`.
 [#adopting-a-version]
 === Taking a new version
 
-. Change `apiContractVersion` in the project's `gradle.properties`, or the subscription's `version`; for an API the project calls, the `version` of its `subscribeAsClient` block.
+. Change `apiContractVersion` in the project's `gradle.properties`, or on the subscription; for an API the project calls, the `apiContractVersion` of its `subscribeAsClient` block.
+  To build against another version once, without changing anything, pass `-PapiContractVersion=<version>`; it overrides every other setting, but not a called API's.
 . Run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
 . Commit the version change and `apionly.lock` together.
 

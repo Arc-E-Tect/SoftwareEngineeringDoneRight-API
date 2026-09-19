@@ -45,7 +45,7 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -72,7 +72,7 @@ These are the versions this prompt was verified with. Use them unless I name new
           // extension = 'tgz'                           // the default
       }
       subscribe('<target>') {
-          // version = '1.1.0'                           // else apiOnlySubscriber.version, else apiContractVersion
+          // apiContractVersion = '1.1.0'                // else apiOnlySubscriber's, else the project property
           // allowPrerelease = false                     // the default
           // groupId = '...'                             // overrides channel.groupId for this contract
           // artifactId = '...'                          // defaults to the target name
@@ -80,12 +80,13 @@ These are the versions this prompt was verified with. Use them unless I name new
   }
   ```
 
-- **The version a subscription fetches** is its own `version` if set; otherwise `apiOnlySubscriber.version`; otherwise the project property `apiContractVersion`, from `gradle.properties`, `-P` or `ORG_GRADLE_PROJECT_apiContractVersion`.
+- **The version a subscription fetches** is `-PapiContractVersion` on the command line, which overrides every other; otherwise the subscription's own `apiContractVersion`; otherwise `apiOnlySubscriber.apiContractVersion`; otherwise the project property `apiContractVersion`, from `gradle.properties` or `ORG_GRADLE_PROJECT_apiContractVersion`.
+  The old name `version` fails the build and names `apiContractVersion`.
 - The `maven` channel resolves `<groupId>:<artifactId>:<version>@tgz` through the project's `repositories`.
   The producer's repository holds, per release, `<artifactId>-<version>.tgz`, `.pom` and `-manifest.json`.
   The Subscriber cannot fetch from npm or GitHub releases.
 - A named repository with `credentials(PasswordCredentials)` reads `<name>Username` and `<name>Password` as Gradle properties.
-- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the target in camel case, plus the aggregates `fetchApiSpec` and `verifyApiSpec`.
+- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the target in PascalCase, plus the aggregates `fetchApiSpec` and `verifyApiSpec`.
   `check` depends on `verifyApiSpec`, and `processResources` depends on the fetch.
   `verifyApiSpec` deliberately does not depend on the fetch, so `./gradlew check` fetches again and restores a hand-edited document, while `./gradlew verifyApiSpec` on its own reports it.
 - The fetch unpacks the documents (`openapi.yaml`, `asyncapi.yaml`) and `manifest.json` into `build/api-spec/<target>/`, which is added as a resources directory, so they sit at the classpath root.

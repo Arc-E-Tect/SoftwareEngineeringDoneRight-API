@@ -513,13 +513,13 @@ Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` 
 |Applies the extension, registers the tasks per subscription, resolves a subscription's archive for its channel, and wires resources and `check`.
 
 |`ApiOnlySubscriberExtension`
-|The `apiOnlySubscriber { }` block: `channel`, `lockfile`, `version`, `subscribe` for the contract the project implements, refusing a second, and `subscribeAsClient` for each API it calls.
+|The `apiOnlySubscriber { }` block: `channel`, `lockfile`, `apiContractVersion`, `subscribe` for the contract the project implements, refusing a second, and `subscribeAsClient` for each API it calls.
 
 |`ChannelSpec`
 |`channel { }`, on the project and in each subscription, where every setting a subscription leaves out comes from the project's: `type`, `groupId`, `extension`, `directory`.
 
 |`Subscription`
-|One `subscribe(...)` or `subscribeAsClient(...)`: `version`, `allowPrerelease`, `groupId`, `artifactId`, `into`, its own `channel`, whether it `isClient`, and the `openapi` and `asyncapi` providers.
+|One `subscribe(...)` or `subscribeAsClient(...)`: `apiContractVersion`, `allowPrerelease`, `groupId`, `artifactId`, `into`, its own `channel`, whether it `isClient`, and the `openapi` and `asyncapi` providers.
 
 |`FetchApiSpecTask`
 |Resolves, checks, unpacks and locks one subscription.
