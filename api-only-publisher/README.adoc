@@ -138,8 +138,9 @@ However the Publisher itself is started, it fetches them with `npx`, at the vers
 |===
 |Command |Purpose
 
-|`init [dir] [--force]`
-|Scaffold `apionly.yaml` and a reference directory layout that builds as it stands.
+|`init [dir] [--yes] [--force] [value flags]`
+|Scaffold `apionly.yaml` and a reference directory layout that builds as it stands: OpenAPI, AsyncAPI or both.
+At a terminal it asks for each value first, as <<init,Scaffolding a library §>> describes.
 
 |`build [--target <t>]... [--pre-release <ids>] [--openapi\|--asyncapi]`
 |Stage, substitute placeholders, bundle, stamp each published target's version, and lint.
@@ -179,6 +180,101 @@ npm run apionly -- build --target orders --openapi
 npm run apionly -- publish --target orders --pre-release rc.1
 npm run apionly -- changed --since origin/main --quiet
 ----
+
+[#init]
+== Scaffolding a library
+
+`init` writes a library that builds, lints and publishes as it stands, from a handful of values: which kinds of document it holds, its target's name, the API's title and so on.
+
+[source,console,subs="attributes+"]
+----
+npx @arc-e-tect/api-only-publisher@{api-only-publisher-version} init my-api-library
+----
+
+At a terminal it asks for each value, showing the default in brackets; Enter takes it.
+An answer that would break the build later is refused, and the question asked again.
+
+[source,text]
+----
+Kinds of document: openapi, asyncapi or both [openapi]: both
+Target name [example-service]: Customer_Orders
+'Customer_Orders' is not a target name: use lowercase letters and digits, in words joined by single hyphens, starting with a letter, such as customer-orders
+Target name [example-service]: customer-orders
+API title [Example API]: Customer Orders API
+Initial contract version [0.1.0]:
+...
+----
+
+Where nobody is watching -- no terminal, as in CI, a script or an AI assistant -- it asks nothing and takes the defaults, as it always has.
+`--yes` (or `-y`) does the same at a terminal.
+
+[cols="2,2,3", options="header"]
+|===
+|Question |Flag |Default, and what is accepted
+
+|Kinds of document
+|`--openapi`, `--asyncapi`; both flags for both
+|`openapi`. The library's trees and targets follow from it.
+
+|Target name
+|`--target <name>`
+|`example-service`. Lowercase kebab-case: a lowercase letter first, then lowercase letters and digits, in words joined by single hyphens -- `orders`, `customer-orders`, `orders-v2`.
+The name becomes file names, a properties key, a Maven artifactId, a git tag and, through the Subscriber, a Gradle task name, which treats `-`, `_` and `.` alike; one separator keeps two targets from claiming one task.
+
+|API title
+|`--title <text>`
+|`Example API`. Any text.
+
+|Initial contract version
+|`--contract-version <version>`
+|`0.1.0`. A semantic release version, not a pre-release: it goes in the target's version file.
+
+|Contact name
+|`--contact-name <text>`
+|`Example Team`.
+
+|Contact URL
+|`--contact-url <url>`
+|`https://example.invalid`. An http or https URL.
+
+|Licence
+|`--license <spdx-id>`
+|`Apache-2.0`. An SPDX identifier; the URL of a well-known licence follows from it.
+
+|Licence URL
+|`--license-url <url>`
+|Asked only for a licence whose URL the tool does not know, and then required.
+
+|Production server URL
+|`--server-url <url>`
+|`https://api.example.invalid`. Asked only for a library with OpenAPI.
+
+|Broker host
+|`--broker-host <host[:port]>`
+|`kafka:9092`. Asked only for a library with AsyncAPI.
+|===
+
+A flag always wins: its question is not asked, and an invalid value, or a flag for a kind the library does not hold, stops `init` before it writes anything.
+
+What each kind of library gets::
+* *OpenAPI*: the OpenAPI tree under `specs/openapi/`, its target, and `.redocly.yaml`, the lint rules Redocly applies.
+`apionly.yaml` holds no `asyncapi` keys.
+* *AsyncAPI*: the AsyncAPI tree under `specs/asyncapi/` -- a channel, a message and its payload -- and its target.
+`apionly.yaml` holds no `openapi` keys, and there is no `.redocly.yaml` or Redocly pin: an AsyncAPI document is bundled and validated with the AsyncAPI CLI alone.
+* *Both*: both trees, one target building both documents, and one schema they share: `specs/openapi/components/common/schemas/ExampleIdV1.yaml`, which the HTTP response and the event payload both refer to.
+That is the library's convention in miniature -- a definition used by both protocols is one fragment -- and why the whole source root is staged together (<<what-build-does,What `build` does §>>).
+
+What it reports::
+`init` never overwrites what is there unless told to, and says for every file what it did:
++
+[horizontal]
+`created`:: The file was not there, and is now.
+`identical`:: The file was there, and matches what `init` would write, ignoring line endings and final newlines.
+`differs`:: The file was there, and does not match: where the library has diverged from the scaffold, usually on purpose.
+It is left alone.
+`overwrote`:: The file differed, and `--force` replaced it.
++
+At a terminal, `--force` first lists the files that differ and asks once whether to overwrite them; without a terminal, or with `--yes`, it overwrites them without asking.
 
 [#what-build-does]
 == What `build` does
@@ -437,7 +533,7 @@ Every target's document of one kind has the same `outputName`; keep the defaults
 === Where bundle roots go
 
 Put every bundle root in a `bundles/` directory of its kind's source directory, named `<target>_<kind>_structure.yaml`: `specs/openapi/bundles/orders_openapi_structure.yaml` and `specs/asyncapi/bundles/orders_asyncapi_structure.yaml`.
-The `init` scaffold lays out its OpenAPI bundle root this way.
+The `init` scaffold lays out its bundle roots this way, for each kind it writes.
 
 * A bundle root is a table of contents rather than a fragment, and a `bundles/` directory keeps the two apart.
 * The name says which target and which kind, so the two roots of one target are never confused, in the tree or in a review.

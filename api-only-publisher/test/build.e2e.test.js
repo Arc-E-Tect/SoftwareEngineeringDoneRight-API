@@ -35,6 +35,31 @@ test("a scaffolded library builds, lints and stamps a real document", { timeout:
     assert.ok(!/\{\{/.test(document), "no placeholder may survive into a published contract");
 });
 
+for (const [name, kinds, documents] of [
+    ["an AsyncAPI-only", ["asyncapi"], ["asyncapi.yaml"]],
+    ["a both-kinds", ["openapi", "asyncapi"], ["openapi.yaml", "asyncapi.yaml"]],
+]) {
+    test(`${name} scaffold builds, lints and stamps as init writes it`, { timeout: 300000 }, () => {
+        const { DEFAULTS } = require("../src/init");
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-e2e-"));
+        init(dir, { values: { ...DEFAULTS, kinds } });
+
+        const results = build(loadFrom(dir), { versionOf: () => "1.2.3" });
+
+        assert.deepStrictEqual(results.map((r) => path.basename(r.file)).sort(), documents.slice().sort());
+        for (const result of results) {
+            const document = fs.readFileSync(result.file, "utf8");
+            assert.match(document, /^ {2}version: 1\.2\.3$/m, `${result.file} must carry the stamped version`);
+            assert.ok(!/\{\{/.test(document), "no placeholder may survive into a published contract");
+        }
+        if (kinds.length === 2) {
+            // The event's identifier is the OpenAPI tree's fragment, stamped with its path.
+            const events = fs.readFileSync(results.find((r) => r.file.endsWith("asyncapi.yaml")).file, "utf8");
+            assert.match(events, /x-fragment-path: openapi\/components\/common\/schemas\/ExampleIdV1\.yaml/);
+        }
+    });
+}
+
 test("building without a version leaves the source version in place", { timeout: 300000 }, () => {
     const config = scaffold();
 

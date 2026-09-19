@@ -1,0 +1,30 @@
+# apionly.yaml
+#
+# Declares what this library builds, from where, and where each document goes.
+
+schemaVersion: 1
+
+sources:
+  root: specs
+  openapi: openapi
+
+defaults:
+  openapi:
+    lint: .redocly.yaml
+    outputName: openapi.yaml
+  placeholders:
+    # Fail the build on a {{token}} with no matching Markdown file, rather than
+    # emitting a marker into a published contract.
+    strict: true
+
+build:
+  staging: build/staging
+  dist: dist
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+
+targets:
+  example-service:
+    openapi:
+      bundle: bundles/example-service_openapi_structure.yaml

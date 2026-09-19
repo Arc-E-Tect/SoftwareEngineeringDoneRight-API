@@ -1,0 +1,21 @@
+description: The request was not valid.
+content:
+  application/problem+json:
+    schema:
+      # RFC 9457. A problem shape is product-wide infrastructure, so it lives
+      # under components/common/ however service-specific its meaning.
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+      required:
+        - type
+        - title
+        - status

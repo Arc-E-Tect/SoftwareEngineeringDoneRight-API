@@ -1,0 +1,7 @@
+# Lint rules for this library.
+#
+# 'recommended' is Redocly's own baseline. Narrow or widen it as the library
+# grows -- these rules are the governance the library applies to itself, which is
+# why they live here rather than in any project that consumes the output.
+extends:
+  - recommended

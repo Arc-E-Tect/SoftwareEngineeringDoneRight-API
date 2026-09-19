@@ -6,58 +6,85 @@
 // layout below is the one the library documentation describes; a project that
 // starts from it inherits the common/<product> split, the shared info block with
 // placeholder snippets, and a configuration that already builds.
+//
+// What it writes follows from a handful of values -- which kinds of document the
+// library holds, the target's name, the API's title and so on -- that
+// init-questions.js asks for at a terminal and defaults everywhere else. This file
+// only turns values into files and writes them; it never reads input itself.
 
 const fs = require("fs");
 const path = require("path");
+const YAML = require("yaml");
 
-const CONFIG = `# apionly.yaml
-#
-# Declares what this library builds, from where, and where each document goes.
+/** Every value the scaffold is written from, as it is when nobody chooses otherwise. */
+const DEFAULTS = Object.freeze({
+    kinds: Object.freeze(["openapi"]),
+    target: "example-service",
+    title: "Example API",
+    contractVersion: "0.1.0",
+    contactName: "Example Team",
+    contactUrl: "https://example.invalid",
+    license: "Apache-2.0",
+    licenseUrl: "https://www.apache.org/licenses/LICENSE-2.0.html",
+    serverUrl: "https://api.example.invalid",
+    brokerHost: "kafka:9092",
+});
 
-schemaVersion: 1
+/** A value as a YAML scalar: plain where YAML reads it back unchanged, quoted where it would not. */
+function scalar(value) {
+    return YAML.stringify(value, { lineWidth: 0 }).trimEnd();
+}
 
-sources:
-  root: specs
-  openapi: openapi
-  asyncapi: asyncapi
+function config(v) {
+    const openapi = v.kinds.includes("openapi");
+    const asyncapi = v.kinds.includes("asyncapi");
+    const lines = [
+        "# apionly.yaml",
+        "#",
+        "# Declares what this library builds, from where, and where each document goes.",
+        "",
+        "schemaVersion: 1",
+        "",
+        "sources:",
+        "  root: specs",
+    ];
+    if (openapi) lines.push("  openapi: openapi");
+    if (asyncapi) lines.push("  asyncapi: asyncapi");
+    lines.push("", "defaults:");
+    if (openapi) lines.push("  openapi:", "    lint: .redocly.yaml", "    outputName: openapi.yaml");
+    if (asyncapi) lines.push("  asyncapi:", "    outputName: asyncapi.yaml");
+    lines.push(
+        "  placeholders:",
+        "    # Fail the build on a {{token}} with no matching Markdown file, rather than",
+        "    # emitting a marker into a published contract.",
+        "    strict: true",
+        "",
+        "build:",
+        "  staging: build/staging",
+        "  dist: dist",
+        "",
+        "toolchain:",
+    );
+    if (openapi) lines.push('  redocly: "@redocly/cli@2.52.0"');
+    if (asyncapi) lines.push('  asyncapi: "@asyncapi/cli@6.0.2"');
+    lines.push("", "targets:", `  ${v.target}:`);
+    if (openapi) lines.push("    openapi:", `      bundle: bundles/${v.target}_openapi_structure.yaml`);
+    if (asyncapi) lines.push("    asyncapi:", `      bundle: bundles/${v.target}_asyncapi_structure.yaml`);
+    return lines.join("\n") + "\n";
+}
 
-defaults:
-  openapi:
-    lint: .redocly.yaml
-    outputName: openapi.yaml
-  asyncapi:
-    outputName: asyncapi.yaml
-  placeholders:
-    # Fail the build on a {{token}} with no matching Markdown file, rather than
-    # emitting a marker into a published contract.
-    strict: true
-
-build:
-  staging: build/staging
-  dist: dist
-
-toolchain:
-  redocly: "@redocly/cli@2.52.0"
-  asyncapi: "@asyncapi/cli@6.0.2"
-
-targets:
-  example-service:
-    openapi:
-      bundle: bundles/example-service_openapi_structure.yaml
-`;
-
-const INFO = `title: Example API
+const info = (v) => `title: ${scalar(v.title)}
 version: 0.0.0
 description: |
   What this API is for.
 
   {{conventions}}
 contact:
-  name: Example Team
-  url: https://example.invalid
+  name: ${scalar(v.contactName)}
+  url: ${scalar(v.contactUrl)}
 license:
-  name: Apache-2.0
-  url: https://www.apache.org/licenses/LICENSE-2.0.html
+  name: ${scalar(v.license)}
+  url: ${scalar(v.licenseUrl)}
 `;
 
 const CONVENTIONS = `## Conventions
@@ -68,7 +95,7 @@ with whatever your own API consumers need to know up front -- pagination, status
 codes, error shapes.
 `;
 
-const SERVERS = `- url: https://api.example.invalid
+const servers = (v) => `- url: ${scalar(v.serverUrl)}
   description: Production.
 `;
 
@@ -117,7 +144,9 @@ content:
         - status
 `;
 
-const PATH_FRAGMENT = `get:
+// With AsyncAPI beside it, the examples are identified by a schema both protocols
+// share; on its own, the OpenAPI scaffold stays as small as it always was.
+const pathFragment = (shared) => `get:
   operationId: listExamples
   summary: List examples.
   responses:
@@ -128,9 +157,15 @@ const PATH_FRAGMENT = `get:
           schema:
             type: array
             items:
-              type: string
+${shared ? "              $ref: '../../components/common/schemas/ExampleIdV1.yaml'" : "              type: string"}
     '400':
       $ref: '../../components/common/responses/errors/InvalidRequestProblemV1.yaml'
+`;
+
+const EXAMPLE_ID = `# One definition, two protocols: the HTTP response and the event both refer to this
+# fragment, so an example's identifier means the same thing wherever it appears.
+type: string
+description: An example's identifier.
 `;
 
 const REDOCLY = `# Lint rules for this library.
@@ -147,44 +182,177 @@ dist/
 node_modules/
 `;
 
-const VERSION = `# The version of the example-service contract, for every document it builds.
+const version = (v) => `# The version of the ${v.target} contract, for every document it builds.
 # Semantic: major for a breaking change, minor for an additive one, patch for
 # anything else. Change it in the same commit as the fragments it describes.
-version=0.1.0
+version=${v.contractVersion}
 `;
 
-const FILES = {
-    "apionly.yaml": CONFIG,
-    ".redocly.yaml": REDOCLY,
-    ".gitignore": GITIGNORE,
-    "specs/openapi/shared/info.yaml": INFO,
-    "specs/openapi/shared/conventions.md": CONVENTIONS,
-    "specs/openapi/shared/servers.yaml": SERVERS,
-    "specs/openapi/bundles/example-service_openapi_structure.yaml": BUNDLE,
-    "specs/openapi/bundles/example-service.bundle.properties": VERSION,
-    "specs/openapi/paths/example/ExamplesV1.yaml": PATH_FRAGMENT,
-    "specs/openapi/components/common/security/BearerAuth.yaml": SECURITY_SCHEME,
-    "specs/openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml": PROBLEM,
-};
+// The AsyncAPI bundle root holds its operations itself: they point into the document
+// with #/channels/..., which only resolves in the file that contains it.
+const asyncBundle = (v) => `asyncapi: 3.1.0
+info:
+  title: ${scalar(v.title)}
+  version: 0.0.0
+  description: |
+    The events this API publishes.
 
-function init(targetDir, { force = false, log = () => {} } = {}) {
-    const created = [];
-    const skipped = [];
+    {{conventions}}
+  contact:
+    name: ${scalar(v.contactName)}
+    url: ${scalar(v.contactUrl)}
+  license:
+    name: ${scalar(v.license)}
+    url: ${scalar(v.licenseUrl)}
+defaultContentType: application/json
+servers:
+  production:
+    host: ${scalar(v.brokerHost)}
+    protocol: kafka
+    description: Production.
+channels:
+  examplesV1:
+    $ref: '../channels/example/ExamplesV1.yaml'
+operations:
+  publishExampleCreated:
+    action: send
+    channel:
+      $ref: '#/channels/examplesV1'
+    summary: Publish an ExampleCreated event when an example is created.
+    messages:
+      - $ref: '#/channels/examplesV1/messages/exampleCreated'
+`;
 
-    for (const [rel, content] of Object.entries(FILES)) {
-        const file = path.join(targetDir, rel);
-        if (fs.existsSync(file) && !force) {
-            skipped.push(rel);
-            continue;
-        }
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, content);
-        created.push(rel);
+const CHANNEL = `address: examples.v1
+title: Examples
+description: Events about examples.
+messages:
+  exampleCreated:
+    $ref: '../../messages/example/ExampleCreatedMessageV1.yaml'
+`;
+
+const MESSAGE = `name: ExampleCreated
+title: An example was created.
+contentType: application/json
+payload:
+  $ref: '../../components/example/schemas/ExampleCreatedEventV1.yaml'
+`;
+
+const event = (shared) => `type: object
+description: An example was created.
+required:
+  - id
+  - occurredAt
+properties:
+  id:
+${shared
+        ? "    # The OpenAPI tree's schema: an event and an HTTP response mean one identifier.\n" +
+          "    $ref: '../../../../openapi/components/common/schemas/ExampleIdV1.yaml'"
+        : "    type: string\n    description: The example's identifier."}
+  occurredAt:
+    type: string
+    format: date-time
+    description: When the example was created.
+`;
+
+/**
+ * The files a library of these values starts with, keyed by their path relative to it.
+ *
+ * @param {object} values the values, as DEFAULTS has them
+ * @returns {Object<string, string>}
+ */
+function scaffold(values = DEFAULTS) {
+    const v = { ...DEFAULTS, ...values };
+    const openapi = v.kinds.includes("openapi");
+    const asyncapi = v.kinds.includes("asyncapi");
+    const both = openapi && asyncapi;
+    const files = { "apionly.yaml": config(v) };
+    if (openapi) files[".redocly.yaml"] = REDOCLY;
+    files[".gitignore"] = GITIGNORE;
+
+    if (openapi) {
+        Object.assign(files, {
+            "specs/openapi/shared/info.yaml": info(v),
+            "specs/openapi/shared/conventions.md": CONVENTIONS,
+            "specs/openapi/shared/servers.yaml": servers(v),
+            [`specs/openapi/bundles/${v.target}_openapi_structure.yaml`]: BUNDLE,
+            [`specs/openapi/bundles/${v.target}.bundle.properties`]: version(v),
+            "specs/openapi/paths/example/ExamplesV1.yaml": pathFragment(both),
+            "specs/openapi/components/common/security/BearerAuth.yaml": SECURITY_SCHEME,
+            "specs/openapi/components/common/responses/errors/InvalidRequestProblemV1.yaml": PROBLEM,
+        });
+        if (both) files["specs/openapi/components/common/schemas/ExampleIdV1.yaml"] = EXAMPLE_ID;
     }
-
-    for (const rel of created) log(`  created  ${rel}`);
-    for (const rel of skipped) log(`  exists   ${rel} (left alone; --force overwrites)`);
-    return { created, skipped };
+    if (asyncapi) {
+        // The version file sits beside the target's first bundle root: the OpenAPI one
+        // when there is one. The conventions snippet is found anywhere under specs/.
+        if (!openapi) {
+            files[`specs/asyncapi/bundles/${v.target}.bundle.properties`] = version(v);
+            files["specs/asyncapi/shared/conventions.md"] = CONVENTIONS;
+        }
+        Object.assign(files, {
+            [`specs/asyncapi/bundles/${v.target}_asyncapi_structure.yaml`]: asyncBundle(v),
+            "specs/asyncapi/channels/example/ExamplesV1.yaml": CHANNEL,
+            "specs/asyncapi/messages/example/ExampleCreatedMessageV1.yaml": MESSAGE,
+            "specs/asyncapi/components/example/schemas/ExampleCreatedEventV1.yaml": event(both),
+        });
+    }
+    return files;
 }
 
-module.exports = { init, FILES };
+const FILES = scaffold(DEFAULTS);
+
+/** Text as a comparison sees it: line endings and final newlines are not differences. */
+function normalised(text) {
+    return text.replace(/\r\n?/g, "\n").replace(/\n+$/, "");
+}
+
+/**
+ * What writing these files would do to each: create it, leave it because it is
+ * identical, or find it different from what would be written.
+ *
+ * @returns {{rel: string, status: "missing"|"identical"|"differs"}[]}
+ */
+function plan(targetDir, files) {
+    return Object.entries(files).map(([rel, content]) => {
+        const file = path.join(targetDir, rel);
+        if (!fs.existsSync(file)) return { rel, status: "missing" };
+        const same = normalised(fs.readFileSync(file, "utf8")) === normalised(content);
+        return { rel, status: same ? "identical" : "differs" };
+    });
+}
+
+/**
+ * Writes the scaffold of these values into a directory, and reports each file.
+ *
+ * A file that is not there is created. One that is there already is left alone,
+ * reported as identical to what would have been written or as differing from it;
+ * with `force`, one that differs is overwritten.
+ */
+function init(targetDir, { values = DEFAULTS, force = false, log = () => {} } = {}) {
+    const files = scaffold(values);
+    const report = { created: [], overwritten: [], identical: [], differing: [] };
+
+    for (const { rel, status } of plan(targetDir, files)) {
+        if (status === "identical") {
+            report.identical.push(rel);
+            continue;
+        }
+        if (status === "differs" && !force) {
+            report.differing.push(rel);
+            continue;
+        }
+        const file = path.join(targetDir, rel);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, files[rel]);
+        (status === "missing" ? report.created : report.overwritten).push(rel);
+    }
+
+    for (const rel of report.created) log(`  created    ${rel}`);
+    for (const rel of report.overwritten) log(`  overwrote  ${rel}`);
+    for (const rel of report.identical) log(`  identical  ${rel}`);
+    for (const rel of report.differing) log(`  differs    ${rel} (left alone; --force overwrites)`);
+    return { ...report, skipped: [...report.identical, ...report.differing] };
+}
+
+module.exports = { init, scaffold, plan, FILES, DEFAULTS };

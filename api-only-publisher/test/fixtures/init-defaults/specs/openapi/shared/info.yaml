@@ -1,0 +1,12 @@
+title: Example API
+version: 0.0.0
+description: |
+  What this API is for.
+
+  {{conventions}}
+contact:
+  name: Example Team
+  url: https://example.invalid
+license:
+  name: Apache-2.0
+  url: https://www.apache.org/licenses/LICENSE-2.0.html
