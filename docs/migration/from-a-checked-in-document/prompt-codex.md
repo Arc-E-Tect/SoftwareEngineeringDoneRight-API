@@ -38,8 +38,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.1` |
-| `{api-only-subscriber-version}` | `0.3.1` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -99,7 +99,7 @@ Downstream changes: none.
 Downstream changes: the committed document becomes generated. Consumers do not change.
 
 1. Add the `distribution` block to `apionly.yaml`, pointing at the directory each project already reads.
-2. Run `npm run apionly -- build`, and show that `git status` reports no change to the committed documents.
+2. Run `npm run apionly -- build`, and show with `git diff` that each committed document changed by exactly the differences phase 1 accepted as the bundler's, such as `components: {}`, and by nothing else; commit that, because the documents are the build's output from now on.
    If it reports one, stop: phase 1 was not finished.
 3. Delete the script or build step that used to produce or copy the documents, and tell me what it was.
 4. Change CI to fail when the build changes a committed document: `git diff --exit-code -- <path>`.
@@ -127,7 +127,7 @@ Downstream changes: none.
 1. Confirm no project is left in the `distribution` layout, then delete the block.
 2. Delete `.migration/`, and the fixture check from CI.
 3. Make sure `build/`, `node_modules/` and any other generated directory are in `.gitignore`.
-4. Run `git ls-files '*/src/main/resources/*openapi*' '*/src/main/resources/*asyncapi*'` and show that it prints nothing.
+4. Run `git ls-files '*src/main/resources/*openapi*' '*src/main/resources/*asyncapi*'` and show that it prints nothing.
 5. Run the full build once more.
 6. Stop. Summarise, and list the files to commit.
 

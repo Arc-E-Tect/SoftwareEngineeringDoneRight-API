@@ -47,7 +47,7 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-transcriberj-version}` | `0.3.2` |
+| `{api-only-transcriberj-version}` | `0.3.6` |
 | `{api-only-transcriberj-restdocs-version}` | `0.1.1` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
@@ -72,11 +72,11 @@ These are the versions this prompt was verified with. Use them unless I name new
   1. the locale's own file, e.g. `docs/Descriptions_nl_BE.properties`;
   2. its parents' files, e.g. `docs/Descriptions_nl.properties`;
   3. the base file, `docs/Descriptions.properties`;
-  4. what generation produced: the contract's text with `generateDocs = true`, otherwise the placeholder `INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE`.
+  4. what generation produced: with `generateDocs = true`, the contract's text, or the placeholder `INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE` where it has none; without it, the empty string.
 
   A missing file, a missing key and a blank entry all fall through.
   The JVM's default locale is never part of the chain.
-  Resolving never throws, and a description is never empty.
+  Resolving never throws; with `generateDocs = true`, a description is never empty.
 - **Keys.** A class's key is its class name, e.g. `OrderV1`.
   A field's key is `<ClassName>.<path>`, with the path exactly as the field reports it: `OrderV1.id`, `OrderV1.customer.address.street` for a nested object, `OrderV1.lines[].sku` for a field of an array's items.
   A field whose type is another generated class is described under that class's key.
@@ -132,7 +132,7 @@ Run the tests and show me that they fail, and why.
 ## Step 3: Configure and write the bundle
 
 1. Set `descriptionBundle` on the subscription.
-   Keep `generateDocs = true` unless I say the placeholder is the fallback I want.
+   Keep `generateDocs = true` unless I say the empty string is the fallback I want.
 2. Create the base file, `src/test/resources/docs/Descriptions.properties` (or the resources of the source set from step 1), with a comment explaining the key scheme, and only the keys we agreed.
 3. Create one file per other language, `Descriptions_<language>.properties`.
 4. Pass the run's language to the test JVM, pinned to the base language when nothing is asked:

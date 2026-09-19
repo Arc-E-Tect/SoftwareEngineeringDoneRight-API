@@ -47,7 +47,7 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -72,7 +72,7 @@ These are the versions this prompt was verified with. Use them unless I name new
           groupId = '<the provider\'s group id>'
       }
       subscribeAsClient('<target>') {
-          version = providers.gradleProperty('<target>ApiVersion')   // required: no default
+          apiContractVersion = providers.gradleProperty('<target>ApiVersion')   // required: no default
           // allowPrerelease = false                     // the default
           // groupId = '...'                             // another provider's group
           // artifactId = '...'                          // defaults to the target name
@@ -80,11 +80,11 @@ These are the versions this prompt was verified with. Use them unless I name new
   }
   ```
 
-- A client subscription sets its own `version`; it does not read `apiContractVersion`, which is the version of a contract the project implements.
+- A client subscription sets its own `apiContractVersion`; it does not read `apiOnlySubscriber.apiContractVersion`, the `apiContractVersion` project property or `-PapiContractVersion`, which are the version of a contract the project implements.
   Without one, the build fails with `client subscription '<target>' declares no version`.
 - The `maven` channel resolves `<groupId>:<artifactId>:<version>@tgz` through the project's `repositories`; a subscription can set a `channel { }` of its own, and every setting it leaves out comes from the project's channel.
 - A named repository with `credentials(PasswordCredentials)` reads `<name>Username` and `<name>Password` as Gradle properties.
-- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>` (target in camel case), and the aggregates `fetchApiSpec` and `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetches.
+- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>` (target in PascalCase), and the aggregates `fetchApiSpec` and `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetches.
 - Each fetch unpacks into `build/api-spec/<target>/`, and, with the `java` plugin, `processResources` copies the documents to `contracts/<target>/` on the classpath.
 - `apionly.lock` holds one entry per subscription: target, version, channel and a SHA-256 per document.
 - Gradle tasks that need a document read it through `apiOnlySubscriber.subscription('<target>').openapi`, which carries the dependency on the fetch.

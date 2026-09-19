@@ -5,8 +5,8 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.0
-:api-only-subscriber-version: 0.3.0
+:api-only-publisher-version: 0.7.0
+:api-only-subscriber-version: 0.3.4
 
 [NOTE]
 .Where the links in this document go
@@ -407,10 +407,10 @@ apiOnlySubscriber {
     }
     // The APIs this project calls, each at the version this project's gradle.properties declares.
     subscribeAsClient('orders') {
-        version = findProperty('ordersApiVersion')
+        apiContractVersion = findProperty('ordersApiVersion')
     }
     subscribeAsClient('payments') {
-        version = findProperty('paymentsApiVersion')
+        apiContractVersion = findProperty('paymentsApiVersion')
     }
 }
 
@@ -505,9 +505,15 @@ Run `./gradlew check --continue` without raising any version:
 ----
 > Task :storefront:fetchApiSpecOrders FAILED
 > Task :storefront:fetchApiSpecPayments FAILED
+> Task :storefront:verifyApiSpecOrders FAILED
+> Task :storefront:verifyApiSpecPayments FAILED
 > the published contract for 'orders' 1.0.0 is not the one recorded in apionly.lock:
 > the published contract for 'payments' 1.0.0 is not the one recorded in apionly.lock:
+> the contract for 'orders' has drifted from apionly.lock:
+> the contract for 'payments' has drifted from apionly.lock:
 ----
+
+Because of `--continue`, the verify tasks run as well, and fail for the same reason: a fetch that refuses a contract leaves the document it refused in `storefront/build/api-spec/`, and that is not the document `apionly.lock` records.
 
 Raise `version` to `1.0.1` in both `.bundle.properties` files, and both properties in `storefront/gradle.properties` to `1.0.1`, and run `./gradlew check`:
 

@@ -5,9 +5,9 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-transcriberj-version: 0.3.3
+:api-only-transcriberj-version: 0.3.6
 :api-only-transcriberj-restdocs-version: 0.1.1
-:api-only-publisher-version: 0.5.0
+:api-only-publisher-version: 0.7.0
 :spring-boot-version: 4.1.1
 :example-url: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/hand-written-contract-tests
 
@@ -685,6 +685,11 @@ Remove `maximum` from `AmountV1.yaml`, raise the contract's version in `refunds.
 
 [source,text]
 ----
+src/test/java/com/example/contract/RefundRequestsTest.java:34: error: cannot find symbol
+        assertThat(RefundRequests.SOME_AMOUNT).isBetween(AmountV1.MINIMUM, AmountV1.MAXIMUM);
+                                                                                   ^
+  symbol:   variable MAXIMUM
+  location: class AmountV1
 src/test/java/com/example/contract/RefundRequests.java:25: error: cannot find symbol
     public static final int TOO_LARGE_AN_AMOUNT = AmountV1.MAXIMUM + 1;
                                                           ^
@@ -692,7 +697,7 @@ src/test/java/com/example/contract/RefundRequests.java:25: error: cannot find sy
   location: class AmountV1
 ----
 
-The build stops at the line that relied on the contract, before any test runs.
+The build stops at every line that relied on the contract, before any test runs.
 
 [#member-renamed]
 === A member the hand-written code types is renamed
