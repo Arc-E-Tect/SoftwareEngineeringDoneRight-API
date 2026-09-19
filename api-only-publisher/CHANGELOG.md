@@ -1,3 +1,15 @@
+# [0.9.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.8.0...api-only-publisher-v0.9.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** warn when a contract has no examples ([#41](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/41)) ([c9d2515](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/c9d2515951cce54f637c39ce98a44a6652d1c6d9)), closes [#41](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/41)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.8.0 [skip ci] ([2176ea5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2176ea53d5a4a82cde08be6c06009800bbd1fa1b))
+
 # [0.8.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.7.1...api-only-publisher-v0.8.0) (2026-09-19)
 
 
