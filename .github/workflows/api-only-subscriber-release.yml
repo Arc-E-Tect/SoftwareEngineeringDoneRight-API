@@ -29,7 +29,9 @@ jobs:
   Calculate-Version:
     uses: ./.github/workflows/semantic-version-calculate.yml
     with:
-      fail_on_empty_version: ${{ github.ref_name == 'main' }}
+      # Nothing to release is a success: every job that releases runs only when
+      # next_version_empty is false, as in the Gradle and Library repositories.
+      fail_on_empty_version: false
       fail_on_existing_tag: ${{ github.ref_name == 'main' }}
       project_dir: api-only-subscriber
       tag_format: 'api-only-subscriber-v${version}'

@@ -39,12 +39,14 @@ concurrency:
 jobs:
   Calculate-Version:
     # A re-publish has nothing to calculate: the version is given, the tag exists.
-    # Leaving this enabled would fail the run outright, since fail_on_empty_version
-    # is true on main and there is by definition nothing new to release.
+    # Running it anyway would only find that there is, by definition, nothing new
+    # to release.
     if: ${{ inputs.republish_version == '' }}
     uses: ./.github/workflows/semantic-version-calculate.yml
     with:
-      fail_on_empty_version: ${{ github.ref_name == 'main' }}
+      # Nothing to release is a success: every job that releases runs only when
+      # next_version_empty is false, as in the Gradle and Library repositories.
+      fail_on_empty_version: false
       fail_on_existing_tag: ${{ github.ref_name == 'main' }}
       project_dir: api-only-publisher
       tag_format: 'api-only-publisher-v${version}'
