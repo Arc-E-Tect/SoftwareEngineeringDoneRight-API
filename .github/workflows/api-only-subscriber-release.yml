@@ -186,6 +186,61 @@ jobs:
           git diff --cached --quiet || git commit -m "chore(api-only-subscriber): update README version to ${{ env.VERSION }} [skip ci]"
           git push
 
+  Update-TranscriberJ:
+    name: Move the TranscriberJ to this Subscriber
+    # The TranscriberJ depends on the Subscriber and applies it, so a project that applies
+    # only the TranscriberJ gets the Subscriber its pin names. A pull request, not a commit:
+    # the TranscriberJ's build tests it against this release, someone merges it, and the
+    # fix commit releases the TranscriberJ with it. The branch is pushed with the automation
+    # token, because the TranscriberJ's build runs on push and a push made with GITHUB_TOKEN
+    # starts no workflow; that token does all the writing, so GITHUB_TOKEN stays read-only.
+    # Re-running the job updates the same branch and pull request.
+    needs: [Calculate-Version, Publish]
+    if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    permissions:
+      contents: read
+
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
+      BRANCH: fix/api-only-transcriberj-subscriber-${{ needs.Calculate-Version.outputs.next_version }}
+      PIN_FILE: api-only-transcriberj/gradle/libs.versions.toml
+      GH_TOKEN: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          token: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
+
+      - name: Move the Subscriber pin
+        run: |
+          sed -i -E "s/^api-only-subscriber = \"[^\"]*\"/api-only-subscriber = \"$VERSION\"/" "$PIN_FILE"
+          grep -n '^api-only-subscriber = ' "$PIN_FILE"
+
+      - name: Push the branch, and open the pull request
+        run: |
+          if git diff --quiet -- "$PIN_FILE"; then
+            echo "The TranscriberJ already depends on Subscriber $VERSION."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -m "fix(api-only-transcriberj): depend on API-Only Subscriber $VERSION" -- "$PIN_FILE"
+          git push --force origin "$BRANCH"
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "The pull request for $BRANCH is open already; its branch is updated."
+            exit 0
+          fi
+          gh pr create --base main --head "$BRANCH" \
+            --title "fix(api-only-transcriberj): depend on API-Only Subscriber $VERSION" \
+            --body "API-Only Subscriber $VERSION is released. The TranscriberJ applies the Subscriber it depends on, so a project that applies only the TranscriberJ keeps the Subscriber its pin names until this is merged.
+
+          This moves the pin in \`$PIN_FILE\` to $VERSION. The TranscriberJ's build runs its tests against it here; merging releases a TranscriberJ patch that brings it. If the build fails, the Subscriber changed something the TranscriberJ relies on: fix that on this branch before merging."
+
   Determine-Release-Type:
     needs: [Calculate-Version]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
@@ -193,7 +248,7 @@ jobs:
 
   Workflow-Summary:
     name: Workflow Summary
-    needs: [Build, Publish, Update-README, Release-Plugin, Determine-Release-Type]
+    needs: [Build, Publish, Update-README, Update-TranscriberJ, Release-Plugin, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
     steps:
