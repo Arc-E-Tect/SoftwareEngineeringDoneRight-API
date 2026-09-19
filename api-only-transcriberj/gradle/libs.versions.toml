@@ -19,7 +19,7 @@ jackson3        = "3.1.1"
 # The version the reference implementation's hand-written classes compile against.
 spring-restdocs = "4.0.1"
 snakeyaml-engine = "3.1.1"
-api-only-subscriber = "0.2.1"
+api-only-subscriber = "0.3.4"
 # The marker annotation every generated class carries, so a coverage rule does not
 # measure code nobody wrote. The plugin manages it for the projects it generates into.
 sedr-library = "1.0.0"

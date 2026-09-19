@@ -42,7 +42,7 @@ class IdeIntegrationFunctionalTest {
                         directory = file('channel')
                     }
                     subscribe('user-account') {
-                        version = '1.0.0'
+                        apiContractVersion = '1.0.0'
                     }
                 }
 
@@ -126,7 +126,7 @@ class IdeIntegrationFunctionalTest {
                         directory = file('channel')
                     }
                     subscribe('user-account') {
-                        version = '1.0.0'
+                        apiContractVersion = '1.0.0'
                     }
                 }
 

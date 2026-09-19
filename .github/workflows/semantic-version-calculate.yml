@@ -186,7 +186,9 @@ jobs:
           fi
 
       - name: Fail on existing tag
-        if: ${{ inputs.fail_on_existing_tag && steps.check_tag.outputs.tag_exists == 'true' }}
+        # Only for a version actually calculated: with nothing to release, next_version falls
+        # back to the current version, whose tag exists by definition.
+        if: ${{ inputs.fail_on_existing_tag && steps.calculate_semantic_version.outputs.next_version_empty != 'true' && steps.check_tag.outputs.tag_exists == 'true' }}
         run: |
           VERSION="${{ steps.calculate_semantic_version.outputs.next_version }}"
           EXISTING_TAG="${{ steps.check_tag.outputs.existing_tag }}"

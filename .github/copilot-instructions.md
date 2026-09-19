@@ -45,6 +45,7 @@ The hooks provide local defense in depth by rejecting keystores and likely hardc
 - Build and test with `cd api-only-transcriberj && ./gradlew check`. Add `-PreferenceRepository=<SoftwareEngineeringDoneRight-Code checkout>` to also compare the committed copies of the reference implementation's hand-written classes with that repository.
 - The `model` and `spi` packages are what emitter libraries compile against; changing them changes a published interface. They are part of the plugin artifact and released with it.
 - The plugin's runtime dependencies end up on every consumer's build script classpath. They are the API-Only Subscriber, `snakeyaml-engine` and `dsl-updater-core` (for `updateApiOnlyTranscriberJDSL`); add none without an explicit decision.
+- The plugin applies the Subscriber it depends on, so a project that applies only the TranscriberJ gets the Subscriber that `api-only-subscriber` in `api-only-transcriberj/gradle/libs.versions.toml` names. Keep that pin at the latest Subscriber release: after each release, the `Update-TranscriberJ` job in `api-only-subscriber-release.yml` opens a `fix(api-only-transcriberj)` pull request that moves it, and merging that releases the TranscriberJ with it. Do not move the pin by hand in an unrelated change.
 - It is built by `api-only-transcriberj-build.yml`, released by `api-only-transcriberj-release.yml` under the `api-only-transcriberj-v*` tags, and scanned by `nvd-cache-refresh.yml`.
 
 ## Contribution and change rules

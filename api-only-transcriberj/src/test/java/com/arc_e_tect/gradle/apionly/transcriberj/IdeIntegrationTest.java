@@ -48,7 +48,7 @@ class IdeIntegrationTest {
         for (String contract : contracts) {
             // A project implements one contract and calls the rest, as the Subscriber requires.
             if (implemented) {
-                subscriber.subscribeAsClient(contract, s -> s.getVersion().set("1.0.0"));
+                subscriber.subscribeAsClient(contract, s -> s.getApiContractVersion().set("1.0.0"));
             } else {
                 subscriber.subscribe(contract);
                 implemented = true;
