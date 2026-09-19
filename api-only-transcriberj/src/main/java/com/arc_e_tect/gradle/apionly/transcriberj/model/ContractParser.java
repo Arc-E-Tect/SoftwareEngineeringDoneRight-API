@@ -188,6 +188,7 @@ public final class ContractParser {
         return new ContractModel(
                 version,
                 title,
+                null,
                 contractVersion == null ? null : String.valueOf(contractVersion),
                 List.copyOf(schemas),
                 List.copyOf(responses),
@@ -231,9 +232,11 @@ public final class ContractParser {
             operationMap.forEach((id, raw) -> operations.add(asyncOperation(id, raw)));
         }
 
+        String asyncTitle = info == null ? null : optionalString(info.get("title"), "/info/title");
+
         List<Finding> all = new ArrayList<>(http.findings());
         all.addAll(findings);
-        return new ContractModel(http.openapi(), http.title(), http.version(), List.copyOf(components),
+        return new ContractModel(http.openapi(), http.title(), asyncTitle, http.version(), List.copyOf(components),
                 http.responses(), http.parameters(), http.requestBodies(), http.otherComponents(), http.paths(),
                 List.copyOf(channels), List.copyOf(operations), List.copyOf(all));
     }

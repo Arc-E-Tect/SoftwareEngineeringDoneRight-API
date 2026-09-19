@@ -33,6 +33,15 @@ class AsyncContractParserTest {
     }
 
     @Test
+    void theAsyncapiDocumentsOwnTitleIsCarriedSeparatelyFromTheOpenapiOne() throws IOException {
+        ContractModel model = userAccount();
+
+        assertThat(model.asyncTitle()).isEqualTo("IFF Async API");
+        assertThat(model.title()).isNotEqualTo(model.asyncTitle());
+        assertThat(ContractParser.parse(OPENAPI, null).asyncTitle()).isNull();
+    }
+
+    @Test
     void everyChannelCarriesItsAddressAndItsMessages() throws IOException {
         ContractModel model = userAccount();
 
