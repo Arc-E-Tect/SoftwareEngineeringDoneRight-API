@@ -60,7 +60,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                         directory = file('channel').path
                     }
                     subscribe('user-account') {
-                        version = findProperty('contractVersion') ?: '1.0.0'
+                        apiContractVersion = findProperty('contractVersion') ?: '1.0.0'
                     }
                 }
 
@@ -190,6 +190,15 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         BuildResult upgraded = runner("useContract", "-PcontractVersion=1.0.1").build();
         assertThat(upgraded.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(upgraded.getOutput()).contains("VERSION 1.0.1");
+    }
+
+    @Test
+    void theCommandLineChoosesTheContractVersionOverTheSubscription() throws Exception {
+        // The Subscriber the plugin brings decides where the version comes from; with a
+        // current one, -PapiContractVersion overrides the subscription's own.
+        publish("1.0.1", Files.readString(CONTRACT).replace("  version: 1.0.0", "  version: 1.0.1"));
+        BuildResult result = runner("useContract", "-PapiContractVersion=1.0.1").build();
+        assertThat(result.getOutput()).contains("VERSION 1.0.1");
     }
 
     @Test

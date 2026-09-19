@@ -57,6 +57,8 @@ com.arc-e-tect.api-only-transcriberj
 ----
 
 It applies the API-Only Subscriber, which it depends on.
+A project that applies only this plugin gets the Subscriber release this one was built with, and `apiOnlySubscriber` works as that release's README describes.
+Each Subscriber release opens a pull request that moves this plugin's dependency to that release, so the next TranscriberJ release brings it.
 
 [#requirements]
 == Requirements
@@ -210,7 +212,7 @@ A description resolves in one order, at the moment it is asked for:
 . what generation produced: with `generateDocs = true`, the contract's text, or the placeholder where it has none; without it, the empty string.
 
 So a bundle is an overlay rather than a third mode: it wins where it has a key, and `generateDocs` decides what a key it lacks falls back to.
-A missing bundle, a missing key and a blank entry are all the same thing -- the fallback -- so a description is never empty and resolving one never throws.
+A missing bundle, a missing key and a blank entry are all the same thing -- the fallback -- so resolving a description never throws, and with `generateDocs = true` it is never empty.
 
 The keys::
 A class's key is its class name.
