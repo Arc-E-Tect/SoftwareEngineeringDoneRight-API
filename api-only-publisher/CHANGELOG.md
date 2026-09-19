@@ -1,3 +1,20 @@
+# [0.7.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.6.2...api-only-publisher-v0.7.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** ask for the scaffold's values at a terminal, and scaffold only the kinds the library holds ([#33](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/33)) ([7666b90](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/7666b90896a05c5e40eb3e75f65af97dbaa6b246)), closes [#33](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/33) [#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-subscriber:** call the contract version apiContractVersion everywhere, and let the command line override it ([#31](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/31)) ([14e47e7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/14e47e7ae165d9084070e2db5a7342458b0d8450)), closes [#31](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/31) [#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32) [#32](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/32)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.6.2 [skip ci] ([0f03723](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/0f03723c175854ed4ab193787ebceeb757332a6f))
+
 ## [0.6.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.6.1...api-only-publisher-v0.6.2) (2026-09-18)
 
 
