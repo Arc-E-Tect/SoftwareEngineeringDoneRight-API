@@ -63,6 +63,39 @@ orders-service/
     └── test/java/com/example/orders/
 ----
 
+The committed document, as this tutorial starts from it:
+
+.src/main/resources/openapi.yaml
+[source,yaml]
+----
+openapi: 3.1.1
+info:
+  title: Orders API
+  version: 1.4.0
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://api.orders.test
+security: []
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      summary: List the orders.
+      responses:
+        '200':
+          description: The orders.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: The request was not valid.
+----
+
 [#phase-1]
 == Phase 1: reproduce what exists, byte for byte
 
@@ -258,8 +291,21 @@ chmod +x .migration/verify-golden.sh
 
 [source]
 ----
+=== openapi ===
+-- Staging src/main/api -> build/api-only/staging/openapi
+-- Substituted 0 placeholder(s) across 0 file(s)
+
+=== orders (openapi) ===
+-- Bundling orders.yaml with x-fragment-path
+-- Stamped x-fragment-path on 0 component(s)
+-- Stamping version '1.4.0'
+-- Validating openapi.yaml
+
+Built 1 document(s).
 orders: unchanged
 ----
+
+The build reports what it did, and the last line is the script's: the library still produces the fixture.
 
 Run it in CI from now on.
 Every refactoring of the library — extracting the common error shapes, introducing placeholders, splitting out the paths — becomes checkable: either it preserves the document or it does not.
@@ -298,7 +344,8 @@ Built 1 document(s).
 ----
 
 The destination directory has to exist: the build fails rather than creating a directory somewhere unexpected.
-`git status` shows `src/main/resources/openapi.yaml` unchanged, because the library reproduces it exactly.
+`git status` shows `src/main/resources/openapi.yaml` changed, by exactly the differences phase 1 accepted as the bundler's and nothing else; here, the one line `components: {}`.
+`git diff` shows it; commit it, because from now on the file is the build's output.
 
 Now:
 
@@ -435,10 +482,11 @@ The build checks the document on every run now: `verifyApiSpec` against `apionly
 +
 [source,console]
 ----
-git ls-files '*/src/main/resources/*openapi*' '*/src/main/resources/*asyncapi*'
+git ls-files '*src/main/resources/*openapi*' '*src/main/resources/*asyncapi*'
 ----
 +
 It prints nothing.
+The patterns start with `*`, not `*/`, so they match the root project's `src/main/resources/` as well as every subproject's.
 
 . Write down the versioning policy you have been applying informally.
 link:../../reference/run-book.adoc#changing-a-contract[The run-book →] says what it has to decide.

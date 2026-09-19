@@ -562,10 +562,16 @@ Run `./gradlew check --continue` without raising any version:
 [source]
 ----
 > Task :orders:fetchApiSpecOrders FAILED
+> Task :orders:verifyApiSpecOrders FAILED
 > Task :payments:fetchApiSpecPayments FAILED
+> Task :payments:verifyApiSpecPayments FAILED
 > the published contract for 'orders' 1.0.0 is not the one recorded in apionly.lock:
+> the contract for 'orders' has drifted from apionly.lock:
 > the published contract for 'payments' 1.0.0 is not the one recorded in apionly.lock:
+> the contract for 'payments' has drifted from apionly.lock:
 ----
+
+Because of `--continue`, the verify tasks run as well, and fail for the same reason: a fetch that refuses a contract leaves the document it refused in the project's `build/api-spec/`, and that is not the document its `apionly.lock` records.
 
 Both contracts changed, so both need a new version.
 Raise `version` to `1.0.1` in both `.bundle.properties` files and `apiContractVersion` to `1.0.1` in both projects, and run `./gradlew check`:
