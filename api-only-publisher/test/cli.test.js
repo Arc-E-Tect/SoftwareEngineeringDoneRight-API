@@ -338,6 +338,63 @@ test("init adds a missing kind's configuration to an existing library, without -
     assert.match(config, /bundle: bundles\/orders_asyncapi_structure\.yaml/);
 });
 
+test("init writes the portfolio section, with documented defaults, only once a second target arrives", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    let config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.doesNotMatch(config, /portfolio:/, "one target is nothing to aggregate yet");
+
+    const { printed } = await runWith(
+        ["init", "lib", "-C", parent, "--openapi", "--target", "payments"], { interactive: false });
+
+    assert.ok(printed.some((line) => line.startsWith("  updated") && line.includes("portfolio")));
+    config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.match(config, /portfolio:\n {2}openapi:\n {4}paths: target-prefix\n {4}operationIds: target-prefix\n {4}tags: reconcile\n {2}security: push-down\n {2}location: portfolios/);
+});
+
+test("init at a terminal asks about the portfolio once a second target arrives, and takes the flag given for it", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+
+    const { io, shown } = terminal("", "");
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "payments", "--portfolio-location", "aggregates"], io);
+
+    assert.ok(shown.some((text) => text.startsWith("Path prefix strategy for a portfolio")));
+    assert.ok(!shown.some((text) => text.startsWith("Where a portfolio's generated bundle root lands")),
+        "given as a flag, so not asked");
+    const config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.match(config, /location: aggregates/);
+});
+
+test("init never asks about, or touches, a portfolio section that already exists", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "payments"], { interactive: false });
+    const configFile = path.join(parent, "lib", "apionly.yaml");
+    const portfolioSection = () => fs.readFileSync(configFile, "utf8").match(/portfolio:\n(?:.+\n)*/)[0];
+    const before = portfolioSection();
+    assert.match(before, /location: portfolios/);
+
+    const { io, shown } = terminal();
+    const { printed } = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "invoices"], io);
+
+    assert.ok(!shown.some((text) => text.startsWith("Path prefix strategy")));
+    assert.ok(!printed.some((line) => line.includes("portfolio")));
+    assert.strictEqual(portfolioSection(), before);
+});
+
+test("a malformed apionly.yaml never crashes the portfolio check -- init just does not ask", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+    const configFile = path.join(parent, "lib", "apionly.yaml");
+    fs.writeFileSync(configFile, `${fs.readFileSync(configFile, "utf8")}\n: : : not valid yaml [[[\n`);
+
+    const { io, shown } = terminal();
+    const { code } = await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "payments"], io);
+    assert.strictEqual(code, 0);
+    assert.ok(!shown.some((text) => text.startsWith("Path prefix strategy")));
+});
+
 test("init --force at a terminal lists only what still differs after the additive update, not what it completed", async () => {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
     const values = [

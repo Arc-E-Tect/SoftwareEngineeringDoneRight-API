@@ -136,6 +136,16 @@ test("a file with no sources.root is not an apionly.yaml this can complete -- no
     assert.strictEqual(text, before);
 });
 
+test("a file with a YAML error is left alone -- parseDocument does not throw on one, it only records it", () => {
+    // sources.root parses fine before the error, so a check that only asked hasIn
+    // would find it anyway; addMissingConfig must refuse instead of trying to edit
+    // a document that cannot be stringified back.
+    const before = `${scaffold(OPENAPI)["apionly.yaml"]}\n: : : not valid yaml [[[\n`;
+    const { text, added } = addMissingConfig(before, BOTH);
+    assert.deepStrictEqual(added, []);
+    assert.strictEqual(text, before);
+});
+
 test("adding a new target to a library that already declares its kind's top-level slots adds only the target entry", () => {
     const before = scaffold(ASYNCAPI)["apionly.yaml"];
     const values = { ...ASYNCAPI, target: "second" };
@@ -143,4 +153,39 @@ test("adding a new target to a library that already declares its kind's top-leve
 
     // sources.asyncapi, defaults.asyncapi and toolchain.asyncapi are already there.
     assert.deepStrictEqual(added, ["targets.second.asyncapi"]);
+});
+
+// ---- the portfolio section, given only when the caller asks for it ----------
+
+test("no portfolio argument means the portfolio section is never considered, whatever the file already holds", () => {
+    const before = scaffold(OPENAPI)["apionly.yaml"];
+    const { added } = addMissingConfig(before, OPENAPI);
+    assert.ok(!added.includes("portfolio"));
+});
+
+test("a portfolio argument adds the section, with every strategy the caller resolved", () => {
+    const before = scaffold(OPENAPI)["apionly.yaml"];
+    const { text, added } = addMissingConfig(before, OPENAPI, { paths: "none", location: "aggregates" });
+
+    assert.ok(added.includes("portfolio"));
+    const doc = YAML.parse(text);
+    assert.deepStrictEqual(doc.portfolio, {
+        openapi: { paths: "none", operationIds: "target-prefix", tags: "reconcile" },
+        security: "push-down",
+        location: "aggregates",
+    });
+});
+
+test("a portfolio section that already exists is left entirely alone, whatever it holds", () => {
+    const before = scaffold(OPENAPI)["apionly.yaml"] + "portfolio:\n  location: mine\n";
+    const { text, added } = addMissingConfig(before, OPENAPI, { paths: "none", location: "aggregates" });
+
+    assert.ok(!added.includes("portfolio"));
+    assert.strictEqual(text, before);
+});
+
+test("the portfolio section lands after targets, the last section a from-scratch scaffold writes", () => {
+    const before = scaffold(OPENAPI)["apionly.yaml"];
+    const { text } = addMissingConfig(before, OPENAPI, { paths: "target-prefix", location: "portfolios" });
+    assert.ok(text.indexOf("targets:") < text.indexOf("portfolio:"));
 });

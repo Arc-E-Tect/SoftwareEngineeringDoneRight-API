@@ -3,6 +3,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const YAML = require("yaml");
 
 const { loadFrom, ConfigError } = require("./config");
 const { build, prepare, BuildError } = require("./pipeline");
@@ -148,6 +149,25 @@ function initKinds(kinds) {
 }
 
 /**
+ * Whether init should ask about the portfolio section this run: only once the
+ * library is about to have more than one target -- there is nothing to aggregate
+ * with just one -- and only when it does not already have a portfolio section,
+ * which init never changes, present or not.
+ */
+function asksAboutPortfolio(dir, target) {
+    const file = path.join(dir, "apionly.yaml");
+    if (!fs.existsSync(file)) return false;
+    const doc = YAML.parseDocument(fs.readFileSync(file, "utf8"));
+    if (doc.errors.length > 0) return false;
+    if (doc.hasIn(["portfolio"])) return false;
+    const targets = doc.get("targets", true);
+    if (!YAML.isMap(targets)) return false;
+    const names = new Set(targets.items.map((pair) => String(pair.key)));
+    names.add(target);
+    return names.size > 1;
+}
+
+/**
  * Scaffolds a library. At a terminal, and without --yes, it asks for every value no
  * flag gives; anywhere else it takes the defaults, as it always has.
  *
@@ -174,19 +194,33 @@ async function runInit(options, positional, io, log) {
             ask: terminal && ((question) => terminal.question(question)),
             tell: (message) => output.write(`${message}\n`),
         });
+
+        // Asked, or defaulted, the same way a kind's own questions are -- but only
+        // once there is something to aggregate, and only when nothing is configured
+        // for it yet.
+        let portfolio = null;
+        if (asksAboutPortfolio(dir, values.target)) {
+            portfolio = await resolvePortfolioValues({
+                given: options.config,
+                current: { paths: "target-prefix", location: "portfolios" },
+                ask: terminal && ((question) => terminal.question(question)),
+                tell: (message) => output.write(`${message}\n`),
+            });
+        }
+
         log(`Scaffolding a specification library in ${dir}`);
         let force = options.force;
         if (terminal && force) {
             // Asked, --force means "after showing me": it overwrites what differs only
             // once the list has been seen and agreed to.
-            const differing = plan(dir, scaffold(values), values).filter((entry) => entry.status === "differs");
+            const differing = plan(dir, scaffold(values), values, portfolio).filter((entry) => entry.status === "differs");
             if (differing.length > 0) {
                 output.write(`These files differ from the scaffold:\n${differing.map((d) => `  ${d.rel}\n`).join("")}`);
                 const answer = await terminal.question(`Overwrite these ${differing.length} file(s)? [y/N] `);
                 force = /^y(es)?$/i.test(answer.trim());
             }
         }
-        init(dir, { values, force, log });
+        init(dir, { values, force, log, portfolio });
         log(`\nNext: api-only-publisher build -C ${dir}`);
     } finally {
         if (terminal) terminal.close();
