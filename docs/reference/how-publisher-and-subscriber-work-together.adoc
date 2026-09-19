@@ -489,8 +489,12 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`split`
 
 |`src/init.js`
-|Scaffolds a library that builds as it stands.
-|`init`, `FILES`
+|Scaffolds a library that builds as it stands, for the kinds and values chosen, and reports each file as created, identical, differing or overwritten.
+|`init`, `scaffold`, `plan`, `FILES`, `DEFAULTS`
+
+|`src/init-questions.js`
+|The values `init` scaffolds from: asked at a terminal, taken from flags, or defaulted, and validated.
+|`resolveValues`
 |===
 
 Tests are in `api-only-publisher/test/`, one file per module plus `cli.test.js` for every command and `build.e2e.test.js` against the real bundlers.

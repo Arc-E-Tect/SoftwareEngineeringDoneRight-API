@@ -239,6 +239,99 @@ test("init scaffolds a library the other commands can load", async () => {
     assert.match(targets.join("\n"), /^example-service {2}\[openapi/);
 });
 
+/**
+ * A terminal played by a script: each time the CLI asks a question on `output`, the next
+ * answer is typed into `input`. The CLI reads it through node:readline, as it does from
+ * a real terminal.
+ */
+function terminal(...answers) {
+    const { PassThrough } = require("node:stream");
+    const input = new PassThrough();
+    const output = new PassThrough();
+    const shown = [];
+    output.on("data", (chunk) => {
+        const text = chunk.toString();
+        shown.push(text);
+        if (/(: |\] )$/.test(text)) input.write(`${answers.length > 0 ? answers.shift() : ""}\n`);
+    });
+    return { io: { interactive: true, input, output }, shown };
+}
+
+async function runWith(argv, io) {
+    const printed = [];
+    const previousLog = console.log;
+    console.log = (message) => printed.push(String(message));
+    try {
+        return { code: await main(argv, io), printed };
+    } finally {
+        console.log = previousLog;
+    }
+}
+
+test("init without a terminal takes flags for what they name and defaults for the rest", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    const { code, printed } = await runWith(
+        ["init", "lib", "-C", parent, "--asyncapi", "--target", "orders", "--title", "Orders API"],
+        { interactive: false });
+
+    assert.strictEqual(code, 0);
+    const config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.match(config, /^ {2}orders:\n {4}asyncapi:\n {6}bundle: bundles\/orders_asyncapi_structure\.yaml$/m);
+    assert.ok(!/openapi/.test(config));
+    assert.ok(printed.includes("  created    specs/asyncapi/bundles/orders_asyncapi_structure.yaml"));
+});
+
+test("init at a terminal asks each question, takes the answers, and writes them", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    const { io, shown } = terminal("both", "orders", "Orders API");
+    const { code } = await runWith(["init", "lib", "-C", parent], io);
+
+    assert.strictEqual(code, 0);
+    assert.ok(shown.some((text) => text.startsWith("Kinds of document")));
+    assert.ok(shown.some((text) => text.startsWith("Broker host")));
+    const lib = path.join(parent, "lib");
+    assert.ok(fs.existsSync(path.join(lib, "specs/openapi/bundles/orders_openapi_structure.yaml")));
+    assert.ok(fs.existsSync(path.join(lib, "specs/asyncapi/bundles/orders_asyncapi_structure.yaml")));
+    assert.match(fs.readFileSync(path.join(lib, "specs/openapi/shared/info.yaml"), "utf8"), /^title: Orders API$/m);
+});
+
+test("init --yes at a terminal asks nothing", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    const { io, shown } = terminal();
+    const { code } = await runWith(["init", "lib", "-C", parent, "--yes"], io);
+
+    assert.strictEqual(code, 0);
+    assert.deepStrictEqual(shown, []);
+    assert.ok(fs.existsSync(path.join(parent, "lib", "specs/openapi/bundles/example-service_openapi_structure.yaml")));
+});
+
+test("init --force at a terminal lists what differs and asks once before overwriting", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent], { interactive: false });
+    const config = path.join(parent, "lib", "apionly.yaml");
+    fs.writeFileSync(config, "# edited by hand\n");
+
+    const declined = terminal("", "", "", "", "", "", "", "", "n");
+    await runWith(["init", "lib", "-C", parent, "--force"], declined.io);
+    assert.strictEqual(fs.readFileSync(config, "utf8"), "# edited by hand\n");
+    assert.ok(declined.shown.some((text) => text.includes("apionly.yaml")));
+    assert.ok(declined.shown.some((text) => text.startsWith("Overwrite these 1 file(s)? [y/N] ")));
+
+    const accepted = terminal("", "", "", "", "", "", "", "", "y");
+    const { printed } = await runWith(["init", "lib", "-C", parent, "--force"], accepted.io);
+    assert.notStrictEqual(fs.readFileSync(config, "utf8"), "# edited by hand\n");
+    assert.ok(printed.includes("  overwrote  apionly.yaml"));
+});
+
+test("init refuses more than one target, and an invalid value given as a flag, writing nothing", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await assert.rejects(runWith(["init", "-C", dir, "--target", "a", "--target", "b"], { interactive: false }),
+        /init scaffolds one target; --target was given 2 times/);
+    await assert.rejects(runWith(["init", "-C", dir, "--target", "Orders"], { interactive: false }),
+        /--target 'Orders' is not a target name/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+});
+
 test("targets lists every target, its kinds, and which are not published", async () => {
     const { printed } = await run(["targets", "-C", library()]);
     assert.deepStrictEqual(printed, ["alpha  [openapi]", "beta  [openapi]  (publish: false)"]);

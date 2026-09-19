@@ -1,0 +1,14 @@
+get:
+  operationId: listExamples
+  summary: List examples.
+  responses:
+    '200':
+      description: The examples.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+    '400':
+      $ref: '../../components/common/responses/errors/InvalidRequestProblemV1.yaml'

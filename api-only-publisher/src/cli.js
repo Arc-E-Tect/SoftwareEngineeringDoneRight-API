@@ -5,7 +5,8 @@ const path = require("path");
 
 const { loadFrom, ConfigError } = require("./config");
 const { build, prepare, BuildError } = require("./pipeline");
-const { init } = require("./init");
+const { init, scaffold, plan } = require("./init");
+const { resolveValues } = require("./init-questions");
 const { PlaceholderError } = require("./placeholders");
 const { VersionError } = require("./version");
 const { forTargets, ClosureError } = require("./closure");
@@ -20,7 +21,11 @@ const { unreferenced } = require("./unreferenced");
 const USAGE = `api-only-publisher -- build and distribute API description documents
 
 Usage:
-  api-only-publisher init [dir] [--force]
+  api-only-publisher init [dir] [--yes] [--force] [--openapi] [--asyncapi] [--target <name>]
+                          [--title <text>] [--contract-version <version>]
+                          [--contact-name <text>] [--contact-url <url>]
+                          [--license <spdx-id>] [--license-url <url>]
+                          [--server-url <url>] [--broker-host <host[:port]>]
   api-only-publisher build [--target <name>]... [--pre-release <ids>] [--openapi|--asyncapi]
   api-only-publisher lint  [--target <name>]...
   api-only-publisher targets
@@ -37,7 +42,16 @@ Options:
                     rc.1, to each target's version.
   --openapi         Only build OpenAPI documents.
   --asyncapi        Only build AsyncAPI documents.
-  --force           init only: overwrite files that already exist.
+  --force           init only: overwrite files that differ from the scaffold;
+                    at a terminal, after listing them and asking once.
+  -y, --yes         init only: ask nothing, even at a terminal; take the defaults
+                    for every value no flag gives. Without a terminal, init never asks.
+  --openapi, --asyncapi
+                    init: the kinds of document the library holds; both flags for both.
+  --target <name>   init: the target's name, in lowercase kebab-case.
+  --title, --contract-version, --contact-name, --contact-url, --license,
+  --license-url, --server-url, --broker-host
+                    init only: the value of that question; a flag always wins.
   --since <ref>     changed only: the git ref to compare the working tree against.
   --out <dir>       pack/publish/split: where to write.
   --channel <name>  publish only: repeat for several. Default: every configured channel.
@@ -55,6 +69,12 @@ function parseArgs(argv) {
     const options = {
         targets: [], kinds: null, preRelease: null, quiet: false, force: false,
         dir: process.cwd(), since: null, out: null, channels: null, by: "kind",
+        yes: false, init: {},
+    };
+    const INIT_VALUES = {
+        "--title": "title", "--contract-version": "contractVersion", "--contact-name": "contactName",
+        "--contact-url": "contactUrl", "--license": "license", "--license-url": "licenseUrl",
+        "--server-url": "serverUrl", "--broker-host": "brokerHost",
     };
     const positional = [];
 
@@ -83,7 +103,12 @@ function parseArgs(argv) {
             case "-C": options.dir = path.resolve(next()); break;
             case "-q": case "--quiet": options.quiet = true; break;
             case "-h": case "--help": options.help = true; break;
+            case "-y": case "--yes": options.yes = true; break;
             default:
+                if (INIT_VALUES[arg]) {
+                    options.init[INIT_VALUES[arg]] = next();
+                    break;
+                }
                 if (arg.startsWith("-")) throw new ConfigError(`unrecognized option '${arg}'`);
                 positional.push(arg);
         }
@@ -106,7 +131,59 @@ function versionsOf(config, names, preRelease) {
     return new Map(names.map((target) => [target, versionOf(config, target, { preRelease })]));
 }
 
-async function main(argv) {
+/** The kinds --openapi and --asyncapi name, in the order the scaffold writes them. */
+function initKinds(kinds) {
+    return kinds ? ["openapi", "asyncapi"].filter((kind) => kinds.includes(kind)) : undefined;
+}
+
+/**
+ * Scaffolds a library. At a terminal, and without --yes, it asks for every value no
+ * flag gives; anywhere else it takes the defaults, as it always has.
+ *
+ * @param {object} io where a terminal is: `interactive`, and the `input` and `output`
+ *     streams to ask on; process.stdin and process.stdout unless the caller says otherwise
+ */
+async function runInit(options, positional, io, log) {
+    if (options.targets.length > 1) {
+        throw new ConfigError(`init scaffolds one target; --target was given ${options.targets.length} times`);
+    }
+    const dir = path.resolve(options.dir, positional[1] || ".");
+    const input = io.input || process.stdin;
+    const output = io.output || process.stdout;
+    const interactive = io.interactive !== undefined ? io.interactive : Boolean(input.isTTY && output.isTTY);
+    const given = { ...options.init, target: options.targets[0], kinds: initKinds(options.kinds) };
+    for (const key of Object.keys(given)) if (given[key] === undefined) delete given[key];
+
+    const terminal = interactive && !options.yes
+        ? require("node:readline/promises").createInterface({ input, output })
+        : null;
+    try {
+        const values = await resolveValues({
+            given,
+            ask: terminal && ((question) => terminal.question(question)),
+            tell: (message) => output.write(`${message}\n`),
+        });
+        log(`Scaffolding a specification library in ${dir}`);
+        let force = options.force;
+        if (terminal && force) {
+            // Asked, --force means "after showing me": it overwrites what differs only
+            // once the list has been seen and agreed to.
+            const differing = plan(dir, scaffold(values)).filter((entry) => entry.status === "differs");
+            if (differing.length > 0) {
+                output.write(`These files differ from the scaffold:\n${differing.map((d) => `  ${d.rel}\n`).join("")}`);
+                const answer = await terminal.question(`Overwrite these ${differing.length} file(s)? [y/N] `);
+                force = /^y(es)?$/i.test(answer.trim());
+            }
+        }
+        init(dir, { values, force, log });
+        log(`\nNext: api-only-publisher build -C ${dir}`);
+    } finally {
+        if (terminal) terminal.close();
+    }
+    return 0;
+}
+
+async function main(argv, io = {}) {
     const { options, positional } = parseArgs(argv);
     const command = positional[0];
 
@@ -117,13 +194,7 @@ async function main(argv) {
 
     const log = options.quiet ? () => {} : (message) => console.log(message);
 
-    if (command === "init") {
-        const dir = path.resolve(options.dir, positional[1] || ".");
-        log(`Scaffolding a specification library in ${dir}`);
-        init(dir, { force: options.force, log });
-        log(`\nNext: api-only-publisher build -C ${dir}`);
-        return 0;
-    }
+    if (command === "init") return runInit(options, positional, io, log);
 
     const config = loadFrom(options.dir);
     const targets = options.targets.length > 0 ? options.targets : null;

@@ -1,0 +1,15 @@
+openapi: 3.1.1
+info:
+  $ref: '../shared/info.yaml'
+servers:
+  $ref: '../shared/servers.yaml'
+security:
+  - bearerAuth: []
+tags: []
+paths:
+  /v1/examples:
+    $ref: '../paths/example/ExamplesV1.yaml'
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../components/common/security/BearerAuth.yaml'
