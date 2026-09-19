@@ -425,7 +425,7 @@ Everything it produces — class names, packages, bodies, field descriptions, en
 Anyone could have written it, for any language, against any organisation's contracts.
 
 Its emitters make the same point one level further in.
-The classes the TranscriberJ generates depend on nothing; an emitter turns them into a dialect — Spring REST Docs descriptors today, WireMock stubs or another framework's idiom tomorrow — and an emitter is an ordinary library implementing a published interface.
+The classes the TranscriberJ generates depend on nothing; an emitter turns them into a dialect — Spring REST Docs descriptors and Microcks conformance tests today, WireMock stubs or another framework's idiom tomorrow — and an emitter is an ordinary library implementing a published interface.
 Adding a dialect does not require touching the generator, and does not require the generator's author to have anticipated it.
 
 This is how an ecosystem forms around an interface.
@@ -622,7 +622,7 @@ The generated classes depend on nothing.
 A body is a `String`; a field description is a small record of a path, a type, whether it is optional, and whether it stands for a subsection.
 
 A dialect is added by an emitter — an ordinary library implementing a published interface, added as a dependency — which turns those into whatever a particular framework wants.
-Spring REST Docs descriptors and snippets today; WireMock stubs, another test framework, or another language on the same principle.
+Spring REST Docs descriptors and snippets, and Microcks conformance tests for a contract's events, today; WireMock stubs, another test framework, or another language on the same principle.
 
 That separation is what keeps the core honest.
 The thing being derived is the contract's meaning; how it is spoken is a separate, replaceable concern.

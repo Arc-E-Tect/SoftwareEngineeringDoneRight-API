@@ -310,6 +310,9 @@ Those an author causes:
 |`target '<t>': <file> declares no version`
 |The version file has no `version` line.
 
+|`<n> operation(s) in <file> have no example (lint.examples.<kind> is error):`
+|`lint.examples.<kind>` is `error`, and an AsyncAPI message, or an OpenAPI request body or response, has no example. Each finding is listed below the line, worded as in <<give-every-operation-an-example,Give every operation an example §>>. Add the example, or set the key to `warn`.
+
 |`lint failed for <n> document(s): <target> (<kind>); ...`
 |A lint rule the library's configuration sets to `error` failed. The linter's output, printed above the message, names it.
 |===
@@ -399,6 +402,7 @@ Neither tool notices, so neither tool notices when the copies drift apart.
 `lint` lints what is already built, prints the linter's output for every document, and writes it to `<reports.lint>/<target>/<kind>.txt` -- `build/reports/lint/orders/openapi.txt` by default.
 Run without `--target`, it also writes `<reports.lint>/unreferenced.txt`.
 So a lint *warning* is seen only by running `lint`: run it in CI, and read its reports.
+The findings of <<give-every-operation-an-example,Give every operation an example §>> are different: `build` prints them in its log, `lint` does not run that check, and no report file is written.
 
 What is in a lint report comes from Redocly CLI or AsyncAPI CLI, under the lint configuration `defaults.<kind>.lint` names:
 
@@ -492,7 +496,7 @@ The IDE will not generate the classes on sync (link:../../api-only-transcriberj/
 [#reference-library]
 == The reference library against these rules
 
-The reference implementation's library, `usable-suspects/` in the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Code[Code repository ↗], built with Publisher 0.5.0 and generated with TranscriberJ 0.3.3:
+The reference implementation's library, `usable-suspects/` in the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Code[Code repository ↗], built with Publisher 0.9.0 and generated with TranscriberJ 0.5.0:
 
 [cols="2,1,3", options="header"]
 |===
@@ -537,7 +541,8 @@ The reference implementation's library, `usable-suspects/` in the https://github
 
 |<<give-every-operation-an-example,Every operation has an example §>> -- OpenAPI
 |No
-|Every operation's responses, and two operations' request bodies, warn: the library uses property-level `examples` on request and response schemas in only a few places, and none of its response schemas carry a top-level one.
+|Every response, and two request bodies, warn: 38 findings across the five services' documents (60 with the portfolio's copies).
+The library does write `examples` -- on the properties of 18 fragments -- but the rule counts only an `example` or `examples` on the media type, or a top-level `examples` on the schema it references, and only `UsernameV1` has one.
 This is recorded here rather than fixed, per the rule's own default: the warning is a backlog, not a build failure, until a library adopts `lint.examples.openapi: error`.
 |===
 

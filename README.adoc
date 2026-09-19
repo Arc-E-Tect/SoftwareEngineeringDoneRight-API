@@ -39,7 +39,7 @@ Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subsc
 
 |link:api-only-transcriberj/README.adoc[API-Only TranscriberJ →]
 |A Gradle plugin, building on the Subscriber.
-Generates a Java class tree from a subscribed contract: bodies, field descriptions and constants for contract tests and stubs, with room for dialects such as REST Docs as separate emitter libraries.
+Generates a Java class tree from a subscribed contract: bodies, field descriptions and constants for contract tests and stubs, with room for dialects as separate emitter libraries: Spring REST Docs descriptors, and Microcks conformance tests for a contract's events.
 Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal ↗].
 |===
 
