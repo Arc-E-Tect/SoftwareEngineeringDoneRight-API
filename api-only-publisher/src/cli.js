@@ -168,7 +168,7 @@ async function runInit(options, positional, io, log) {
         if (terminal && force) {
             // Asked, --force means "after showing me": it overwrites what differs only
             // once the list has been seen and agreed to.
-            const differing = plan(dir, scaffold(values)).filter((entry) => entry.status === "differs");
+            const differing = plan(dir, scaffold(values), values).filter((entry) => entry.status === "differs");
             if (differing.length > 0) {
                 output.write(`These files differ from the scaffold:\n${differing.map((d) => `  ${d.rel}\n`).join("")}`);
                 const answer = await terminal.question(`Overwrite these ${differing.length} file(s)? [y/N] `);

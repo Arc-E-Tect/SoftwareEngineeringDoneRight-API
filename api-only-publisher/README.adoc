@@ -270,11 +270,41 @@ What it reports::
 [horizontal]
 `created`:: The file was not there, and is now.
 `identical`:: The file was there, and matches what `init` would write, ignoring line endings and final newlines.
+`updated`:: `apionly.yaml` was there, and lacked a kind's configuration; it does now.
+The message names every slot added -- see <<init-additive,Adding a kind to an existing library §>>.
 `differs`:: The file was there, and does not match: where the library has diverged from the scaffold, usually on purpose.
 It is left alone.
 `overwrote`:: The file differed, and `--force` replaced it.
 +
-At a terminal, `--force` first lists the files that differ and asks once whether to overwrite them; without a terminal, or with `--yes`, it overwrites them without asking.
+At a terminal, `--force` first lists the files that still differ -- after any additive update apionly.yaml already got -- and asks once whether to overwrite them; without a terminal, or with `--yes`, it overwrites them without asking.
+
+[#init-additive]
+=== Adding a kind to an existing library
+
+Running `init` again, with a kind the library did not have, is how a library grows: the fragments the new kind needs, and the configuration that makes the build see them.
+
+*Files* stay create-only, as everywhere else in `init`: a fragment not written before is written now; one already there, however it now reads, is left alone -- even where the new kind changes what the scaffold would write for it, such as `specs/openapi/paths/example/ExamplesV1.yaml` once an AsyncAPI event comes to share its schema.
+
+*Configuration* is additive: whichever of `sources.<kind>`, `defaults.<kind>`, the kind's pin in `toolchain`, and `targets.<target>.<kind>` `apionly.yaml` lacks is added to it, in the position a library scaffolded with both kinds from the start would have it in.
+Every value, key and comment already in the file survives untouched, and a slot that is already there, however it reads, is never touched either -- not even to add something missing from *inside* it: a `defaults.openapi` with no `lint` is a choice, and `init` leaves it that way.
+
+[source,console]
+----
+$ api-only-publisher init . --yes --openapi --target orders
+  created    apionly.yaml
+  created    specs/openapi/...
+
+$ api-only-publisher init . --yes --openapi --asyncapi --target orders
+  created    specs/asyncapi/...
+  updated    apionly.yaml (added sources.asyncapi, defaults.asyncapi, toolchain.asyncapi, targets.orders.asyncapi)
+  differs    specs/openapi/paths/example/ExamplesV1.yaml (left alone; --force overwrites)
+----
+
+Nothing is asked before completing `apionly.yaml`: unlike `--force`, an additive update never discards anything, so there is nothing to confirm.
+Run `init` again with the same kinds, and it reports nothing left to add.
+
+`--force` is the other tool for an apionly.yaml that differs, and it does the opposite of the additive update: it reinitialises the file wholesale, exactly as a first run with these values would write it -- any target or key it holds that these values would not produce is gone, additive or not.
+Use it to discard a customisation on purpose; use a plain `init` to add a kind without touching anything else.
 
 [#what-build-does]
 == What `build` does

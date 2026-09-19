@@ -168,3 +168,91 @@ test("--force overwrites only what differs", () => {
     assert.ok(lines.includes("  overwrote  apionly.yaml"));
     assert.ok(!forced.identical.includes("apionly.yaml"));
 });
+
+test("--force rebuilds apionly.yaml from scratch, as init would the first time -- other targets included", () => {
+    // Wholesale replacement is deliberate: --force reinitialises, it does not merge.
+    const dir = tmpdir();
+    init(dir, { values: OPENAPI });
+    const config = path.join(dir, "apionly.yaml");
+    const withAnotherTarget = fs.readFileSync(config, "utf8")
+        .replace("targets:\n  example-service:", "targets:\n  legacy:\n    openapi:\n      bundle: bundles/legacy_openapi_structure.yaml\n  example-service:");
+    fs.writeFileSync(config, withAnotherTarget);
+
+    init(dir, { values: OPENAPI, force: true });
+    const doc = YAML.parse(fs.readFileSync(config, "utf8"));
+    assert.deepStrictEqual(Object.keys(doc.targets), ["example-service"]);
+});
+
+test("a missing kind is added to an existing apionly.yaml, without --force, and reported as updated", () => {
+    const dir = tmpdir();
+    init(dir, { values: OPENAPI });
+
+    const lines = [];
+    const second = init(dir, { values: BOTH, log: (line) => lines.push(line) });
+
+    assert.deepStrictEqual(second.updated, ["apionly.yaml"]);
+    assert.ok(!second.differing.includes("apionly.yaml"));
+    assert.ok(!second.overwritten.includes("apionly.yaml"));
+    assert.ok(lines.some((l) => l.startsWith("  updated") && l.includes("apionly.yaml") &&
+        l.includes("sources.asyncapi") && l.includes("defaults.asyncapi") &&
+        l.includes("toolchain.asyncapi") && l.includes("targets.example-service.asyncapi")));
+
+    const config = YAML.parse(fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8"));
+    assert.deepStrictEqual(Object.keys(config.targets["example-service"]).sort(), ["asyncapi", "openapi"]);
+
+    // Every asyncapi file init would have created from nothing is created now.
+    for (const rel of Object.keys(scaffold(BOTH)).filter((r) => r.startsWith("specs/asyncapi/"))) {
+        assert.ok(second.created.includes(rel), `${rel} was not created`);
+    }
+});
+
+test("the exact reproduction: init openapi, then init again with --asyncapi added, ends with a target both kinds build", () => {
+    const dir = tmpdir();
+    init(dir, { values: { ...OPENAPI, target: "orders" } });
+    init(dir, { values: { ...BOTH, target: "orders" } });
+
+    const config = loadFrom(dir);
+    assert.deepStrictEqual(["openapi", "asyncapi"].filter((k) => config.targets.orders[k]).sort(),
+        ["asyncapi", "openapi"]);
+    // The build can see the AsyncAPI tree it was told to add.
+    assert.ok(fs.existsSync(path.join(dir, "specs/asyncapi/bundles/orders_asyncapi_structure.yaml")));
+});
+
+test("running init twice with the same values changes nothing the second time, and says so", () => {
+    const dir = tmpdir();
+    init(dir, { values: BOTH });
+
+    const lines = [];
+    const second = init(dir, { values: BOTH, log: (line) => lines.push(line) });
+    assert.deepStrictEqual(second.updated, []);
+    assert.deepStrictEqual(second.created, []);
+    assert.deepStrictEqual(second.overwritten, []);
+    assert.strictEqual(second.identical.length, Object.keys(scaffold(BOTH)).length);
+});
+
+test("a hand-customised apionly.yaml keeps every customisation when a new kind is added", () => {
+    const dir = tmpdir();
+    init(dir, { values: OPENAPI });
+    const config = path.join(dir, "apionly.yaml");
+    const customised = fs.readFileSync(config, "utf8")
+        .replace("lint: .redocly.yaml", "lint: .redocly.yaml # our own rules")
+        .replace("staging: build/staging", "staging: build/my-staging");
+    fs.writeFileSync(config, customised);
+
+    init(dir, { values: BOTH });
+    const after = fs.readFileSync(config, "utf8");
+    assert.match(after, /lint: \.redocly\.yaml # our own rules/);
+    assert.match(after, /staging: build\/my-staging/);
+    assert.match(after, /asyncapi: asyncapi/);
+});
+
+test("a scaffold fragment that already exists is never rewritten, even once asyncapi makes the openapi one shared", () => {
+    const dir = tmpdir();
+    init(dir, { values: OPENAPI });
+    const pathFragment = path.join(dir, "specs/openapi/paths/example/ExamplesV1.yaml");
+    const before = fs.readFileSync(pathFragment, "utf8");
+
+    const second = init(dir, { values: BOTH });
+    assert.strictEqual(fs.readFileSync(pathFragment, "utf8"), before);
+    assert.ok(second.differing.includes("specs/openapi/paths/example/ExamplesV1.yaml"));
+});

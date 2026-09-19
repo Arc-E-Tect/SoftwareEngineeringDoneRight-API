@@ -15,6 +15,7 @@
 const fs = require("fs");
 const path = require("path");
 const YAML = require("yaml");
+const { addMissingConfig } = require("./init-config");
 
 /** Every value the scaffold is written from, as it is when nobody chooses otherwise. */
 const DEFAULTS = Object.freeze({
@@ -307,17 +308,37 @@ function normalised(text) {
     return text.replace(/\r\n?/g, "\n").replace(/\n+$/, "");
 }
 
+const CONFIG_FILE = "apionly.yaml";
+
 /**
  * What writing these files would do to each: create it, leave it because it is
  * identical, or find it different from what would be written.
  *
- * @returns {{rel: string, status: "missing"|"identical"|"differs"}[]}
+ * apionly.yaml gets one more thing tried, ahead of "differs": whatever slot
+ * scaffold(values) would write and it lacks is added, in place, before the
+ * comparison that decides "identical" or "differs" -- so a file that is missing only
+ * a kind it never had is never reported as differing, and neither is one that is
+ * missing nothing at all. `values`, resolved as scaffold() resolves it, is what that
+ * completion is measured against; without it, apionly.yaml is compared as every
+ * other file is.
+ *
+ * @returns {{rel: string, status: "missing"|"identical"|"differs", added?: string[], text?: string}[]}
+ *     `added` and `text` -- the completed content -- are there only for apionly.yaml,
+ *     and only when something was missing from it.
  */
-function plan(targetDir, files) {
+function plan(targetDir, files, values) {
     return Object.entries(files).map(([rel, content]) => {
         const file = path.join(targetDir, rel);
         if (!fs.existsSync(file)) return { rel, status: "missing" };
-        const same = normalised(fs.readFileSync(file, "utf8")) === normalised(content);
+        const onDisk = fs.readFileSync(file, "utf8");
+        if (rel === CONFIG_FILE && values) {
+            const completed = addMissingConfig(onDisk, { ...DEFAULTS, ...values });
+            if (completed.added.length > 0) {
+                const status = normalised(completed.text) === normalised(content) ? "identical" : "differs";
+                return { rel, status, added: completed.added, text: completed.text };
+            }
+        }
+        const same = normalised(onDisk) === normalised(content);
         return { rel, status: same ? "identical" : "differs" };
     });
 }
@@ -327,13 +348,27 @@ function plan(targetDir, files) {
  *
  * A file that is not there is created. One that is there already is left alone,
  * reported as identical to what would have been written or as differing from it;
- * with `force`, one that differs is overwritten.
+ * with `force`, one that differs is overwritten, wholesale, as if this were the
+ * first time -- apionly.yaml included, whatever else it declares.
+ *
+ * Short of `force`, apionly.yaml gets one more chance: whatever configuration a
+ * missing kind needs and it lacks is added to it, leaving every value, key and
+ * comment already there exactly as it was. A kind already declared, however it
+ * reads, is never touched -- what is already there is not changed, only what is
+ * not there is added.
  */
 function init(targetDir, { values = DEFAULTS, force = false, log = () => {} } = {}) {
     const files = scaffold(values);
-    const report = { created: [], overwritten: [], identical: [], differing: [] };
+    const report = { created: [], overwritten: [], identical: [], differing: [], updated: [] };
+    const updates = [];
 
-    for (const { rel, status } of plan(targetDir, files)) {
+    for (const { rel, status, added, text } of plan(targetDir, files, values)) {
+        if (added && !force) {
+            fs.writeFileSync(path.join(targetDir, rel), text);
+            report.updated.push(rel);
+            updates.push({ rel, added });
+            continue;
+        }
         if (status === "identical") {
             report.identical.push(rel);
             continue;
@@ -350,6 +385,7 @@ function init(targetDir, { values = DEFAULTS, force = false, log = () => {} } = 
 
     for (const rel of report.created) log(`  created    ${rel}`);
     for (const rel of report.overwritten) log(`  overwrote  ${rel}`);
+    for (const { rel, added } of updates) log(`  updated    ${rel} (added ${added.join(", ")})`);
     for (const rel of report.identical) log(`  identical  ${rel}`);
     for (const rel of report.differing) log(`  differs    ${rel} (left alone; --force overwrites)`);
     return { ...report, skipped: [...report.identical, ...report.differing] };

@@ -323,6 +323,51 @@ test("init --force at a terminal lists what differs and asks once before overwri
     assert.ok(printed.includes("  overwrote  apionly.yaml"));
 });
 
+test("init adds a missing kind's configuration to an existing library, without --force", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders"], { interactive: false });
+
+    const { code, printed } = await runWith(
+        ["init", "lib", "-C", parent, "--openapi", "--asyncapi", "--target", "orders"], { interactive: false });
+
+    assert.strictEqual(code, 0);
+    assert.ok(printed.some((line) => line.startsWith("  updated") && line.includes("apionly.yaml") &&
+        line.includes("sources.asyncapi") && line.includes("targets.orders.asyncapi")));
+    const config = fs.readFileSync(path.join(parent, "lib", "apionly.yaml"), "utf8");
+    assert.match(config, /asyncapi: asyncapi/);
+    assert.match(config, /bundle: bundles\/orders_asyncapi_structure\.yaml/);
+});
+
+test("init --force at a terminal lists only what still differs after the additive update, not what it completed", async () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
+    const values = [
+        "--title", "Orders API", "--contract-version", "0.1.0", "--contact-name", "Orders Team",
+        "--contact-url", "https://orders.example.com", "--license", "MIT",
+        "--server-url", "https://api.orders.example.com",
+    ];
+    await runWith(["init", "lib", "-C", parent, "--openapi", "--target", "orders", ...values], { interactive: false });
+    const config = path.join(parent, "lib", "apionly.yaml");
+    fs.writeFileSync(config, `${fs.readFileSync(config, "utf8")}\n# a hand-added note, kept by the additive update\n`);
+
+    // Adding --asyncapi both completes the file (additively) and leaves the hand-added
+    // note as an unrelated difference from a from-scratch scaffold; --force is asked
+    // about that residual difference only, not about what was just completed. Every
+    // other value is given as a flag and repeated unchanged, so the ExamplesV1.yaml path
+    // fragment is the only other file this run touches, and the only thing asked at this
+    // terminal is the overwrite confirmation, which is what "n" answers.
+    const declined = terminal("n");
+    const { printed } = await runWith(
+        ["init", "lib", "-C", parent, "--openapi", "--asyncapi", "--target", "orders", "--force",
+            ...values, "--broker-host", "kafka:9092"],
+        declined.io);
+
+    assert.ok(declined.shown.some((text) => text.includes("apionly.yaml") && text.includes("differ from the scaffold")));
+    assert.ok(declined.shown.some((text) => /^Overwrite these \d+ file\(s\)\? \[y\/N\] $/.test(text)));
+    assert.ok(printed.some((line) => line.startsWith("  updated") && line.includes("apionly.yaml")));
+    assert.match(fs.readFileSync(config, "utf8"), /# a hand-added note, kept by the additive update/);
+    assert.match(fs.readFileSync(config, "utf8"), /asyncapi: asyncapi/);
+});
+
 test("init refuses more than one target, and an invalid value given as a flag, writing nothing", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-"));
     await assert.rejects(runWith(["init", "-C", dir, "--target", "a", "--target", "b"], { interactive: false }),
