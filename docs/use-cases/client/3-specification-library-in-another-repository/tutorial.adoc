@@ -5,8 +5,8 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.0
-:api-only-subscriber-version: 0.3.0
+:api-only-publisher-version: 0.7.0
+:api-only-subscriber-version: 0.3.4
 
 [NOTE]
 .Where the links in this document go
@@ -138,7 +138,7 @@ apiOnlySubscriber {
     }
     // The orders API this project calls, at the version gradle.properties declares.
     subscribeAsClient('orders') {
-        version = providers.gradleProperty('ordersApiVersion')
+        apiContractVersion = providers.gradleProperty('ordersApiVersion')
     }
 }
 ----
@@ -215,7 +215,7 @@ apiOnlySubscriber {
     }
     // The orders API this project calls, at the version gradle.properties declares.
     subscribeAsClient('orders') {
-        version = providers.gradleProperty('ordersApiVersion')
+        apiContractVersion = providers.gradleProperty('ordersApiVersion')
         // Deliberate and temporary: remove at the release.
         allowPrerelease = true
         channel {

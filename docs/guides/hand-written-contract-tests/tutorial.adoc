@@ -5,9 +5,9 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-transcriberj-version: 0.3.3
+:api-only-transcriberj-version: 0.3.6
 :api-only-transcriberj-restdocs-version: 0.1.1
-:api-only-publisher-version: 0.5.0
+:api-only-publisher-version: 0.7.0
 :spring-boot-version: 4.1.1
 :example-url: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/hand-written-contract-tests
 

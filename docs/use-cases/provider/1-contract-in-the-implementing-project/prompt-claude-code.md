@@ -46,8 +46,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.0` |
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -105,9 +105,10 @@ These are the versions this prompt was verified with. Use them unless I name new
   }
   ```
 
-- **The version a subscription fetches** is its own `version` if set; otherwise `apiOnlySubscriber.version`; otherwise the project property `apiContractVersion`, from `gradle.properties`, `-P` or `ORG_GRADLE_PROJECT_apiContractVersion`.
+- **The version a subscription fetches** is `-PapiContractVersion` on the command line, which overrides every other; otherwise the subscription's own `apiContractVersion`; otherwise `apiOnlySubscriber.apiContractVersion`; otherwise the project property `apiContractVersion`, from `gradle.properties` or `ORG_GRADLE_PROJECT_apiContractVersion`.
+  The old name `version` fails the build and names `apiContractVersion`.
   A pre-release is refused unless the subscription sets `allowPrerelease = true`.
-- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the target in camel case (`orders` gives `fetchApiSpecOrders`), plus the aggregates `fetchApiSpec` and `verifyApiSpec`.
+- Tasks: `fetchApiSpec<Target>` and `verifyApiSpec<Target>`, with the target in PascalCase (`orders` gives `fetchApiSpecOrders`), plus the aggregates `fetchApiSpec` and `verifyApiSpec`.
   `check` depends on `verifyApiSpec`, and `processResources` depends on the fetch.
   `verifyApiSpec` deliberately does not depend on the fetch.
 - The fetch unpacks `openapi.yaml`, `asyncapi.yaml` where present, and `manifest.json` into `build/api-spec/<target>/`, which is added as a resources directory, so the documents sit at the classpath root.

@@ -42,8 +42,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.0` |
-| `{api-only-subscriber-version}` | `0.3.0` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 
@@ -68,14 +68,14 @@ These are the versions this prompt was verified with. Use them unless I name new
           groupId = '<the library\'s group id>'
       }
       subscribeAsClient('<target>') {
-          version = providers.gradleProperty('<target>ApiVersion')   // required: no default
+          apiContractVersion = providers.gradleProperty('<target>ApiVersion')   // required: no default
       }
   }
   ```
 
 - Working ahead of a release, temporarily, on one subscription: a `channel { type = 'file'; directory = '../<library checkout>/build/publish' }` inside that `subscribeAsClient` block, `<target>ApiVersion` set to the pre-release, and `allowPrerelease = true`.
   Every setting a subscription's own channel leaves out comes from the project's channel, and the other subscriptions keep resolving through the project's channel.
-- A client subscription sets its own `version`; it does not read `apiContractVersion`.
+- A client subscription sets its own `apiContractVersion`; it does not read `apiOnlySubscriber.apiContractVersion`, the `apiContractVersion` project property or `-PapiContractVersion`.
 - Tasks: `fetchApiSpec<Target>`, `verifyApiSpec<Target>`, `fetchApiSpec`, `verifyApiSpec`; `check` depends on `verifyApiSpec`, and `processResources` on the fetches, which copies each contract to `contracts/<target>/` on the classpath.
 - `apionly.lock` records target, version, channel (`maven` or `file`) and a SHA-256 per document.
 - It prints `Subscribed to <target> <version>`, `Updated <target> from <old> to <new>`, and refuses a pre-release without `allowPrerelease` with `subscription '<target>' resolves the pre-release version <version>.`.

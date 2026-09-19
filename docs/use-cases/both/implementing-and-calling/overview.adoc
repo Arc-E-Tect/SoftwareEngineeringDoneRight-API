@@ -55,7 +55,7 @@ apiOnlySubscriber {
     }
     subscribe('billing')
     subscribeAsClient('orders') {
-        version = findProperty('ordersApiVersion')
+        apiContractVersion = findProperty('ordersApiVersion')
         channel {
             type = 'maven'
             groupId = 'com.example.contracts'

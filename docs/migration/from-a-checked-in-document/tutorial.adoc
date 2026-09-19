@@ -5,8 +5,8 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.1
-:api-only-subscriber-version: 0.3.1
+:api-only-publisher-version: 0.7.0
+:api-only-subscriber-version: 0.3.4
 
 [NOTE]
 .Where the links in this document go

@@ -36,8 +36,8 @@ Wherever one of these names appears below, in braces, it stands for this version
 
 | Name | Version |
 |---|---|
-| `{api-only-publisher-version}` | `0.4.1` |
-| `{api-only-subscriber-version}` | `0.3.1` |
+| `{api-only-publisher-version}` | `0.7.0` |
+| `{api-only-subscriber-version}` | `0.3.4` |
 
 These are the versions this prompt was verified with. Use them unless I name newer ones; a newer release works the same unless its changelog says otherwise.
 

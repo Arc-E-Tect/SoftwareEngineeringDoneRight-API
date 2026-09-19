@@ -68,7 +68,7 @@ Node.js, the Publisher, or access to the fragments the contracts are built from.
 . **Get the coordinates from each provider**: the Maven repository's URL, the group id, the target name of each API, and the versions available.
 . **Declare the version of each API the project calls** in `gradle.properties`, as `<target>ApiVersion`.
 . **Write the contract test first**: a test that fails until each contract, at its version, is on the classpath under `/contracts/<target>/`.
-. **Apply the Subscriber**: the Maven repository with its credentials read from outside the build file, the `maven` channel, and a `subscribeAsClient` per API, each with its own `version`.
+. **Apply the Subscriber**: the Maven repository with its credentials read from outside the build file, the `maven` channel, and a `subscribeAsClient` per API, each with its own `apiContractVersion`.
 . **Run `./gradlew check`**, and commit `apionly.lock`.
 . **Run the same `./gradlew check` in CI**, with the repository credentials in the environment, and fail the build when the lockfile changed.
 

@@ -5,9 +5,9 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-transcriberj-version: 0.3.2
+:api-only-transcriberj-version: 0.3.6
 :api-only-transcriberj-restdocs-version: 0.1.1
-:api-only-publisher-version: 0.5.0
+:api-only-publisher-version: 0.7.0
 :example-url: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/description-bundles
 
 [NOTE]
@@ -66,11 +66,11 @@ The TranscriberJ has three sources for a description, and a bundle is only one o
 |Configuration |Every class and field is described by
 
 |Neither setting
-|The placeholder `INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE`.
-Right for a tree that only contract tests use.
+|The empty string.
+Right for a tree that only contract tests use: a description exists only for documentation, and none was asked for.
 
 |`generateDocs = true`
-|The contract's own description.
+|The contract's own description, or, where the contract has none, the placeholder `INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE`.
 Right when the contract is written for the readers of the documentation, in their language.
 
 |`descriptionBundle = '...'`
@@ -211,8 +211,8 @@ The tree goes to the test source set, so the files go under `src/test/resources`
 
 What to consider::
 * **`generateDocs` decides the fallback.**
-With it, a key the bundle lacks is described by the contract; without it, by the placeholder.
-Turn it on unless you want every description the bundle does not cover to show up, visibly, as the placeholder.
+With it, a key the bundle lacks is described by the contract; without it, by the empty string.
+Turn it on unless you want every description the bundle does not cover to be empty.
 * **The bundle is read when a description is asked for, not when the classes are generated.**
 Editing a properties file needs no regeneration, and the generated sources do not change with it.
 * **Without `descriptionBundle`, nothing changes**: the classes are the ones generated before bundles existed, with their descriptions compiled in.
@@ -381,7 +381,7 @@ A description in a locale resolves in this order, and the first text that is the
 . the locale's own file: `Descriptions_nl_BE.properties` for `nl-BE`;
 . its parents' files: `Descriptions_nl.properties`;
 . the base file, `Descriptions.properties`;
-. what generation produced: the contract's text with `generateDocs = true`, the placeholder without it.
+. what generation produced: with `generateDocs = true`, the contract's text, or the placeholder where it has none; without it, the empty string.
 
 The JVM's own locale is never part of that chain: on a machine whose default locale is Dutch, English is still answered from the base file, never from the Dutch one.
 

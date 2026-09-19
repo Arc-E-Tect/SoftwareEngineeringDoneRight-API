@@ -5,8 +5,8 @@
 :icons: font
 :source-highlighter: rouge
 // The component versions this document describes; change them here only.
-:api-only-publisher-version: 0.4.0
-:api-only-subscriber-version: 0.3.0
+:api-only-publisher-version: 0.7.0
+:api-only-subscriber-version: 0.3.4
 
 [NOTE]
 .Where the links in this document go
@@ -194,10 +194,10 @@ apiOnlySubscriber {
     }
     // The APIs this project calls, each at the version gradle.properties declares.
     subscribeAsClient('orders') {
-        version = providers.gradleProperty('ordersApiVersion')
+        apiContractVersion = providers.gradleProperty('ordersApiVersion')
     }
     subscribeAsClient('payments') {
-        version = providers.gradleProperty('paymentsApiVersion')
+        apiContractVersion = providers.gradleProperty('paymentsApiVersion')
     }
 }
 ----
@@ -213,7 +213,7 @@ apiOnlySubscriber {
 |Resolve contracts through Gradle's own dependency resolution, as `com.example.contracts:orders:1.1.0@tgz`.
 
 |`subscribeAsClient('orders')`
-|An API this project calls, by its target name, with its own `version`.
+|An API this project calls, by its target name, with its own `apiContractVersion`.
 An API from another provider sets `groupId` on its subscription, and that provider's repository goes in `repositories`.
 |===
 
@@ -324,7 +324,7 @@ To work against it deliberately, add `allowPrerelease = true` to that subscripti
 [source,groovy]
 ----
     subscribeAsClient('orders') {
-        version = providers.gradleProperty('ordersApiVersion')
+        apiContractVersion = providers.gradleProperty('ordersApiVersion')
         allowPrerelease = true
     }
 ----
