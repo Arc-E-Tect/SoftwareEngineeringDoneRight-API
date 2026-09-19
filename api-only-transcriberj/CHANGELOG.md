@@ -1,3 +1,20 @@
+## [0.3.7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.6...api-only-transcriberj-v0.3.7) (2026-09-19)
+
+
+### ✅ Tests
+
+* **api-only-transcriberj:** rebuild the scaffold fixture with init --yes, which 0.7.0 needs at a terminal ([#34](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/34)) ([cdf2466](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/cdf2466bf65be4e34aa29763a543743b9b392bd6)), closes [#34](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/34)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** depend on the current API-Only Subscriber, and keep it current ([#36](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/36)) ([a6152d7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a6152d7b255aa84ffdc0a00aa59e1051b35c61df)), closes [#36](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/36) [#93](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/93)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.3.6 [skip ci] ([e8cdd2c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e8cdd2ca2b402cddbbafbc133d93c11d6bce6481))
+
 ## [0.3.6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.5...api-only-transcriberj-v0.3.6) (2026-09-18)
 
 
