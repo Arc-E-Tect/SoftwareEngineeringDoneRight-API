@@ -1,0 +1,113 @@
+name: API-Only Publisher - Build
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'api-only-publisher/**'
+      - '.github/workflows/api-only-publisher-build.yml'
+      - '.github/workflows/semantic-version-calculate.yml'
+      - '.github/workflows/determine-release-type.yml'
+
+jobs:
+  Detect-Changes:
+    name: Detect Relevant Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.decide.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # GitHub's own paths: trigger filter above is skipped entirely for a brand-new branch's
+      # first push (there's no prior ref state to diff against), so this only re-checks paths -
+      # against main - for that specific case. An existing branch's push already got here only
+      # because the trigger's own paths filter matched, so it's trusted as-is.
+      - name: Filter paths relevant to this plugin (new-branch pushes only)
+        id: filter
+        if: github.event.before == '0000000000000000000000000000000000000000'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          base: main
+          filters: |
+            changed:
+              - 'api-only-publisher/**'
+              - '.github/workflows/api-only-publisher-build.yml'
+              - '.github/workflows/semantic-version-calculate.yml'
+              - '.github/workflows/determine-release-type.yml'
+
+      - name: Decide whether to proceed
+        id: decide
+        run: |
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=${{ steps.filter.outputs.changed }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  Calculate-Version:
+    needs: Detect-Changes
+    if: needs.Detect-Changes.outputs.changed == 'true'
+    uses: ./.github/workflows/semantic-version-calculate.yml
+    with:
+      fail_on_empty_version: false
+      fail_on_existing_tag: false
+      project_dir: api-only-publisher
+      tag_format: 'api-only-publisher-v${version}'
+    secrets:
+      sem_rel_token_token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
+
+  Determine-Release-Type:
+    needs: [Detect-Changes, Calculate-Version]
+    if: needs.Detect-Changes.outputs.changed == 'true'
+    uses: ./.github/workflows/determine-release-type.yml
+
+  Build:
+    name: Build API-Only Publisher
+    needs: [Detect-Changes, Calculate-Version]
+    if: needs.Detect-Changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api-only-publisher/package-lock.json
+
+      - name: Install
+        run: npm ci --prefix api-only-publisher
+
+      - name: Test API-Only Publisher
+        # `npm test` carries the coverage thresholds, so a branch cannot merge
+        # with code the tests stopped covering.
+        run: npm test --prefix api-only-publisher
+
+      - name: Verify the scaffold still builds
+        run: |
+          # `init` is the one part of this tool whose value is the conventions
+          # rather than the code, so a scaffold that does not build is broken
+          # however well every unit test passes.
+          node api-only-publisher/src/cli.js init "${RUNNER_TEMP}/scaffold"
+          node api-only-publisher/src/cli.js build -C "${RUNNER_TEMP}/scaffold"
+
+  Workflow-Summary:
+    name: Workflow Summary
+    needs: [Detect-Changes, Build, Determine-Release-Type]
+    if: always() && needs.Detect-Changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output build completion
+        run: |
+          echo "API-Only Publisher ${{ needs.Determine-Release-Type.outputs.release_type }} build workflow completed"
+          echo "::notice title=Build Complete::API-Only Publisher ${{ needs.Determine-Release-Type.outputs.release_type }} build workflow completed"
