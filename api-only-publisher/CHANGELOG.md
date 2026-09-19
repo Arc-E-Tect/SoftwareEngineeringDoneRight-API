@@ -1,3 +1,15 @@
+## [0.7.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.7.0...api-only-publisher-v0.7.1) (2026-09-19)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** make init add missing apionly.yaml configuration, not just missing files ([#37](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/37)) ([f70dce3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/f70dce32705b4bc7f14811b1cd8c1441ad542d5e)), closes [#37](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/37)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.7.0 [skip ci] ([d2daaa9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/d2daaa97d0a691af87fbbf715ada44e86aef370c))
+
 # [0.7.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.6.2...api-only-publisher-v0.7.0) (2026-09-19)
 
 
