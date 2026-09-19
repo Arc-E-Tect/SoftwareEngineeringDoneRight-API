@@ -56,7 +56,7 @@ Run in the directory that holds `apionly.yaml` and the Publisher's `package.json
 |After cloning, and whenever `package-lock.json` changes
 
 |`npm run apionly -- build [--target <t>]`
-|Builds, stamps and lints every contract, or one.
+|Builds, stamps and lints every contract, or one, and logs each operation that has no example (a warning unless `lint.examples.<kind>` says `error`).
 |After changing fragments or a version file
 
 |`npm run apionly -- lint`
@@ -325,6 +325,10 @@ The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`
 |`lint failed for <n> document(s): …`
 |Lint errors, listed above that line.
 |Fix the fragments.
+
+|`<n> operation(s) in <file> have no example (lint.examples.<kind> is error):`
+|The library set `lint.examples.<kind>` to `error`, and an AsyncAPI message, or an OpenAPI request body or response, has no example. Each is listed below the line.
+|Add the example to the fragment, or relax the setting (link:authoring-a-specification-library.adoc#give-every-operation-an-example[Give every operation an example →]).
 
 |`declares info.version '<a>' but is being packed as '<b>'`
 |The document was built for another version than the one being packed.

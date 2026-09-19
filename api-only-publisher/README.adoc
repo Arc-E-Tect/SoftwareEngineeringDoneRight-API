@@ -11,7 +11,7 @@
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
 image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDoneRight-API?filter=api-only-publisher-v*[GitHub release,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/releases?q=api-only-publisher]
-image:https://img.shields.io/badge/Node-22%2B-339933?logo=node.js[Node 22+,link=https://nodejs.org]
+image:https://img.shields.io/badge/Node-22.14%2B-339933?logo=node.js[Node 22.14+,link=https://nodejs.org]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
 [NOTE]
@@ -343,6 +343,9 @@ A `publish: false` target keeps the version its source declares.
 
 . **Lint** the finished document, so a broken fragment surfaces against the target it actually affects.
 `build` prints the linter's output only when the lint fails, and writes no report; to see warnings, and to write each document's report under `reports.lint`, run `lint`.
+
+. **Report operations with no example**, after the lint and apart from it: an AsyncAPI message without `examples`, or an OpenAPI request body or response without one, is logged as a finding, and `lint.examples.<kind>` decides whether that fails the build (<<examples-check,An operation with no example is reported apart from lint §>>).
+Only `build` does this; `lint` does not, and no report file is written.
 
 [#versions]
 == Versions
@@ -808,6 +811,8 @@ OpenAPI operation '<operationId>': <request body, or response <status>> (<fragme
 A body or response with no `content` at all, such as a `204`, has nothing to exemplify and is never reported.
 
 `lint.examples.asyncapi` and `lint.examples.openapi` each default to `warn`; `error` fails the build, `off` does not look.
+The findings appear in the build log only: `lint` does not run this check, and there is no report file, so a job that only runs `lint` never sees them -- run `build`, and read its log.
+With `error`, the build fails with `<n> operation(s) in <file> have no example (lint.examples.<kind> is error):`, followed by each finding.
 A library that has adopted the Microcks-based conformance emitter will usually want `lint.examples.asyncapi: error`: publishing a bundle its own toolchain cannot use is a real defect there, not merely a gap (link:../docs/reference/authoring-a-specification-library.adoc#give-every-operation-an-example[Give every operation an example →]).
 
 [#version-stamping]
@@ -1034,7 +1039,7 @@ Anything else is a bug; please report it.
 npm test
 ----
 
-Covers every module and every command: placeholder substitution, version stamping, version files, configuration parsing, closures, packing, channels, splitting, and the scaffold.
+Covers every module and every command: placeholder substitution, version stamping, version files, configuration parsing, closures, packing, channels, splitting, aggregates, the example check, and the scaffold.
 `build.e2e.test.js` runs the real bundlers.
 The run fails below 90% of lines and functions, or 80% of branches.
 

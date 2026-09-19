@@ -114,7 +114,7 @@ Its name is the coordination key across both tools.
 
 |2. Build
 |Publisher `build`
-|Copies the source root to a staging directory, substitutes `{{token}}` placeholders, bundles each target with Redocly CLI or AsyncAPI CLI, stamps the version into `info.version`, and lints the result.
+|Copies the source root to a staging directory, substitutes `{{token}}` placeholders, bundles each target with Redocly CLI or AsyncAPI CLI, stamps the version into `info.version`, lints the result, and reports operations whose example the toolchain could use (`lint.examples.<kind>`).
 |`apionly.yaml`, fragments, version files, `toolchain`
 |`<build.staging>/`, `<build.dist>/<target>/`
 
@@ -345,6 +345,11 @@ link:../../api-only-subscriber/README.adoc#version-precedence[Where a subscripti
 |Publisher `src/pipeline.js`; `src/cli.js` for `lint`
 |The linter's own output; `lint failed for <n> document(s)`
 
+|Every AsyncAPI message, and every OpenAPI request body and response, carries an example -- a warning by default, never a specification requirement
+|`build` only
+|Publisher `src/examples.js`, called from `src/pipeline.js`
+|`AsyncAPI operation '<id>': message '<key>' (...) carries no example, so this bundle cannot be used for Microcks-based conformance testing.`, `OpenAPI operation '<id>': ... carries no example, which makes the generated documentation harder to read.`; with `lint.examples.<kind>: error`, `<n> operation(s) in <file> have no example`
+
 |Every YAML file under `sources.root` is reached by some target, apart from lint tools' configuration files and the lint configurations `apionly.yaml` names
 |`lint` without `--target`
 |Publisher `src/unreferenced.js`, called from `src/cli.js`
@@ -441,8 +446,12 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`load`, `loadFrom`, `ConfigError`
 
 |`src/pipeline.js`
-|Stage, substitute, generate an aggregate's bundle root, bundle, push an OpenAPI aggregate's operation ids and security down onto its own bundled output, stamp, lint and distribute; `prepare` stages and generates without bundling.
-|`build`, `prepare`, `lint`, `BuildError`
+|Stage, substitute, generate an aggregate's bundle root, bundle, push an OpenAPI aggregate's operation ids and security down onto its own bundled output, stamp, lint, report operations with no example (`checkExamples`) and distribute; `prepare` stages and generates without bundling.
+|`build`, `prepare`, `lint`, `checkExamples`, `BuildError`
+
+|`src/examples.js`
+|Finds AsyncAPI messages and OpenAPI request bodies and responses with no example in a bundled document, and words each finding for its kind.
+|`asyncapiOperationsWithoutExamples`, `openapiOperationsWithoutExamples`, `asyncapiMessage`, `openapiMessage`
 
 |`src/placeholders.js`
 |`{{token}}` substitution.

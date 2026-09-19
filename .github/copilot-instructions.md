@@ -1,6 +1,6 @@
 # Project Overview
 
-This is a public repository for API-related software. The implementation language, build system, runtime, and release process are intentionally not defined yet.
+This is a public repository for API-related software: the API-Only Publisher (Node.js, npm), and the API-Only Subscriber and TranscriberJ (Gradle plugins, Java 21). Each component builds, tests and releases on its own, as described below.
 
 ## Security: zero credentials policy
 
@@ -39,6 +39,18 @@ The hooks provide local defense in depth by rejecting keystores and likely hardc
 - Run `actionlint` after changing a workflow, and fix all reported errors before committing.
 - Do not use `pull_request_target` with untrusted pull-request code. Do not expose secrets to pull-request workflows from forks.
 - Use immutable action, container, and dependency versions. Do not use mutable `latest` tags.
+
+## API-Only Publisher
+
+- Build and test with `cd api-only-publisher && npm ci && npm test`. `npm test` gates on 90% of lines, 90% of functions and 80% of branches, with no exclusions; `test:quick` skips the gate. `build.e2e.test.js` runs the real bundlers, so it needs network access.
+- Its one runtime dependency is `yaml`. Add none without an explicit decision.
+- It is built by `api-only-publisher-build.yml` on every push to a branch other than `main`, released by `api-only-publisher-release.yml` under the `api-only-publisher-v*` tags, and published to npm by trusted publishing: npm binds the trusted publisher to that workflow's file name, so do not rename it or move the publish step to another workflow.
+- Behaviour that changes what a library sees -- a message, a configuration key, a check -- is documented in `api-only-publisher/README.adoc` and, with its reasoning, in `docs/reference/authoring-a-specification-library.adoc`, in the same change.
+
+## API-Only Subscriber
+
+- Build and test with `cd api-only-subscriber && ./gradlew build`.
+- It is built by `api-only-subscriber-build.yml` and released by `api-only-subscriber-release.yml` under the `api-only-subscriber-v*` tags.
 
 ## API-Only TranscriberJ
 

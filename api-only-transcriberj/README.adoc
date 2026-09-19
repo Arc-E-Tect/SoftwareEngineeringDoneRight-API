@@ -557,6 +557,21 @@ A warning never fails the build.
 
 An emitter adds a dialect: companion classes in `<basePackage>.<emitter id>`, such as REST Docs descriptors or WireMock stubs, built on the core classes.
 None is included; a project adds the ones it wants to `transcriberjEmitters`.
+
+Two are published from https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library[the Library repository ↗]:
+
+[cols="1,3",options="header"]
+|===
+|Emitter |What it generates
+
+|`com.arc-e-tect:api-only-transcriberj-restdocs`
+|Spring REST Docs field descriptors and snippets for every class with a body (`<basePackage>.restdocs`).
+
+|`com.arc-e-tect:api-only-transcriberj-microcks`
+|From the AsyncAPI document, one JUnit 5 conformance test per `send` operation, checking what an application publishes against a Microcks-imported copy of the contract, as `<basePackage>.microcks.AsyncConformanceHarness`. What a generator cannot know -- the broker, where the contract file is, how the application publishes each event -- is left to abstract methods the project implements. It also writes a properties resource, which is what `EmitterContext.writeResource` is for. It needs every message to carry an `examples` array, which the Publisher can enforce with `lint.examples.asyncapi`.
+|===
+
+Each one's README lists what it needs of the project.
 They run after the core emitter, each in a class loader built from that configuration, so their dependencies never mix with the build script's.
 
 An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`, and names its implementation in `META-INF/services/com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`.
