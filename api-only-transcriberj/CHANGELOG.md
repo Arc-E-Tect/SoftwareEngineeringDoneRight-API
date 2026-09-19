@@ -1,3 +1,15 @@
+# [0.4.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.7...api-only-transcriberj-v0.4.0) (2026-09-19)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** let an emitter write a resource file ([#39](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/39)) ([f0ae3c4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/f0ae3c4c6b66e0d4b50d6d01256a750a5489e173)), closes [#39](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/39)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.3.7 [skip ci] ([da27524](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/da27524136c6e0eb610549c32831be08a90cba1c))
+
 ## [0.3.7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.3.6...api-only-transcriberj-v0.3.7) (2026-09-19)
 
 
