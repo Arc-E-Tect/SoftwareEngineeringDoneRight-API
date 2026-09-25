@@ -1,3 +1,15 @@
+# [0.11.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.10.0...api-only-publisher-v0.11.0) (2026-09-25)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** make every default a channel writes overridable ([#45](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/45)) ([a8b00a7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a8b00a7bc3d60d4dfbed81a238904106ec37286f)), closes [#45](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/45) [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44) [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44) [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.10.0 [skip ci] ([2850b28](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2850b286f6cf3571de97b2cc61ebfe615e3382d4))
+
 # [0.10.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.9.0...api-only-publisher-v0.10.0) (2026-09-25)
 
 
