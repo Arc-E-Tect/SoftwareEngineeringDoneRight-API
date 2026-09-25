@@ -241,6 +241,12 @@ With `publish: false`, the package is only packed into `directory`.
 |The archive, attached to a release tagged `<target>-v<version>`, marked as a pre-release where it is one.
 |Not read.
 |`channels.github-release.repository`, `tagFormat`
+
+|`nuget`
+|`<id>.<version>.nupkg` holding the archive's contents under `contracts/`, into a local feed as `<id>/<version>/` with the `.sha512`, `.nuspec` and `manifest.json` beside it, or pushed with a multipart `PUT` and `X-NuGet-ApiKey` to the endpoint a remote feed's service index names.
+The id is `<idPrefix>.<target in PascalCase>`; a version with build metadata is refused.
+|Not read. A .NET build restores it with a `PackageReference`.
+|`channels.nuget.idPrefix`, `packageId`, `repository`, `tokenEnv`, `authors`, `license`
 |===
 
 [#settings-map]
@@ -364,6 +370,11 @@ link:../../api-only-subscriber/README.adoc#version-precedence[Where a subscripti
 |`publish`
 |Publisher `src/channels.js`
 |`no credential in $<VAR>, which channels.maven.tokenEnv names`
+
+|A NuGet package id and version NuGet accepts, and an API key for a remote feed
+|`publish`
+|Publisher `src/nuget.js`
+|`'<id>' is not a valid NuGet package id`, `version '<v>' carries build metadata`, `no API key in $<VAR>, which channels.nuget.tokenEnv names`
 
 |A project implements at most one contract, and never both implements and calls the same one
 |Evaluating the build file
@@ -490,8 +501,20 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`pack`, `manifest`, `MANIFEST_SCHEMA_VERSION`
 
 |`src/channels.js`
-|One function per channel, and the dispatcher.
+|One function per channel, and the dispatcher; a channel large enough for its own module is registered here too.
 |`publish`, `CHANNELS`, `ChannelError`
+
+|`src/channel-error.js`
+|`ChannelError`, in a module of its own so a channel outside `src/channels.js` can throw it.
+|`ChannelError`
+
+|`src/nuget.js`
+|The `nuget` channel: the package id, the `.nuspec`, the `.nupkg`, a local feed and a remote push.
+|`publishNuget`, `packageId`, `nuspec`, `checkVersion`, `CONTENT_FOLDER`
+
+|`src/zip.js`
+|A deterministic ZIP writer, for the `.nupkg`: fixed entry order, fixed timestamp.
+|`zip`, `crc32`, `ZipError`
 
 |`src/split.js`
 |Splits a library into self-contained parts.
@@ -580,8 +603,8 @@ Tests are in `api-only-subscriber/src/test/java/`: in-process tests per class, a
 |`test/cli.test.js`; <<checks,Every check §>>
 
 |A new Publisher channel
-|`src/channels.js`: a `publish<Name>` function and an entry in `CHANNELS`; its options come from `channels.<name>`
-|`test/pipeline.test.js`; <<channels,Channels §>>
+|`src/channels.js`: a `publish<Name>` function and an entry in `CHANNELS`, or a module of its own registered there, throwing `ChannelError` from `src/channel-error.js`, as `src/nuget.js` does; its options come from `channels.<name>`
+|`test/pipeline.test.js`, or a test file of its own such as `test/nuget.test.js`; <<channels,Channels §>>
 
 |A new channel the Subscriber reads
 |`ApiOnlySubscriberPlugin.resolveArchive`, `ChannelSpec`, and the messages in `FetchApiSpecTask`

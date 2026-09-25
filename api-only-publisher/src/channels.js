@@ -13,8 +13,9 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 const { isPrerelease, npmDistTag } = require("./version-policy");
+const { ChannelError } = require("./channel-error");
+const { publishNuget } = require("./nuget");
 
-class ChannelError extends Error {}
 
 /**
  * `file` -- publish to a local directory.
@@ -275,7 +276,9 @@ function publishMavenRemote(archive, manifest, options, log) {
     });
 }
 
-const CHANNELS = { file: publishFile, maven: publishMaven, npm: publishNpm, "github-release": publishGithubRelease };
+const CHANNELS = {
+    file: publishFile, maven: publishMaven, npm: publishNpm, "github-release": publishGithubRelease, nuget: publishNuget,
+};
 
 function publish(archive, manifest, channel, options, log = () => {}) {
     const handler = CHANNELS[channel];

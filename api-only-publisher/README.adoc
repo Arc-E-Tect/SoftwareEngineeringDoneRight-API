@@ -621,20 +621,85 @@ Native for Gradle consumers: version resolution, caching and conflict handling c
 |`github-release`
 |The language-neutral floor: immutable per tag, works for private repositories with a token, readable by a consumer with no JVM and no Node.js.
 No dependency-resolution semantics and no update notification, which is why it is the fallback rather than the default.
+
+|`nuget`
+|A path writes a `.nupkg` into a local feed; an `http(s)` URL -- the feed's service index -- pushes to a remote one.
+Native for .NET consumers: a `PackageReference` at a version, restored from a feed. See <<nuget,The `nuget` channel §>>.
 |===
 
 Credentials are read from the environment, never from configuration.
-`channels.maven.tokenEnv` names the variable, `MAVEN_TOKEN` by default; a configuration file gets committed, and a credential in a committed file is a credential that has leaked.
+`channels.maven.tokenEnv` names the variable, `MAVEN_TOKEN` by default, and `channels.nuget.tokenEnv` the NuGet API key's, `NUGET_API_KEY` by default; a configuration file gets committed, and a credential in a committed file is a credential that has leaked.
 
 link:../docs/reference/how-publisher-and-subscriber-work-together.adoc#channels[How the Publisher and the Subscriber work together →] lists each channel's layout and options.
 
+[#nuget]
+=== The `nuget` channel
+
+It is published without the .NET SDK, as the Maven channel is published without Maven: a `.nupkg` is a ZIP archive the Publisher writes itself, and a push is one HTTP request.
+
+[source,yaml]
+----
+channels:
+  nuget:
+    idPrefix: Contoso.Contracts          # required
+    # packageId: Contoso.Users           # replaces the whole id, for every target
+    repository: build/nuget-feed         # a directory, or a feed's service index URL
+    # tokenEnv: NUGET_API_KEY            # the variable holding the API key, for a URL
+    # authors: Contoso API team          # default: idPrefix
+    # license: MIT                       # an SPDX expression; default: UNLICENSED
+----
+
+*The package id* is `<idPrefix>.<target in PascalCase>`: target `user-account` with `idPrefix: Contoso.Contracts` is `Contoso.Contracts.UserAccount`, the dotted PascalCase .NET uses for namespaces, from a kebab-case target.
+`packageId` replaces it.
+An id NuGet would refuse -- anything but letters, digits and underscores in parts separated by single dots or dashes, or longer than 100 characters -- is refused before anything is written.
+
+*The version* is the contract's, and a pre-release is a NuGet pre-release: `2.1.0-rc.1` is not picked by a floating range such as `2.1.*`, only when asked for.
+A version with build metadata, such as `2.1.0+build.7`, is refused before anything is written: NuGet ignores `+metadata` when it identifies a package, so it would be the same package as every other build of `2.1.0`, and a feed refuses the second.
+
+*A local feed* is a directory in the layout `nuget add` writes, which the NuGet documentation recommends over a flat folder:
+
+----
+<repository>/<id, lower case>/<version>/
+    <id>.<version>.nupkg
+    <id>.<version>.nupkg.sha512
+    <id>.nuspec
+    manifest.json           -- beside the package, so provenance is readable without unpacking it
+----
+
+A .NET build uses it with `dotnet nuget add source <repository>`, or a `nuget.config` entry.
+
+*A remote feed* is configured by its service index, the URL a feed's settings show and that ends in `index.json`, such as `https://api.nuget.org/v3/index.json`.
+The Publisher reads the service index for its `PackagePublish/2.0.0` endpoint, then pushes the package there with one `PUT`, as `multipart/form-data`, with the key from the environment variable `tokenEnv` names in the `X-NuGet-ApiKey` header.
+A feed that already has the version answers 409, and the push fails: a published version is never replaced.
+Without the variable set, the push fails before anything is sent, naming it.
+That is how nuget.org, GitHub Packages and self-hosted feeds such as BaGet take a push.
+A feed that authenticates some other way -- Azure Artifacts, which expects a credential provider or a token in an `Authorization` header -- is not supported yet; only the local-HTTP-stub tests exercise the push, not a real feed.
+
+*The package holds* the `.nuspec`, the two Open Packaging Conventions parts (`[Content_Types].xml` and `_rels/.rels`), and exactly what `pack` produced -- the documents and `manifest.json` -- extracted, never rebuilt, under `contracts/`:
+
+----
+Contoso.Contracts.UserAccount.nuspec
+[Content_Types].xml
+_rels/.rels
+contracts/asyncapi.yaml
+contracts/manifest.json
+contracts/openapi.yaml
+----
+
+`contracts/` is the contract with the consumer, and changes only with a major version of the Publisher.
+NuGet gives the folder no behaviour: nothing is copied into a project, nothing is compiled, and a restore reports no warning for a package with no assemblies.
+Until a `.targets` file places and verifies the documents for a .NET build, a consumer reads them where restore put them, `~/.nuget/packages/<id, lower case>/<version>/contracts/` (or `$(NuGetPackageRoot)` in MSBuild), and verifies them against `contracts/manifest.json`.
+
+The same packed archive always produces a byte-identical package: entries in a fixed order, a fixed timestamp.
+Note that `publish` packs again each time, and `manifest.json` records when it was packed, so publishing the same version twice produces two packages that differ in that one field; a NuGet consumer keeps whichever it restored first, since NuGet treats a version as immutable.
+
 [#why-registries]
-=== Why npm and Maven rather than release assets alone
+=== Why npm, Maven and NuGet rather than release assets alone
 
 Publishing is passive.
 The producer releases `2.1.0` and nothing happens in an implementation repository until somebody looks.
 
-Renovate and Dependabot understand npm and Maven natively, so a contract bump arrives downstream as a pull request without any bespoke machinery.
+Renovate and Dependabot understand npm, Maven and NuGet natively, so a contract bump arrives downstream as a pull request without any bespoke machinery.
 That is the practical argument for preferring them, and the reason to design the coordinates so that standard update bots can read them.
 
 [#pre-releases]
