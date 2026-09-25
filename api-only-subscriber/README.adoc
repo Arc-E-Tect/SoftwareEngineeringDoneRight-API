@@ -141,6 +141,14 @@ apiOnlySubscriber {
     // Default: the apiContractVersion project property; unset when that is not defined
     // apiContractVersion = findProperty('apiContractVersion')
 
+    // The source set whose resources the documents join, unless a subscription names
+    // its own; 'test' keeps the contract to the tests. Default: main
+    // sourceSet = 'main'
+
+    // The classpath folder an API the project calls is copied under, followed by its
+    // target. Default: contracts
+    // clientResources = 'contracts'
+
     channel {
         // Which kind of channel to resolve through: 'maven' or 'file'.
         // Default: maven
@@ -185,6 +193,10 @@ apiOnlySubscriber {
         // Default: build/api-spec/<target>
         // into = layout.buildDirectory.dir('api-spec/orders')
 
+        // The source set this subscription's documents join.
+        // Default: apiOnlySubscriber.sourceSet
+        // sourceSet = 'main'
+
         // A channel of this subscription's own. Every setting it leaves out
         // comes from the project's channel above.
         // Default: the project's channel
@@ -217,6 +229,14 @@ apiOnlySubscriber {
     // its own. See "Where a subscription's version comes from".
     // Default: the apiContractVersion project property; unset when that is not defined
     // apiContractVersion = findProperty("apiContractVersion")?.toString()
+
+    // The source set whose resources the documents join, unless a subscription names
+    // its own; "test" keeps the contract to the tests. Default: main
+    // sourceSet = "main"
+
+    // The classpath folder an API the project calls is copied under, followed by its
+    // target. Default: contracts
+    // clientResources = "contracts"
 
     channel {
         // Which kind of channel to resolve through: "maven" or "file".
@@ -261,6 +281,10 @@ apiOnlySubscriber {
         // Where this subscription's documents land.
         // Default: build/api-spec/<target>
         // into = layout.buildDirectory.dir("api-spec/orders")
+
+        // The source set this subscription's documents join.
+        // Default: apiOnlySubscriber.sourceSet
+        // sourceSet = "main"
 
         // A channel of this subscription's own. Every setting it leaves out
         // comes from the project's channel above.
@@ -493,8 +517,9 @@ Gradle rejects that outright, which is the class of bug these providers exist to
 == Where documents land
 
 `build/api-spec/<target>/`.
-For the contract the project implements, that directory is registered as an additional resources directory, so each document is at the root of the classpath: `/openapi.yaml`, `/asyncapi.yaml`, and the archive's `/manifest.json`.
+For the contract the project implements, that directory is registered as an additional resources directory of the `main` source set, so each document is at the root of the classpath: `/openapi.yaml`, `/asyncapi.yaml`, and the archive's `/manifest.json`.
 For an API the project calls, its contents are copied to `/contracts/<target>/` on the classpath instead, as <<api-clients,Calling other APIs §>> explains.
+`sourceSet`, on `apiOnlySubscriber` or on one subscription, names another source set -- `test`, say, when only the tests read the contract -- and `clientResources` another folder than `contracts`.
 
 Not `src/main/resources`.
 Generated files inside a source tree show up in IDE search, tempt hand-editing, and survive a `clean`.
@@ -672,7 +697,7 @@ Every check the implemented contract gets:
 
 * **A place at the classpath root.**
 The root is the implemented contract's.
-With the `java` plugin, the documents of an API the project calls are copied to `/contracts/<target>/`, so any number of them fit side by side: `/contracts/orders/openapi.yaml`, `/contracts/payments/openapi.yaml`.
+With the `java` plugin, the documents of an API the project calls are copied to `/contracts/<target>/` (`clientResources` names another folder), so any number of them fit side by side: `/contracts/orders/openapi.yaml`, `/contracts/payments/openapi.yaml`.
 * **A shared version.**
 `apiContractVersion` on `apiOnlySubscriber`, the project property and `-PapiContractVersion` on the command line are the version of the contract the project implements.
 Each called API sets its own `apiContractVersion`, because its provider releases it on its own schedule; without one, the build fails with `client subscription '<target>' declares no version`.

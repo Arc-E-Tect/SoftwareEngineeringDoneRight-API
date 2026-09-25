@@ -5,6 +5,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -293,6 +294,40 @@ class ApiOnlySubscriberPluginTest {
 
             assertThat(main.getResources().getSrcDirs())
                 .contains(subscription.getInto().get().getAsFile());
+        }
+
+        @Test
+        @DisplayName("apiOnlySubscriber.sourceSet names the source set the implemented contract joins, set before or after subscribe")
+        void implementedContractJoinsTheConfiguredSourceSet() {
+            project.getPlugins().apply("java");
+            SourceSetContainer sets = project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets();
+            sets.create("contractTest");
+            Subscription subscription = subscribe("customer-orders", "1.0.0");
+            extension().getSourceSet().set("contractTest");
+
+            assertThat(sets.getByName("contractTest").getResources().getSrcDirs())
+                .contains(subscription.getInto().get().getAsFile());
+            assertThat(sets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).getResources().getSrcDirs())
+                .doesNotContain(subscription.getInto().get().getAsFile());
+            assertThat(dependencyNamesOf("processContractTestResources")).contains("fetchApiSpecCustomerOrders");
+            assertThat(dependencyNamesOf("processResources")).doesNotContain("fetchApiSpecCustomerOrders");
+        }
+
+        @Test
+        @DisplayName("a subscription's own sourceSet wins over apiOnlySubscriber's, which defaults to main")
+        void aSubscriptionsOwnSourceSetWins() {
+            project.getPlugins().apply("java");
+            extension().getSourceSet().set("test");
+            Subscription payments = extension().subscribeAsClient("order-payments", s -> {
+                s.getApiContractVersion().set("1.0.0");
+                s.getSourceSet().set("main");
+            });
+            Subscription orders = subscribe("customer-orders", "1.0.0");
+
+            assertThat(payments.getSourceSet().get()).isEqualTo("main");
+            assertThat(orders.getSourceSet().get()).isEqualTo("test");
+            assertThat(dependencyNamesOf("processResources")).contains("fetchApiSpecOrderPayments");
+            assertThat(dependencyNamesOf("processTestResources")).contains("fetchApiSpecCustomerOrders");
         }
 
         @Test

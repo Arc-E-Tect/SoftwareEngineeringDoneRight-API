@@ -188,11 +188,24 @@ public abstract class Subscription {
      *
      * <p>For an API the project calls, the directory is not a resources directory
      * itself: its contents are copied to {@code contracts/<target>/} on the
-     * classpath, so that the root stays the implemented contract's.</p>
+     * classpath, so that the root stays the implemented contract's; {@code apiOnlySubscriber.clientResources}
+     * names another folder than {@code contracts}.</p>
      *
      * @return the directory fetched documents are unpacked into
      */
     public abstract DirectoryProperty getInto();
+
+    /**
+     * The source set whose resources this subscription's documents join: the
+     * implemented contract's as a resources directory, an API the project calls copied
+     * under {@code apiOnlySubscriber.clientResources}.
+     *
+     * <p>Defaults to {@code apiOnlySubscriber.sourceSet}, itself {@code main}. Name
+     * {@code test}, or a test suite's source set, for documents only tests read.</p>
+     *
+     * @return the source set name
+     */
+    public abstract Property<String> getSourceSet();
 
     /**
      * The channel this subscription resolves through.

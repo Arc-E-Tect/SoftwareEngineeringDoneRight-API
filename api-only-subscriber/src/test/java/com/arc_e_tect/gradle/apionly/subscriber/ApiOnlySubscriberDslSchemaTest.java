@@ -27,7 +27,7 @@ class ApiOnlySubscriberDslSchemaTest {
                 .map(DslPropertySpec::name)
                 .collect(Collectors.toList());
 
-        assertThat(names).containsExactly("lockfile", "apiContractVersion", "channel");
+        assertThat(names).containsExactly("lockfile", "apiContractVersion", "sourceSet", "clientResources", "channel");
         assertThat(ApiOnlySubscriberDslSchema.SCHEMA.properties())
                 .filteredOn(property -> property.name().equals("apiContractVersion"))
                 .extracting(DslPropertySpec::defaultLiteral)
