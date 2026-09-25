@@ -99,3 +99,66 @@ test("the maven channel writes a resolvable repository layout", () => {
     assert.match(fs.readFileSync(path.join(base, "svc-1.0.0.pom"), "utf8"), /<artifactId>svc<\/artifactId>/);
     assert.strictEqual(result.coordinates, "com.example.contracts:svc:1.0.0@tgz");
 });
+
+// ------------------------------------------------------------------ reproducibility
+
+const { execFileSync: run } = require("node:child_process");
+const { pack } = require("../src/pack");
+
+function withEpoch(value, body) {
+    const saved = process.env.SOURCE_DATE_EPOCH;
+    if (value === undefined) delete process.env.SOURCE_DATE_EPOCH; else process.env.SOURCE_DATE_EPOCH = value;
+    try {
+        return body();
+    } finally {
+        if (saved === undefined) delete process.env.SOURCE_DATE_EPOCH; else process.env.SOURCE_DATE_EPOCH = saved;
+    }
+}
+
+test("packing the same documents twice produces byte-identical archives and manifests", () => {
+    const config = library();
+    document(config, "svc", "openapi.yaml", "openapi: 3.1.1\ninfo:\n  version: 1.0.0\n");
+    document(config, "svc", "asyncapi.yaml", "asyncapi: 3.0.0\ninfo:\n  version: 1.0.0\n");
+
+    const [first, second] = withEpoch("1767225600", () => [1, 2].map((n) => {
+        const result = pack(config, "svc", { version: "1.0.0", closureSha256: "c", outDir: path.join(config.root, `out${n}`) });
+        return { archive: fs.readFileSync(result.archive), manifest: fs.readFileSync(result.manifestPath) };
+    }));
+
+    assert.ok(first.archive.equals(second.archive), "archive bytes");
+    assert.ok(first.manifest.equals(second.manifest), "manifest bytes");
+});
+
+test("the archive is a gzipped tar any tar reads, with the documents and manifest.json at its root", () => {
+    const config = library();
+    document(config, "svc", "openapi.yaml", "openapi: 3.1.1\ninfo:\n  version: 1.0.0\n");
+    const { archive } = withEpoch("1767225600",
+        () => pack(config, "svc", { version: "1.0.0", closureSha256: "c", outDir: path.join(config.root, "out") }));
+
+    assert.deepStrictEqual(run("tar", ["-tzf", archive], { encoding: "utf8" }).trim().split("\n"),
+        ["manifest.json", "openapi.yaml"]);
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), "aop-pack-x-"));
+    run("tar", ["-xzf", archive, "-C", out]);
+    assert.strictEqual(fs.readFileSync(path.join(out, "openapi.yaml"), "utf8"), "openapi: 3.1.1\ninfo:\n  version: 1.0.0\n");
+});
+
+test("producedAt is the time of the commit packed, and SOURCE_DATE_EPOCH overrides it", () => {
+    const config = library();
+    const git = (...args) => run("git", args, { cwd: config.root, encoding: "utf8",
+        env: { ...process.env, GIT_AUTHOR_DATE: "2026-03-01T10:00:00Z", GIT_COMMITTER_DATE: "2026-03-01T10:00:00Z" } });
+    git("init", "-q");
+    git("-c", "user.email=t@example.com", "-c", "user.name=T", "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "c");
+    const file = document(config, "svc", "openapi.yaml", "openapi: 3.1.1\n");
+
+    assert.strictEqual(withEpoch(undefined, () => manifest(config, "svc", { version: "1.0.0", files: [file] })).producedAt,
+        "2026-03-01T10:00:00Z");
+    assert.strictEqual(withEpoch("1767225600", () => manifest(config, "svc", { version: "1.0.0", files: [file] })).producedAt,
+        "2026-01-01T00:00:00Z");
+});
+
+test("a SOURCE_DATE_EPOCH that is not a whole number of seconds is refused", () => {
+    const config = library();
+    const file = document(config, "svc", "openapi.yaml", "openapi: 3.1.1\n");
+    assert.throws(() => withEpoch("yesterday", () => manifest(config, "svc", { version: "1.0.0", files: [file] })),
+        (e) => e instanceof PackError && /SOURCE_DATE_EPOCH/.test(e.message));
+});
