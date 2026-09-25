@@ -1,3 +1,32 @@
+# [0.11.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.10.0...api-only-publisher-v0.11.0) (2026-09-25)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** make every default a channel writes overridable ([#45](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/45)) ([a8b00a7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a8b00a7bc3d60d4dfbed81a238904106ec37286f)), closes [#45](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/45) [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44) [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44) [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.10.0 [skip ci] ([2850b28](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2850b286f6cf3571de97b2cc61ebfe615e3382d4))
+
+# [0.10.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.9.0...api-only-publisher-v0.10.0) (2026-09-25)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** add a nuget channel ([#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44)) ([7a855a6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/7a855a6398ece4532c0e147de2ea8f6185a805c8)), closes [#44](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/44)
+
+
+### 📝 Documentation
+
+* correct and complete the documentation after the recent features ([#43](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/43)) ([e72b3b2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e72b3b250ee3eb33e6033e38749ad9835d4fa4ed)), closes [#43](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/43) [#42](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/42) [#42](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/42)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.9.0 [skip ci] ([06f8e23](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/06f8e2324a1c82982950a1d00bc9db55d2197f85))
+
 # [0.9.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.8.0...api-only-publisher-v0.9.0) (2026-09-19)
 
 

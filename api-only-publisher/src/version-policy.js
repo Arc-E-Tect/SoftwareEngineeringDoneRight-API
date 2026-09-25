@@ -44,10 +44,11 @@ function isPrerelease(version) {
  * The npm dist-tag a version should be published under.
  *
  * A pre-release goes to `next`, never `latest`, so that `npm install <pkg>`
- * cannot pick one up by accident.
+ * cannot pick one up by accident. Both can be named otherwise -- `releaseTag` for a
+ * patch to an older line that must not become `latest`, say.
  */
-function npmDistTag(version) {
-    return isPrerelease(version) ? "next" : "latest";
+function npmDistTag(version, { releaseTag = "latest", prereleaseTag = "next" } = {}) {
+    return isPrerelease(version) ? prereleaseTag : releaseTag;
 }
 
 /**

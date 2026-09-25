@@ -128,7 +128,7 @@ Its name is the coordination key across both tools.
 |Publisher `pack`, or `publish`
 |Checks that each document's `info.version` is the version being packed, writes `manifest.json`, and archives the documents with it.
 |`<build.dist>/<target>/`
-|`<target>-<version>.tgz`, in `build/packages/`
+|`<target>-<version>.tgz`, in `<build.packages>/` (`build/packages/` by default), or `--out`
 
 |5. Publish
 |Publisher `publish`
@@ -229,24 +229,24 @@ A missing version fails the fetch and lists the versions that exist.
 |`maven`
 |`<groupId as path>/<artifactId>/<version>/<artifactId>-<version>.<extension>`, `.pom` and `-manifest.json`, into a directory, or uploaded with HTTP `PUT` and a bearer token to a URL.
 |`<groupId>:<artifactId>:<version>@<extension>`, resolved by Gradle from the build's `repositories`, with `channel.type = 'maven'`.
-|`channels.maven.groupId`, `repository`, `tokenEnv`, `artifactId`, `extension`
+|`channels.maven.groupId`, `repository`, `tokenEnv`, `artifactId`, `extension`, `description`
 
 |`npm`
 |A package `<scope>/<target>`, or `<namePrefix><target>` without a scope, holding the archive's contents, published under the `next` dist-tag for a pre-release and `latest` otherwise.
 With `publish: false`, the package is only packed into `directory`.
 |Not read.
-|`channels.npm.scope`, `namePrefix`, `license`, `access`, `registry`, `provenance`, `publish`, `directory`
+|`channels.npm.scope`, `namePrefix`, `license`, `access`, `registry`, `provenance`, `publish`, `directory`, `description`, `releaseTag`, `prereleaseTag`
 
 |`github-release`
 |The archive, attached to a release tagged `<target>-v<version>`, marked as a pre-release where it is one.
 |Not read.
-|`channels.github-release.repository`, `tagFormat`
+|`channels.github-release.repository`, `tagFormat`, `title`, `notes`, `description`
 
 |`nuget`
 |`<id>.<version>.nupkg` holding the archive's contents under `contracts/`, into a local feed as `<id>/<version>/` with the `.sha512`, `.nuspec` and `manifest.json` beside it, or pushed with a multipart `PUT` and `X-NuGet-ApiKey` to the endpoint a remote feed's service index names.
 The id is `<idPrefix>.<target in PascalCase>`; a version with build metadata is refused.
 |Not read. A .NET build restores it with a `PackageReference`.
-|`channels.nuget.idPrefix`, `packageId`, `repository`, `tokenEnv`, `authors`, `license`
+|`channels.nuget.idPrefix`, `packageId`, `repository`, `tokenEnv`, `authors`, `license`, `description`
 |===
 
 Publishing a version a remote destination already has succeeds when it holds the same bytes, and fails when it does not; a local one is written again. See the Publisher's link:../../api-only-publisher/README.adoc#idempotent[Publishing the same version again →].

@@ -16,6 +16,14 @@ const { isPrerelease, npmDistTag } = require("./version-policy");
 const { ChannelError } = require("./channel-error");
 const { publishNuget } = require("./nuget");
 
+/** What every package and release says it is, unless `description` says otherwise. */
+const DEFAULT_DESCRIPTION = "API description documents for {target}.";
+
+/** `template` with {target} and {version} filled in, as tagFormat has always been. */
+function format(template, manifest) {
+    return String(template).replace(/\{target\}/g, manifest.target).replace(/\{version\}/g, manifest.version);
+}
+
 
 /**
  * `file` -- publish to a local directory.
@@ -44,7 +52,7 @@ function publishFile(archive, manifest, options, log) {
     return { location: archiveDest };
 }
 
-function pom(groupId, artifactId, version, packaging) {
+function pom(groupId, artifactId, version, packaging, description = `API description documents for ${artifactId}.`) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -54,9 +62,14 @@ function pom(groupId, artifactId, version, packaging) {
   <artifactId>${artifactId}</artifactId>
   <version>${version}</version>
   <packaging>${packaging}</packaging>
-  <description>API description documents for ${artifactId}.</description>
+  <description>${description.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</description>
 </project>
 `;
+}
+
+/** The POM's description: configured, or the POM's own default. */
+function pomDescription(options, manifest) {
+    return options.description ? format(options.description, manifest) : undefined;
 }
 
 /**
@@ -91,7 +104,7 @@ function publishMaven(archive, manifest, options, log) {
     const base = `${artifactId}-${version}`;
     const artifactDest = path.join(dir, `${base}.${extension}`);
     fs.copyFileSync(archive, artifactDest);
-    fs.writeFileSync(path.join(dir, `${base}.pom`), pom(groupId, artifactId, version, extension));
+    fs.writeFileSync(path.join(dir, `${base}.pom`), pom(groupId, artifactId, version, extension, pomDescription(options, manifest)));
 
     // The manifest travels beside the artifact as well as inside it, so a
     // consumer can read provenance without unpacking anything.
@@ -115,7 +128,7 @@ function publishNpm(archive, manifest, options, log) {
     const scope = options.scope;
     const name = scope ? `${scope}/${manifest.target}` : (options.namePrefix || "") + manifest.target;
     const version = manifest.version;
-    const distTag = npmDistTag(version);
+    const distTag = npmDistTag(version, options);
 
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-only-npm-"));
     try {
@@ -126,7 +139,7 @@ function publishNpm(archive, manifest, options, log) {
         fs.writeFileSync(path.join(workDir, "package.json"), JSON.stringify({
             name,
             version,
-            description: `API description documents for ${manifest.target}.`,
+            description: format(options.description || DEFAULT_DESCRIPTION, manifest),
             license: options.license || "UNLICENSED",
             files: fs.readdirSync(workDir).filter((f) => f !== "package.json").sort(),
             // npm defaults a scoped package to restricted. A contract exists to be
@@ -210,9 +223,7 @@ function publishGithubRelease(archive, manifest, options, log) {
     const repository = options.repository;
     if (!repository) throw new ChannelError("the github-release channel requires a repository");
 
-    const tag = (options.tagFormat || "{target}-v{version}")
-        .replace(/\{target\}/g, manifest.target)
-        .replace(/\{version\}/g, manifest.version);
+    const tag = format(options.tagFormat || "{target}-v{version}", manifest);
 
     const gh = (args) => execFileSync("gh", args, { encoding: "utf8", stdio: "pipe" });
 
@@ -225,8 +236,8 @@ function publishGithubRelease(archive, manifest, options, log) {
 
     if (!exists) {
         const args = ["release", "create", tag, "--repo", repository,
-                      "--title", `${manifest.target} ${manifest.version}`,
-                      "--notes", `API description documents for ${manifest.target}.`];
+                      "--title", format(options.title || "{target} {version}", manifest),
+                      "--notes", format(options.notes || options.description || DEFAULT_DESCRIPTION, manifest)];
         // A pre-release is marked as one, so that "latest release" never resolves
         // to a contract that is not finished.
         if (isPrerelease(manifest.version)) args.push("--prerelease");
@@ -333,7 +344,7 @@ function publishMavenRemote(archive, manifest, options, log) {
         }
         await putFile(`${base}.${extension}`, bytes, token, "application/octet-stream");
         await putFile(`${base}.pom`,
-            Buffer.from(pom(options.groupId, artifactId, version, extension), "utf8"),
+            Buffer.from(pom(options.groupId, artifactId, version, extension, pomDescription(options, manifest)), "utf8"),
             token, "application/xml");
         await putFile(`${base}-manifest.json`,
             Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8"),
@@ -368,4 +379,4 @@ function publish(archive, manifest, channel, options, log = () => {}) {
     return handler(archive, manifest, options || {}, log);
 }
 
-module.exports = { publish, CHANNELS, ChannelError, pom };
+module.exports = { publish, CHANNELS, ChannelError, pom, format, DEFAULT_DESCRIPTION };
