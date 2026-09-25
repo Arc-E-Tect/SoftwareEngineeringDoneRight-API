@@ -1,3 +1,15 @@
+# [0.4.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.4...api-only-subscriber-v0.4.0) (2026-09-25)
+
+
+### ✨ New and updated features
+
+* **api-only-subscriber:** let the source set and the client classpath folder be configured ([#46](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/46)) ([c1dc28e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/c1dc28eb6c410b1d13a36230a96fe9ad2d98e431)), closes [#46](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/46)
+
+
+### 🔧 Misc
+
+* **api-only-subscriber:** update README version to 0.3.4 [skip ci] ([6615734](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/6615734cdb771d5393e795c4c6b58e0134ab5a2c))
+
 ## [0.3.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.3.3...api-only-subscriber-v0.3.4) (2026-09-18)
 
 
