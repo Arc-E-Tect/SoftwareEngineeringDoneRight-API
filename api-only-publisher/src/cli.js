@@ -38,7 +38,7 @@ Usage:
   api-only-publisher changed --since <ref>
   api-only-publisher pack [--pre-release <ids>] [--target <name>]... [--out <dir>]
   api-only-publisher publish [--pre-release <ids>] [--target <name>]... [--channel <name>]... [--out <dir>]
-  api-only-publisher split --out <dir> [--by kind|target]
+  api-only-publisher split [--out <dir>] [--by kind|target]
 
 Options:
   --target <name>   Restrict to one target; repeat for several. Default: all.
@@ -60,7 +60,8 @@ Options:
   --portfolio-paths <target-prefix|none>, --portfolio-location <dir>
                     config only: the value of that question; a flag always wins.
   --since <ref>     changed only: the git ref to compare the working tree against.
-  --out <dir>       pack/publish/split: where to write.
+  --out <dir>       pack/publish/split: where to write, instead of build.packages
+                    or build.split in apionly.yaml.
   --channel <name>  publish only: repeat for several. Default: every configured channel.
   --by <kind|target>  split only: the boundary to split along. Default: kind.
   -C <dir>          Run as if started in <dir>.
@@ -407,7 +408,7 @@ async function main(argv, io = {}) {
             return 0;
         }
         case "pack": {
-            const outDir = path.resolve(options.dir, options.out || "build/packages");
+            const outDir = options.out ? path.resolve(options.dir, options.out) : config.packagesDir();
             const shipped = shippedTargets(config, targets);
             const versions = versionsOf(config, shipped, options.preRelease);
             const closures = forTargets(config, undefined, shipped);
@@ -430,7 +431,7 @@ async function main(argv, io = {}) {
             return 0;
         }
         case "publish": {
-            const outDir = path.resolve(options.dir, options.out || "build/packages");
+            const outDir = options.out ? path.resolve(options.dir, options.out) : config.packagesDir();
             const configured = config.channels || {};
             const names = options.channels || Object.keys(configured);
             if (names.length === 0) {
@@ -460,7 +461,7 @@ async function main(argv, io = {}) {
             return 0;
         }
         case "split": {
-            const outDir = path.resolve(options.dir, options.out || "build/split");
+            const outDir = options.out ? path.resolve(options.dir, options.out) : config.splitDir();
             prepare(config);
             const parts = split(config, { by: options.by, outDir, log });
             const duplicated = parts.reduce((n, p) => n + p.imported.length, 0);

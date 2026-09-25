@@ -169,7 +169,7 @@ A target whose closure is untouched needs no new version, however much else in t
 |`publish [--pre-release <ids>] [--target <t>]... [--channel <c>]... [--out <dir>]`
 |Pack once, then ship those same bytes to every configured channel, or to each `--channel`.
 
-|`split --out <dir> [--by kind\|target]`
+|`split [--out <dir>] [--by kind\|target]`
 |Make the library safe to break into separate repositories.
 |===
 
@@ -651,6 +651,16 @@ What happens when the destination already has the version:
 A NuGet feed that cannot return the package it has, so there is nothing to compare, fails as a different one would.
 |===
 
+[#channel-text]
+=== What a package says about itself
+
+The Maven POM, the npm `package.json`, the NuGet `.nuspec` and a GitHub release all describe the contract.
+By default each says `API description documents for <target>.`, and a GitHub release is titled `<target> <version>`.
+`channels.<channel>.description` replaces the description, and `channels.github-release.title` and `notes` the release's title and notes (notes default to the description); `{target}` and `{version}` are filled in, as in `tagFormat`.
+
+npm publishes a release under the dist-tag `latest` and a pre-release under `next`.
+`channels.npm.releaseTag` and `prereleaseTag` name others: publishing a patch to an older line under `releaseTag: v1` keeps `latest` on the newest line, which publishing it under `latest` would move back.
+
 Credentials are read from the environment, never from configuration.
 `channels.maven.tokenEnv` names the variable, `MAVEN_TOKEN` by default, and `channels.nuget.tokenEnv` the NuGet API key's, `NUGET_API_KEY` by default; a configuration file gets committed, and a credential in a committed file is a credential that has leaked.
 
@@ -671,6 +681,7 @@ channels:
     # tokenEnv: NUGET_API_KEY            # the variable holding the API key, for a URL
     # authors: Contoso API team          # default: idPrefix
     # license: MIT                       # an SPDX expression; default: UNLICENSED
+    # description: "{target} contract"   # default: API description documents for {target}.
 ----
 
 *The package id* is `<idPrefix>.<target in PascalCase>`: target `user-account` with `idPrefix: Contoso.Contracts` is `Contoso.Contracts.UserAccount`, the dotted PascalCase .NET uses for namespaces, from a kebab-case target.
@@ -775,6 +786,8 @@ defaults:
 build:
   staging: build/staging
   dist: build/dist
+  # packages: build/packages   # where pack and publish write archives; --out overrides
+  # split: build/split         # where split writes its parts; --out overrides
 reports:
   lint: build/reports/lint
 lint:
@@ -791,6 +804,14 @@ channels:
   file:
     directory: build/publish
     clean: true        # keep only the version being published
+  # Every channel that describes a package or a release takes `description`, with
+  # {target} and {version} filled in; default: API description documents for {target}.
+  # npm:
+  #   releaseTag: latest         # the dist-tag of a release; another keeps latest where it is
+  #   prereleaseTag: next        # the dist-tag of a pre-release
+  # github-release:
+  #   title: "{target} {version}"
+  #   notes: "..."               # default: description
 
 targets:
   orders:

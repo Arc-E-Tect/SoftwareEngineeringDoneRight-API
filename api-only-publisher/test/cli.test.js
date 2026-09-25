@@ -873,3 +873,17 @@ test("lint --target does not look for unreferenced fragments: they belong to no 
     assert.strictEqual(code, 0);
     assert.ok(!fs.existsSync(path.join(dir, "build/reports/lint/unreferenced.txt")));
 });
+
+test("pack and split write where build.packages and build.split say, and --out still wins", async () => {
+    const config = LIBRARY["apionly.yaml"].replace("  dist: dist\n", "  dist: dist\n  packages: out/pkgs\n  split: out/parts\n");
+    const dir = library({ ...LIBRARY, "apionly.yaml": config });
+    prepare(loadFrom(dir));
+    built(dir, "alpha", "1.0.0");
+
+    await run(["pack", "--target", "alpha", "-C", dir]);
+    assert.ok(fs.existsSync(path.join(dir, "out", "pkgs", "alpha-1.0.0.tgz")));
+    await run(["pack", "--target", "alpha", "--out", "elsewhere", "-C", dir]);
+    assert.ok(fs.existsSync(path.join(dir, "elsewhere", "alpha-1.0.0.tgz")));
+    await run(["split", "--by", "target", "-C", dir]);
+    assert.ok(fs.existsSync(path.join(dir, "out", "parts")));
+});

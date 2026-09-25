@@ -25,7 +25,7 @@ const SOURCES_KEYS = ["root", "openapi", "asyncapi"];
 const DEFAULTS_KEYS = ["openapi", "asyncapi", "placeholders"];
 const DEFAULTS_KIND_KEYS = { openapi: ["lint", "outputName", "fragmentPaths"], asyncapi: ["lint", "outputName", "fragmentPaths"] };
 const PLACEHOLDERS_KEYS = ["strict"];
-const BUILD_KEYS = ["staging", "dist"];
+const BUILD_KEYS = ["staging", "dist", "packages", "split"];
 const REPORTS_KEYS = ["lint"];
 const LINT_KEYS = ["unreferenced", "examples"];
 const LINT_EXAMPLES_KEYS = ["openapi", "asyncapi"];
@@ -254,6 +254,14 @@ function load(configPath) {
         // The subtree of the staged mirror that holds one specification type.
         stagingDir(kind) {
             return path.join(this.stagingRoot(kind), requireString(this.sources[kind], `sources.${kind}`));
+        },
+        // Where pack and publish write archives, and split its parts, unless --out says
+        // otherwise; relative to this configuration, as every other path here is.
+        packagesDir() {
+            return path.resolve(this.root, this.build.packages || "build/packages");
+        },
+        splitDir() {
+            return path.resolve(this.root, this.build.split || "build/split");
         },
         distDir(target) {
             const dist = this.build.dist || "dist";
