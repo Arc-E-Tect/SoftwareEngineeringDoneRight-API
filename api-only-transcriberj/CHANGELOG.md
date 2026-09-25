@@ -1,3 +1,15 @@
+# [0.6.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.5.1...api-only-transcriberj-v0.6.0) (2026-09-25)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** let the report and the endpoint index be written elsewhere ([#48](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/48)) ([48a0139](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/48a0139a1cf8d8d33f297ed698e10ae1d6b5087d)), closes [#48](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/48)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.5.1 [skip ci] ([b36c607](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b36c607e76304bcd9aac63179c03fe7b50b99649))
+
 ## [0.5.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.5.0...api-only-transcriberj-v0.5.1) (2026-09-25)
 
 
