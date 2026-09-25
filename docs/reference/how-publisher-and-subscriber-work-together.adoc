@@ -193,7 +193,7 @@ A reader that does not understand a version must refuse the archive.
 |Subscriber: a `version` different from the resolved one is refused
 
 |`producedAt`
-|When the archive was packed, in UTC.
+|When the documents were produced, in UTC: the time of the commit packed, or `SOURCE_DATE_EPOCH` when it is set, so that packing the same commit twice gives the same archive.
 |People
 
 |`closureSha256`
@@ -248,6 +248,8 @@ The id is `<idPrefix>.<target in PascalCase>`; a version with build metadata is 
 |Not read. A .NET build restores it with a `PackageReference`.
 |`channels.nuget.idPrefix`, `packageId`, `repository`, `tokenEnv`, `authors`, `license`
 |===
+
+Publishing a version a remote destination already has succeeds when it holds the same bytes, and fails when it does not; a local one is written again. See the Publisher's link:../../api-only-publisher/README.adoc#idempotent[Publishing the same version again →].
 
 [#settings-map]
 == How the settings correspond
@@ -511,6 +513,10 @@ Every Publisher run rebuilds its staging directory, so builds that run the Publi
 |`src/nuget.js`
 |The `nuget` channel: the package id, the `.nuspec`, the `.nupkg`, a local feed and a remote push.
 |`publishNuget`, `packageId`, `nuspec`, `checkVersion`, `CONTENT_FOLDER`
+
+|`src/tar.js`
+|A reproducible `.tgz` writer, for the archive `pack` produces: fixed mode, owner and timestamp, no gzip timestamp.
+|`tgz`, `TarError`
 
 |`src/zip.js`
 |A deterministic ZIP writer, for the `.nupkg`: fixed entry order, fixed timestamp.

@@ -151,8 +151,23 @@ function publishNpm(archive, manifest, options, log) {
             return { location, distTag, name };
         }
 
-        const args = ["publish", "--tag", distTag];
-        if (options.registry) args.push("--registry", options.registry);
+        // Idempotent: a version the registry already has is left alone when it is the
+        // same package, and refused when it is not -- npm never replaces a version.
+        const registry = options.registry ? ["--registry", options.registry] : [];
+        const local = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"],
+            { cwd: workDir, encoding: "utf8", stdio: "pipe" }))[0].integrity;
+        const published = npmPublishedIntegrity(name, version, registry);
+        if (published === local) {
+            log(`-- npm ${name}@${version} is already published, identical; nothing to do`);
+            return { location: name + "@" + version, distTag, name, alreadyPublished: true };
+        }
+        if (published) {
+            throw new ChannelError(
+                `npm already has ${name}@${version}, and it is not this package (${published}, not ${local}). ` +
+                "A published version is never replaced; publish the change as a new version.");
+        }
+
+        const args = ["publish", "--tag", distTag, ...registry];
         // A signed attestation tying this tarball to the commit and workflow run
         // that produced it. A tool whose whole purpose is making provenance
         // auditable should not ask to be taken on trust itself. Requires a public
@@ -164,6 +179,19 @@ function publishNpm(archive, manifest, options, log) {
         return { location: name + "@" + version, distTag, name };
     } finally {
         fs.rmSync(workDir, { recursive: true, force: true });
+    }
+}
+
+/** The integrity npm records for `name@version`, or null when it has no such version. */
+function npmPublishedIntegrity(name, version, registry) {
+    try {
+        const out = execFileSync("npm", ["view", `${name}@${version}`, "dist.integrity", ...registry],
+            { encoding: "utf8", stdio: "pipe" }).trim();
+        return out || null;
+    } catch (error) {
+        const output = `${error.stdout || ""}${error.stderr || ""}`;
+        if (/E404/.test(output)) return null;
+        throw new ChannelError(`could not ask npm whether ${name}@${version} is published: ${output.trim() || error.message}`);
     }
 }
 
@@ -205,7 +233,29 @@ function publishGithubRelease(archive, manifest, options, log) {
         gh(args);
     }
 
-    gh(["release", "upload", tag, archive, "--repo", repository, "--clobber"]);
+    // Idempotent, as the registries are: an asset the release already has is left alone
+    // when it is the same bytes, and refused when it is not. Never --clobber: that would
+    // replace a published contract under the same version.
+    const asset = path.basename(archive);
+    const assets = exists
+        ? gh(["release", "view", tag, "--repo", repository, "--json", "assets", "--jq", ".assets[].name"]).split("\n").map((a) => a.trim())
+        : [];
+    if (assets.includes(asset)) {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "api-only-gh-"));
+        try {
+            gh(["release", "download", tag, "--repo", repository, "--pattern", asset, "--dir", dir]);
+            if (fs.readFileSync(path.join(dir, asset)).equals(fs.readFileSync(archive))) {
+                log(`-- ${repository} release ${tag} already has ${asset}, identical; nothing to do`);
+                return { location: `${repository}@${tag}`, tag, alreadyPublished: true };
+            }
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+        throw new ChannelError(
+            `${repository} release ${tag} already has ${asset}, and it is not this archive. ` +
+            "A published version is never replaced; publish the change as a new version.");
+    }
+    gh(["release", "upload", tag, archive, "--repo", repository]);
     log(`-- Published ${manifest.target} ${manifest.version} to ${repository} release ${tag}`);
     return { location: `${repository}@${tag}`, tag };
 }
@@ -242,6 +292,18 @@ async function putFile(url, body, token, contentType) {
     }
 }
 
+/** What a Maven repository holds at `url`, or null when it holds nothing there. */
+async function getFile(url, token) {
+    const response = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+        throw new ChannelError(`GET ${url} failed: ${response.status} ${response.statusText}. ` +
+            (response.status === 401 || response.status === 403
+                ? "Check the token in the environment variable named by channels.maven.tokenEnv." : ""));
+    }
+    return Buffer.from(await response.arrayBuffer());
+}
+
 function publishMavenRemote(archive, manifest, options, log) {
     const tokenEnv = options.tokenEnv || "MAVEN_TOKEN";
     const token = process.env[tokenEnv];
@@ -259,20 +321,36 @@ function publishMavenRemote(archive, manifest, options, log) {
         `${options.groupId.split(".").join("/")}/${artifactId}/${version}/${artifactId}-${version}`;
 
     const work = (async () => {
-        await putFile(`${base}.${extension}`, fs.readFileSync(archive), token, "application/octet-stream");
+        // Idempotent: an artifact the repository already has is left alone when it is
+        // the same bytes, and refused when it is not.
+        const bytes = fs.readFileSync(archive);
+        const existing = await getFile(`${base}.${extension}`, token);
+        if (existing) {
+            if (existing.equals(bytes)) return true;
+            throw new ChannelError(
+                `${options.repository} already has ${options.groupId}:${artifactId}:${version}, and it is not this archive. ` +
+                "A published version is never replaced; publish the change as a new version.");
+        }
+        await putFile(`${base}.${extension}`, bytes, token, "application/octet-stream");
         await putFile(`${base}.pom`,
             Buffer.from(pom(options.groupId, artifactId, version, extension), "utf8"),
             token, "application/xml");
         await putFile(`${base}-manifest.json`,
             Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8"),
             token, "application/json");
+        return false;
     })();
 
     // The CLI is synchronous throughout; surfacing the promise here would make
     // every caller async for one channel's benefit.
-    return work.then(() => {
-        log(`-- Deployed ${options.groupId}:${artifactId}:${version} to ${options.repository}`);
-        return { location: `${base}.${extension}`, coordinates: `${options.groupId}:${artifactId}:${version}@${extension}` };
+    return work.then((alreadyPublished) => {
+        log(alreadyPublished
+            ? `-- ${options.groupId}:${artifactId}:${version} is already in ${options.repository}, identical; nothing to do`
+            : `-- Deployed ${options.groupId}:${artifactId}:${version} to ${options.repository}`);
+        return {
+            location: `${base}.${extension}`, coordinates: `${options.groupId}:${artifactId}:${version}@${extension}`,
+            ...(alreadyPublished ? { alreadyPublished } : {}),
+        };
     });
 }
 

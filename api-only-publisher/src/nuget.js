@@ -34,6 +34,7 @@ const ID = /^\w+([.-]\w+)*$/;
 const ID_MAX_LENGTH = 100;
 
 const PUBLISH_RESOURCE = "PackagePublish/2.0.0";
+const CONTENT_RESOURCE = "PackageBaseAddress/3.0.0";
 
 function pascalCase(target) {
     return target.split(/[-_.]/).filter(Boolean)
@@ -166,18 +167,33 @@ function publishLocal(archive, manifest, options, id, log) {
     return { location: file, id, version: manifest.version, prerelease: isPrerelease(manifest.version) };
 }
 
-/** The publish endpoint a feed's service index names. */
-async function publishEndpoint(index) {
+/** The resources a feed's service index lists. */
+async function feedResources(index) {
     const response = await fetch(index);
     if (!response.ok) {
         throw new ChannelError(`could not read the NuGet service index at ${index}: ${response.status} ${response.statusText}`);
     }
-    const document = await response.json();
-    const resource = (document.resources || []).find((r) => r["@type"] === PUBLISH_RESOURCE);
-    if (!resource) {
+    const resources = (await response.json()).resources || [];
+    const find = (type) => (resources.find((r) => r["@type"] === type) || {})["@id"] || null;
+    const publish = find(PUBLISH_RESOURCE);
+    if (!publish) {
         throw new ChannelError(`the NuGet feed at ${index} has no ${PUBLISH_RESOURCE} resource, so it cannot be pushed to`);
     }
-    return resource["@id"];
+    return { publish, content: find(CONTENT_RESOURCE) };
+}
+
+/**
+ * Whether the feed's copy of this version is these bytes: true or false, or null when the
+ * feed offers no way to read it back.
+ */
+async function sameAsPublished(content, id, version, bytes, key) {
+    if (!content) return null;
+    const lowerId = id.toLowerCase();
+    const lowerVersion = String(version).toLowerCase();
+    const url = `${content.replace(/\/?$/, "/")}${lowerId}/${lowerVersion}/${lowerId}.${lowerVersion}.nupkg`;
+    const response = await fetch(url, { headers: { "X-NuGet-ApiKey": key } });
+    if (!response.ok) return null;
+    return Buffer.from(await response.arrayBuffer()).equals(bytes);
 }
 
 /**
@@ -198,7 +214,7 @@ function publishRemote(archive, manifest, options, id, log) {
     const { bytes } = nupkg(archive, id, manifest, options);
 
     return (async () => {
-        const endpoint = await publishEndpoint(options.repository);
+        const { publish: endpoint, content } = await feedResources(options.repository);
         const boundary = `api-only-${crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 32)}`;
         const body = Buffer.concat([
             Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="package"; filename="package.nupkg"\r\n` +
@@ -216,7 +232,18 @@ function publishRemote(archive, manifest, options, id, log) {
             body,
         });
         if (response.status === 409) {
-            throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}; a published version is never replaced`);
+            // Idempotent: the same package again is success, a different one is not.
+            const same = await sameAsPublished(content, id, manifest.version, bytes, key);
+            if (same) {
+                log(`-- NuGet ${id} ${manifest.version} is already published, identical; nothing to do`);
+                return {
+                    location: endpoint, id, version: manifest.version, prerelease: isPrerelease(manifest.version),
+                    alreadyPublished: true,
+                };
+            }
+            throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}` +
+                (same === false ? ", and it is not this package" : ", and it cannot be read back to compare") +
+                "; a published version is never replaced, so publish the change as a new version");
         }
         if (!response.ok) {
             throw new ChannelError(`the NuGet feed refused the package: ${response.status} ${response.statusText}. ` +
