@@ -88,7 +88,8 @@ function nuspec(id, manifest, options) {
         `    <id>${escape(id)}</id>\n` +
         `    <version>${escape(manifest.version)}</version>\n` +
         `    <authors>${escape(options.authors || options.idPrefix || id)}</authors>\n` +
-        `    <description>API description documents for ${escape(manifest.target)}.</description>\n` +
+        `    <description>${escape((options.description || "API description documents for {target}.")
+            .replace(/\{target\}/g, manifest.target).replace(/\{version\}/g, manifest.version))}</description>\n` +
         `    <license type="expression">${escape(options.license || "UNLICENSED")}</license>\n` +
         repository +
         "  </metadata>\n" +
