@@ -69,6 +69,10 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                     subscription('user-account') {
                         basePackage = 'com.example.contract'
                         recursionDepth = (findProperty('transcriberDepth') ?: '3') as int
+                        if (findProperty('moveOutputs')) {
+                            reportFile = layout.projectDirectory.file('reports/user-account.txt')
+                            endpointIndexFile = layout.projectDirectory.file('index/user-account.properties')
+                        }
                     }
                 }
 
@@ -190,6 +194,17 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         BuildResult upgraded = runner("useContract", "-PcontractVersion=1.0.1").build();
         assertThat(upgraded.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(upgraded.getOutput()).contains("VERSION 1.0.1");
+    }
+
+    @Test
+    void theReportAndTheEndpointIndexAreWrittenWhereTheSubscriptionSays() throws Exception {
+        runner("generateContractSourcesUserAccount", "-PmoveOutputs=true").build();
+
+        assertThat(projectDir.resolve("reports/user-account.txt")).exists();
+        assertThat(projectDir.resolve("index/user-account.properties"))
+                .content().contains("GetUserOperation.PATH=/v1/users/{username}");
+        assertThat(projectDir.resolve("build/reports/transcriberj")).doesNotExist();
+        assertThat(projectDir.resolve("build/generated/transcriberj-index")).doesNotExist();
     }
 
     @Test

@@ -109,9 +109,30 @@ public abstract class TranscriberJSubscription implements Named {
     public abstract Property<String> getDescriptionBundle();
 
     /**
+     * Where the generation writes its report: every degraded method, recommendation and
+     * undecided construct.
+     *
+     * <p>Default: {@code build/reports/transcriberj/<contract>.txt}.
+     *
+     * @return the report file
+     */
+    public abstract RegularFileProperty getReportFile();
+
+    /**
+     * Where the generation writes the endpoint index. A tool reads the index through
+     * {@link #getEndpointIndex()}, which carries the generation task.
+     *
+     * <p>Default: {@code build/generated/transcriberj-index/<contract>/contract-endpoints.properties}.
+     *
+     * @return the index file
+     */
+    public abstract RegularFileProperty getEndpointIndexFile();
+
+    /**
      * The endpoint index the generation writes: the path of every generated operation and
      * inline schema class, keyed {@code ClassName.PATH}. Read-only; it carries the
      * generation task, so a tool reading it runs after the generation.
+     * {@link #getEndpointIndexFile()} says where it is written.
      *
      * <pre>
      * doppelgangerApiDetector {

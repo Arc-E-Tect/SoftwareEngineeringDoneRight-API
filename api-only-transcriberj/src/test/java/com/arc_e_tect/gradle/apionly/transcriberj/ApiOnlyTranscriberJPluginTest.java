@@ -57,6 +57,33 @@ class ApiOnlyTranscriberJPluginTest {
     }
 
     @Test
+    void theReportAndTheEndpointIndexDefaultUnderBuildAndCanBeMoved() {
+        project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);
+        project.getExtensions().getByType(ApiOnlySubscriberExtension.class).subscribe("user-account");
+        ApiOnlyTranscriberJExtension extension = project.getExtensions().getByType(ApiOnlyTranscriberJExtension.class);
+        TranscriberJSubscription subscription = extension.subscription("user-account",
+                s -> s.getBasePackage().set("com.example.contract"));
+
+        assertThat(subscription.getReportFile().get().getAsFile())
+                .isEqualTo(projectDir.resolve("build/reports/transcriberj/user-account.txt").toFile());
+        assertThat(subscription.getEndpointIndexFile().get().getAsFile()).isEqualTo(projectDir.resolve(
+                "build/generated/transcriberj-index/user-account/contract-endpoints.properties").toFile());
+
+        // Set after the subscription was created, as a build script may.
+        subscription.getReportFile().set(projectDir.resolve("reports/orders.txt").toFile());
+        subscription.getEndpointIndexFile().set(projectDir.resolve("index/orders.properties").toFile());
+
+        GenerateContractSourcesTask generate = (GenerateContractSourcesTask)
+                project.getTasks().getByName("generateContractSourcesUserAccount");
+        assertThat(generate.getReportFile().get().getAsFile())
+                .isEqualTo(projectDir.resolve("reports/orders.txt").toFile());
+        assertThat(generate.getEndpointIndex().get().getAsFile())
+                .isEqualTo(projectDir.resolve("index/orders.properties").toFile());
+        assertThat(subscription.getEndpointIndex().get().getAsFile())
+                .isEqualTo(projectDir.resolve("index/orders.properties").toFile());
+    }
+
+    @Test
     void eachSubscriptionGetsTasksConventionsAndItsSourceSets() {
         project.getPluginManager().apply("java");
         project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);

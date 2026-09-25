@@ -414,7 +414,7 @@ What is in a lint report comes from Redocly CLI or AsyncAPI CLI, under the lint 
 [#generation-report]
 === The TranscriberJ's generation report
 
-`generateContractSources<Contract>` writes `build/reports/transcriberj/<contract>.txt`, replacing the previous one.
+`generateContractSources<Contract>` writes `build/reports/transcriberj/<contract>.txt` -- or the subscription's `reportFile` -- replacing the previous one.
 This is the one it writes for the reference library's `user-account` contract:
 
 [source,text]
