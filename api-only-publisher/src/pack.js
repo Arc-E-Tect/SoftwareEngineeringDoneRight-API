@@ -11,6 +11,8 @@ const crypto = require("crypto");
 const { execFileSync } = require("child_process");
 const YAML = require("yaml");
 
+const { tgz } = require("./tar");
+
 const MANIFEST_NAME = "manifest.json";
 const MANIFEST_SCHEMA_VERSION = 1;
 
@@ -42,7 +44,31 @@ function gitInfo(cwd) {
  * one version to differ by a line ending, which surfaces months later as an
  * unexplainable verify failure.
  */
-function manifest(config, target, { version, files, closureSha256, producedAt = new Date() }) {
+/**
+ * When the documents were produced: SOURCE_DATE_EPOCH when it is set -- the
+ * reproducible-builds convention, and the way to choose it -- otherwise the time of the
+ * commit being packed, and the current time only outside a git repository. Never simply
+ * "now" inside one: packing the same commit twice has to give the same manifest, and so
+ * the same archive, or no channel could publish the same version twice idempotently.
+ */
+function producedAtFor(cwd) {
+    const epoch = process.env.SOURCE_DATE_EPOCH;
+    if (epoch !== undefined && epoch !== "") {
+        if (!/^\d+$/.test(epoch)) {
+            throw new PackError(`SOURCE_DATE_EPOCH must be a whole number of seconds since 1970, not '${epoch}'`);
+        }
+        return new Date(Number(epoch) * 1000);
+    }
+    try {
+        const seconds = execFileSync("git", ["log", "-1", "--format=%ct"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+        if (/^\d+$/.test(seconds)) return new Date(Number(seconds) * 1000);
+    } catch {
+        // Not a git repository, or one with no commits yet.
+    }
+    return new Date();
+}
+
+function manifest(config, target, { version, files, closureSha256, producedAt = producedAtFor(config.root) }) {
     if (!version) throw new PackError(`target '${target}': pack requires a version`);
 
     const source = gitInfo(config.root);
@@ -111,13 +137,9 @@ function pack(config, target, { version, closureSha256, outDir, log = () => {} }
 
     // Deterministic archive: sorted entry names, and no mtime/owner noise, so the
     // same inputs produce the same bytes on any machine.
-    const entries = documents.map((d) => path.basename(d)).concat([MANIFEST_NAME]).sort();
-    execFileSync("tar", [
-        "-czf", archive,
-        "-C", distDir,
-        "--numeric-owner",
-        ...entries,
-    ], { encoding: "utf8" });
+    const entries = documents.map((d) => path.basename(d)).concat([MANIFEST_NAME]).sort()
+        .map((name) => ({ name, data: fs.readFileSync(path.join(distDir, name)) }));
+    fs.writeFileSync(archive, tgz(entries, Math.floor(Date.parse(data.producedAt) / 1000)));
 
     log(`-- Packed ${path.basename(archive)} (${data.files.length} document(s))`);
     return { archive, manifest: data, manifestPath };

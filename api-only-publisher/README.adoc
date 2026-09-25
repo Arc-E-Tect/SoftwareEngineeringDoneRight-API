@@ -609,7 +609,7 @@ Configured portfolio: paths=none, location=portfolios
 |`file`
 |A local directory, laid out as `<directory>/<target>/<version>/`.
 Not a distribution mechanism between repositories: it makes the pipeline testable end to end with no infrastructure, lets a library share one build with the projects that implement it, and is a local-iteration escape hatch.
-Publishing a version again replaces that version and keeps the others; with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
+Publishing a version again writes it again and keeps the others (<<idempotent,Publishing the same version again §>>); with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
 
 |`maven`
 |A path publishes into a repository layout on disk; an `http(s)` URL deploys to a remote repository with an HTTP `PUT` per file and a bearer token.
@@ -621,20 +621,109 @@ Native for Gradle consumers: version resolution, caching and conflict handling c
 |`github-release`
 |The language-neutral floor: immutable per tag, works for private repositories with a token, readable by a consumer with no JVM and no Node.js.
 No dependency-resolution semantics and no update notification, which is why it is the fallback rather than the default.
+
+|`nuget`
+|A path writes a `.nupkg` into a local feed; an `http(s)` URL -- the feed's service index -- pushes to a remote one.
+Native for .NET consumers: a `PackageReference` at a version, restored from a feed. See <<nuget,The `nuget` channel §>>.
+|===
+
+[#idempotent]
+=== Publishing the same version again
+
+`publish` is idempotent: publishing a version again with the same content changes nothing, on every channel.
+
+That rests on `pack` being reproducible.
+The same documents always pack to the same archive, byte for byte: the archive is written with a fixed mode, no owner and a fixed timestamp, and `manifest.json`'s `producedAt` is not the time `pack` ran but the time of the commit being packed.
+Set `SOURCE_DATE_EPOCH` (seconds since 1970, the https://reproducible-builds.org/specs/source-date-epoch/[reproducible-builds convention ↗]) to choose another; outside a git repository, where there is no commit, it is the only way to make two packs identical, and without it `producedAt` is the current time.
+
+What happens when the destination already has the version:
+
+[cols="1,3", options="header"]
+|===
+|Destination |Already has the version
+
+|`file`; `maven` and `nuget` to a directory; `npm` with `publish: false`
+|Written again. With the same content the bytes are the same; with different content the version is replaced, and every subscriber whose lockfile recorded the old bytes fails its build until the change is published as a new version.
+
+|`maven` and `nuget` to a URL, `npm`, `github-release`
+|The same bytes: nothing is sent, and the log says `already published, identical`. Different bytes: `publish` fails, naming the version -- a published version is never replaced, so publish the change as a new version.
+`github-release` compares the asset it would upload with the one the release has, and never overwrites one.
+A NuGet feed that cannot return the package it has, so there is nothing to compare, fails as a different one would.
 |===
 
 Credentials are read from the environment, never from configuration.
-`channels.maven.tokenEnv` names the variable, `MAVEN_TOKEN` by default; a configuration file gets committed, and a credential in a committed file is a credential that has leaked.
+`channels.maven.tokenEnv` names the variable, `MAVEN_TOKEN` by default, and `channels.nuget.tokenEnv` the NuGet API key's, `NUGET_API_KEY` by default; a configuration file gets committed, and a credential in a committed file is a credential that has leaked.
 
 link:../docs/reference/how-publisher-and-subscriber-work-together.adoc#channels[How the Publisher and the Subscriber work together →] lists each channel's layout and options.
 
+[#nuget]
+=== The `nuget` channel
+
+It is published without the .NET SDK, as the Maven channel is published without Maven: a `.nupkg` is a ZIP archive the Publisher writes itself, and a push is one HTTP request.
+
+[source,yaml]
+----
+channels:
+  nuget:
+    idPrefix: Contoso.Contracts          # required
+    # packageId: Contoso.Users           # replaces the whole id, for every target
+    repository: build/nuget-feed         # a directory, or a feed's service index URL
+    # tokenEnv: NUGET_API_KEY            # the variable holding the API key, for a URL
+    # authors: Contoso API team          # default: idPrefix
+    # license: MIT                       # an SPDX expression; default: UNLICENSED
+----
+
+*The package id* is `<idPrefix>.<target in PascalCase>`: target `user-account` with `idPrefix: Contoso.Contracts` is `Contoso.Contracts.UserAccount`, the dotted PascalCase .NET uses for namespaces, from a kebab-case target.
+`packageId` replaces it.
+An id NuGet would refuse -- anything but letters, digits and underscores in parts separated by single dots or dashes, or longer than 100 characters -- is refused before anything is written.
+
+*The version* is the contract's, and a pre-release is a NuGet pre-release: `2.1.0-rc.1` is not picked by a floating range such as `2.1.*`, only when asked for.
+A version with build metadata, such as `2.1.0+build.7`, is refused before anything is written: NuGet ignores `+metadata` when it identifies a package, so it would be the same package as every other build of `2.1.0`, and a feed refuses the second.
+
+*A local feed* is a directory in the layout `nuget add` writes, which the NuGet documentation recommends over a flat folder:
+
+----
+<repository>/<id, lower case>/<version>/
+    <id>.<version>.nupkg
+    <id>.<version>.nupkg.sha512
+    <id>.nuspec
+    manifest.json           -- beside the package, so provenance is readable without unpacking it
+----
+
+A .NET build uses it with `dotnet nuget add source <repository>`, or a `nuget.config` entry.
+
+*A remote feed* is configured by its service index, the URL a feed's settings show and that ends in `index.json`, such as `https://api.nuget.org/v3/index.json`.
+The Publisher reads the service index for its `PackagePublish/2.0.0` endpoint, then pushes the package there with one `PUT`, as `multipart/form-data`, with the key from the environment variable `tokenEnv` names in the `X-NuGet-ApiKey` header.
+A feed that already has the version answers 409; the Publisher then reads the feed's copy back (its `PackageBaseAddress/3.0.0` resource) and succeeds when it is the same package, and fails when it is not, or cannot be read (<<idempotent,Publishing the same version again §>>).
+Without the variable set, the push fails before anything is sent, naming it.
+That is how nuget.org, GitHub Packages and self-hosted feeds such as BaGet take a push.
+A feed that authenticates some other way -- Azure Artifacts, which expects a credential provider or a token in an `Authorization` header -- is not supported yet; only the local-HTTP-stub tests exercise the push, not a real feed.
+
+*The package holds* the `.nuspec`, the two Open Packaging Conventions parts (`[Content_Types].xml` and `_rels/.rels`), and exactly what `pack` produced -- the documents and `manifest.json` -- extracted, never rebuilt, under `contracts/`:
+
+----
+Contoso.Contracts.UserAccount.nuspec
+[Content_Types].xml
+_rels/.rels
+contracts/asyncapi.yaml
+contracts/manifest.json
+contracts/openapi.yaml
+----
+
+`contracts/` is the contract with the consumer, and changes only with a major version of the Publisher.
+NuGet gives the folder no behaviour: nothing is copied into a project, nothing is compiled, and a restore reports no warning for a package with no assemblies.
+Until a `.targets` file places and verifies the documents for a .NET build, a consumer reads them where restore put them, `~/.nuget/packages/<id, lower case>/<version>/contracts/` (or `$(NuGetPackageRoot)` in MSBuild), and verifies them against `contracts/manifest.json`.
+
+The same packed archive always produces a byte-identical package: entries in a fixed order, a fixed timestamp.
+Since `pack` is reproducible, publishing the same commit again produces the same package too, so a republish to a local feed can be checked as unchanged.
+
 [#why-registries]
-=== Why npm and Maven rather than release assets alone
+=== Why npm, Maven and NuGet rather than release assets alone
 
 Publishing is passive.
 The producer releases `2.1.0` and nothing happens in an implementation repository until somebody looks.
 
-Renovate and Dependabot understand npm and Maven natively, so a contract bump arrives downstream as a pull request without any bespoke machinery.
+Renovate and Dependabot understand npm, Maven and NuGet natively, so a contract bump arrives downstream as a pull request without any bespoke machinery.
 That is the practical argument for preferring them, and the reason to design the coordinates so that standard update bots can read them.
 
 [#pre-releases]
