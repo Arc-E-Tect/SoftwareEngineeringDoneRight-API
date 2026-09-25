@@ -155,6 +155,14 @@ apiOnlyTranscriberJ {
         // Where a resource an emitter writes is generated.
         // Default: build/generated/resources/transcriberj/<contract>
         // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders')
+
+        // Where the generation report is written.
+        // Default: build/reports/transcriberj/<contract>.txt
+        // reportFile = layout.buildDirectory.file('reports/transcriberj/orders.txt')
+
+        // Where the endpoint index is written; read it through endpointIndex.
+        // Default: build/generated/transcriberj-index/<contract>/contract-endpoints.properties
+        // endpointIndexFile = layout.buildDirectory.file('generated/transcriberj-index/orders/contract-endpoints.properties')
     }
 }
 
@@ -247,7 +255,7 @@ Nothing resolves and nothing is generated to resolve with: the classes are the o
 |Task |What it does
 
 |`generateContractSources<Contract>`
-|Generates the class tree, replacing whatever the output directory held, and writes `build/reports/transcriberj/<contract>.txt`.
+|Generates the class tree, replacing whatever the output directory held, and writes its report, by default `build/reports/transcriberj/<contract>.txt` (`reportFile`).
 Runs whenever the contract document or the lockfile changes; the fetch runs first.
 
 |`verifyContractSources<Contract>`
@@ -442,8 +450,8 @@ wireMock.stubFor(get(urlEqualTo(GetUserOperation.path("alice"))))
 === The endpoint index
 
 Tools that read test sources one file at a time, without a classpath, cannot see what `GetUserOperation.PATH` holds.
-The generation therefore also writes `build/generated/transcriberj-index/<contract>/contract-endpoints.properties`, with every operation's and inline schema's path keyed `ClassName.PATH`.
-The subscription exposes it, carrying the generation task:
+The generation therefore also writes `build/generated/transcriberj-index/<contract>/contract-endpoints.properties`, with every operation's and inline schema's path keyed `ClassName.PATH`; `endpointIndexFile` names another location.
+The subscription exposes it as `endpointIndex`, carrying the generation task, so a tool reads it from there wherever it is written:
 
 [source,groovy]
 ----
@@ -536,7 +544,7 @@ The model types `$ref`, `type`, `format`, `description`, `const`, `enum`, `requi
 |One fragment bundled as different bytes in two places, such as the contract's two documents |Undecided |One class is generated, from the copy read first -- the OpenAPI document's when the fragment is in both -- so it may not match the other; listed as undecided, as <<shared-fragments,A fragment both documents use is one class §>> describes.
 |===
 
-The report lists every degraded method, every recommendation and every undecided construct in `build/reports/transcriberj/<contract>.txt`, and the build log gives the counts.
+The report lists every degraded method, every recommendation and every undecided construct in `build/reports/transcriberj/<contract>.txt` (or the subscription's `reportFile`), and the build log gives the counts.
 A construct can appear in both lists: *undecided* says the contract uses it, *degraded* names each method it made throw.
 A report with undecided constructs and no degraded method means nothing generated was affected.
 A schema written inline in an operation is generated, and also listed with the recommendation to make it a component.

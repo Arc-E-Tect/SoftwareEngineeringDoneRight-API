@@ -34,6 +34,13 @@ final class ApiOnlyTranscriberJDslSchema {
             "//     // descriptionBundle = 'docs.Descriptions'",
             "//     // Where the sources are generated. Default: build/generated/sources/transcriberj/orders",
             "//     // into = layout.buildDirectory.dir('generated/sources/transcriberj/orders')",
+            "//     // Where a resource an emitter writes is generated. Default: build/generated/resources/transcriberj/orders",
+            "//     // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders')",
+            "//     // Where the generation report is written. Default: build/reports/transcriberj/orders.txt",
+            "//     // reportFile = layout.buildDirectory.file('reports/transcriberj/orders.txt')",
+            "//     // Where the endpoint index is written. Default:",
+            "//     // build/generated/transcriberj-index/orders/contract-endpoints.properties",
+            "//     // endpointIndexFile = layout.buildDirectory.file('generated/transcriberj-index/orders/contract-endpoints.properties')",
             "// }");
 
     static final DslExtensionSchema SCHEMA = new DslExtensionSchema(

@@ -102,6 +102,10 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().dir("generated/sources/transcriberj/" + contract));
             subscription.getIntoResources().convention(
                     project.getLayout().getBuildDirectory().dir("generated/resources/transcriberj/" + contract));
+            subscription.getReportFile().convention(
+                    project.getLayout().getBuildDirectory().file("reports/transcriberj/" + contract + ".txt"));
+            subscription.getEndpointIndexFile().convention(project.getLayout().getBuildDirectory()
+                    .file("generated/transcriberj-index/" + contract + "/contract-endpoints.properties"));
 
             Provider<RegularFile> document = project.provider(() -> subscriber.subscription(contract))
                     .flatMap(Subscription::getOpenapi);
@@ -126,10 +130,8 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getEmitterClasspath().from(emitters);
                         task.getOutputDirectory().set(subscription.getInto());
                         task.getResourceDirectory().set(subscription.getIntoResources());
-                        task.getReportFile().set(
-                                project.getLayout().getBuildDirectory().file("reports/transcriberj/" + contract + ".txt"));
-                        task.getEndpointIndex().set(project.getLayout().getBuildDirectory()
-                                .file("generated/transcriberj-index/" + contract + "/contract-endpoints.properties"));
+                        task.getReportFile().set(subscription.getReportFile());
+                        task.getEndpointIndex().set(subscription.getEndpointIndexFile());
                     });
 
             // The IDE indexes what is on disk at sync time, so it is told which task
