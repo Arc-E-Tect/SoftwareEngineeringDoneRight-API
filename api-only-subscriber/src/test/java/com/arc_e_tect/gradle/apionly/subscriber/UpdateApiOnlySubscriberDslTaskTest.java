@@ -89,6 +89,8 @@ class UpdateApiOnlySubscriberDslTaskTest {
             apiOnlySubscriber {
                 lockfile = file('contracts.lock')
                 apiContractVersion = '1.0.0'
+                sourceSet = 'main'
+                clientResources = 'contracts'
             }
             """);
 

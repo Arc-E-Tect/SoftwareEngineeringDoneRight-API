@@ -16,7 +16,9 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.language.jvm.tasks.ProcessResources;
 
 import java.io.File;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Callable;
 
 /**
  * The consumer half of the API-Only pair.
@@ -50,7 +52,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
 
     /**
      * The classpath directory the documents of an API a project calls are copied
-     * under, followed by the target name: {@value}.
+     * under by default, followed by the target name: {@value}.
      */
     public static final String CLIENT_RESOURCES = "contracts";
 
@@ -71,6 +73,8 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
             project.getExtensions().create(EXTENSION_NAME, ApiOnlySubscriberExtension.class);
 
         extension.getLockfile().convention(project.getLayout().getProjectDirectory().file("apionly.lock"));
+        extension.getSourceSet().convention(SourceSet.MAIN_SOURCE_SET_NAME);
+        extension.getClientResources().convention(CLIENT_RESOURCES);
 
         // Read through the project, not providers.gradleProperty(...): that does not
         // see a subproject's own gradle.properties, which is exactly where a service
@@ -119,6 +123,7 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
 
         subscription.getInto().convention(
             project.getLayout().getBuildDirectory().dir("api-spec/" + target));
+        subscription.getSourceSet().convention(extension.getSourceSet());
         // apiOnlySubscriber.apiContractVersion, and the project property behind it, are
         // the version of the contract this project implements. An API it calls sets its own.
         if (!subscription.isClient()) {
@@ -169,26 +174,31 @@ public class ApiOnlySubscriberPlugin implements Plugin<Project> {
         fetchAll.configure(task -> task.dependsOn(fetch));
         verifyAll.configure(task -> task.dependsOn(verify));
 
-        // The implemented contract's directory becomes a resource directory, so its
-        // documents reach the classpath root exactly as they did when generated into
-        // src/main/resources -- without anything generated living under src/. An API
-        // the project calls is copied under contracts/<target>/ instead: any number of
-        // them fit there side by side, and the root stays the implemented contract's.
+        // The implemented contract's directory becomes a resource directory of the
+        // subscription's source set (main by default), so its documents reach the
+        // classpath root without anything generated living under src/. An API the
+        // project calls is copied under <clientResources>/<target>/ instead: any number
+        // of them fit there side by side, and the root stays the implemented contract's.
+        // The source set is read when the build needs it, not here, so it can be set
+        // anywhere in the build script, before or after subscribe(...).
         project.getPlugins().withType(JavaPlugin.class, plugin -> {
-            if (subscription.isClient()) {
-                project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources.class, task -> {
-                    task.dependsOn(fetch);
-                    task.from(fetch.flatMap(FetchApiSpecTask::getInto),
-                        spec -> spec.into(CLIENT_RESOURCES + "/" + target));
-                });
-                return;
-            }
             SourceSetContainer sourceSets =
                 project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets();
-            sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME, main ->
-                main.getResources().srcDir(fetch.map(FetchApiSpecTask::getInto)));
-            project.getTasks().named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME,
-                task -> task.dependsOn(fetch));
+            sourceSets.configureEach(set -> {
+                Callable<Boolean> mine = () -> set.getName().equals(subscription.getSourceSet().get());
+                project.getTasks().named(set.getProcessResourcesTaskName(), ProcessResources.class, task -> {
+                    task.dependsOn((Callable<Object>) () -> mine.call() ? List.of(fetch) : List.of());
+                    if (subscription.isClient()) {
+                        task.from((Callable<Object>) () -> mine.call() ? fetch.flatMap(FetchApiSpecTask::getInto) : List.of(),
+                            spec -> spec.into((Callable<String>) () ->
+                                extension.getClientResources().get() + "/" + target));
+                    }
+                });
+                if (!subscription.isClient()) {
+                    set.getResources().srcDir((Callable<Object>) () ->
+                        mine.call() ? fetch.map(FetchApiSpecTask::getInto) : List.of());
+                }
+            });
         });
     }
 

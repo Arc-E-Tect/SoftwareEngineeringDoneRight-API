@@ -299,6 +299,23 @@ public abstract class ApiOnlySubscriberExtension {
     public abstract RegularFileProperty getLockfile();
 
     /**
+     * The source set every subscription's documents join, unless a subscription names its
+     * own. Defaults to {@code main}, so the implemented contract is on the application's
+     * classpath; {@code test} keeps it to the tests.
+     *
+     * @return the source set name
+     */
+    public abstract Property<String> getSourceSet();
+
+    /**
+     * The classpath folder the documents of an API the project calls are copied under,
+     * followed by its target: {@code contracts/<target>/} by default.
+     *
+     * @return the folder name
+     */
+    public abstract Property<String> getClientResources();
+
+    /**
      * The version of the contract this project implements, unless its subscription
      * sets its own. An API the project calls is not affected.
      *

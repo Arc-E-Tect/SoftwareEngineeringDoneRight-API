@@ -28,6 +28,10 @@ final class ApiOnlySubscriberDslSchema {
                             "Where resolved contract versions and file hashes are recorded."),
                     DslPropertySpec.scalar("apiContractVersion", "findProperty('apiContractVersion')",
                             "The version of the contract this project implements, unless its subscription sets its own."),
+                    DslPropertySpec.scalar("sourceSet", "'main'",
+                            "The source set whose resources the documents join, unless a subscription names its own."),
+                    DslPropertySpec.scalar("clientResources", "'contracts'",
+                            "The classpath folder an API the project calls is copied under, followed by its target."),
                     DslPropertySpec.container("channel",
                             "The channel used to resolve every subscribed contract.",
                             CHANNEL_STUB)

@@ -165,6 +165,31 @@ class ApiOnlySubscriberPluginFunctionalTest {
         }
 
         @Test
+        @DisplayName("sourceSet and clientResources move the documents to another source set and another classpath folder")
+        void sourceSetAndClientResourcesAreConfigurable() throws Exception {
+            publish("customer-orders", "1.0.0", OPENAPI);
+            publish("order-payments", "1.4.0", OPENAPI.replace("title: Example", "title: Payments"));
+            buildFile(subscribingBuild("1.0.0", "") + """
+
+                apiOnlySubscriber {
+                    subscribeAsClient('order-payments') {
+                        apiContractVersion = '1.4.0'
+                    }
+                    sourceSet = 'test'
+                    clientResources = 'apis'
+                }
+                """);
+
+            runner("processTestResources", "processResources", "--configuration-cache").build();
+
+            Path test = projectDir.resolve("build/resources/test");
+            assertThat(Files.readString(test.resolve("openapi.yaml"))).contains("title: Example");
+            assertThat(Files.readString(test.resolve("apis/order-payments/openapi.yaml"))).contains("title: Payments");
+            assertThat(projectDir.resolve("build/resources/main/openapi.yaml")).doesNotExist();
+            assertThat(test.resolve("contracts")).doesNotExist();
+        }
+
+        @Test
         @DisplayName("a project implementing one contract and calling two APIs fetches, locks and verifies all three")
         void clientsNextToTheImplementedContract() throws Exception {
             publish("customer-orders", "1.0.0", OPENAPI);
@@ -286,7 +311,7 @@ class ApiOnlySubscriberPluginFunctionalTest {
 
             BuildResult result = runner("updateApiOnlySubscriberDSL").build();
 
-            assertThat(result.getOutput()).contains("added 2 missing properties");
+            assertThat(result.getOutput()).contains("added 4 missing properties");
             assertThat(projectDir.resolve("build.gradle.bak")).exists();
             assertThat(Files.readString(projectDir.resolve("build.gradle")))
                 .contains("lockfile = layout.projectDirectory.file('apionly.lock')");
