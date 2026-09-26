@@ -24,7 +24,7 @@ class OperationClassesTest {
 
     private GeneratedSources userAccount() {
         return GeneratedSources.generate(
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
                 GeneratedSources.settings("user-account"), List.of());
     }
 
@@ -68,7 +68,7 @@ class OperationClassesTest {
     @Test
     void theEndpointIndexListsEveryGeneratedPath() throws Exception {
         Path index = directory.resolve("index/contract-endpoints.properties");
-        GeneratedSources.generate(GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"),
+        GeneratedSources.generate(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"),
                 "1.0.0", directory, GeneratedSources.settings("user-account"), List.of(), index);
 
         assertThat(Files.readAllLines(index)).containsExactly(

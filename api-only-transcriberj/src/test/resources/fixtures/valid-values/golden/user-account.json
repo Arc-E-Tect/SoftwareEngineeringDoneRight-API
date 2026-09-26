@@ -98,7 +98,7 @@
           "instance": "https://example.com/",
           "status": 400,
           "title": "Invalid Request",
-          "type": "https://api.iff.arc-e-tect.com/problems/invalid-request"
+          "type": "https://api.apionly.arc-e-tect.com/problems/invalid-request"
         }
       },
       "location": "/components/schemas/InvalidRequestProblemV1",
@@ -107,7 +107,7 @@
           "detail": "a",
           "status": 400,
           "title": "Invalid Request",
-          "type": "https://api.iff.arc-e-tect.com/problems/invalid-request"
+          "type": "https://api.apionly.arc-e-tect.com/problems/invalid-request"
         }
       }
     },
@@ -155,7 +155,7 @@
           "instance": "https://example.com/",
           "status": 422,
           "title": "Registration Request Cannot Be Processed",
-          "type": "https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed"
+          "type": "https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed"
         }
       },
       "location": "/components/schemas/RegisteredRequestCannotBeProcessedProblemV1",
@@ -164,7 +164,7 @@
           "detail": "a",
           "status": 422,
           "title": "Registration Request Cannot Be Processed",
-          "type": "https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed"
+          "type": "https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed"
         }
       }
     },
@@ -318,7 +318,7 @@
           "instance": "https://example.com/",
           "status": 404,
           "title": "Registration Not Found",
-          "type": "https://api.iff.arc-e-tect.com/problems/registration-not-found"
+          "type": "https://api.apionly.arc-e-tect.com/problems/registration-not-found"
         }
       },
       "location": "/components/schemas/RegistrationNotFoundProblemV1",
@@ -327,7 +327,7 @@
           "detail": "a",
           "status": 404,
           "title": "Registration Not Found",
-          "type": "https://api.iff.arc-e-tect.com/problems/registration-not-found"
+          "type": "https://api.apionly.arc-e-tect.com/problems/registration-not-found"
         }
       }
     },
@@ -339,7 +339,7 @@
           "instance": "https://example.com/",
           "status": 422,
           "title": "Registration Process Expired",
-          "type": "https://api.iff.arc-e-tect.com/problems/registration-process-expired"
+          "type": "https://api.apionly.arc-e-tect.com/problems/registration-process-expired"
         }
       },
       "location": "/components/schemas/RegistrationProcessExpiredProblemV1",
@@ -348,7 +348,7 @@
           "detail": "a",
           "status": 422,
           "title": "Registration Process Expired",
-          "type": "https://api.iff.arc-e-tect.com/problems/registration-process-expired"
+          "type": "https://api.apionly.arc-e-tect.com/problems/registration-process-expired"
         }
       }
     },
@@ -394,7 +394,7 @@
           "instance": "https://example.com/",
           "status": 404,
           "title": "User Not Found",
-          "type": "https://api.iff.arc-e-tect.com/problems/user-not-found"
+          "type": "https://api.apionly.arc-e-tect.com/problems/user-not-found"
         }
       },
       "location": "/components/schemas/UserNotFoundProblemV1",
@@ -403,7 +403,7 @@
           "detail": "a",
           "status": 404,
           "title": "User Not Found",
-          "type": "https://api.iff.arc-e-tect.com/problems/user-not-found"
+          "type": "https://api.apionly.arc-e-tect.com/problems/user-not-found"
         }
       }
     },
@@ -475,7 +475,7 @@
           "instance": "https://example.com/",
           "status": 409,
           "title": "Username Already Registered",
-          "type": "https://api.iff.arc-e-tect.com/problems/username-already-registered"
+          "type": "https://api.apionly.arc-e-tect.com/problems/username-already-registered"
         }
       },
       "location": "/components/schemas/UsernameAlreadyRegisteredProblemV1",
@@ -484,7 +484,7 @@
           "detail": "a",
           "status": 409,
           "title": "Username Already Registered",
-          "type": "https://api.iff.arc-e-tect.com/problems/username-already-registered"
+          "type": "https://api.apionly.arc-e-tect.com/problems/username-already-registered"
         }
       }
     },
@@ -532,7 +532,7 @@
           "instance": "https://example.com/",
           "status": 422,
           "title": "Verification Link Expired",
-          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-expired"
+          "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-expired"
         }
       },
       "location": "/components/schemas/VerificationLinkExpiredProblemV1",
@@ -541,7 +541,7 @@
           "detail": "a",
           "status": 422,
           "title": "Verification Link Expired",
-          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-expired"
+          "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-expired"
         }
       }
     },
@@ -553,7 +553,7 @@
           "instance": "https://example.com/",
           "status": 410,
           "title": "Verification Link Superseded",
-          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-superseded"
+          "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-superseded"
         }
       },
       "location": "/components/schemas/VerificationLinkSupersededProblemV1",
@@ -562,7 +562,7 @@
           "detail": "a",
           "status": 410,
           "title": "Verification Link Superseded",
-          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-superseded"
+          "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-superseded"
         }
       }
     }

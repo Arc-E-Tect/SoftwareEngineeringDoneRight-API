@@ -86,16 +86,6 @@ tasks.named('jar') {
     }
 }
 
-// The safety net (Phase 0).
-//
-// The reference implementation's hand-written testSchemaCommon classes, copied
-// verbatim from the commit named in src/test/resources/fixtures/handwritten/SOURCE.properties.
-// They live in their own source set so that Spring REST Docs, which they import,
-// never reaches main: the generated core classes must stay dependency-free (D9).
-sourceSets {
-    handwritten
-}
-
 dependencies {
     // updateApiOnlyTranscriberJDSL, as the Subscriber and every sibling plugin have it.
     implementation libs.dsl.updater.core
@@ -105,11 +95,6 @@ dependencies {
     implementation libs.snakeyaml.engine
     implementation libs.api.only.subscriber
 
-    handwrittenImplementation libs.spring.restdocs.core
-    handwrittenImplementation libs.jackson3.databind
-
-    testImplementation sourceSets.handwritten.output
-    testImplementation libs.spring.restdocs.core
     testImplementation gradleTestKit()
     testImplementation libs.junit.jupiter
     testImplementation libs.assertj.core
@@ -126,11 +111,15 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    // The reference contracts, the Publisher scaffold and the corpora, read by path: an input,
-    // so that changing a fixture runs the tests again.
+    // The Publisher scaffold and the corpora, read by path, and the contracts of the
+    // repository's reference API, built by its Publisher: inputs, so that changing either
+    // runs the tests again.
     systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('src/test/resources/fixtures').asFile.absolutePath
     inputs.dir(layout.projectDirectory.dir('src/test/resources/fixtures')).withPathSensitivity(PathSensitivity.RELATIVE)
             .withPropertyName('fixtures')
+    systemProperty 'transcriberj.referenceApi', layout.projectDirectory.dir('../reference-api/dist').asFile.absolutePath
+    inputs.dir(layout.projectDirectory.dir('../reference-api/dist')).withPathSensitivity(PathSensitivity.RELATIVE)
+            .withPropertyName('referenceApi')
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
@@ -140,54 +129,11 @@ tasks.named('test') {
     finalizedBy jacocoTestReport
 }
 
-// The repeatable comparison command:
-//
-//   ./gradlew verifyHandwrittenFixtures
-//
-// Replays every recorded body(...) input against the hand-written classes and
-// compares the output with the committed expectation. Pass
-// -PreferenceRepository=<path to SoftwareEngineeringDoneRight-Code> to also check
-// that the committed copies still match the reference implementation at the
-// recorded commit; without it that check is skipped, not failed.
-def verifyHandwrittenFixtures = tasks.register('verifyHandwrittenFixtures', Test) {
-    description = 'Compares the hand-written reference classes and their body(...) output with the committed fixtures.'
-    group = 'verification'
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
-    filter {
-        includeTestsMatching 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.*'
-    }
-    def referenceRepository = providers.gradleProperty('referenceRepository')
-    inputs.property('referenceRepository', referenceRepository.orElse(''))
-    systemProperty 'transcriberj.referenceRepository', referenceRepository.getOrElse('')
-    outputs.upToDateWhen { false }
-}
-
-// Rewrites the committed body(...) expectations from the hand-written classes.
-// Only for when the fixture source commit is deliberately moved; review the diff.
-tasks.register('recordHandwrittenFixtures', JavaExec) {
-    description = 'Re-records the expected body(...) output of the hand-written reference classes.'
-    group = 'verification'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenBodyRecorder'
-    args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/bodies.json').asFile.absolutePath
-}
-
-// The same, for the hand-written event classes, whose payloads are recorded from the
-// records themselves rather than from a static body(...).
-tasks.register('recordHandwrittenEventPayloads', JavaExec) {
-    description = 'Re-records the expected payloads of the hand-written reference event classes.'
-    group = 'verification'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenEventPayloadRecorder'
-    args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/event-payloads.json').asFile.absolutePath
-}
-
 // Re-records the committed baselines the valid-value work is held to: the hash of every
 // source generated before it (T12.11), and the valid values of the reference contracts
 // (T12.10). Only for a deliberate change; review the diff.
 // recordInvalidRequestsGolden does the same for the invalid-request cases of the user-account
-// contract (T13.14), the tests the reference implementation is run against.
+// contract of the reference API (T13.14), the tests an implementation of it is run against.
 ['recordBaselineSources': 'sources', 'recordValidValuesGolden': 'golden',
  'recordInvalidRequestsGolden': 'invalid-requests'].each { name, what ->
     tasks.register(name, JavaExec) {
@@ -196,6 +142,7 @@ tasks.register('recordHandwrittenEventPayloads', JavaExec) {
         classpath = sourceSets.test.runtimeClasspath
         mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.core.Baselines'
         systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('src/test/resources/fixtures').asFile.absolutePath
+        systemProperty 'transcriberj.referenceApi', layout.projectDirectory.dir('../reference-api/dist').asFile.absolutePath
         args what
     }
 }
@@ -231,7 +178,7 @@ tasks.named('javadoc') {
 }
 
 tasks.named('check') {
-    dependsOn verifyHandwrittenFixtures, jacocoTestCoverageVerification, tasks.named('javadoc')
+    dependsOn jacocoTestCoverageVerification, tasks.named('javadoc')
 }
 
 dependencyCheck {

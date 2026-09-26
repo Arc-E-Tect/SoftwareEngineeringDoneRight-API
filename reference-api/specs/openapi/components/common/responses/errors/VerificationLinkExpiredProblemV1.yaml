@@ -1,0 +1,30 @@
+title: Verification Link Expired Problem
+description: The verification link has expired.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.apionly.arc-e-tect.com/problems/verification-link-expired
+        examples:
+          - https://api.apionly.arc-e-tect.com/problems/verification-link-expired
+      title:
+        type: string
+        const: Verification Link Expired
+        examples:
+          - Verification Link Expired
+      status:
+        type: integer
+        const: 422
+        examples:
+          - 422
+      detail:
+        type: string
+        examples:
+          - The verification link has expired. Request a new verification email to complete the registration process.

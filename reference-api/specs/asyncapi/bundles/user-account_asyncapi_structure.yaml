@@ -1,0 +1,129 @@
+asyncapi: 3.1.0
+
+info:
+  title: API-Only Async API
+  version: 1.0.0
+  description: Asynchronous events published by the API-Only platform over Apache Kafka.
+
+servers:
+  kafka:
+    host: kafka:9092
+    protocol: kafka
+    description: API-Only Kafka broker.
+
+channels:
+  auditV1:
+    $ref: ../channels/apionly/useraccount/AuditV1.yaml
+
+operations:
+  publishRegistrationInitiated:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationInitiated event when a user registration is initiated.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationInitiatedMessage'
+
+  publishVerificationEmailSent:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a VerificationEmailSent event when a verification email has been sent successfully.
+    messages:
+      - $ref: '#/channels/auditV1/messages/verificationEmailSentMessage'
+
+  publishVerificationEmailResendRequested:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a VerificationEmailResendRequested event when a user requests a verification email to be resent.
+    messages:
+      - $ref: '#/channels/auditV1/messages/verificationEmailResendRequestedMessage'
+
+  publishNewVerificationEmailSent:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a NewVerificationEmailSent event when a new verification email has been sent to a user.
+    messages:
+      - $ref: '#/channels/auditV1/messages/newVerificationEmailSentMessage'
+
+  publishUserAccountCreated:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a UserAccountCreated event when a user account is created.
+    messages:
+      - $ref: '#/channels/auditV1/messages/userAccountCreatedMessage'
+
+  publishConfirmationEmailSent:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a ConfirmationEmailSent event when a confirmation email has been sent.
+    messages:
+      - $ref: '#/channels/auditV1/messages/confirmationEmailSentMessage'
+
+  publishPersonDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a PersonDeleted event when a person's registration data is deleted.
+    messages:
+      - $ref: '#/channels/auditV1/messages/personDeletedMessage'
+
+  publishRegistrationAttemptedWithExpiredLink:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithExpiredLink event when a registration is attempted using an expired verification link.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithExpiredLinkMessage'
+
+  publishRegistrationAttemptedWithExpiredRegistrationProcess:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithExpiredRegistrationProcess event when a registration is attempted after the registration process has expired.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithExpiredRegistrationProcessMessage'
+
+  publishRegistrationAttemptedWithReservedUsername:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithReservedUsername event when a registration is attempted using a reserved username.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithReservedUsernameMessage'
+
+  publishRegistrationAttemptedWithTakenUsername:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithTakenUsername event when a registration is attempted using a username that is already taken.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithTakenUsernameMessage'
+
+  publishRegistrationAttemptedWithInvalidLink:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithInvalidLink event when a registration is attempted using an invalid verification link.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithInvalidLinkMessage'
+
+  publishRegistrationAttemptedWithInitiatedEmailAddress:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithInitiatedEmailAddress event when a registration is attempted using an email address for which a registration is already in progress.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithInitiatedEmailAddressMessage'
+
+  publishRegistrationAttemptedWithTakenEmailAddress:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a RegistrationAttemptedWithTakenEmailAddress event when a registration is attempted using an email address that is already registered.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationAttemptedWithTakenEmailAddressMessage'

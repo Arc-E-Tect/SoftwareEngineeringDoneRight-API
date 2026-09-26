@@ -1,0 +1,884 @@
+asyncapi: 3.1.0
+info:
+  title: API-Only Async API
+  version: 1.0.0
+  description: Asynchronous events published by the API-Only platform over Apache Kafka.
+servers:
+  kafka:
+    host: kafka:9092
+    protocol: kafka
+    description: API-Only Kafka broker.
+channels:
+  auditV1:
+    x-fragment-path: asyncapi/channels/apionly/useraccount/AuditV1.yaml
+    address: apionly.useraccount.audit.v1
+    description: Audit events for the user-account domain.
+    messages:
+      registrationInitiatedMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationInitiatedMessageV1.yaml
+        name: RegistrationInitiatedV1
+        title: Registration Initiated
+        summary: Audit event published when a user registration is initiated.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationInitiatedEventV1.yaml
+          type: object
+          title: RegistrationInitiatedEventV1
+          description: Audit event published when a user registration is initiated.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address of the user whose registration was initiated.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the registration was initiated.
+        examples:
+          - name: RegistrationInitiatedExample
+            summary: >-
+              Alice initiates the registration process with username alice and
+              email address alice@wonderland.com.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:30:00Z'
+      verificationEmailSentMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/VerificationEmailSentMessageV1.yaml
+        name: VerificationEmailSentV1
+        title: Verification Email Sent
+        summary: >-
+          Audit event published when a verification email has been sent
+          successfully.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/VerificationEmailSentEventV1.yaml
+          type: object
+          title: VerificationEmailSentEventV1
+          description: >-
+            Audit event published when a verification email has been sent
+            successfully.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address to which the verification email was sent.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the verification email was sent.
+        examples:
+          - name: VerificationEmailSentExample
+            summary: >-
+              A verification email is sent to alice@wonderland.com during
+              alice's initial registration.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:30:05Z'
+      verificationEmailResendRequestedMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/VerificationEmailResendRequestedMessageV1.yaml
+        name: VerificationEmailResendRequestedV1
+        title: Verification Email Resend Requested
+        summary: >-
+          Audit event published when a user requests a verification email to be
+          resent.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/VerificationEmailResendRequestedEventV1.yaml
+          type: object
+          title: VerificationEmailResendRequestedEventV1
+          description: >-
+            Audit event published when a user requests a verification email to
+            be resent.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: VerificationEmailResendRequestedExample
+            summary: >-
+              alice requests the verification email be resent to
+              alice@wonderland.com.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:32:00Z'
+      newVerificationEmailSentMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/NewVerificationEmailSentMessageV1.yaml
+        name: NewVerificationEmailSentV1
+        title: New Verification Email Sent
+        summary: >-
+          Audit event published when a new verification email has been sent to a
+          user.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/NewVerificationEmailSentEventV1.yaml
+          type: object
+          title: NewVerificationEmailSentEventV1
+          description: >-
+            Audit event published when a new verification email has been sent to
+            a user.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: NewVerificationEmailSentExample
+            summary: >-
+              A new verification email is sent to alice@wonderland.com after
+              alice requested a resend.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:32:05Z'
+      userAccountCreatedMessage:
+        x-fragment-path: asyncapi/messages/apionly/useraccount/UserAccountCreatedMessageV1.yaml
+        name: UserAccountCreatedV1
+        title: User Account Created
+        summary: Audit event published when a user account is created.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/UserAccountCreatedEventV1.yaml
+          type: object
+          title: UserAccountCreatedEventV1
+          description: Audit event published when a user account is created.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: UserAccountCreatedExample
+            summary: >-
+              A user account is created for alice after she completes the
+              registration process.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:35:00Z'
+      confirmationEmailSentMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/ConfirmationEmailSentMessageV1.yaml
+        name: ConfirmationEmailSentV1
+        title: Confirmation Email Sent
+        summary: Audit event published when a confirmation email has been sent.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/ConfirmationEmailSentEventV1.yaml
+          type: object
+          title: ConfirmationEmailSentEventV1
+          description: Audit event published when a confirmation email has been sent.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: ConfirmationEmailSentExample
+            summary: >-
+              A confirmation email is sent to alice@wonderland.com after her
+              account is created.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:35:05Z'
+      personDeletedMessage:
+        x-fragment-path: asyncapi/messages/apionly/useraccount/PersonDeletedMessageV1.yaml
+        name: PersonDeletedV1
+        title: Person Deleted
+        summary: Audit event published when a person's registration data is deleted.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/PersonDeletedEventV1.yaml
+          type: object
+          title: PersonDeletedEventV1
+          description: Audit event published when a person's registration data is deleted.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: PersonDeletedExample
+            summary: >-
+              alice's in-progress registration data is deleted once her user
+              account is created.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:35:10Z'
+      registrationAttemptedWithExpiredLinkMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithExpiredLinkMessageV1.yaml
+        name: RegistrationAttemptedWithExpiredLinkV1
+        title: Registration Attempted With Expired Link
+        summary: >-
+          Audit event published when a registration is attempted using an
+          expired verification link.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithExpiredLinkEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithExpiredLinkEventV1
+          description: >-
+            Audit event published when a registration is attempted using an
+            expired verification link.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: RegistrationAttemptedWithExpiredLinkExample
+            summary: alice clicks her verification link after it has expired.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:37:00Z'
+      registrationAttemptedWithExpiredRegistrationProcessMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithExpiredRegistrationProcessMessageV1.yaml
+        name: RegistrationAttemptedWithExpiredRegistrationProcessV1
+        title: Registration Attempted With Expired Registration Process
+        summary: >-
+          Audit event published when a registration is attempted after the
+          registration process has expired.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithExpiredRegistrationProcessEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithExpiredRegistrationProcessEventV1
+          description: >-
+            Audit event published when a registration is attempted after the
+            registration process has expired.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: RegistrationAttemptedWithExpiredRegistrationProcessExample
+            summary: >-
+              alice tries to complete her registration after the registration
+              process itself has expired.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:38:00Z'
+      registrationAttemptedWithReservedUsernameMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithReservedUsernameMessageV1.yaml
+        name: RegistrationAttemptedWithReservedUsernameV1
+        title: Registration Attempted With Reserved Username
+        summary: >-
+          Audit event published when a registration is attempted using a
+          reserved username.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithReservedUsernameEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithReservedUsernameEventV1
+          description: >-
+            Audit event published when a registration is attempted using a
+            reserved username.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: RegistrationAttemptedWithReservedUsernameExample
+            summary: >-
+              A registration is attempted using the username alice while it is
+              reserved by an existing person record.
+            payload:
+              username: alice
+              emailAddress: alice@wonderland.com
+              occurredAt: '2026-01-15T10:39:00Z'
+      registrationAttemptedWithTakenUsernameMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithTakenUsernameMessageV1.yaml
+        name: RegistrationAttemptedWithTakenUsernameV1
+        title: Registration Attempted With Taken Username
+        summary: >-
+          Audit event published when a registration is attempted using a
+          username that is already taken.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithTakenUsernameEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithTakenUsernameEventV1
+          description: >-
+            Audit event published when a registration is attempted using a
+            username that is already taken.
+          required:
+            - username
+            - emailAddress
+            - occurredAt
+          properties:
+            username:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            emailAddress:
+              type: string
+              format: email
+              description: The email address associated with the account.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the event occurred.
+        examples:
+          - name: RegistrationAttemptedWithTakenUsernameExample
+            summary: >-
+              sylvia attempts to register using the already-taken username
+              alice; the event carries the attempted username alongside sylvia's
+              own email address, exactly as RegisterUserService constructs it
+              from the request -- not a self-consistent identity.
+            payload:
+              username: alice
+              emailAddress: sylvia@wonderland.com
+              occurredAt: '2026-01-15T10:40:00Z'
+      registrationAttemptedWithInvalidLinkMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithInvalidLinkMessageV1.yaml
+        name: RegistrationAttemptedWithInvalidLinkV1
+        title: Registration Attempted With Invalid Link
+        summary: >-
+          Audit event published when a registration is attempted using an
+          invalid verification link.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithInvalidLinkEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithInvalidLinkEventV1
+          description: >-
+            Audit event published when a registration is attempted using an
+            invalid verification link.
+          required:
+            - verificationLink
+            - occurredAt
+          properties:
+            verificationLink:
+              type: string
+              format: uri
+              description: The verification link that was presented.
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the attempt occurred.
+        examples:
+          - name: RegistrationAttemptedWithInvalidLinkExample
+            summary: >-
+              alice clicks her original verification link after already
+              requesting a resend, so it's no longer valid.
+            payload:
+              verificationLink: https://apionly.example.com/verify/alices-original-link
+              occurredAt: '2026-01-15T10:36:00Z'
+      registrationAttemptedWithInitiatedEmailAddressMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithInitiatedEmailAddressMessageV1.yaml
+        name: RegistrationAttemptedWithInitiatedEmailAddressV1
+        title: Registration Attempted With Initiated Email Address
+        summary: >-
+          Audit event published when a registration is attempted using an email
+          address for which a registration is already in progress.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithInitiatedEmailAddressEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithInitiatedEmailAddressEventV1
+          description: >-
+            Audit event published when a registration is attempted using an
+            email address for which a registration is already in progress.
+          required:
+            - emailAddress
+            - attemptedUsername
+            - occurredAt
+          properties:
+            emailAddress:
+              type: string
+              format: email
+              description: The email address the attempted registration used.
+            attemptedUsername:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the attempt occurred.
+        examples:
+          - name: RegistrationAttemptedWithInitiatedEmailAddressExample
+            summary: >-
+              sylvia attempts to register using alice@wonderland.com, for which
+              alice's registration is already in progress.
+            payload:
+              emailAddress: alice@wonderland.com
+              attemptedUsername: sylvia
+              occurredAt: '2026-01-15T10:41:00Z'
+      registrationAttemptedWithTakenEmailAddressMessage:
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithTakenEmailAddressMessageV1.yaml
+        name: RegistrationAttemptedWithTakenEmailAddressV1
+        title: Registration Attempted With Taken Email Address
+        summary: >-
+          Audit event published when a registration is attempted using an email
+          address that is already registered.
+        contentType: application/json
+        payload:
+          x-fragment-path: >-
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithTakenEmailAddressEventV1.yaml
+          type: object
+          title: RegistrationAttemptedWithTakenEmailAddressEventV1
+          description: >-
+            Audit event published when a registration is attempted using an
+            email address that is already registered.
+          required:
+            - emailAddress
+            - attemptedUsername
+            - occurredAt
+          properties:
+            emailAddress:
+              type: string
+              format: email
+              description: The email address the attempted registration used.
+            attemptedUsername:
+              x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml
+              type: string
+              description: >
+                The unique username of the account.
+
+                Must be 5-12 characters, start with a lowercase letter,
+
+                and contain only lowercase alphanumerics, dashes, or
+                underscores.
+              minLength: 5
+              maxLength: 12
+              pattern: ^[a-z][a-z0-9_-]*$
+              examples:
+                - alice_1
+                - user-name
+            occurredAt:
+              type: string
+              format: date-time
+              description: The ISO-8601 timestamp at which the attempt occurred.
+        examples:
+          - name: RegistrationAttemptedWithTakenEmailAddressExample
+            summary: >-
+              sylvia attempts to register using alice@wonderland.com, an email
+              address already registered to alice.
+            payload:
+              emailAddress: alice@wonderland.com
+              attemptedUsername: sylvia
+              occurredAt: '2026-01-15T10:42:00Z'
+operations:
+  publishRegistrationInitiated:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationInitiated event when a user registration is
+      initiated.
+    messages:
+      - $ref: '#/channels/auditV1/messages/registrationInitiatedMessage'
+  publishVerificationEmailSent:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a VerificationEmailSent event when a verification email has been
+      sent successfully.
+    messages:
+      - $ref: '#/channels/auditV1/messages/verificationEmailSentMessage'
+  publishVerificationEmailResendRequested:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a VerificationEmailResendRequested event when a user requests a
+      verification email to be resent.
+    messages:
+      - $ref: '#/channels/auditV1/messages/verificationEmailResendRequestedMessage'
+  publishNewVerificationEmailSent:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a NewVerificationEmailSent event when a new verification email has
+      been sent to a user.
+    messages:
+      - $ref: '#/channels/auditV1/messages/newVerificationEmailSentMessage'
+  publishUserAccountCreated:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: Publish a UserAccountCreated event when a user account is created.
+    messages:
+      - $ref: '#/channels/auditV1/messages/userAccountCreatedMessage'
+  publishConfirmationEmailSent:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a ConfirmationEmailSent event when a confirmation email has been
+      sent.
+    messages:
+      - $ref: '#/channels/auditV1/messages/confirmationEmailSentMessage'
+  publishPersonDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a PersonDeleted event when a person's registration data is
+      deleted.
+    messages:
+      - $ref: '#/channels/auditV1/messages/personDeletedMessage'
+  publishRegistrationAttemptedWithExpiredLink:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithExpiredLink event when a registration
+      is attempted using an expired verification link.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithExpiredLinkMessage
+  publishRegistrationAttemptedWithExpiredRegistrationProcess:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithExpiredRegistrationProcess event when a
+      registration is attempted after the registration process has expired.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithExpiredRegistrationProcessMessage
+  publishRegistrationAttemptedWithReservedUsername:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithReservedUsername event when a
+      registration is attempted using a reserved username.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithReservedUsernameMessage
+  publishRegistrationAttemptedWithTakenUsername:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithTakenUsername event when a registration
+      is attempted using a username that is already taken.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithTakenUsernameMessage
+  publishRegistrationAttemptedWithInvalidLink:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithInvalidLink event when a registration
+      is attempted using an invalid verification link.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithInvalidLinkMessage
+  publishRegistrationAttemptedWithInitiatedEmailAddress:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithInitiatedEmailAddress event when a
+      registration is attempted using an email address for which a registration
+      is already in progress.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithInitiatedEmailAddressMessage
+  publishRegistrationAttemptedWithTakenEmailAddress:
+    action: send
+    channel:
+      $ref: '#/channels/auditV1'
+    summary: >-
+      Publish a RegistrationAttemptedWithTakenEmailAddress event when a
+      registration is attempted using an email address that is already
+      registered.
+    messages:
+      - $ref: >-
+          #/channels/auditV1/messages/registrationAttemptedWithTakenEmailAddressMessage

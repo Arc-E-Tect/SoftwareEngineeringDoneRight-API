@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * T12.10: the valid values of the five reference-implementation contracts are those
+ * T12.10: the valid values of the reference API's contracts are those
  * recorded in {@code fixtures/valid-values/golden/<contract>.json}, so that any change
  * to value generation shows up as a reviewable diff. T12.1 shows each of them valid.
  * {@code ./gradlew recordValidValuesGolden} re-records them.

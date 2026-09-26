@@ -1,0 +1,30 @@
+title: Registration Process Expired Problem
+description: The registration process has expired.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.apionly.arc-e-tect.com/problems/registration-process-expired
+        examples:
+          - https://api.apionly.arc-e-tect.com/problems/registration-process-expired
+      title:
+        type: string
+        const: Registration Process Expired
+        examples:
+          - Registration Process Expired
+      status:
+        type: integer
+        const: 422
+        examples:
+          - 422
+      detail:
+        type: string
+        examples:
+          - The registration process has expired. Start a new registration process.

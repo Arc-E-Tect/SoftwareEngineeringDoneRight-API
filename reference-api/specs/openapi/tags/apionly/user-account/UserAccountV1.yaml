@@ -1,0 +1,4 @@
+name: UserAccount
+description:
+  Operations related to user account management, including registration, lookup, and lifecycle events.
+

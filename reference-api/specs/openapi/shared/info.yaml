@@ -1,0 +1,65 @@
+title: 'API-Only - Reference API Specification'
+version: '0.0.0'
+contact:
+  name: Arc-E-Tect
+  email: sedr@arc-e-tect.com
+  url: https://discord.gg/HcH7YzTSGH
+license:
+  name: MIT
+  url: https://opensource.org/licenses/MIT
+x-logo:
+  url: 'assets/apionly/images/api_only.png'
+  altText: 'API-Only logo'
+description: |
+  # 📙  Introduction
+
+  ###  Background
+
+  The reference application is designed as an API-only application.
+
+
+  API-Only is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.
+
+
+  The basic idea behind API-Only is to have an application that uses the [Six Degrees of Separation](https://en.wikipedia.org/wiki/Six_degrees_of_separation) idea to contact everybody worldwide.
+  This idea assumes that every person knows 44 other people, and those 44 persons know 43 other than you, and so on, eventually covering the world population.
+
+
+  Another study showed that, on average, people in the US know 611 persons by name [The limits of our personal experience and the value of statistics - Our World in Data](https://ourworldindata.org/limits-personal-experience).
+  Of the 8 billion persons that make up the world population, you know 600 persons by name.
+
+  That is, assuming the study I referred to is correct and knowing that you must know at least 44 people to be connected to the remaining 8 billion minus 44 people at the sixth degree.
+
+  Assuming that you know all your friends and family by name but that not all 600 persons you know by name are family or even friends, but possibly friends of friends or just merely acquaintances, it is useful to know your relationship with a person when you meet this person.
+  To determine whether a person is a friend or family, somebody you know by name or just somebody, we apply a standard personality psychology metric: [Three Levels of Knowing a Person | Psychology Today](https://www.psychologytoday.com/us/blog/the-personality-analyst/201011/three-levels-knowing-person).
+
+  ###  API Reference
+
+  The API-Only APIs are organized around [REST](https://en.wikipedia.org/wiki/REST).
+  The API follows the [OpenAPI](https://swagger.io/specification/v3/) specification.
+  The APIs accept request bodies in JSON format and returns JSON-encoded responses.
+  We use standard HTTP response codes, and verbs.
+
+  # 📙  Rate Limits
+
+  Clients that send many requests in quick succession might see error responses that show up as status code 429.
+
+  ### Handling rate limits gracefully
+
+  A basic technique for integrations to gracefully handle limiting is to watch for 429 status codes and build in a retry mechanism.
+  The retry mechanism should follow an exponential backoff schedule to reduce request volume when necessary.
+  We also recommend building some randomness into the backoff schedule to avoid [thundering herd](https://encore.dev/blog/thundering-herd-problem) effect.
+
+  # 📙   Versioning
+
+  The current API version, v1, is a URI path prefix that precedes every API endpoint.
+
+  # 📙   Pagination
+
+  {{pagination}}
+
+  # 📙  Status Codes and Error Messages
+
+  {{statusCodes}}
+
+  {{errorCodes}}

@@ -1,0 +1,49 @@
+get:
+  security: []
+  tags:
+    - UserAccount
+  operationId: CompleteUserRegistration
+  summary: >
+    Complete user registration
+  description:
+    Completes the registration process for a new API-Only user account.
+    The caller provides the verification link received by email; API-Only validates the link,
+    creates the user account, and sends a confirmation email.
+    The verification link is a one-time token embedded in the verification email.
+  parameters:
+    - name: verificationLink
+      in: path
+      required: true
+      description: The one-time verification token from the verification email.
+      schema:
+        type: string
+        examples:
+          - abc123token
+  responses:
+    '200':
+      description:
+        Registration completed. The user account has been created.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../../components/apionly/user-account/schemas/UserAccountV1.yaml'
+    '410':
+      description: The verification link has been superseded and is no longer valid. A new verification email has been sent; use the new link to complete registration.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/VerificationLinkSupersededProblemV1.yaml'
+    '422':
+      description: The verification link has expired, or the registration process has expired.
+      content:
+        application/problem+json:
+          schema:
+            oneOf:
+              - $ref: '../../../../../components/common/responses/errors/VerificationLinkExpiredProblemV1.yaml'
+              - $ref: '../../../../../components/common/responses/errors/RegistrationProcessExpiredProblemV1.yaml'
+    '500':
+      description: An unexpected server-side error occurred.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/InternalServerProblemV1.yaml'

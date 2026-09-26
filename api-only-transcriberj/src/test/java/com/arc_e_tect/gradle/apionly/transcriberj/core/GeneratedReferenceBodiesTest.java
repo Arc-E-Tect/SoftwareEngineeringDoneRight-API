@@ -1,30 +1,18 @@
 package com.arc_e_tect.gradle.apionly.transcriberj.core;
 
-import com.arc_e_tect.gradle.apionly.transcriberj.fixtures.BodyFixtures;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 3's acceptance: the classes generated from the user-account contract write,
- * for every recorded input, the body the hand-written classes write.
- *
- * <p>Byte for byte, except UserV1, which is held to JSON equality by decision. Two
- * signatures differ from the hand-written ones by decision, and are called through
- * the adapters below: InvalidRequestProblemV1's list of errors, and
- * ProblemDetailsV1's optional members.
+ * The classes generated from the reference API's user-account contract: which there are,
+ * which are public, and what their constants hold.
  */
 class GeneratedReferenceBodiesTest {
 
@@ -33,50 +21,15 @@ class GeneratedReferenceBodiesTest {
 
     static GeneratedSources generated;
 
-    private static final ObjectMapper JSON = new ObjectMapper();
-
     @BeforeAll
     static void generate() {
         generated = GeneratedSources.generate(
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
                 GeneratedSources.settings("user-account"), List.of());
     }
 
-    @TestFactory
-    Stream<DynamicTest> everyRecordedBodyIsWrittenByTheGeneratedClasses() {
-        return BodyFixtures.cases(BodyFixtures.read()).stream().map(c -> DynamicTest.dynamicTest(c.id(), () -> {
-            String actual = replay(c);
-            if (c.comparison().equals("json-equal")) {
-                assertThat(JSON.readTree(actual)).isEqualTo(JSON.readTree(c.expected()));
-                assertThat(actual).endsWith("\n");
-            } else {
-                assertThat(actual).isEqualTo(c.expected());
-            }
-        }));
-    }
-
-    private static String replay(BodyFixtures.Case c) throws Throwable {
-        JsonNode args = c.args();
-        if (c.className().equals("InvalidRequestProblemV1") && args.size() == 3) {
-            List<String> errors = new ArrayList<>();
-            for (JsonNode message : args.get(1)) {
-                errors.add((String) generated.call("ErrorDetailV1", "body",
-                        new Class<?>[]{String.class, String.class}, message.textValue(), args.get(2).textValue()));
-            }
-            return (String) generated.call("InvalidRequestProblemV1", "body",
-                    new Class<?>[]{String.class, String.class, List.class}, args.get(0).textValue(), null, errors);
-        }
-        if (c.className().equals("ProblemDetailsV1")) {
-            return (String) generated.call("ProblemDetailsV1", "body",
-                    new Class<?>[]{String.class, String.class, Integer.class, String.class, String.class},
-                    args.get(0).textValue(), args.get(1).textValue(), args.get(2).intValue(),
-                    args.get(3).textValue(), null);
-        }
-        return c.replay(GeneratedSources.PACKAGE, generated.compile());
-    }
-
     @Test
-    void theGeneratedClassesAreTheHandWrittenOnesPlusTheInlineResponsesAndSupport() {
+    void theGeneratedClassesAreTheComponentsTheOperationsTheInlineResponsesAndSupport() {
         assertThat(generated.classNames()).containsExactly(
                 "CompleteUserRegistrationInvalidRequests", "CompleteUserRegistrationOperation", "ContractField",
                 "ContractJson", "ContractManifest", "ContractRequest",
@@ -123,7 +76,7 @@ class GeneratedReferenceBodiesTest {
     }
 
     @Test
-    void fieldsMatchTheHandWrittenDescriptorsInPathTypeAndOptionality() throws Throwable {
+    void fieldsHaveThePathTypeAndOptionalityTheContractGivesThem() throws Throwable {
         List<?> fields = (List<?>) generated.call("InvalidRequestProblemV1", "fields",
                 new Class<?>[]{String.class}, "");
         assertThat(fields).extracting(Object::toString).containsExactly(

@@ -24,7 +24,7 @@ class ReferenceContractsTest {
     private static final String ROOT_DEPENDENCIES =
             "/paths/~1v1/get/responses/200/content/application~1json/schema/properties/dependencies";
 
-    private static final Path CONTRACTS = Path.of(System.getProperty("transcriberj.fixtures"), "contracts");
+    private static final Path CONTRACTS = Path.of(System.getProperty("transcriberj.referenceApi"));
 
     private static ContractModel model(String target) throws IOException {
         return ContractParser.parse(CONTRACTS.resolve(target).resolve("openapi.yaml"));
@@ -43,7 +43,7 @@ class ReferenceContractsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"auth-server", "relationship", "social-network", "system-admin", "user-account"})
+    @ValueSource(strings = {"system-admin", "user-account"})
     void everyComponentAndOperationRoundTrips(String target) throws IOException {
         ContractModel model = model(target);
         Map<String, Object> document = raw(target);
@@ -61,7 +61,7 @@ class ReferenceContractsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"auth-server", "relationship", "social-network", "system-admin", "user-account"})
+    @ValueSource(strings = {"system-admin", "user-account"})
     void everyComponentKnowsItsFragmentAndHash(String target) throws IOException {
         ContractModel model = model(target);
         Map<String, Object> schemas = map(map(raw(target).get("components")).get("schemas"));
@@ -171,7 +171,7 @@ class ReferenceContractsTest {
                         + "/content/application~1problem+json/schema",
                         Construct.ONE_OF_REF_BRANCHES, Treatment.REPRESENTED,
                         "oneOf: VerificationLinkExpiredProblemV1, RegistrationProcessExpiredProblemV1"));
-        assertThat(model("auth-server").findings()).extracting(Finding::construct)
+        assertThat(model("system-admin").findings()).extracting(Finding::construct)
                 .containsExactlyInAnyOrder(Construct.ADDITIONAL_PROPERTIES, Construct.ADDITIONAL_PROPERTIES,
                         Construct.MULTIPLE_TYPES, Construct.MULTIPLE_TYPES);
     }

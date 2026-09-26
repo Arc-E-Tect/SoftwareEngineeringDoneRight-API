@@ -371,7 +371,7 @@ A `oneOf` or `anyOf` whose branches are all references gets no class: each branc
 |Named after its `operationId`, followed by `Operation`: `publishRegistrationInitiated` is `PublishRegistrationInitiatedOperation`.
 |===
 
-Two fragments with the same file name are told apart by the nearest directory in which their paths differ: `iff/user-account/schemas/UserV1.yaml` and `iff/other/schemas/UserV1.yaml` become `UserAccountUserV1` and `OtherUserV1`.
+Two fragments with the same file name are told apart by the nearest directory in which their paths differ: `apionly/user-account/schemas/UserV1.yaml` and `apionly/other/schemas/UserV1.yaml` become `UserAccountUserV1` and `OtherUserV1`.
 Only colliding classes are renamed, so adding an unrelated fragment never renames an existing class.
 Names that still collide stop generation.
 
@@ -1076,27 +1076,19 @@ link:../docs/guides/hand-written-contract-tests/overview.adoc[The guide to hand-
 ----
 cd api-only-transcriberj
 ./gradlew check
-
-# Also compare the Phase 0 copies of the reference implementation's hand-written
-# classes with that repository, at the commit their SOURCE.properties names.
-./gradlew check -PreferenceRepository=<path to SoftwareEngineeringDoneRight-Code>
 ----
 
 One build, one artifact: the plugin, the built-in core emitter, and the contract model and emitter interface emitters compile against (the `model` and `spi` packages) are released together, at one version.
 It is published to the Gradle Plugin Portal as `com.arc-e-tect.api-only-transcriberj`, with the artifact `com.arc-e-tect:api-only-transcriberj`, by `.github/workflows/api-only-transcriberj-release.yml`, under the `api-only-transcriberj-v*` tags.
 `./gradlew publishToMavenLocal` puts it in `mavenLocal` for use before a release.
 
-The tests read their fixtures from `src/test/resources/fixtures/`: the reference library's published contracts, built by this repository's Publisher -- of which only `user-account` has an AsyncAPI document -- and the Publisher's `init` scaffold, which generates an OpenAPI document only, no AsyncAPI one.
-Each directory's `SOURCE.properties` says how to rebuild it.
-
-`src/handwritten` holds the reference implementation's hand-written `testSchemaCommon` classes.
-The generated classes must write, for every input recorded in `src/test/resources/fixtures/handwritten/bodies.json`, the body the hand-written ones write: byte for byte, except `UserV1`, which is held to JSON equality.
-`./gradlew verifyHandwrittenFixtures` checks the recording itself; the fixtures' own `README.adoc` says which parts are strict and which advisory.
+The tests generate from the contracts of this repository's link:../reference-api/README.adoc[reference API →], `system-admin` and `user-account` -- of which only `user-account` has an AsyncAPI document -- read from `../reference-api/dist`, where its build commits them.
+They also read fixtures of their own from `src/test/resources/fixtures/`: the Publisher's `init` scaffold, which generates an OpenAPI document only, no AsyncAPI one, and whose `SOURCE.properties` says how to rebuild it; and the corpora and golden files below.
 
 `src/test/resources/fixtures/valid-values` holds what valid-value generation is held to: a corpus of contracts written for it, one golden file of valid values per reference contract, and the hash of every source generated before valid values were.
 Its `README.adoc` says what each is for; `./gradlew recordValidValuesGolden` and `./gradlew recordBaselineSources` re-record them, for a deliberate change only.
 
-`src/test/resources/fixtures/invalid-requests` holds what invalid-request derivation is held to: a corpus of contracts written for it, and the golden cases and coverage of the `user-account` contract, which are the tests the reference implementation is run against.
+`src/test/resources/fixtures/invalid-requests` holds what invalid-request derivation is held to: a corpus of contracts written for it, and the golden cases and coverage of the reference API's `user-account` contract, which are the tests an implementation of it is run against.
 Its `README.adoc` says which test covers which requirement; `./gradlew recordInvalidRequestsGolden` re-records the golden file, for a deliberate change only.
 
 The build gates on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.

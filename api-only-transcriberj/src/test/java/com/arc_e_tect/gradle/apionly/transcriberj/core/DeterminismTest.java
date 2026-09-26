@@ -47,7 +47,7 @@ class DeterminismTest {
     void twiceInOneJvmGivesTheSameBytes() {
         Map<String, String> first = generate(directory.resolve("first"));
         Map<String, String> second = generate(directory.resolve("second"));
-        assertThat(first).hasSizeGreaterThan(200);
+        assertThat(first).hasSizeGreaterThan(100);
         assertThat(second).isEqualTo(first);
     }
 

@@ -1,0 +1,127 @@
+# apionly.yaml
+#
+# The single source of truth for what this specification library builds, with
+# this repository's own API-Only Publisher.
+#
+# Adding a target here is all it takes to have it built and distributed.
+
+schemaVersion: 1
+
+# Where the hand-authored fragments live, relative to this file.
+#
+# The two specification types share a root because they share fragments: the
+# AsyncAPI event schemas $ref the OpenAPI `components/common/schemas/UsernameV1.yaml`,
+# so a username is defined once and means the same thing whether it arrives over
+# HTTP or as an event. That makes the two trees one $ref graph, which is why the
+# build stages the whole root rather than each type separately -- staging them
+# apart would break every cross-tree reference.
+sources:
+  root: specs
+  openapi: openapi
+  asyncapi: asyncapi
+
+defaults:
+  openapi:
+    lint: .redocly.lint.yaml
+    outputName: openapi.yaml
+  asyncapi:
+    outputName: asyncapi.yaml
+  placeholders:
+    # A {{token}} with no matching Markdown file fails the build, so a broken
+    # contract cannot come out of a green build.
+    strict: true
+
+# Where the build happens. Nothing under `staging` is hand-authored or committed;
+# it is disposable and gitignored. `dist` is committed: it holds the contracts the
+# tools in this repository are tested against, and CI fails when it is not what
+# building the fragments gives.
+#
+# Each specification type stages its own complete mirror of the source root,
+# under `<staging>/<type>/`. A complete mirror, because the two trees $ref each
+# other and a partial copy would break those references; its own, because
+# otherwise each script would wipe and rebuild the other's staged tree, leaving
+# whatever ran last on disk and making a finished run impossible to inspect.
+build:
+  staging: build/staging
+  # Built documents land here first, named by target. Publishing them to a
+  # channel is a separate step -- see the `channels` block.
+  dist: dist
+
+# What the build does about an operation whose example the toolchain could use.
+# Neither specification requires one. But contract tests generated from an AsyncAPI
+# document -- the TranscriberJ's Microcks emitter, for one -- are built from each
+# message's own `examples`: a message without one cannot be tested at all, so
+# publishing it is a defect here. OpenAPI examples stay at the default, `warn`.
+lint:
+  examples:
+    asyncapi: error
+
+# The bundlers the Publisher drives, pinned, so that the documents this library
+# produces change only when something here does. The Publisher is the one in this
+# repository. README.adoc describes how to upgrade them.
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+  asyncapi: "@asyncapi/cli@6.0.2"
+
+# Where built artifacts are published to.
+#
+# `file` writes each contract as a versioned archive under build/publish, where
+# the API-Only Subscriber can read it: no registry is involved. The Publisher also
+# supports `maven`, `npm`, `nuget` and `github-release` channels.
+channels:
+  file:
+    directory: build/publish
+    # Keep only the version being published: build/publish is a build output,
+    # and an older version is published again from the commit that declares it.
+    clean: true
+
+# One entry per bounded context.
+#
+# A target is whatever gets its own contract document: a microservice, a modular
+# monolith, a backend-for-frontend, or a documentation aggregate. It need not be
+# a deployable, which is why this is not called `services`.
+targets:
+  system-admin:
+    openapi:
+      bundle: bundles/system-admin_openapi_structure.yaml
+  user-account:
+    openapi:
+      bundle: bundles/user-account_openapi_structure.yaml
+    asyncapi:
+      bundle: bundles/user-account_asyncapi_structure.yaml
+
+  # A whole-landscape documentation view, not any one service's contract. An
+  # aggregate is generated, never hand-written, and never published: the
+  # Publisher infers both from `aggregate` alone, and computes where the
+  # generated root lands itself, so neither kind needs a `bundle` here.
+  #
+  # An OpenAPI portfolio can be a table of $refs, because every path body
+  # already lives in a fragment; AsyncAPI operations use document-root
+  # pointers (#/channels/...) that break when moved into one, so a
+  # hand-written async portfolio would have to copy every operation verbatim
+  # and would start rotting immediately. Generating both from their members
+  # means neither can fall behind them.
+  portfolio:
+    openapi:
+      aggregate:
+        - user-account
+      # info-contact and info-license are required by .redocly.lint.yaml; the
+      # generated default has neither, so this landscape view needs its own.
+      info:
+        title: API-Only API (portfolio)
+        version: 0.0.0
+        description: Every API published across the API-Only landscape.
+        contact:
+          name: Arc-E-Tect
+          email: sedr@arc-e-tect.com
+          url: https://discord.gg/HcH7YzTSGH
+        license:
+          name: MIT
+          url: https://opensource.org/licenses/MIT
+    asyncapi:
+      aggregate:
+        - user-account
+      info:
+        title: API-Only Async API (portfolio)
+        version: 0.0.0
+        description: Every event contract published across the API-Only landscape.

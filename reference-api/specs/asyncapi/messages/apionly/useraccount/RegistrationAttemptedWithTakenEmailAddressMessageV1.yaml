@@ -1,0 +1,13 @@
+name: RegistrationAttemptedWithTakenEmailAddressV1
+title: Registration Attempted With Taken Email Address
+summary: Audit event published when a registration is attempted using an email address that is already registered.
+contentType: application/json
+payload:
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationAttemptedWithTakenEmailAddressEventV1.yaml'
+examples:
+  - name: RegistrationAttemptedWithTakenEmailAddressExample
+    summary: sylvia attempts to register using alice@wonderland.com, an email address already registered to alice.
+    payload:
+      emailAddress: alice@wonderland.com
+      attemptedUsername: sylvia
+      occurredAt: '2026-01-15T10:42:00Z'

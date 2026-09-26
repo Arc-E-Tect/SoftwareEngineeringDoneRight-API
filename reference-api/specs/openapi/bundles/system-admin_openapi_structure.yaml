@@ -1,0 +1,12 @@
+openapi: 3.1.1
+info:
+  $ref: '../shared/info.yaml'
+servers:
+  $ref: '../shared/servers.yaml'
+tags:
+  - $ref: '../tags/common/SystemV1.yaml'
+paths:
+  /v1:
+    $ref: '../paths/common/RootV1.yaml'
+  /v1/actuator/health:
+    $ref: '../paths/common/health/HealthV1.yaml'

@@ -1,0 +1,13 @@
+name: NewVerificationEmailSentV1
+title: New Verification Email Sent
+summary: Audit event published when a new verification email has been sent to a user.
+contentType: application/json
+payload:
+  $ref: '../../../components/apionly/useraccount/schemas/NewVerificationEmailSentEventV1.yaml'
+examples:
+  - name: NewVerificationEmailSentExample
+    summary: A new verification email is sent to alice@wonderland.com after alice requested a resend.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:32:05Z'

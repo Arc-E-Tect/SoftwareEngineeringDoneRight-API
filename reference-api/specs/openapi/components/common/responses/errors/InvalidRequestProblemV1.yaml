@@ -1,0 +1,36 @@
+title: Invalid Request Problem
+description: The request body is missing or fails validation.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.apionly.arc-e-tect.com/problems/invalid-request
+        examples:
+          - https://api.apionly.arc-e-tect.com/problems/invalid-request
+      title:
+        type: string
+        const: Invalid Request
+        examples:
+          - Invalid Request
+      status:
+        type: integer
+        const: 400
+        examples:
+          - 400
+      detail:
+        type: string
+        examples:
+          - The registration request is invalid.
+      errors:
+        title: Errors
+        description: The individual validation failures that caused this request to be rejected.
+        type: array
+        items:
+          $ref: ./ErrorDetailV1.yaml

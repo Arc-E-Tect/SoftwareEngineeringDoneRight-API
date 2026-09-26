@@ -1,0 +1,13 @@
+name: ConfirmationEmailSentV1
+title: Confirmation Email Sent
+summary: Audit event published when a confirmation email has been sent.
+contentType: application/json
+payload:
+  $ref: '../../../components/apionly/useraccount/schemas/ConfirmationEmailSentEventV1.yaml'
+examples:
+  - name: ConfirmationEmailSentExample
+    summary: A confirmation email is sent to alice@wonderland.com after her account is created.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:35:05Z'

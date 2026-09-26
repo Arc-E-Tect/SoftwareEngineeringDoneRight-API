@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("T13.12 Settings plumbing")
 class InvalidRequestSettingsTest {
 
-    private static final Path USER_ACCOUNT = GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml");
+    private static final Path USER_ACCOUNT = GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml");
 
     @TempDir
     Path directory;

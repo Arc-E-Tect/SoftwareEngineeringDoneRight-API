@@ -1,0 +1,39 @@
+get:
+  security: []
+  tags:
+    - UserAccount
+  operationId: GetUser
+  summary: >
+    Check whether a user exists
+  description:
+    Looks up a user account by username.
+    Returns the user's basic profile when found, or 404 when no account with that username exists.
+    This operation is used as a precondition check before initiating registration.
+  parameters:
+    - name: username
+      in: path
+      required: true
+      description: The username to look up.
+      schema:
+        $ref: '../../../../components/common/schemas/UsernameV1.yaml'
+  responses:
+    '200':
+      description:
+        A user account with the given username exists.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../components/apionly/user-account/schemas/UserV1.yaml'
+    '404':
+      description:
+        No user account with the given username exists.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../components/common/responses/errors/UserNotFoundProblemV1.yaml'
+    '500':
+      description: An unexpected server-side error occurred.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../components/common/responses/errors/InternalServerProblemV1.yaml'

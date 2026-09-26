@@ -1,0 +1,18 @@
+type: object
+title: RegistrationAttemptedWithInitiatedEmailAddressEventV1
+description: Audit event published when a registration is attempted using an email address for which a registration is already in progress.
+required:
+  - emailAddress
+  - attemptedUsername
+  - occurredAt
+properties:
+  emailAddress:
+    type: string
+    format: email
+    description: The email address the attempted registration used.
+  attemptedUsername:
+    $ref: '../../../../../openapi/components/common/schemas/UsernameV1.yaml'
+  occurredAt:
+    type: string
+    format: date-time
+    description: The ISO-8601 timestamp at which the attempt occurred.

@@ -1,0 +1,15 @@
+type: object
+title: RegistrationAttemptedWithInvalidLinkEventV1
+description: Audit event published when a registration is attempted using an invalid verification link.
+required:
+  - verificationLink
+  - occurredAt
+properties:
+  verificationLink:
+    type: string
+    format: uri
+    description: The verification link that was presented.
+  occurredAt:
+    type: string
+    format: date-time
+    description: The ISO-8601 timestamp at which the attempt occurred.

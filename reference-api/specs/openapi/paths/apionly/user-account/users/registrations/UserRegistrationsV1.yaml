@@ -1,0 +1,50 @@
+post:
+  security: []
+  tags:
+    - UserAccount
+  operationId: InitiateUserRegistration
+  summary: >
+    Initiate user registration
+  description:
+    Starts the registration process for a new API-Only user account.
+    The caller provides an email address; API-Only sends a verification email containing a one-time
+    verification link to that address.
+    The account is not active until the user follows the link and confirms ownership of the address.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../../../../components/apionly/user-account/schemas/UserRegistrationRequestV1.yaml'
+  responses:
+    '202':
+      description:
+        Registration initiated. A verification email has been dispatched to the provided address.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../../components/apionly/user-account/schemas/UserRegistrationResponseV1.yaml'
+    '400':
+      description: The request body is missing or contains an invalid username or email address.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/InvalidRequestProblemV1.yaml'
+    '409':
+      description: A pending or active user account with the given username already exists.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/UsernameAlreadyRegisteredProblemV1.yaml'
+    '422':
+      description: A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/RegisteredRequestCannotBeProcessedProblemV1.yaml'
+    '500':
+      description: An unexpected server-side error occurred.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/InternalServerProblemV1.yaml'

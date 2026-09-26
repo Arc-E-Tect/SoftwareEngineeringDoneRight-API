@@ -1,0 +1,13 @@
+name: PersonDeletedV1
+title: Person Deleted
+summary: Audit event published when a person's registration data is deleted.
+contentType: application/json
+payload:
+  $ref: '../../../components/apionly/useraccount/schemas/PersonDeletedEventV1.yaml'
+examples:
+  - name: PersonDeletedExample
+    summary: alice's in-progress registration data is deleted once her user account is created.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:35:10Z'

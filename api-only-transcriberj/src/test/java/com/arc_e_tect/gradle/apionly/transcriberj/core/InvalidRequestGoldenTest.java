@@ -11,9 +11,9 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * T13.14: the cases of the reference implementation's user-account contract, and the
- * coverage of its constraints, are exactly the committed golden file: the tests the real
- * application will be run against, reviewed as a diff when they change.
+ * T13.14: the cases of the reference API's user-account contract, and the coverage of
+ * its constraints, are exactly the committed golden file: the tests an implementation of
+ * that contract is run against, reviewed as a diff when they change.
  */
 @DisplayName("T13.14 The reference contract, as a golden file")
 class InvalidRequestGoldenTest {

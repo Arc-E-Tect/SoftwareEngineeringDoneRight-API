@@ -40,8 +40,8 @@ class CoreEmitterTest {
     @Test
     void fragmentsSharingAFileNameAreToldApartByTheirNearestDifferingDirectory() {
         GeneratedSources g = generate(contract("{}", "schemas:\n" + (
-                schema("UserV1", "openapi/components/iff/user-account/schemas/UserV1.yaml", "type: object")
-                        + schema("UserV1-2", "openapi/components/iff/other/schemas/UserV1.yaml", "type: object")
+                schema("UserV1", "openapi/components/apionly/user-account/schemas/UserV1.yaml", "type: object")
+                        + schema("UserV1-2", "openapi/components/apionly/other/schemas/UserV1.yaml", "type: object")
                         + schema("Deep", "openapi/a/b/UserV1.yaml", "type: object")
                         + schema("Plain", "openapi/components/Plain.yaml", "type: string")).indent(2)));
 
@@ -601,7 +601,7 @@ class CoreEmitterTest {
 
     @Test
     void theRunRefusesWhatItCannotGenerateFrom() throws Exception {
-        Path contract = GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml");
+        Path contract = GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml");
         Path out = directory.resolve("out");
         Path resources = directory.resolve("resources");
         assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
@@ -633,7 +633,7 @@ class CoreEmitterTest {
     @Test
     void anEmitterRunsAfterTheCoreOverTheSameNamesAndReportsUnderItsOwnId() throws Throwable {
         GeneratedSources g = GeneratedSources.generate(
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
                 GeneratedSources.settings("user-account"), List.of(new TestEmitter()));
 
         Class<?> counter = Class.forName(GeneratedSources.PACKAGE + ".counting.UserV1Count", true, g.compile());

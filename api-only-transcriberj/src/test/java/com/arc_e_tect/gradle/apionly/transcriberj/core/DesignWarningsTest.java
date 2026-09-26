@@ -105,7 +105,7 @@ class DesignWarningsTest {
     @Test
     void theReferenceContractHasNothingToWarnAbout() {
         GeneratedSources g = GeneratedSources.generate(
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
                 GeneratedSources.settings("user-account"), List.of());
         assertThat(g.report.warnings()).isEmpty();
     }

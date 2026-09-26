@@ -14,9 +14,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /** Both of a contract's documents, read into one model. */
 class AsyncContractParserTest {
 
-    private static final Path FIXTURES = Path.of(System.getProperty("transcriberj.fixtures"));
-    private static final Path OPENAPI = FIXTURES.resolve("contracts/user-account/openapi.yaml");
-    private static final Path ASYNCAPI = FIXTURES.resolve("contracts/user-account/asyncapi.yaml");
+    private static final Path CONTRACTS = Path.of(System.getProperty("transcriberj.referenceApi"));
+    private static final Path OPENAPI = CONTRACTS.resolve("user-account/openapi.yaml");
+    private static final Path ASYNCAPI = CONTRACTS.resolve("user-account/asyncapi.yaml");
 
     private static ContractModel userAccount() throws IOException {
         return ContractParser.parse(OPENAPI, ASYNCAPI);
@@ -36,7 +36,7 @@ class AsyncContractParserTest {
     void theAsyncapiDocumentsOwnTitleIsCarriedSeparatelyFromTheOpenapiOne() throws IOException {
         ContractModel model = userAccount();
 
-        assertThat(model.asyncTitle()).isEqualTo("IFF Async API");
+        assertThat(model.asyncTitle()).isEqualTo("API-Only Async API");
         assertThat(model.title()).isNotEqualTo(model.asyncTitle());
         assertThat(ContractParser.parse(OPENAPI, null).asyncTitle()).isNull();
     }
@@ -47,11 +47,11 @@ class AsyncContractParserTest {
 
         assertThat(model.channels()).singleElement().satisfies(channel -> {
             assertThat(channel.key()).isEqualTo("auditV1");
-            assertThat(channel.address()).isEqualTo("iff.useraccount.audit.v1");
+            assertThat(channel.address()).isEqualTo("apionly.useraccount.audit.v1");
             assertThat(channel.description()).isNotBlank();
             assertThat(channel.location()).isEqualTo("/channels/auditV1");
             assertThat(channel.provenance().fragmentPath())
-                    .isEqualTo("asyncapi/channels/iff/useraccount/AuditV1.yaml");
+                    .isEqualTo("asyncapi/channels/apionly/useraccount/AuditV1.yaml");
             assertThat(channel.messages()).hasSize(14);
         });
     }
@@ -70,7 +70,7 @@ class AsyncContractParserTest {
                     assertThat(message.name()).isEqualTo("RegistrationInitiatedV1");
                     assertThat(message.title()).isEqualTo("Registration Initiated");
                     assertThat(message.payload().provenance().fragmentPath())
-                            .isEqualTo("asyncapi/components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml");
+                            .isEqualTo("asyncapi/components/apionly/useraccount/schemas/RegistrationInitiatedEventV1.yaml");
                     assertThat(message.payload().location())
                             .isEqualTo("/channels/auditV1/messages/registrationInitiatedMessage/payload");
                 });

@@ -1,0 +1,30 @@
+title: Registration request cannot be processed
+description: A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed
+        examples:
+          - https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed
+      title:
+        type: string
+        const: Registration Request Cannot Be Processed
+        examples:
+          - Registration Request Cannot Be Processed
+      status:
+        type: integer
+        const: 422
+        examples:
+          - 422
+      detail:
+        type: string
+        examples:
+          - A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.

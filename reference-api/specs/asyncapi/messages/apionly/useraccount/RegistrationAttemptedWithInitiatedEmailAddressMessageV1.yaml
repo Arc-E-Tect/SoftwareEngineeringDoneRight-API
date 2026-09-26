@@ -1,0 +1,13 @@
+name: RegistrationAttemptedWithInitiatedEmailAddressV1
+title: Registration Attempted With Initiated Email Address
+summary: Audit event published when a registration is attempted using an email address for which a registration is already in progress.
+contentType: application/json
+payload:
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationAttemptedWithInitiatedEmailAddressEventV1.yaml'
+examples:
+  - name: RegistrationAttemptedWithInitiatedEmailAddressExample
+    summary: sylvia attempts to register using alice@wonderland.com, for which alice's registration is already in progress.
+    payload:
+      emailAddress: alice@wonderland.com
+      attemptedUsername: sylvia
+      occurredAt: '2026-01-15T10:41:00Z'

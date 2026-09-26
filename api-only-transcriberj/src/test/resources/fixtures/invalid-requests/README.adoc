@@ -42,14 +42,14 @@ Generated with the default `invalidRequestStatus`, and with `422`.
 |What is reported rather than derived: a keyword the model does not type, a `oneOf` of references, recursion beyond `recursionDepth`, keywords that assert nothing, a parameter style not supported.
 
 |`golden/user-account.json`
-|The cases of the reference implementation's `user-account` contract -- id, keyword, pointer, violating request and expected response -- with the coverage of every constraint on its request input, the gaps and the format recommendations: the tests the reference implementation is run against.
+|The cases of the reference API's `user-account` contract -- id, keyword, pointer, violating request and expected response -- with the coverage of every constraint on its request input, the gaps and the format recommendations: the tests an implementation of that contract is run against.
 Re-record with `./gradlew recordInvalidRequestsGolden`, and review the diff.
 |===
 
 The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests.
 They are kept apart from `../valid-values/corpus`, whose generated sources are hashed in `../valid-values/baseline-sources.sha256`: a change to those contracts would change the hashes of sources generated before invalid requests were.
 
-Every test runs over every fixture contract where the requirement says so: the valid-value corpus, this corpus, and the reference contracts under `../contracts`.
+Every test runs over every fixture contract where the requirement says so: the valid-value corpus, this corpus, and the reference API's contracts, `reference-api/dist` at the repository root.
 
 Which test covers which requirement:
 

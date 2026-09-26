@@ -1,0 +1,49 @@
+get:
+  security: []
+  tags:
+    - System
+  operationId: GetRoot
+  summary: >
+    Get application root
+  description: |
+    This endpoint returns the basic application information, its name and the currently deployed version of the application.
+  responses:
+    '200':
+      description: |
+        Returns a json formatted object containing the application name and version.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - versionName
+              - versionCode
+            properties:
+              versionName:
+                type: string
+                minLength: 3
+                maxLength: 16
+                examples:
+                  - WIREMOCK
+              versionCode:
+                type: number
+                examples:
+                  - 1
+              dependencies:
+                type: object
+                description: |
+                  Version information of downstream microservices.
+                  Null values for versionName and versionCode indicate the service was unreachable.
+                additionalProperties:
+                  type: object
+                  properties:
+                    versionName:
+                      type: ['string', 'null']
+                    versionCode:
+                      type: ['number', 'null']
+    '500':
+      description: An unexpected server-side error occurred.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../components/common/responses/errors/InternalServerProblemV1.yaml'

@@ -196,7 +196,7 @@ operations:
     messages:
       - $ref: '#/channels/auditV1/messages/registered'
 `);
-    write("specs/asyncapi/channels/Audit.yaml", `address: iff.audit.v1
+    write("specs/asyncapi/channels/Audit.yaml", `address: apionly.audit.v1
 description: Audit events.
 messages:
   registered:

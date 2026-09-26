@@ -1,0 +1,31 @@
+address: apionly.useraccount.audit.v1
+description: Audit events for the user-account domain.
+messages:
+  registrationInitiatedMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationInitiatedMessageV1.yaml'
+  verificationEmailSentMessage:
+    $ref: '../../../messages/apionly/useraccount/VerificationEmailSentMessageV1.yaml'
+  verificationEmailResendRequestedMessage:
+    $ref: '../../../messages/apionly/useraccount/VerificationEmailResendRequestedMessageV1.yaml'
+  newVerificationEmailSentMessage:
+    $ref: '../../../messages/apionly/useraccount/NewVerificationEmailSentMessageV1.yaml'
+  userAccountCreatedMessage:
+    $ref: '../../../messages/apionly/useraccount/UserAccountCreatedMessageV1.yaml'
+  confirmationEmailSentMessage:
+    $ref: '../../../messages/apionly/useraccount/ConfirmationEmailSentMessageV1.yaml'
+  personDeletedMessage:
+    $ref: '../../../messages/apionly/useraccount/PersonDeletedMessageV1.yaml'
+  registrationAttemptedWithExpiredLinkMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithExpiredLinkMessageV1.yaml'
+  registrationAttemptedWithExpiredRegistrationProcessMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithExpiredRegistrationProcessMessageV1.yaml'
+  registrationAttemptedWithReservedUsernameMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithReservedUsernameMessageV1.yaml'
+  registrationAttemptedWithTakenUsernameMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithTakenUsernameMessageV1.yaml'
+  registrationAttemptedWithInvalidLinkMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithInvalidLinkMessageV1.yaml'
+  registrationAttemptedWithInitiatedEmailAddressMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithInitiatedEmailAddressMessageV1.yaml'
+  registrationAttemptedWithTakenEmailAddressMessage:
+    $ref: '../../../messages/apionly/useraccount/RegistrationAttemptedWithTakenEmailAddressMessageV1.yaml'

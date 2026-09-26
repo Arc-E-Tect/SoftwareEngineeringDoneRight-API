@@ -160,7 +160,7 @@ class ApiOnlyTranscriberJPluginTest {
 
     @Test
     void theGenerationActionPassesTheInvalidRequestSettingsOn() throws Exception {
-        Path contract = Path.of(System.getProperty("transcriberj.fixtures"), "contracts/user-account/openapi.yaml");
+        Path contract = Path.of(System.getProperty("transcriberj.referenceApi"), "user-account/openapi.yaml");
         GenerateContractSourcesAction.Parameters parameters =
                 project.getObjects().newInstance(GenerateContractSourcesAction.Parameters.class);
         parameters.getContract().set(contract.toFile());
@@ -252,7 +252,7 @@ class ApiOnlyTranscriberJPluginTest {
     @Test
     void theGenerationTaskRunsTheCoreAndTheEmittersInIsolation() throws Exception {
         project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);
-        Path contract = Path.of(System.getProperty("transcriberj.fixtures"), "contracts/user-account/openapi.yaml");
+        Path contract = Path.of(System.getProperty("transcriberj.referenceApi"), "user-account/openapi.yaml");
         Path jar = projectDir.resolve("emitter.jar");
         ApiOnlyTranscriberJPluginFunctionalTest.emitterJar(jar);
         GenerateContractSourcesTask task = project.getTasks().create("generate", InProcessGenerateTask.class);
