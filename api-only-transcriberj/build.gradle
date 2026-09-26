@@ -126,10 +126,10 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    // The reference contracts and the Publisher scaffold, and the corpora: an input, so that
-    // changing a fixture runs the tests again.
-    systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('fixtures').asFile.absolutePath
-    inputs.dir(layout.projectDirectory.dir('fixtures')).withPathSensitivity(PathSensitivity.RELATIVE)
+    // The reference contracts, the Publisher scaffold and the corpora, read by path: an input,
+    // so that changing a fixture runs the tests again.
+    systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('src/test/resources/fixtures').asFile.absolutePath
+    inputs.dir(layout.projectDirectory.dir('src/test/resources/fixtures')).withPathSensitivity(PathSensitivity.RELATIVE)
             .withPropertyName('fixtures')
     testLogging {
         events 'passed', 'skipped', 'failed'
@@ -195,7 +195,7 @@ tasks.register('recordHandwrittenEventPayloads', JavaExec) {
         group = 'verification'
         classpath = sourceSets.test.runtimeClasspath
         mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.core.Baselines'
-        systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('fixtures').asFile.absolutePath
+        systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('src/test/resources/fixtures').asFile.absolutePath
         args what
     }
 }
