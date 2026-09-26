@@ -3,6 +3,8 @@ package com.arc_e_tect.gradle.apionly.transcriberj.spi;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.ContractModel;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Finding;
 
+import java.util.List;
+
 /** What an emitter is given to write one contract's classes. */
 public interface EmitterContext {
 
@@ -63,4 +65,16 @@ public interface EmitterContext {
      * @return a Java statement, without indentation
      */
     String degraded(String className, String method, Finding finding);
+
+    /**
+     * The invalid-request cases of an operation, in the order its generated {@code CASES}
+     * lists them: what an emitter that renders cases shapes its code by. The core derives them
+     * before any other emitter runs.
+     *
+     * @param location the JSON pointer of the operation, such as {@code /paths/~1v1~1users/get}
+     * @return the cases; empty when the operation has none, or there is no such operation
+     */
+    default List<InvalidRequestCase> invalidRequestCases(String location) {
+        return List.of();
+    }
 }
