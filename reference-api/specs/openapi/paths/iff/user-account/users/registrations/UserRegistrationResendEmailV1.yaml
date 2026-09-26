@@ -1,0 +1,44 @@
+post:
+  security: []
+  tags:
+    - UserAccount
+  operationId: ResendVerificationEmail
+  summary: >
+    Resend verification email
+  description:
+    Sends a new verification email to the email address associated with the pending registration identified by username.
+    The caller provides the username; IFF generates a new one-time verification link and dispatches
+    a new verification email to the associated email address.
+    This operation is intended for users who did not receive the original verification email.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../../../../../components/iff/user-account/schemas/UserRegistrationResendEmailRequestV1.yaml'
+  responses:
+    '202':
+      description:
+        Verification email resent. A new verification email has been dispatched to the provided address.
+      content:
+        application/json:
+          schema:
+            $ref: '../../../../../components/iff/user-account/schemas/UserRegistrationResponseV1.yaml'
+    '400':
+      description: The request body is missing or contains an invalid username.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/InvalidRequestProblemV1.yaml'
+    '404':
+      description: No pending registration exists for the given username.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/RegistrationNotFoundProblemV1.yaml'
+    '500':
+      description: An unexpected server-side error occurred.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/InternalServerProblemV1.yaml'

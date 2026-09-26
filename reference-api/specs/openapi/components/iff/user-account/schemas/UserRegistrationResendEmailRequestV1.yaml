@@ -1,0 +1,7 @@
+type: object
+description: Request body for resending a verification email to a pending registration identified by username.
+required:
+  - username
+properties:
+  username:
+    $ref: '../../../common/schemas/UsernameV1.yaml'

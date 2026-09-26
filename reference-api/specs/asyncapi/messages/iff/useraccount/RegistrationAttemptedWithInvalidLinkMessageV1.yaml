@@ -1,0 +1,12 @@
+name: RegistrationAttemptedWithInvalidLinkV1
+title: Registration Attempted With Invalid Link
+summary: Audit event published when a registration is attempted using an invalid verification link.
+contentType: application/json
+payload:
+  $ref: '../../../components/iff/useraccount/schemas/RegistrationAttemptedWithInvalidLinkEventV1.yaml'
+examples:
+  - name: RegistrationAttemptedWithInvalidLinkExample
+    summary: alice clicks her original verification link after already requesting a resend, so it's no longer valid.
+    payload:
+      verificationLink: https://iff.example.com/verify/alices-original-link
+      occurredAt: '2026-01-15T10:36:00Z'

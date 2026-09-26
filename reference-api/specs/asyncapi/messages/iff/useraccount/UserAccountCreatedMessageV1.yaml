@@ -1,0 +1,13 @@
+name: UserAccountCreatedV1
+title: User Account Created
+summary: Audit event published when a user account is created.
+contentType: application/json
+payload:
+  $ref: '../../../components/iff/useraccount/schemas/UserAccountCreatedEventV1.yaml'
+examples:
+  - name: UserAccountCreatedExample
+    summary: A user account is created for alice after she completes the registration process.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:35:00Z'

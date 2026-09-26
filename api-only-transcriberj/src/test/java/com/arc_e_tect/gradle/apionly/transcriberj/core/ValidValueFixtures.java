@@ -11,9 +11,8 @@ import java.util.stream.StreamSupport;
 /** The contracts the valid-value tests run over, generated, with their oracle and machine-readable report. */
 final class ValidValueFixtures {
 
-    /** The five reference-implementation contracts. */
-    static final List<String> REFERENCE = List.of("auth-server", "relationship", "social-network", "system-admin",
-            "user-account");
+    /** The contracts of the repository's reference API, built into {@code reference-api/dist}. */
+    static final List<String> REFERENCE = List.of("system-admin", "user-account");
 
     /** The contracts written for these tests, under {@code fixtures/valid-values/corpus}. */
     static final List<String> CORPUS = List.of("keywords", "exclusive-3.0", "unsatisfiable", "parameters");
@@ -82,7 +81,7 @@ final class ValidValueFixtures {
     }
 
     static Fixture reference(String name, Path into) {
-        Path directory = GeneratedSources.FIXTURES.resolve("contracts").resolve(name);
+        Path directory = GeneratedSources.CONTRACTS.resolve(name);
         Path document = directory.resolve("openapi.yaml");
         Path async = directory.resolve("asyncapi.yaml");
         GeneratedSources sources = GeneratedSources.generate(document, Files.exists(async) ? async : null, "1.0.0",

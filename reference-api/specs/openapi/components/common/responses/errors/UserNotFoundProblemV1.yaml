@@ -1,0 +1,30 @@
+title: User Not Found Problem
+description: The requested user account does not exist.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.iff.arc-e-tect.com/problems/user-not-found
+        examples:
+          - https://api.iff.arc-e-tect.com/problems/user-not-found
+      title:
+        type: string
+        const: User Not Found
+        examples:
+          - User Not Found
+      status:
+        type: integer
+        const: 404
+        examples:
+          - 404
+      detail:
+        type: string
+        examples:
+          - No user account with the given username exists.

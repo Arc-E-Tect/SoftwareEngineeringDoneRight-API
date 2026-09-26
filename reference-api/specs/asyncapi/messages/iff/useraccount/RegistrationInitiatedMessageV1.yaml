@@ -1,0 +1,13 @@
+name: RegistrationInitiatedV1
+title: Registration Initiated
+summary: Audit event published when a user registration is initiated.
+contentType: application/json
+payload:
+  $ref: '../../../components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml'
+examples:
+  - name: RegistrationInitiatedExample
+    summary: Alice initiates the registration process with username alice and email address alice@wonderland.com.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:30:00Z'

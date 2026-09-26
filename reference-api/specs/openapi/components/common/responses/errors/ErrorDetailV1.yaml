@@ -1,0 +1,21 @@
+title: Error Detail
+required:
+  - message
+  - context
+type: object
+properties:
+  message:
+    title: Message
+    description: The message describing a detail of the error.
+    type: string
+    minLength: 5
+    maxLength: 254
+    examples:
+      - "Divider was 0 (zero)."
+  context:
+    title: Context
+    type: string
+    minLength: 5
+    maxLength: 254
+    examples:
+      - "While calculating the average of an empty list of numbers, the divider was 0 (zero)."

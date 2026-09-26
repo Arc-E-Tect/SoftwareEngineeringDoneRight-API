@@ -5,6 +5,8 @@ on:
       - main
     paths:
       - 'api-only-transcriberj/**'
+      # The tests generate from the reference API's built contracts.
+      - 'reference-api/dist/**'
       - '.github/workflows/api-only-transcriberj-build.yml'
       - '.github/workflows/semantic-version-calculate.yml'
       - '.github/workflows/determine-release-type.yml'
@@ -35,6 +37,7 @@ jobs:
           filters: |
             changed:
               - 'api-only-transcriberj/**'
+              - 'reference-api/dist/**'
               - '.github/workflows/api-only-transcriberj-build.yml'
               - '.github/workflows/semantic-version-calculate.yml'
               - '.github/workflows/determine-release-type.yml'

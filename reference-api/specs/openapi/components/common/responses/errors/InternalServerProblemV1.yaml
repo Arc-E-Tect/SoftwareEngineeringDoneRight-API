@@ -1,0 +1,30 @@
+title: Internal Server Problem
+description: An unexpected server-side error occurred.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: about:blank
+        examples:
+          - about:blank
+      title:
+        type: string
+        const: Internal Server Error
+        examples:
+          - Internal Server Error
+      status:
+        type: integer
+        const: 500
+        examples:
+          - 500
+      detail:
+        type: string
+        examples:
+          - An unexpected error occurred while processing the request.

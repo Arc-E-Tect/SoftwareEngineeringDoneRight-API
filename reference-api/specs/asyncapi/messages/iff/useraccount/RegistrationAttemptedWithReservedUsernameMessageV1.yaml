@@ -1,0 +1,13 @@
+name: RegistrationAttemptedWithReservedUsernameV1
+title: Registration Attempted With Reserved Username
+summary: Audit event published when a registration is attempted using a reserved username.
+contentType: application/json
+payload:
+  $ref: '../../../components/iff/useraccount/schemas/RegistrationAttemptedWithReservedUsernameEventV1.yaml'
+examples:
+  - name: RegistrationAttemptedWithReservedUsernameExample
+    summary: A registration is attempted using the username alice while it is reserved by an existing person record.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:39:00Z'

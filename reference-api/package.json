@@ -1,0 +1,8 @@
+{
+  "name": "reference-api",
+  "private": true,
+  "description": "The reference API specification the tools in this repository are tested against.",
+  "scripts": {
+    "apionly": "node ../api-only-publisher/src/cli.js"
+  }
+}

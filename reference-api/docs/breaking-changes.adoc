@@ -1,0 +1,179 @@
+= Breaking changes to a published contract
+:toc: macro
+:toc-title: Contents
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+toc::[]
+
+== What this is
+
+A published contract is a promise.
+This document says what counts as breaking that promise, what to do when it has to be broken anyway, and who decides.
+
+It is policy, not machinery.
+Whether a change is breaking is not checked by a tool yet; see <<enforcement,Enforcement, when it comes §>> for what is checked already, and where the rest will attach.
+Until then it is enforced the way most useful things are: by people reading it and by reviewers holding each other to it.
+
+== The three versions, which are not the same thing
+
+Most confusion about breaking changes here comes from conflating three numbers that happen to look alike.
+
+[cols="1,2,3", options="header"]
+|===
+|Version |Where it lives |What it means
+
+|The *resource* version
+|The URL path: `/v1/users/{username}`
+|Which shape of the resource a caller is asking for. Changing it is how a
+breaking change is offered to REST callers without taking the old one away.
+
+|The *schema* version
+|The fragment filename: `UserV1.yaml`, `UsernameV1.yaml`
+|Which shape of a *definition* this file describes. A `V2` alongside a `V1` is
+how two shapes coexist while consumers move between them.
+
+|The *artifact* version
+|`version` in the bundle's `<target>.bundle.properties`, stamped into `info.version`, and the version a consumer subscribes to: `2.1.0`
+|Which *release* of the whole document a consumer is building against. This is
+the semver one, and the only one the tooling reasons about.
+|===
+
+Only the third is semver.
+A major bump of the artifact version says "something in here broke"; it does not say which resource or which schema, and it does not by itself give a consumer anywhere to go.
+That is what the other two are for.
+
+The practical consequence: **a breaking change is almost never only a version bump.** It is a new `V2` fragment, or a new path version, published alongside the old one, *and* a major bump of the artifact so that consumers are told.
+
+== What counts as breaking, for a REST contract
+
+Breaking, because an existing caller that was correct yesterday is wrong today:
+
+* Removing a path, an operation, or a response status.
+* Removing a field from a response, or renaming one.
+* Adding a required field to a request, or making an optional one required.
+* Narrowing anything a caller may send: a tighter pattern, a smaller `maxLength`, a shorter enum, a stricter format.
+* Widening anything a caller may receive: a longer enum, a nullable field that was not nullable, a type that admits more shapes.
+Callers validate responses too, and a response they cannot parse is an outage that looks like the provider's fault -- because it is.
+* Changing the meaning of a field while leaving its name and type alone.
+This is the worst kind, because nothing mechanical will ever catch it.
+* Changing an error's `type` URI, or the status code a condition produces.
+
+Not breaking:
+
+* Adding an optional request field with a safe default.
+* Adding a response field, provided consumers are not required to reject unknown ones.
+Say so explicitly in the contract's prose rather than assuming it.
+* Adding a new path or operation.
+* Documentation, examples, descriptions, and `summary` text.
+* Anything under `x-`, unless a consumer has been told to rely on it.
+
+== What counts as breaking, for an event contract
+
+The list overlaps, but the asymmetry underneath it does not, and it is the reason event contracts deserve their own section rather than a footnote.
+
+**A REST provider can enumerate its consumers.
+An event publisher cannot.** A provider can look at its own traffic and see who is calling what.
+A publisher emits to a topic and has no idea who reads it, when, or with what validator.
+The feedback that tells a REST provider it broke something -- errors, support tickets, a dashboard going red -- reaches an event publisher late, if at all, and usually as somebody else's incident.
+
+So for events:
+
+* *Everything* in the REST list that applies to a message payload applies here.
+* **Adding a field is closer to breaking than it is for REST.** A consumer doing strict schema validation rejects the message.
+A consumer deserialising into a typed record may reject it too.
+Whether this is safe depends entirely on a convention the contract must state, and which must actually be true of every consumer.
+* Changing a channel address, a routing key, or an operation's name.
+* Changing message ordering or delivery guarantees, even though neither is written in the schema.
+They are part of the contract whether or not the document says so, which is an argument for making the document say so.
+* Replaying or re-emitting historical events under a changed shape.
+
+The practical rule: **an event contract changes additively, into a new message version, and the old one keeps being published until the publisher has positive evidence that nobody reads it.** Not the absence of complaints -- evidence.
+
+== How a breaking change is versioned
+
+. Add the new shape alongside the old one.
+A new `V2` fragment, a new path version, or a new message version.
+Never edit a `V1` fragment into a `V2` shape: the whole point of the suffix is that `UserV1.yaml` keeps describing what `V1` consumers already build against.
+. Keep publishing the old shape.
+Both are in the contract; both are supported.
+. Raise the **major** version in the bundle's `<target>.bundle.properties`, in the same commit as the new shape.
+The bump is the notification: a subscriber is pinned to a contract version in its own build -- with the API-Only Subscriber, `apiContractVersion` -- so it moves only when it deliberately subscribes to the new one, and its lockfile makes any unannounced change fail that build.
+Where contracts are published to a registry, Renovate and Dependabot can raise that move as a pull request in every subscribing repository.
+. Announce the deprecation in the contract itself -- `deprecated: true`, and prose in the description saying what to move to and by when.
+A deprecation that lives only in a release note is a deprecation nobody will find.
+. Remove the old shape only after <<sunset,How long a superseded version stays published §>> is satisfied.
+*That* removal is itself a second major bump.
+
+A breaking change is therefore two releases, usually months apart.
+If that feels heavy, it is worth remembering that the alternative is one release and somebody else's outage.
+
+[#sunset]
+== How long a superseded version stays published
+
+**Minimum six months from the deprecation release, and never until every known subscriber has moved.** Whichever is later.
+
+"Known subscriber" is doing a lot of work in that sentence, and it is the part that needs a person rather than a rule:
+
+* For REST, the provider's own traffic is the evidence.
+A version with no calls for a full billing cycle is a version that can go.
+* For events, there is no equivalent, which is why the burden is on the publisher to ask.
+The publisher is responsible for maintaining a list of known consumers of each message version and for confirming, in writing, that each has moved.
+
+Two things make this tractable rather than theoretical. `apionly.lock` in every consuming repository records exactly which contract version that repository builds against, so the question "who is still on `V1`?" is answerable by grep across the organisation's repositories rather than by asking around.
+And the `closure` machinery can say which targets a fragment is reachable from, so the blast radius of a proposed change is knowable before it is made.
+
+**Who confirms:** the owner of the specification repository, before merging the removal. Not the person making the change -- the person accountable for the contract.
+
+== Who approves a breaking change
+
+A breaking change to a published contract needs, in order:
+
+. **The author**, who writes down what breaks, for whom, and what those consumers must do.
+If that paragraph cannot be written, the change is not understood well enough to make.
+. **The owner of the specification repository**, who owns the promise being broken and confirms the sunset obligations in <<sunset,How long a superseded version stays published §>> are met.
+. **A named representative of each known consuming team**, for event contracts specifically.
+Not a notification -- an acknowledgement.
+The asymmetry above means silence cannot be read as consent.
+
+An emergency exception exists for a security fix that cannot be made additively.
+It follows the same steps in the same order, compressed, and the sunset period is whatever the security issue permits.
+It is not a way to skip step 1.
+
+== A note on split repositories
+
+`api-only-publisher split` copies a shared fragment into each part so that both sides build independently.
+Every copy it makes is a future breaking change waiting to happen: two repositories that both define a username are two schemas that happen to agree today, and nothing will notice when they stop.
+
+Each split part records what it copied, in its own `IMPORTED.adoc`.
+Treat that list as a register of debt.
+A fragment on it that genuinely matters to both sides should be promoted to a contract of its own -- published and subscribed to like any other -- rather than left as a copy that drifts silently.
+
+[#enforcement]
+== Enforcement, when it comes
+
+Two things around this policy are checked already.
+A contract whose documents changed under a version that was published before is refused by the API-Only Subscriber in every build that locked the earlier documents, so a change cannot reach a consumer without a new version.
+And the Publisher's `lint` fails on a fragment that no target reaches, so a definition a change left behind does not linger unnoticed.
+
+What is not checked is whether the new version is the right one: nothing yet tells a breaking change from an additive one.
+That is deliberate: a policy nobody has read yet is not improved by being enforced.
+
+When enforcement arrives it will be a diff gate on release, comparing the document about to be published against the one currently published for that target, and refusing a breaking difference that is not accompanied by a major version bump.
+
+The hook it will attach to already exists.
+`api-only-publisher changed` resolves each target's dependency closure and hashes it, so the release job already knows which targets a commit actually altered; and every published `manifest.json` records the `closureSha256` of what was released.
+A gate needs the previous document, which the manifest makes retrievable, and a comparison, which is the only part not yet written.
+
+Two things that gate will not catch, and which are therefore permanently a human responsibility: a field whose meaning changed while its name and type did not, and an event consumer nobody knew existed.

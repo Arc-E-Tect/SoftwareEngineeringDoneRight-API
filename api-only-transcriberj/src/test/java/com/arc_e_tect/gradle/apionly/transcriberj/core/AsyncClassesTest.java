@@ -26,8 +26,8 @@ class AsyncClassesTest {
     @BeforeAll
     static void generate() {
         generated = GeneratedSources.generate(
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"),
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/asyncapi.yaml"),
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"),
+                GeneratedSources.CONTRACTS.resolve("user-account/asyncapi.yaml"),
                 "1.0.0", directory, GeneratedSources.settings("user-account"), List.of());
     }
 
@@ -98,8 +98,8 @@ class AsyncClassesTest {
     @Test
     void generateDocsDescribesAnEventsFieldsFromTheContract(@TempDir Path into) throws Throwable {
         GeneratedSources docs = GeneratedSources.generate(
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/openapi.yaml"),
-                GeneratedSources.FIXTURES.resolve("contracts/user-account/asyncapi.yaml"), "1.0.0", into,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"),
+                GeneratedSources.CONTRACTS.resolve("user-account/asyncapi.yaml"), "1.0.0", into,
                 new Settings("user-account", GeneratedSources.PACKAGE, true, "PLACEHOLDER", 3), List.of());
 
         List<?> fields = (List<?>) docs.call("RegistrationInitiatedEventV1", "fields",

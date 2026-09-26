@@ -1,0 +1,30 @@
+title: Verification Link Superseded Problem
+description: The verification link has been superseded and is no longer valid.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+        examples:
+          - https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+      title:
+        type: string
+        const: Verification Link Superseded
+        examples:
+          - Verification Link Superseded
+      status:
+        type: integer
+        const: 410
+        examples:
+          - 410
+      detail:
+        type: string
+        examples:
+          - The verification link has been superseded and is no longer valid. A new verification email has been sent; use the new link to complete registration.

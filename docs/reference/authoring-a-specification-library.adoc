@@ -496,7 +496,7 @@ The IDE will not generate the classes on sync (link:../../api-only-transcriberj/
 [#reference-library]
 == The reference library against these rules
 
-The reference implementation's library, `usable-suspects/` in the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Code[Code repository ↗], built with Publisher 0.9.0 and generated with TranscriberJ 0.5.0:
+This repository's reference API, link:../../reference-api/README.adoc[`reference-api/` →], built with the Publisher and generated with the TranscriberJ in this repository:
 
 [cols="2,1,3", options="header"]
 |===
@@ -541,7 +541,7 @@ The reference implementation's library, `usable-suspects/` in the https://github
 
 |<<give-every-operation-an-example,Every operation has an example §>> -- OpenAPI
 |No
-|Every response, and two request bodies, warn: 38 findings across the five services' documents (60 with the portfolio's copies).
+|Every response, and two request bodies, warn: 26 findings across the two services' documents (48 with the portfolio's copies).
 The library does write `examples` -- on the properties of 18 fragments -- but the rule counts only an `example` or `examples` on the media type, or a top-level `examples` on the schema it references, and only `UsernameV1` has one.
 This is recorded here rather than fixed, per the rule's own default: the warning is a backlog, not a build failure, until a library adopts `lint.examples.openapi: error`.
 |===

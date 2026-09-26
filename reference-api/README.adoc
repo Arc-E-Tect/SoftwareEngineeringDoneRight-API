@@ -1,0 +1,186 @@
+= Reference API
+:toc: left
+:toc-title: Contents
+:toclevels: 3
+:sectanchors:
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#purpose]
+== Purpose
+
+`reference-api` is the specification library the tools in this repository are tested against.
+It is a realistic library -- OpenAPI and AsyncAPI fragments, shared definitions, several services, one contract each -- that nobody wrote to suit a tool, so the tools meet what real libraries hold.
+
+Its shape is inspired by the Usable Suspects project of the book _Software Engineering Done Right_.
+It lives here on its own terms: it depends on nothing outside this repository, and changes whenever the tooling here needs it to.
+
+It describes IFF, an API-only application, as two services:
+
+[cols="1,3", options="header"]
+|===
+|Service |Contract
+
+|`user-account`
+|An OpenAPI document: registering a user, resending a verification email, completing a registration, looking a user up; and an AsyncAPI document of the events the registration publishes.
+
+|`system-admin`
+|An OpenAPI document of the root and health endpoints only: a second service, sharing fragments with the first, to show one library building a contract per service.
+|===
+
+It is built with link:../api-only-publisher/README.adoc[the API-Only Publisher →] in this repository, never a released one, so a change to the Publisher is tested against this library in the same commit.
+
+[#using-it]
+== Using it
+
+The built contracts are committed, in `dist/`:
+
+[source]
+----
+dist/
+├── system-admin/openapi.yaml
+├── user-account/openapi.yaml
+├── user-account/asyncapi.yaml
+└── portfolio/                  The whole library as one documentation view; never published
+    ├── openapi.yaml
+    └── asyncapi.yaml
+----
+
+A tool's tests read them from there; link:../api-only-transcriberj/README.adoc#development[the TranscriberJ's →] do.
+They are committed so that a tool built with another toolchain -- the Gradle plugins -- needs no Node.js to test against them.
+`.github/workflows/reference-api-build.yml` rebuilds them on every push that touches this library or the Publisher, and fails when they are not what the fragments build.
+
+To rebuild them, from this directory:
+
+[source,console]
+----
+npm ci --prefix ../api-only-publisher
+npm run apionly -- build
+npm run apionly -- lint
+----
+
+Commit the rebuilt `dist/` with the change that caused it.
+Each tool's tests then run against it; a change that alters a contract shows up in their golden files as a diff to review.
+
+[#directory-layout]
+== Directory layout
+
+[source]
+----
+reference-api/
+├── package.json                    `npm run apionly` runs this repository's Publisher
+├── apionly.yaml                    Declares what gets built, from where, and where it goes
+├── redocly.yaml                    Registers the portfolio as the "iff" API root for @redocly/cli
+├── .redocly.lint.yaml              The lint rules every OpenAPI document is held to
+├── docs/                           Policy: what counts as a breaking change
+├── dist/                           The built contracts, committed
+└── specs/
+    ├── openapi/
+    │   ├── bundles/                One root file per service, and <service>.bundle.properties with its version
+    │   ├── shared/                 info.yaml and servers.yaml, $ref'd by every bundle, and the *.md snippets info.yaml pulls in
+    │   ├── paths/
+    │   │   ├── common/             Path fragments every service has: root and health
+    │   │   └── iff/<service>/      Path fragments of one service
+    │   ├── components/
+    │   │   ├── common/             Schemas and RFC 9457 problem responses reusable across services
+    │   │   └── iff/<service>/      Request and response schemas of one service
+    │   ├── tags/                   The same split, for tags
+    │   └── assets/iff/             Images info.yaml refers to
+    └── asyncapi/                   The same split applied to event contracts: bundles, channels, messages, components
+----
+
+[#bundle-roots]
+== Bundle root files: one entry point per service
+
+Each `<service>_openapi_structure.yaml` in link:specs/openapi/bundles/[specs/openapi/bundles/ →] is the complete table of contents of one service's contract: everything else under `specs/openapi/` is reached only through a bundle's `$ref`s.
+An AsyncAPI document's root, `<service>_asyncapi_structure.yaml`, sits in link:specs/asyncapi/bundles/[specs/asyncapi/bundles/ →] the same way; it holds its `operations` itself, because they point into the document with `#/channels/...`, which only resolves in the file that contains it.
+A bundle holds no inline schema or path body, only `$ref`s:
+
+[source,yaml]
+----
+openapi: 3.1.1
+info:
+  $ref: '../shared/info.yaml'
+servers:
+  $ref: '../shared/servers.yaml'
+tags:
+  - $ref: '../tags/common/SystemV1.yaml'
+  - $ref: '../tags/iff/user-account/UserAccountV1.yaml'
+paths:
+  /v1:
+    $ref: '../paths/common/RootV1.yaml'
+  /v1/users/{username}:
+    $ref: '../paths/iff/user-account/users/UserV1.yaml'
+  # ...
+----
+
+`portfolio`, in link:apionly.yaml[apionly.yaml →], is not a bundle: it declares `openapi.aggregate` and `asyncapi.aggregate`, listing the services it covers, and the Publisher generates its root from them.
+Declaring `aggregate` means it is never published.
+
+[#versions]
+== Versions: one per service
+
+Every service's contract has a version of its own, beside its bundle root as `<service>.bundle.properties`, and the Publisher stamps it into each document's `info.version`.
+It covers everything the service publishes, so `user-account`'s AsyncAPI document carries the same version as its OpenAPI document.
+Both started at `1.0.0` here.
+
+Raise it in the same change as the fragments it describes: major for a breaking change, as link:docs/breaking-changes.adoc[docs/breaking-changes.adoc →] defines one; minor for an additive one; patch for anything else that changes the built documents.
+A shared fragment changes every contract that reaches it; `npm run apionly -- changed --since <ref>` lists them.
+
+[#shared-fragments]
+== Shared fragments: `common/` and `iff/<service>/`
+
+`common/` means "not specific to any one service": the root and health paths, the `SystemV1` tag, the `UsernameV1` schema, and every RFC 9457 problem response, even those only one service returns today.
+`iff/<service>/` holds what belongs to one service: its resources, its paths, its tag.
+`iff` is the product's name, a naming convention no tool reads.
+
+A resource schema or a path goes under `iff/<service>/`; a problem response goes under link:specs/openapi/components/common/responses/errors/[components/common/responses/errors/ →], however specific its meaning.
+
+The AsyncAPI event schemas reuse the OpenAPI `UsernameV1`, so a username means the same whether it arrives over HTTP or as an event.
+That makes the two trees one `$ref` graph, which is why the build stages the whole `specs/` root for each.
+
+[#placeholders]
+== Placeholders and the staging build
+
+Nothing under `specs/` is ever written to by the build.
+It copies the whole tree to `build/staging/<type>/` first, and works on the copy.
+
+In the copy, every `{{name}}` in a YAML file is replaced by the contents of `name.md` found in that file's directory or below, indentation kept.
+link:specs/openapi/shared/info.yaml[shared/info.yaml →] pulls in `pagination.md`, `statusCodes.md` and `errorCodes.md` this way.
+An unresolved placeholder fails the build.
+
+[#linting]
+== Linting
+
+Every document is linted when it is built: an OpenAPI document with link:.redocly.lint.yaml[.redocly.lint.yaml →], an AsyncAPI document with `@asyncapi/cli validate`.
+`npm run apionly -- lint` lints every built document again, and fails when a YAML file under `specs/` is reachable from no service, so a definition a change left behind does not linger.
+
+`apionly.yaml` sets `lint.examples.asyncapi: error`: contract tests generated from an AsyncAPI document are built from each message's `examples`, so an event without one stops the build.
+OpenAPI examples are at the default, `warn`, and the build logs each missing one.
+
+[#changing-it]
+== Changing it
+
+Change it when a tool needs something it does not have yet: a construct, a parameter style, a kind of component.
+Add it to the service it fits, or to a new service when it fits neither, rebuild, and commit the fragments, `dist/` and the version change together.
+
+The contracts are also what each tool's golden files are recorded from, so a change here is reviewed twice: as fragments, and as the diffs it causes in the tools' tests.
+link:docs/breaking-changes.adoc[docs/breaking-changes.adoc →] is the policy a published contract would be held to; it applies here as the example it is.
+
+[#toolchain]
+== The toolchain
+
+The Publisher is the one in `../api-only-publisher`.
+The bundlers it drives are pinned in `apionly.yaml`, as `toolchain.redocly` and `toolchain.asyncapi`, and Node.js in the workflow.
+Any of them can change the built documents without a fragment changing: rebuild before and after an upgrade, and compare `dist/`.

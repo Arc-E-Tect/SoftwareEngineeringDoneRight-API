@@ -1,0 +1,30 @@
+title: Username Already Registered Problem
+description: A pending or active user account with the given username already exists.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: https://api.iff.arc-e-tect.com/problems/username-already-registered
+        examples:
+          - https://api.iff.arc-e-tect.com/problems/username-already-registered
+      title:
+        type: string
+        const: Username Already Registered
+        examples:
+          - Username Already Registered
+      status:
+        type: integer
+        const: 409
+        examples:
+          - 409
+      detail:
+        type: string
+        examples:
+          - A pending or active user account with the given username already exists.

@@ -27,7 +27,7 @@ class BaselineSourcesTest {
     void everyExistingMemberIsByteForByteWhatItWas() {
         Map<String, GeneratedSources> trees = Baselines.generateAll(directory);
         Map<String, String> committed = Baselines.committedHashes();
-        assertThat(committed).hasSizeGreaterThan(250);
+        assertThat(committed).hasSizeGreaterThan(200);
         assertThat(Baselines.hashes(trees)).containsExactlyInAnyOrderEntriesOf(committed);
         trees.values().forEach(tree -> assertThat(tree.file(GeneratedSources.PACKAGE, "ContractRequest")).exists());
     }

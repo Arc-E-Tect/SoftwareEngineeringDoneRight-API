@@ -26,8 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** The plugin, applied to a real build, with a real Subscriber fetching a real contract. */
 class ApiOnlyTranscriberJPluginFunctionalTest {
 
-    static final Path CONTRACT = Path.of(System.getProperty("transcriberj.fixtures"),
-            "contracts/user-account/openapi.yaml");
+    static final Path CONTRACT = Path.of(System.getProperty("transcriberj.referenceApi"),
+            "user-account/openapi.yaml");
 
     @TempDir
     Path projectDir;

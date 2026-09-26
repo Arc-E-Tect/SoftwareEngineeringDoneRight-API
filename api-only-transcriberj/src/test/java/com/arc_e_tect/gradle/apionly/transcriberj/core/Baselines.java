@@ -46,7 +46,7 @@ public final class Baselines {
     static Map<String, GeneratedSources> generateAll(Path into) {
         Map<String, GeneratedSources> out = new TreeMap<>();
         for (String contract : ValidValueFixtures.REFERENCE) {
-            Path dir = GeneratedSources.FIXTURES.resolve("contracts").resolve(contract);
+            Path dir = GeneratedSources.CONTRACTS.resolve(contract);
             Path async = dir.resolve("asyncapi.yaml");
             Path asyncOrNull = Files.exists(async) ? async : null;
             out.put("plain/" + contract, GeneratedSources.generate(dir.resolve("openapi.yaml"), asyncOrNull, "1.0.0",

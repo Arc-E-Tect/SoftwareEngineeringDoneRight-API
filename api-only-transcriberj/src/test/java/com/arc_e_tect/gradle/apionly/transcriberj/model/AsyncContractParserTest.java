@@ -14,9 +14,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /** Both of a contract's documents, read into one model. */
 class AsyncContractParserTest {
 
-    private static final Path FIXTURES = Path.of(System.getProperty("transcriberj.fixtures"));
-    private static final Path OPENAPI = FIXTURES.resolve("contracts/user-account/openapi.yaml");
-    private static final Path ASYNCAPI = FIXTURES.resolve("contracts/user-account/asyncapi.yaml");
+    private static final Path CONTRACTS = Path.of(System.getProperty("transcriberj.referenceApi"));
+    private static final Path OPENAPI = CONTRACTS.resolve("user-account/openapi.yaml");
+    private static final Path ASYNCAPI = CONTRACTS.resolve("user-account/asyncapi.yaml");
 
     private static ContractModel userAccount() throws IOException {
         return ContractParser.parse(OPENAPI, ASYNCAPI);

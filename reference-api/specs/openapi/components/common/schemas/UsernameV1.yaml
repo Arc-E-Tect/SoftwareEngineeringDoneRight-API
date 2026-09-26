@@ -1,0 +1,11 @@
+type: string
+description: |
+  The unique username of the account.
+  Must be 5-12 characters, start with a lowercase letter,
+  and contain only lowercase alphanumerics, dashes, or underscores.
+minLength: 5
+maxLength: 12
+pattern: '^[a-z][a-z0-9_-]*$'
+examples:
+  - alice_1
+  - user-name

@@ -1,0 +1,13 @@
+name: VerificationEmailResendRequestedV1
+title: Verification Email Resend Requested
+summary: Audit event published when a user requests a verification email to be resent.
+contentType: application/json
+payload:
+  $ref: '../../../components/iff/useraccount/schemas/VerificationEmailResendRequestedEventV1.yaml'
+examples:
+  - name: VerificationEmailResendRequestedExample
+    summary: alice requests the verification email be resent to alice@wonderland.com.
+    payload:
+      username: alice
+      emailAddress: alice@wonderland.com
+      occurredAt: '2026-01-15T10:32:00Z'

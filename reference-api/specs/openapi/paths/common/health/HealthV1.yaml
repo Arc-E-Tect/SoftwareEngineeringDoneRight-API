@@ -1,0 +1,29 @@
+get:
+  security: []
+  tags:
+    - System
+  operationId: GetHealth
+  summary: >
+    Check the health status
+  description: |
+    This endpoint checks the health status of the application.
+    It returns a simple status message indicating whether the application is up and running.
+  responses:
+    '200':
+      description: |
+        Returns the health status of the application as a single text string.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                examples:
+                  - UP
+    '500':
+      description: An unexpected server-side error occurred.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../components/common/responses/errors/InternalServerProblemV1.yaml'

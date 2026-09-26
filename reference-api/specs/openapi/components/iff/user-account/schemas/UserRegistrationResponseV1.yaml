@@ -1,0 +1,13 @@
+title: User Registration Response
+type: object
+required:
+  - message
+properties:
+  message:
+    type: string
+    description: Human-readable confirmation that the verification email was sent.
+    minLength: 10
+    maxLength: 254
+    examples:
+      - A verification email has been sent to alice@wonderland.com
+

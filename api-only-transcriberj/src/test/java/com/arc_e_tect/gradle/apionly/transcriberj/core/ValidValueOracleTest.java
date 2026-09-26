@@ -85,7 +85,7 @@ class ValidValueOracleTest {
                 .filter(e -> e.get("requiredRequest").has("value")).count();
         assertThat(bodies).isGreaterThan(60);
         assertThat(fixtures.stream().filter(f -> f.async() != null)).isNotEmpty();
-        assertThat(requests).isGreaterThan(15);
+        assertThat(requests).isGreaterThan(10);
     }
 
     @Test

@@ -107,7 +107,13 @@ cd api-only-subscriber && ./gradlew build
 
 # TranscriberJ
 cd api-only-transcriberj && ./gradlew check
+
+# The reference API every tool is tested against: rebuild it after changing a fragment
+cd reference-api && npm run apionly -- build
 ----
+
+link:reference-api/README.adoc[`reference-api/` →] is the specification library the tools are tested against: two services, `system-admin` and `user-account`, built with the Publisher in this repository.
+It is not released; its built contracts are committed, and its CI fails when they are not what the fragments build.
 
 To change either tool, read link:docs/reference/how-publisher-and-subscriber-work-together.adoc#extending[Where a change belongs →] first.
 

@@ -29,6 +29,8 @@ final class GeneratedSources {
 
     static final String PACKAGE = "com.example.contract";
     static final Path FIXTURES = Path.of(System.getProperty("transcriberj.fixtures"));
+    /** The reference API's built contracts, one directory per target: {@code reference-api/dist}. */
+    static final Path CONTRACTS = Path.of(System.getProperty("transcriberj.referenceApi"));
 
     final Path sources;
     final Path resources;

@@ -1,0 +1,47 @@
+# .redocly.lint.yaml
+#
+# The one lint configuration, used everywhere. There used to be a lenient
+# .redocly.dev.yaml and this stricter file, with the intent that releases
+# linted harder -- but nothing ever selected this one, so releases linted no
+# more strictly than a local build, and a developer could not find out locally
+# what a release would object to. One config removes that gap in the direction
+# that keeps the checks.
+extends:
+  - recommended
+
+rules:
+  # Contract integrity: fail fast on broken or ambiguous API definitions.
+  no-unresolved-refs: error
+  no-unused-components: warn
+  no-ambiguous-paths: error
+  no-identical-paths: error
+  path-not-include-query: error
+  path-parameters-defined: error
+  operation-parameters-unique: error
+  no-duplicated-enum-values: error
+  no-required-schema-properties-undefined: error
+  no-schema-type-mismatch: error
+  no-invalid-parameter-examples: error
+  no-invalid-media-type-examples: error
+  no-invalid-schema-examples: error
+
+  # Production governance: require secure, well-defined operations.
+  security-defined: error
+  info-contact: error
+  info-license: error
+  no-empty-servers: error
+  no-server-trailing-slash: error
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-operationId-url-safe: error
+  operation-2xx-response: error
+
+  # Documentation quality: keep signal high without failing the build yet.
+  operation-4xx-response: warn
+  operation-summary: warn
+  operation-description: warn
+  parameter-description: warn
+  tag-description: warn
+  operation-tag-defined: warn
+  required-string-property-missing-min-length: warn
+  no-server-example.com: off

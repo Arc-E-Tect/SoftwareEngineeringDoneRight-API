@@ -21,17 +21,17 @@ Each component's comment says the value its rule gives.
 |Path, query and header parameters, the ones not supported yet, the ignored headers, and request bodies.
 
 |`golden/<contract>.json`
-|The machine-readable report of each reference contract under `../contracts`, indented.
+|The machine-readable report of each contract of the repository's reference API, `reference-api/dist` at the repository root, indented.
 A change to value generation shows up here as a diff to review.
 Re-record with `./gradlew recordValidValuesGolden`.
 
 |`baseline-sources.sha256`
-|The hash of every source generated before valid values were, from `main` at 1172661: the reference contracts, with and without `generateDocs` and a description bundle, and the corpus.
+|The hash of every source generated before valid values were, from `main` at 1172661: the reference API's contracts, with and without `generateDocs` and a description bundle, and the corpus.
 Each source generated now, with the valid-value members stripped, must hash the same: every existing member stays byte for byte what it was.
 Re-record with `./gradlew recordBaselineSources`, for a deliberate change to existing members only.
 |===
 
-The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests; the reference contracts under `../contracts` are not.
+The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests; the reference API's contracts are built from its fragments, and change only with them.
 
 The oracle reads each document as the plugin does, with two rewrites: a `format` beside a `pattern` is dropped, as the pattern wins; and a 3.0 boolean exclusive bound becomes the 3.1 numeric one.
 
