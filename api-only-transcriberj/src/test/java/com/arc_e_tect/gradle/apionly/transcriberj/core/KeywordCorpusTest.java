@@ -100,19 +100,15 @@ class KeywordCorpusTest {
         assertThat(required(keywords, "FormatsV1")).isEqualTo(json("""
                 {"email":"user@example.com","uuid":"00000000-0000-4000-8000-000000000000","date":"2000-01-01",
                  "dateTime":"2000-01-01T00:00:00Z","time":"00:00:00Z","uri":"https://example.com/",
-                 "uriReference":"https://example.com/","hostname":"a","ipv4":"a","ipv6":"a",
-                 "longEmail":"useraaaaaaaa@example.com","shortUri":"https://example.com",
-                 "longHostname":"%s","custom":"a"}""".formatted("a".repeat(80))));
+                 "uriReference":"https://example.com/","hostname":"example.com","ipv4":"192.0.2.1",
+                 "ipv6":"2001:db8::1","longEmail":"useraaaaaaaa@example.com","shortUri":"https://example.com",
+                 "longHostname":"%s.aaaaa.example.com","custom":"a"}""".formatted("a".repeat(62))));
     }
 
     @Test
     void anUnsupportedFormatIsAPlainStringAndNoted() {
-        for (String[] unsupported : new String[][]{{"x-custom", "custom"}, {"hostname", "hostname"},
-            {"ipv4", "ipv4"}, {"ipv6", "ipv6"}, {"hostname", "longHostname"}}) {
-            assertThat(keywords.sources().report.notes()).contains("No value is generated for format "
-                    + unsupported[0] + " at /components/schemas/FormatsV1/properties/" + unsupported[1]
-                    + "; valid values there are plain strings");
-        }
+        assertThat(keywords.sources().report.notes()).containsExactly("No value is generated for format x-custom at "
+                + "/components/schemas/FormatsV1/properties/custom; valid values there are plain strings");
     }
 
     @Test

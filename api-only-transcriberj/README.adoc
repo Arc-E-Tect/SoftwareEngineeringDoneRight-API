@@ -582,9 +582,9 @@ The pattern is read as ECMA-262 in Unicode mode and, as JSON Schema says, is _fo
 Every pattern that applies must match.
 A pattern with a backreference, a lookaround, a word boundary or a Unicode property escape has no value generated for it: see <<no-valid-value,When there is no valid value §>>.
 |`format`, without `pattern` |A fixed value per format, made longer or shorter where the format allows, to meet `minLength` and `maxLength`:
-`email` `user@example.com`; `uuid` `00000000-0000-4000-8000-000000000000`; `date` `2000-01-01`; `date-time` `2000-01-01T00:00:00Z`; `time` `00:00:00Z`; `uri` and `uri-reference` `https://example.com/`.
-The host is `example.com`, a name reserved for documentation.
-Any other format is a plain string, and the report notes it -- including, for now, `hostname`, `ipv4` and `ipv6`: see <<unsupported-formats,Formats not supported yet §>>.
+`email` `user@example.com`; `uuid` `00000000-0000-4000-8000-000000000000`; `date` `2000-01-01`; `date-time` `2000-01-01T00:00:00Z`; `time` `00:00:00Z`; `uri` and `uri-reference` `https://example.com/`; `hostname` `example.com`; `ipv4` `192.0.2.1`; `ipv6` `2001:db8::1`.
+Each uses a name or address reserved for documentation -- `example.com`, `192.0.2.0/24` and `2001:db8::/32` -- so a value a test sends never reaches a real host, as a loopback or private address could.
+Any other format is a plain string, and the report notes it.
 |`format` with `pattern` |The pattern wins, and the format is ignored.
 |`type: integer` |`0` when it is valid; otherwise the smallest valid value at or above the lower bound; otherwise the largest at or below the upper bound; a multiple of `multipleOf` in each case.
 |`type: number` |As an integer, in exact decimal arithmetic, so `multipleOf: 0.1` from `0.25` gives `0.3`.
@@ -613,18 +613,6 @@ Only a parameter with a primitive schema and the default `style` for where it is
 One in a cookie, with an array or object schema, described by `content`, or with another `style` or `explode` is reported as not supported yet: an optional one is left out of `fullRequest()`, and a required one leaves the request without a value.
 Header parameters named `Accept`, `Content-Type` or `Authorization` are ignored, as OpenAPI says they are.
 A body is sent as the first JSON content type the operation declares -- `application/json`, or any `+json` type; an operation that accepts none has no valid request.
-
-[#unsupported-formats]
-[IMPORTANT]
-.Formats not supported yet: `hostname`, `ipv4`, `ipv6`
-====
-No value of these three formats is generated yet.
-A string with one of them and no `pattern` gets the plain-string value, `a` or longer, which is not a host name or an address; the report notes each one.
-The TranscriberJ's own tests do not check values against these formats either.
-
-A server that validates the format rejects such a value, so a test built on `requiredBody()`, `fullBody()` or a request that carries one fails for a reason that has nothing to do with what it tests.
-Until they are supported, either give the property a `pattern` in the contract -- the pattern wins over the format, and a value is generated from it -- or replace the member in the hand-written test with a valid address, such as `192.0.2.1`, `2001:db8::1` or `example.com`.
-====
 
 [#valid-value-determinism]
 ==== The same contract, the same values

@@ -21,7 +21,8 @@ class FormatsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"email", "uuid", "date", "date-time", "time", "uri", "uri-reference"})
+    @ValueSource(strings = {"email", "uuid", "date", "date-time", "time", "uri", "uri-reference", "hostname", "ipv4",
+        "ipv6"})
     void everyVariantOfEveryLengthIsOfItsFormat(String format) {
         for (int length = 1; length <= 90; length++) {
             for (String value : values(format, length, length)) {
@@ -36,7 +37,7 @@ class FormatsTest {
 
     @ParameterizedTest
     @CsvSource({"email,13,user@example.com", "email,24,useraaaaaaaa@example.com", "date-time,22,x", "time,13,x",
-        "uri,25,x"})
+        "uri,25,x", "hostname,14,x", "ipv4,11,192.0.2.100", "ipv6,14,2001:db8::1000"})
     void valuesGrowToAMinimumLength(String format, int min, String expected) {
         String first = values(format, min, 200).get(0);
         assertThat(first.length()).isGreaterThanOrEqualTo(min);
@@ -49,6 +50,9 @@ class FormatsTest {
         assertThat(values("date-time", 0, 19)).isEmpty();
         assertThat(values("date-time", 31, 40)).isEmpty();
         assertThat(values("email", 0, 12)).isEmpty();
+        assertThat(values("hostname", 12, 12)).isEmpty();
+        assertThat(values("ipv4", 12, 20)).isEmpty();
+        assertThat(values("ipv6", 15, 20)).isEmpty();
     }
 
     @Test
@@ -62,10 +66,11 @@ class FormatsTest {
         assertThat(Formats.accepts("uri-reference", "a b")).isFalse();
         assertThat(Formats.accepts("x-custom", "anything")).isTrue();
         assertThat(Formats.supported("x-custom")).isFalse();
-        for (String network : new String[]{"hostname", "ipv4", "ipv6"}) {
-            assertThat(Formats.supported(network)).as("%s is not supported yet", network).isFalse();
-            assertThat(Formats.accepts(network, "a")).isTrue();
-        }
+        assertThat(Formats.accepts("hostname", "-bad.example.com")).isFalse();
+        assertThat(Formats.accepts("hostname", ("a".repeat(60) + ".").repeat(5) + "com")).isFalse();
+        assertThat(Formats.accepts("ipv4", "256.0.0.1")).isFalse();
+        assertThat(Formats.accepts("ipv6", "1:2:3:4:5:6:7:8")).isTrue();
+        assertThat(Formats.accepts("ipv6", "2001:db8")).isFalse();
         assertThatThrownBy(() -> Formats.values("x-custom", 0, 5)).isInstanceOf(IllegalArgumentException.class);
     }
 }

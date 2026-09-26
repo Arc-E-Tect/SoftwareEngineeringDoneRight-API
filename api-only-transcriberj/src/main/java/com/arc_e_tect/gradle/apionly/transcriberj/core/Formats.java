@@ -18,9 +18,9 @@ import java.util.regex.Pattern;
 /**
  * The canonical value of each supported {@code format}, for a string with no {@code pattern}.
  *
- * <p>Each value is fixed and uses a documentation-reserved name, {@code example.com}.
- * {@code hostname}, {@code ipv4} and {@code ipv6} are not supported yet: a string of one
- * of them is a plain string, as for any other format not listed here. Where a format
+ * <p>Each value is fixed and uses documentation-reserved names and addresses, so that
+ * nothing a test sends ever reaches a real host: {@code example.com},
+ * {@code 192.0.2.0/24} (TEST-NET-1) and {@code 2001:db8::/32}. Where a format
  * allows it, the value is made longer or shorter to meet {@code minLength} and
  * {@code maxLength}; successive variants differ, for {@code uniqueItems}.
  */
@@ -28,11 +28,15 @@ final class Formats {
 
     /** The formats a value is generated for. */
     static final List<String> SUPPORTED = List.of("email", "uuid", "date", "date-time", "time", "uri",
-            "uri-reference");
+            "uri-reference", "hostname", "ipv4", "ipv6");
 
     private static final Pattern UUID = Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}"
             + "-[0-9a-fA-F]{12}");
     private static final Pattern EMAIL = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
+    private static final Pattern LABEL = Pattern.compile("[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?");
+    private static final Pattern IPV4 = Pattern.compile("((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}"
+            + "(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)");
+    private static final Pattern IPV6 = Pattern.compile("[0-9a-fA-F:]+");
     private static final Map<String, Predicate<String>> CHECKS = Map.of(
             "email", v -> EMAIL.matcher(v).matches(),
             "uuid", v -> UUID.matcher(v).matches(),
@@ -40,7 +44,10 @@ final class Formats {
             "date-time", Formats::isDateTime,
             "time", Formats::isTime,
             "uri", v -> uri(v, true),
-            "uri-reference", v -> uri(v, false));
+            "uri-reference", v -> uri(v, false),
+            "hostname", Formats::isHostname,
+            "ipv4", v -> IPV4.matcher(v).matches(),
+            "ipv6", v -> IPV6.matcher(v).matches() && (v.contains("::") || v.chars().filter(c -> c == ':').count() == 7));
 
     private Formats() {
     }
@@ -79,6 +86,9 @@ final class Formats {
             case "date-time" -> fraction(String.format(Locale.ROOT, "2000-01-01T00:00:%02d", variant), "Z", min, max);
             case "time" -> fraction(String.format(Locale.ROOT, "00:00:%02d", variant), "Z", min, max);
             case "uri", "uri-reference" -> path(variant, min, max);
+            case "hostname" -> hostname(letter, min, max);
+            case "ipv4" -> ipv4(variant, min, max);
+            case "ipv6" -> ipv6(variant, min, max);
             default -> throw new IllegalArgumentException("unsupported format " + format);
         };
         if (value == null) return null;
@@ -118,6 +128,44 @@ final class Formats {
         return value;
     }
 
+    /**
+     * {@code example.com}, or a subdomain of it as long as it takes: letters, with a dot
+     * every 62 of them, so that no label is longer than DNS allows.
+     */
+    private static String hostname(char letter, int min, int max) {
+        String domain = "example.com";
+        if (letter == 'a' && min <= domain.length()) return domain;
+        int length = Math.max(min - domain.length() - 1, 1);
+        if (length + 1 + domain.length() > max) return null;
+        char[] prefix = "a".repeat(length).toCharArray();
+        prefix[0] = letter;
+        for (int i = 62; i < length - 1; i += 63) prefix[i] = '.';
+        return new String(prefix) + "." + domain;
+    }
+
+    /** An address in 192.0.2.0/24, TEST-NET-1: the variant-th whose length fits. */
+    private static String ipv4(int variant, int min, int max) {
+        for (int host = 1; host < 255; host++) {
+            String value = "192.0.2." + host;
+            if (value.length() >= min && value.length() <= max && variant-- == 0) return value;
+        }
+        return null;
+    }
+
+    /** {@code 2001:db8::} and a last group of one to four hex digits: the variant-th that fits the length. */
+    private static String ipv6(int variant, int min, int max) {
+        String prefix = "2001:db8::";
+        for (int digits = 1; digits <= 4; digits++) {
+            int length = prefix.length() + digits;
+            if (length < min || length > max) continue;
+            int first = digits == 1 ? 1 : 1 << (4 * (digits - 1));
+            int count = (1 << (4 * digits)) - first;
+            if (variant < count) return prefix + Integer.toHexString(first + variant);
+            variant -= count;
+        }
+        return null;
+    }
+
     private static boolean isDate(String v) {
         try {
             LocalDate.parse(v, DateTimeFormatter.ISO_LOCAL_DATE);
@@ -152,5 +200,13 @@ final class Formats {
         } catch (URISyntaxException e) {
             return false;
         }
+    }
+
+    private static boolean isHostname(String v) {
+        if (v.length() > 253) return false;
+        for (String label : v.split("\\.", -1)) {
+            if (!LABEL.matcher(label).matches()) return false;
+        }
+        return true;
     }
 }

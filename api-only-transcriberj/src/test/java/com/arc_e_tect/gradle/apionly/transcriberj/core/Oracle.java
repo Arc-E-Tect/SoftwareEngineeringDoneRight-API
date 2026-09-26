@@ -33,10 +33,9 @@ import java.util.Map;
  * with the generator, run over the contract document itself.
  *
  * <p>Formats are asserted, and patterns are evaluated as ECMA-262 by joni. The document is
- * read with the same YAML 1.2 reader the plugin reads contracts with, and changed in three
+ * read with the same YAML 1.2 reader the plugin reads contracts with, and changed in two
  * ways only: where a schema has both {@code pattern} and {@code format}, the format is
- * dropped, since the pattern wins (S8); {@code hostname}, {@code ipv4} and {@code ipv6} are
- * dropped too, since no value is generated for them yet; and an OpenAPI 3.0 boolean
+ * dropped, since the pattern wins (S8); and an OpenAPI 3.0 boolean
  * {@code exclusiveMinimum}/{@code exclusiveMaximum} becomes the numeric form 2020-12 knows.
  */
 final class Oracle {
@@ -44,8 +43,6 @@ final class Oracle {
     static final JsonMapper JSON = JsonMapper.builder().build();
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
     private static final String BASE = "https://transcriberj.test/contract.json";
-    /** The formats no value is generated for yet, and so none is tested against. */
-    static final java.util.Set<String> UNSUPPORTED_FORMATS = java.util.Set.of("hostname", "ipv4", "ipv6");
 
     final JsonNode document;
     private final SchemaRegistry registry;
@@ -131,10 +128,6 @@ final class Oracle {
     private static void normalise(JsonNode node) {
         if (node instanceof ObjectNode o) {
             if (o.has("pattern") && o.get("pattern").isString() && o.has("format")) o.remove("format");
-            if (o.has("format") && o.get("format").isString()
-                    && UNSUPPORTED_FORMATS.contains(o.get("format").stringValue())) {
-                o.remove("format");
-            }
             exclusive(o, "exclusiveMinimum", "minimum");
             exclusive(o, "exclusiveMaximum", "maximum");
             o.values().forEach(Oracle::normalise);

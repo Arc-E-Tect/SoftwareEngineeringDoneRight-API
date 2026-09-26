@@ -150,9 +150,8 @@ components:
       required: [value]
       properties:
         value: {type: string, minLength: 2, maxLength: 2, pattern: "^\U0001F600+$"}
-    # Every supported format, the canonical value of each, and some made longer or
-    # shorter. The formats not supported -- hostname, ipv4, ipv6 and any other, such as
-    # x-custom -- are plain strings, and noted; the oracle does not assert them.
+    # Every supported format, the canonical value of each, some made longer or shorter,
+    # and one format that is not supported, which is a plain string and noted.
     FormatsV1:
       x-fragment-path: openapi/components/schemas/FormatsV1.yaml
       type: object

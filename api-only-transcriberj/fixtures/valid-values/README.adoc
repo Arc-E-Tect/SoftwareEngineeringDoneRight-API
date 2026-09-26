@@ -33,7 +33,7 @@ Re-record with `./gradlew recordBaselineSources`, for a deliberate change to exi
 
 The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests; the reference contracts under `../contracts` are not.
 
-The oracle reads each document as the plugin does, with three rewrites: a `format` beside a `pattern` is dropped, as the pattern wins; `hostname`, `ipv4` and `ipv6` are dropped, as no value is generated for them yet; and a 3.0 boolean exclusive bound becomes the 3.1 numeric one.
+The oracle reads each document as the plugin does, with two rewrites: a `format` beside a `pattern` is dropped, as the pattern wins; and a 3.0 boolean exclusive bound becomes the 3.1 numeric one.
 
 Which test covers which requirement:
 
