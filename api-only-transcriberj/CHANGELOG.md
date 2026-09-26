@@ -1,3 +1,15 @@
+# [0.10.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.9.0...api-only-transcriberj-v0.10.0) (2026-09-26)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** tell each invalid-request case its operation's id and declared parameters ([#53](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/53)) ([6e264d4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/6e264d4ce0f28017ed9eccf35d822ba0cd8ae123)), closes [#53](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/53)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.9.0 [skip ci] ([5a13de3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/5a13de37522f3fc5d6df2758e6252446152877b0))
+
 # [0.9.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.8.0...api-only-transcriberj-v0.9.0) (2026-09-26)
 
 
