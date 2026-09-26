@@ -131,6 +131,8 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getOutputDirectory().set(subscription.getInto());
                         task.getResourceDirectory().set(subscription.getIntoResources());
                         task.getReportFile().set(subscription.getReportFile());
+                        task.getValidValuesReport().set(project.getLayout().file(
+                                subscription.getReportFile().map(ApiOnlyTranscriberJPlugin::validValuesReport)));
                         task.getEndpointIndex().set(subscription.getEndpointIndexFile());
                     });
 
@@ -211,5 +213,16 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             upper = false;
         }
         return out.toString();
+    }
+
+    /**
+     * The machine-readable report's file, beside the report: {@code orders.txt} gives
+     * {@code orders.valid-values.json}.
+     */
+    static java.io.File validValuesReport(RegularFile report) {
+        java.io.File file = report.getAsFile();
+        String name = file.getName();
+        String base = name.endsWith(".txt") ? name.substring(0, name.length() - 4) : name;
+        return new java.io.File(file.getParentFile(), base + ".valid-values.json");
     }
 }

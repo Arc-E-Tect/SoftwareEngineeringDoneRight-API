@@ -115,6 +115,10 @@ dependencies {
     testImplementation libs.assertj.core
     testImplementation libs.jackson.databind
     testImplementation libs.gradle.idea.ext
+    // The oracle every generated valid value is checked against: test scope only, so
+    // the plugin's runtime classpath -- the consumer's build script -- never sees it.
+    testImplementation libs.json.schema.validator
+    testRuntimeOnly    libs.joni
     // Generated code carries the marker annotation, so the tests compile against it.
     testImplementation libs.sedr.library
     testRuntimeOnly    libs.junit.platform.launcher
@@ -174,6 +178,20 @@ tasks.register('recordHandwrittenEventPayloads', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.fixtures.HandwrittenEventPayloadRecorder'
     args layout.projectDirectory.file('src/test/resources/fixtures/handwritten/event-payloads.json').asFile.absolutePath
+}
+
+// Re-records the committed baselines the valid-value work is held to: the hash of every
+// source generated before it (T12.11), and the valid values of the reference contracts
+// (T12.10). Only for a deliberate change; review the diff.
+['recordBaselineSources': 'sources', 'recordValidValuesGolden': 'golden'].each { name, what ->
+    tasks.register(name, JavaExec) {
+        description = "Re-records the committed ${what == 'sources' ? 'hashes of the existing generated sources' : 'valid values of the reference contracts'}."
+        group = 'verification'
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.core.Baselines'
+        systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('fixtures').asFile.absolutePath
+        args what
+    }
 }
 
 jacocoTestReport {

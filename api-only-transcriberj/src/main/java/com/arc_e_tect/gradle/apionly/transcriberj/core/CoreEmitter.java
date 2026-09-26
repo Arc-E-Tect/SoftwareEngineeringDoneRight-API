@@ -4,6 +4,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.CanonicalJson;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Const;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Constraints;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Construct;
+import com.arc_e_tect.gradle.apionly.transcriberj.model.Finding;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncChannel;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncMessage;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.AsyncOperation;
@@ -52,6 +53,8 @@ final class CoreEmitter implements Emitter {
     private final CoreClassNames names;
     private final String contractSha256;
     private final GenerationReport report;
+    private ValidValues values;
+    private ValidRequests requests;
 
     /** Every key a bundle may carry, in the order the classes declare them. */
     private final java.util.Set<String> descriptionKeys = new java.util.LinkedHashSet<>();
@@ -93,6 +96,9 @@ final class CoreEmitter implements Emitter {
                 "placeholder", JavaText.literal(context.settings().descriptionPlaceholder()),
                 "depth", String.valueOf(context.settings().recursionDepth()))));
         context.writeJava(pkg, "ContractManifest", manifest(context, header, pkg));
+        context.writeJava(pkg, "ContractRequest", template("ContractRequest", header, pkg, Map.of()));
+        values = new ValidValues(shapes, context.settings().recursionDepth());
+        requests = new ValidRequests(context.model(), shapes, values);
 
         // Written before the resolver, which is written from the keys they ask it for.
         Map<String, String> sources = new LinkedHashMap<>();
@@ -117,6 +123,11 @@ final class CoreEmitter implements Emitter {
                     + ", with " + descriptionKeys.size() + " key(s) it may carry; what generation produced is the "
                     + "fallback. ContractDescriptions.keys() lists them, missing() what nothing covers, and "
                     + "untranslated(locale) what one language has no text of its own for.");
+        }
+        for (String unsupported : values.unsupportedFormats()) {
+            report.note("No value is generated for format " + unsupported.substring(unsupported.lastIndexOf(": ") + 2)
+                    + " at " + unsupported.substring(0, unsupported.lastIndexOf(": ")) + "; valid values there are "
+                    + "plain strings");
         }
         sources.forEach((name, source) -> context.writeJava(pkg, name, source));
     }
@@ -411,8 +422,143 @@ final class CoreEmitter implements Emitter {
                     .append(INDENT).append(INDENT).append("return ").append(expression).append(";\n")
                     .append(INDENT).append("}\n\n");
         }
+        validRequests(context, operation, generated, out);
         out.append("}\n");
         return out.toString();
+    }
+
+    // ------------------------------------------------------- valid values
+
+    /** What one generated valid-value method returns: a value, or where and why there is none. */
+    private record Outcome(Object value, String location, String reason) {
+    }
+
+    private static Outcome outcome(java.util.function.Supplier<Object> value) {
+        try {
+            return new Outcome(value.get(), null, null);
+        } catch (ValidValues.Unsatisfiable e) {
+            return new Outcome(null, e.location, e.reason);
+        } catch (Shapes.Unrepresentable e) {
+            Finding f = e.finding;
+            return new Outcome(null, f.location(), f.construct() + " (" + f.detail() + "), which no rule represents "
+                    + "yet" + (f.remedy() == null ? "" : "; remedy: " + f.remedy()));
+        }
+    }
+
+    /** The body of a valid-value method: its value returned, or, reported, the reason it has none thrown. */
+    private List<String> returning(Outcome outcome, String className, String method, String contract,
+                                   java.util.function.Function<Object, String> expression) {
+        if (outcome.value() != null) return List.of("return " + expression.apply(outcome.value()) + ";");
+        report.noValidValue(new GenerationReport.NoValidValue(className, method, outcome.location(), outcome.reason()));
+        String message = className + "." + method + " has no valid value from contract " + contract + ": "
+                + outcome.reason() + " at " + outcome.location() + ". See the API-Only TranscriberJ report.";
+        return List.of("throw new UnsupportedOperationException(" + JavaText.literal(message) + ");");
+    }
+
+    /** An outcome as the machine-readable report records it. */
+    private static Map<String, Object> reported(Outcome outcome, java.util.function.Function<Object, Object> value) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (outcome.value() != null) {
+            out.put("value", value.apply(outcome.value()));
+        } else {
+            Map<String, Object> why = new LinkedHashMap<>();
+            why.put("location", outcome.location());
+            why.put("reason", outcome.reason());
+            out.put("unsatisfiable", why);
+        }
+        return out;
+    }
+
+    /**
+     * A string as a Java expression: a literal, or, for a text too long for one class-file
+     * constant, literals joined at run time.
+     */
+    static String javaString(String text) {
+        int chunk = 8000;
+        if (text.length() <= chunk) return JavaText.literal(text);
+        List<String> parts = new ArrayList<>();
+        int start = 0;
+        while (start < text.length()) {
+            int end = Math.min(start + chunk, text.length());
+            if (end < text.length() && Character.isHighSurrogate(text.charAt(end - 1))) end--;
+            parts.add(JavaText.literal(text.substring(start, end)));
+            start = end;
+        }
+        return "String.join(\"\", " + String.join(", ", parts) + ")";
+    }
+
+    /** A body as its method returns it: compact JSON followed by a newline. */
+    private static String bodyText(Object value) {
+        return javaString(ValueJson.write(value) + "\n");
+    }
+
+    private void validRequests(EmitterContext context, Operation operation, GeneratedClass generated,
+                               StringBuilder out) {
+        String name = generated.simpleName();
+        for (ValidRequests.Unsupported u : requests.unsupported(operation)) {
+            report.unsupportedParameter(new GenerationReport.UnsupportedParameter(name, u.location(), u.name(),
+                    u.reason()));
+        }
+        Map<String, Object> entry = new LinkedHashMap<>();
+        entry.put("class", name);
+        entry.put("location", generated.key());
+        entry.put("method", operation.method().name());
+        entry.put("pathTemplate", operation.path());
+        List<Object[]> kinds = new ArrayList<>();
+        kinds.add(new Object[]{ValidRequests.Kind.REQUIRED, "requiredRequest",
+            "The smallest request the contract accepts: every required parameter, and the minimal body when\n"
+                    + INDENT + " * the operation declares one, each at the first valid value by the rules the README gives."});
+        kinds.add(new Object[]{ValidRequests.Kind.FULL, "fullRequest",
+            "A request with every parameter a value is generated for, and the full body when the operation\n"
+                    + INDENT + " * declares one."});
+        if (ValidRequests.bodyOptional(operation)) {
+            kinds.add(new Object[]{ValidRequests.Kind.NO_BODY, "noBodyRequest",
+                "The smallest request without a body, which the contract allows since it does not require one:\n"
+                        + INDENT + " * worth a test of its own, as an optional body is often meant to be required."});
+        }
+        for (Object[] kind : kinds) {
+            String method = (String) kind[1];
+            Outcome o = outcome(() -> requests.request(operation, (ValidRequests.Kind) kind[0]));
+            List<String> lines = returning(o, name, method + "()", context.settings().contract(),
+                    v -> requestExpression((ValidRequests.Request) v));
+            out.append(INDENT).append("/**\n").append(INDENT).append(" * ").append(kind[2]).append("\n")
+                    .append(INDENT).append(" */\n")
+                    .append(INDENT).append("public static ContractRequest ").append(method).append("() {\n");
+            for (String line : lines) out.append(INDENT).append(INDENT).append(line).append('\n');
+            out.append(INDENT).append("}\n\n");
+            entry.put(method, reported(o, v -> requestJson((ValidRequests.Request) v)));
+        }
+        report.validRequest(entry);
+    }
+
+    private static String requestExpression(ValidRequests.Request r) {
+        return "new ContractRequest(METHOD, PATH, " + listOf(r.pathValues()) + ", " + pairs(r.query()) + ", "
+                + pairs(r.headers()) + ", " + (r.contentType() == null ? "null" : JavaText.literal(r.contentType()))
+                + ", " + (r.body() == null ? "null" : bodyText(r.body())) + ")";
+    }
+
+    private static String pairs(List<ValidRequests.Pair> pairs) {
+        return "java.util.List.of(" + String.join(", ", pairs.stream().map(p -> "new ContractRequest.Pair("
+                + JavaText.literal(p.name()) + ", " + JavaText.literal(p.value()) + ")").toList()) + ")";
+    }
+
+    private static Map<String, Object> requestJson(ValidRequests.Request r) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("method", r.method());
+        out.put("pathTemplate", r.pathTemplate());
+        out.put("pathParameters", r.pathValues());
+        out.put("query", r.query().stream().map(CoreEmitter::pair).toList());
+        out.put("headers", r.headers().stream().map(CoreEmitter::pair).toList());
+        out.put("contentType", r.contentType());
+        out.put("body", r.body());
+        return out;
+    }
+
+    private static Map<String, Object> pair(ValidRequests.Pair p) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("name", p.name());
+        out.put("value", p.value());
+        return out;
     }
 
     private static String listOf(List<String> values) {
@@ -512,6 +658,10 @@ final class CoreEmitter implements Emitter {
                     body(plan, unrepresentable);
                     fields(schema);
                 }
+            }
+            if (generated.exposed() && generated.bodyShaped()) {
+                validBodies(target != null ? target : schema, target != null
+                        ? "/components/schemas/" + Shapes.escape(schema.ref()) : schemaLocation);
             }
             out.append("}\n");
             return out.toString();
@@ -941,6 +1091,29 @@ final class CoreEmitter implements Emitter {
             method("The fields of a body; see {@link " + targetClass + "}.",
                     "public static java.util.List<ContractField> fields(String prefix)",
                     List.of("return " + targetClass + ".fields(prefix);"));
+        }
+
+        /** {@code requiredBody()} and {@code fullBody()}: the class's valid bodies, or why it has none. */
+        private void validBodies(Schema schema, String location) {
+            String name = generated.simpleName();
+            String contract = context.settings().contract();
+            Outcome required = outcome(() -> values.value(schema, location, ValidValues.Variant.REQUIRED));
+            Outcome full = outcome(() -> values.value(schema, location, ValidValues.Variant.FULL));
+            method("The smallest body the contract accepts: every required member and nothing else, each at the\n"
+                            + INDENT + " * first valid value by the rules the README gives. Compact JSON followed by a newline,\n"
+                            + INDENT + " * as {@code body(...)} writes.",
+                    "public static String requiredBody()",
+                    returning(required, name, "requiredBody()", contract, CoreEmitter::bodyText));
+            method("A body with every member the contract declares, each at a valid value. Compact JSON followed\n"
+                            + INDENT + " * by a newline, as {@code body(...)} writes.",
+                    "public static String fullBody()",
+                    returning(full, name, "fullBody()", contract, CoreEmitter::bodyText));
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("class", name);
+            entry.put("location", location);
+            entry.put("requiredBody", reported(required, v -> v));
+            entry.put("fullBody", reported(full, v -> v));
+            report.validBody(entry);
         }
 
         // ------------------------------------------------------------ fields

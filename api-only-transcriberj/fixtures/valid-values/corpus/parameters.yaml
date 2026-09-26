@@ -1,0 +1,95 @@
+# Parameters and requests (T12.8). Parameters travel as strings, so each value is its
+# wire form: an integer's is "1", a boolean's "false". Only a primitive schema with the
+# default style for its location has a value; the rest are reported as not supported yet.
+openapi: 3.1.0
+info:
+  title: Valid-value corpus, parameters
+  version: 1.0.0
+paths:
+  /items/{id}/{flag}/{code}:
+    parameters:
+      # Declared on the path item, and replaced by the operation's own of that name.
+      - {name: id, in: path, required: true, schema: {type: string}}
+      - {name: X-Trace, in: header, required: true, schema: {type: string, pattern: '^t-[0-9a-f]{4}$'}}
+    get:
+      operationId: getItem
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: flag, in: path, required: true, schema: {type: boolean}}
+        - {name: code, in: path, required: true, schema: {type: string, pattern: '^[A-Z]{3}$'}}
+        - {name: weight, in: query, required: true, schema: {type: number, minimum: 1.2, multipleOf: 0.5}}
+        - {name: status, in: query, required: true, schema: {type: string, enum: [open, closed]}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 10, maximum: 100}}
+        - $ref: '#/components/parameters/PageV1'
+        # Ignored, as OpenAPI says a header parameter of these names is.
+        - {name: Accept, in: header, required: true, schema: {type: string, const: application/xml}}
+        - {name: Content-Type, in: header, required: true, schema: {type: string, const: text/plain}}
+        - {name: Authorization, in: header, required: true, schema: {type: string, const: Basic x}}
+        # Not supported yet, and optional: reported, and left out of fullRequest() too.
+        - {name: tags, in: query, schema: {type: array, items: {type: string}}}
+        - {name: filter, in: query, schema: {type: object, properties: {a: {type: string}}}}
+        - {name: sort, in: query, style: spaceDelimited, schema: {type: string}}
+        - {name: single, in: query, explode: false, schema: {type: string}}
+        - {name: session, in: cookie, schema: {type: string}}
+      responses:
+        '200':
+          description: The item.
+  /search:
+    post:
+      operationId: search
+      parameters:
+        # Required, and not supported yet: no request can be generated without it.
+        - {name: ids, in: query, required: true, schema: {type: array, items: {type: integer}}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryV1'
+      responses:
+        '200':
+          description: The results.
+  /notes:
+    post:
+      operationId: postNote
+      # Declared and not required: noBodyRequest() as well.
+      requestBody:
+        content:
+          text/plain:
+            schema: {type: string}
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/QueryV1'
+      responses:
+        '204':
+          description: Accepted.
+  /documents:
+    put:
+      operationId: putDocument
+      # Only a content type this generator does not write.
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema: {type: string}
+      responses:
+        '204':
+          description: Accepted.
+components:
+  parameters:
+    PageV1:
+      x-fragment-path: openapi/components/parameters/PageV1.yaml
+      name: page
+      in: query
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    QueryV1:
+      x-fragment-path: openapi/components/schemas/QueryV1.yaml
+      type: object
+      required: [text]
+      properties:
+        text: {type: string, minLength: 2}
+        exact: {type: boolean}

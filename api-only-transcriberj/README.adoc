@@ -156,7 +156,8 @@ apiOnlyTranscriberJ {
         // Default: build/generated/resources/transcriberj/<contract>
         // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders')
 
-        // Where the generation report is written.
+        // Where the generation report is written. The machine-readable report of
+        // every valid value goes beside it: orders.txt gives orders.valid-values.json.
         // Default: build/reports/transcriberj/<contract>.txt
         // reportFile = layout.buildDirectory.file('reports/transcriberj/orders.txt')
 
@@ -255,7 +256,7 @@ Nothing resolves and nothing is generated to resolve with: the classes are the o
 |Task |What it does
 
 |`generateContractSources<Contract>`
-|Generates the class tree, replacing whatever the output directory held, and writes its report, by default `build/reports/transcriberj/<contract>.txt` (`reportFile`).
+|Generates the class tree, replacing whatever the output directory held, and writes its report, by default `build/reports/transcriberj/<contract>.txt` (`reportFile`), with the machine-readable report of every valid value beside it, `<contract>.valid-values.json`.
 Runs whenever the contract document or the lockfile changes; the fetch runs first.
 
 |`verifyContractSources<Contract>`
@@ -414,6 +415,7 @@ They are constants only; generated bodies do not enforce them.
 A schema can be sent under more than one content type and status, so those belong to the operation: its class holds `REQUEST_CONTENT_TYPE` and `CONTENT_TYPE_<status>`, as <<operations,Operations §>> shows.
 * **`description()`**: the empty string, or, with `generateDocs` on, the contract's description or the placeholder.
 * **`body(...)`** and **`fields(prefix)`**, when the schema describes an object.
+* **`requiredBody()`** and **`fullBody()`**, when the class is public and has `body(...)`: a valid body, as <<valid-values,Valid values §>> describes.
 
 [#operations]
 === Operations
@@ -433,6 +435,10 @@ public final class GetUserOperation {
     // LOCATION, OPERATION_SHA256, CONTRACT_VERSION, REQUEST_CONTENT_TYPE where there is one
 
     public static String path(String username) { ... }
+
+    public static ContractRequest requiredRequest() { ... }
+    public static ContractRequest fullRequest() { ... }
+    // noBodyRequest() where the operation's body is optional
 }
 ----
 
@@ -512,6 +518,160 @@ A map, an object with `additionalProperties` and no properties of its own, is a 
 `ContractManifest` holds the contract's name, title, version and document hash, and an entry for every generated class, operations included, with what it came from.
 One test can assert that the whole tree corresponds to the locked contract.
 
+[#valid-values]
+=== Valid values
+
+A test of a `409` or a `422` starts from a request the contract accepts and changes one thing about it.
+The tree generates that starting point, from the contract's constraints alone -- never from its `example` or `examples` -- so it changes when the contract does:
+
+[cols="2,3", options="header"]
+|===
+|Member |Returns
+
+|`requiredBody()`, on every public class with `body(...)`
+|The smallest body the contract accepts: every required member and nothing else, and exactly `minItems` items in every array.
+Compact JSON followed by a newline, as `body(...)` writes.
+
+|`fullBody()`, on the same classes
+|A body with every member the contract declares, and at least one item in every array that allows one.
+
+|`requiredRequest()`, on every operation's class
+|A `ContractRequest` with every required parameter and, when the operation declares a body, the minimal one -- whether the body is required or not.
+
+|`fullRequest()`, on the same classes
+|Every parameter a value is generated for, and the full body.
+
+|`noBodyRequest()`, where an operation declares a body and does not require it
+|The required parameters and no body: valid, since the contract says so, and worth a test of its own, as an optional body is often a mistake in the contract.
+|===
+
+`ContractRequest` is generated into the base package beside `ContractField`, and depends on nothing.
+It holds the method, the path *template* -- the operation's `PATH` -- and, apart from it, the value of each placeholder in the order the path names them; the query parameters and the headers as lists of name and value, since a name may repeat; the content type; and the body as JSON text.
+The last two are `null` without a body.
+Nothing is encoded, as `path(...)` encodes nothing.
+
+[source,java]
+----
+ContractRequest request = RegisterUserOperation.requiredRequest();
+webTestClient.method(HttpMethod.valueOf(request.method()))
+        .uri(RegisterUserOperation.PATH, request.pathParameters().toArray())
+        .contentType(MediaType.parseMediaType(request.contentType()))
+        .bodyValue(request.body())
+        .exchange()
+        .expectStatus().isCreated();
+----
+
+Every value is valid by construction: nothing here generates an invalid one.
+Each returns the same value on every call, and is a constant compiled into the class.
+
+[#valid-value-rules]
+==== How a value is chosen
+
+The rules below decide each value, and are what the TranscriberJ's own tests hold it to, checked against an independent JSON Schema 2020-12 validator.
+
+[cols="2,5", options="header"]
+|===
+|Keyword or type |Value
+
+|`const` |The const value.
+|`enum` |The first listed value that satisfies every other keyword of the schema.
+|`type: string` |`a`, repeated to `minLength` and at least once -- unless `maxLength` is `0`, which gives the empty string.
+Lengths are counted in code points, as JSON Schema counts them, so a character outside the Basic Multilingual Plane is one.
+|`pattern` |The shortest value that matches, within `minLength` and `maxLength`.
+The pattern is read as ECMA-262 in Unicode mode and, as JSON Schema says, is _found_ anywhere in the value rather than matched against the whole of it: an unanchored match is padded with `a` to reach `minLength`.
+Every pattern that applies must match.
+A pattern with a backreference, a lookaround, a word boundary or a Unicode property escape has no value generated for it: see <<no-valid-value,When there is no valid value §>>.
+|`format`, without `pattern` |A fixed value per format, made longer or shorter where the format allows, to meet `minLength` and `maxLength`:
+`email` `user@example.com`; `uuid` `00000000-0000-4000-8000-000000000000`; `date` `2000-01-01`; `date-time` `2000-01-01T00:00:00Z`; `time` `00:00:00Z`; `uri` and `uri-reference` `https://example.com/`; `hostname` `example.com`; `ipv4` `192.0.2.1`; `ipv6` `2001:db8::1`.
+Each uses a name or address reserved for documentation -- `example.com`, `192.0.2.0/24` and `2001:db8::/32` -- so a value a test sends never reaches a real host, as a loopback or private address could.
+Any other format is a plain string, and the report notes it.
+|`format` with `pattern` |The pattern wins, and the format is ignored.
+|`type: integer` |`0` when it is valid; otherwise the smallest valid value at or above the lower bound; otherwise the largest at or below the upper bound; a multiple of `multipleOf` in each case.
+|`type: number` |As an integer, in exact decimal arithmetic, so `multipleOf: 0.1` from `0.25` gives `0.3`.
+Above an exclusive lower bound with no `multipleOf`, the next whole number, or, when that is beyond the upper bound, the midpoint of the two.
+|`exclusiveMinimum`, `exclusiveMaximum` |Both forms: the number of OpenAPI 3.1, and the boolean beside `minimum` or `maximum` of 3.0.
+|`type: boolean` |`false`.
+|`type: array` |`minItems` items in the required body; at least one, where `maxItems` allows it, in the full one.
+With `uniqueItems`, each different from the others.
+|`type: object` |The required members, in the order they are declared.
+When `minProperties` asks for more, the declared optional members first, then members named after a `patternProperties` pattern, then members `additionalProperties` allows, named `additional1`, `additional2` and on.
+In the full body, every declared member.
+|No `type`, and no keyword implying one |`null`.
+Where keywords imply a type -- `properties`, `items`, `minLength`, `minimum` and the like -- the value is of that type.
+|`$ref` |Followed.
+In the full body, an optional member that refers back to its own component is followed `recursionDepth` times, as `fields(...)` follows it, and then left out; a required one that recurses deeper has no valid value.
+|`allOf` |Every branch applies: the larger `minLength`, the smaller `maxLength`, every `pattern`, the values the `enum` lists have in common, the stricter bounds.
+The class's constants and descriptors go on taking the first definition of each keyword, as they always have.
+|`oneOf`, `anyOf` of references |The first branch, in declared order, whose value is valid; for `oneOf`, one valid against _exactly_ that branch, so a branch whose value another branch accepts too is passed over.
+With a `discriminator`, the discriminating property takes the value its mapping gives the branch.
+|`oneOf`, `anyOf` with an inline branch, a type list, a `true` or `false` schema |No value, as there is no `body(...)`: see <<unrepresentable,Constructs no rule represents yet §>>.
+|`not`, `if`, `prefixItems` and every other keyword that asserts something the model does not type |No value: the schema's validity depends on it, and a value is never guessed at.
+|===
+
+A parameter's value is its value as it travels, a string: an integer parameter's is `"0"`.
+Only a parameter with a primitive schema and the default `style` for where it is sent -- `simple` in the path and a header, `form` in the query -- has one.
+One in a cookie, with an array or object schema, described by `content`, or with another `style` or `explode` is reported as not supported yet: an optional one is left out of `fullRequest()`, and a required one leaves the request without a value.
+Header parameters named `Accept`, `Content-Type` or `Authorization` are ignored, as OpenAPI says they are.
+A body is sent as the first JSON content type the operation declares -- `application/json`, or any `+json` type; an operation that accepts none has no valid request.
+
+[#valid-value-determinism]
+==== The same contract, the same values
+
+Every choice is made by a fixed rule, and nothing depends on the clock, the machine, its locale or its time zone.
+The same contract generates byte-identical sources, and byte-identical reports, on every run and every machine, so the generation task stays up to date.
+
+[#no-valid-value]
+==== When there is no valid value
+
+When the contract leaves no valid value -- `minLength` above `maxLength`, bounds that cross, `enum` lists with no value in common, a pattern no value of the allowed length matches, `uniqueItems` with fewer distinct values than `minItems`, a required member that recurses forever -- or this generator cannot find one, it never falls back to something that merely looks right.
+The method is generated as one that throws `UnsupportedOperationException`, naming the location in the contract and the reason, and the report lists it under _No valid value could be generated_.
+The build does not fail.
+A full body can have no valid value where the required one has -- `maxProperties` below the number of members declared, for instance -- and then only `fullBody()` throws.
+
+[#valid-values-report]
+==== The machine-readable report
+
+Beside the report, generation writes every valid value as JSON, for tools and tests to read: `build/reports/transcriberj/<contract>.valid-values.json`, or, with `reportFile` set, the same name with `.valid-values.json` in place of `.txt`.
+It is compact, its members sorted by name, and its entries by class, so the same contract gives the same bytes:
+
+[source,json]
+----
+{
+  "schemaVersion": 1,
+  "contract": "orders",
+  "version": "1.4.0",
+  "bodies": [
+    {
+      "class": "OrderV1",
+      "location": "/components/schemas/OrderV1",
+      "requiredBody": {"value": {"id": "a", "quantity": 1}},
+      "fullBody": {"unsatisfiable": {"location": "/components/schemas/OrderV1", "reason": "..."}}
+    }
+  ],
+  "requests": [
+    {
+      "class": "PlaceOrderOperation",
+      "location": "/paths/~1orders/post",
+      "method": "POST",
+      "pathTemplate": "/orders",
+      "requiredRequest": {"value": {"method": "POST", "pathTemplate": "/orders", "pathParameters": [],
+                                    "query": [], "headers": [{"name": "X-Tenant", "value": "a"}],
+                                    "contentType": "application/json", "body": {"id": "a", "quantity": 1}}},
+      "fullRequest": {"value": {"...": "..."}},
+      "noBodyRequest": {"value": {"...": "..."}}
+    }
+  ],
+  "unsupportedParameters": [
+    {"class": "PlaceOrderOperation", "location": "/paths/~1orders/post/parameters/1", "name": "tags",
+     "reason": "a parameter whose schema is an array is not supported yet"}
+  ]
+}
+----
+
+Each variant holds either `value`, the value the method returns, or `unsatisfiable`, with the `location` and the `reason` the method throws.
+`noBodyRequest` is present only where the method is.
+`schemaVersion` changes when the shape does.
+
 [#unrepresentable]
 == Constructs no rule represents yet
 
@@ -545,6 +705,7 @@ The model types `$ref`, `type`, `format`, `description`, `const`, `enum`, `requi
 |===
 
 The report lists every degraded method, every recommendation and every undecided construct in `build/reports/transcriberj/<contract>.txt` (or the subscription's `reportFile`), and the build log gives the counts.
+A valid-value method that reaches such a construct throws too, and is listed under _No valid value could be generated_ rather than among the degraded methods, with every other valid-value method that has no value; the build log counts those, and the parameters not supported yet, as well.
 A construct can appear in both lists: *undecided* says the contract uses it, *degraded* names each method it made throw.
 A report with undecided constructs and no degraded method means nothing generated was affected.
 A schema written inline in an operation is generated, and also listed with the recommendation to make it a component.
@@ -682,7 +843,7 @@ It does not prove that the payload is valid against the schema, and nothing here
 
 Constraints are constants, not checks.
 Generated bodies are built from the arguments given, and a body built from arguments that violate a constraint violates it too.
-Invalid and partial bodies, for the tests of 4xx responses, are written by hand.
+Invalid and partial bodies, for the tests of 4xx responses, are written by hand, starting from a valid one: `requiredBody()`, `requiredRequest()` and the rest, in <<valid-values,Valid values §>>.
 link:../docs/guides/hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] says how to write them, and anything else the generator could not, on top of the generated classes -- and how many to write.
 
 [#development]
@@ -708,6 +869,9 @@ Each directory's `SOURCE.properties` says how to rebuild it.
 `src/handwritten` holds the reference implementation's hand-written `testSchemaCommon` classes.
 The generated classes must write, for every input recorded in `src/test/resources/fixtures/handwritten/bodies.json`, the body the hand-written ones write: byte for byte, except `UserV1`, which is held to JSON equality.
 `./gradlew verifyHandwrittenFixtures` checks the recording itself; the fixtures' own `README.adoc` says which parts are strict and which advisory.
+
+`fixtures/valid-values` holds what valid-value generation is held to: a corpus of contracts written for it, one golden file of valid values per reference contract, and the hash of every source generated before valid values were.
+Its `README.adoc` says what each is for; `./gradlew recordValidValuesGolden` and `./gradlew recordBaselineSources` re-record them, for a deliberate change only.
 
 The build gates on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
 The plugin's tasks are tested in-process as well as through TestKit, so the coverage agent sees them.

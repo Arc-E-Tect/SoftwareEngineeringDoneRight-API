@@ -168,6 +168,16 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     public abstract RegularFileProperty getReportFile();
 
     /**
+     * Where the machine-readable report of every generated valid value goes: JSON, beside
+     * the report. Nothing is written when it is not set.
+     *
+     * @return the report
+     */
+    @OutputFile
+    @org.gradle.api.tasks.Optional
+    public abstract RegularFileProperty getValidValuesReport();
+
+    /**
      * Gradle's worker API.
      *
      * @return the executor
@@ -199,6 +209,7 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             parameters.getOutputDirectory().set(getOutputDirectory());
             parameters.getResourceDirectory().set(getResourceDirectory());
             parameters.getReportFile().set(getReportFile());
+            parameters.getValidValuesReport().set(getValidValuesReport());
             parameters.getEndpointIndex().set(getEndpointIndex());
         });
         queue.await();

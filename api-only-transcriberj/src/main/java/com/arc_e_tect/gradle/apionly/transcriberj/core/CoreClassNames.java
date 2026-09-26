@@ -38,7 +38,8 @@ import java.util.Set;
 final class CoreClassNames implements ClassNames {
 
     /** The classes every generated tree has, whose names nothing else may take. */
-    static final List<String> SUPPORT_CLASSES = List.of("ContractJson", "ContractField", "ContractManifest");
+    static final List<String> SUPPORT_CLASSES = List.of("ContractJson", "ContractField", "ContractManifest",
+            "ContractRequest");
 
     private static final String INLINE_ADVICE = "an inline schema; define it as a schema component and $ref it, "
             + "so that its class is named after its fragment rather than after the operation";
