@@ -572,9 +572,12 @@ final class CoreEmitter implements Emitter {
         for (Operation operation : context.model().operations()) {
             GeneratedClass generated = names.invalidRequests(CoreClassNames.operationLocation(operation)).orElseThrow();
             InvalidRequests.Result result = invalid.derive(operation);
-            sources.put(generated.simpleName(), invalidRequestsClass(context, generated, header, result));
+            Declared declared = declared(operation);
+            sources.put(generated.simpleName(), invalidRequestsClass(context, generated, header, result, declared));
             List<InvalidRequestCase> cases = new ArrayList<>();
-            for (int i = 0; i < result.cases().size(); i++) cases.add(spiCase(result.cases().get(i), i));
+            for (int i = 0; i < result.cases().size(); i++) {
+                cases.add(spiCase(result.cases().get(i), operation.operationId(), declared, i));
+            }
             invalidRequestCases.put(CoreClassNames.operationLocation(operation), List.copyOf(cases));
             report.invalidRequests(generated.simpleName(), result, context.settings().invalidRequestStatus());
         }
@@ -582,8 +585,28 @@ final class CoreEmitter implements Emitter {
         invalid.formatRecommendations().forEach(report::formatRecommendation);
     }
 
+    /**
+     * The names of the query parameters and headers an operation declares, as its valid requests
+     * read them: its path item's and its own, without the headers OpenAPI ignores.
+     */
+    private record Declared(List<String> query, List<String> headers) {
+    }
+
+    private Declared declared(Operation operation) {
+        List<String> query = new ArrayList<>();
+        List<String> headers = new ArrayList<>();
+        for (ValidRequests.Located located : requests.parameters(operation)) {
+            String in = located.parameter().in();
+            String name = located.parameter().name();
+            if (name == null) continue;
+            if (InvalidRequests.QUERY.equals(in)) query.add(name);
+            if (InvalidRequests.HEADER.equals(in)) headers.add(name);
+        }
+        return new Declared(List.copyOf(query), List.copyOf(headers));
+    }
+
     private String invalidRequestsClass(EmitterContext context, GeneratedClass generated, String header,
-                                        InvalidRequests.Result result) {
+                                        InvalidRequests.Result result, Declared declared) {
         Operation operation = result.operation();
         String name = generated.simpleName();
         String status = context.settings().invalidRequestStatus();
@@ -623,7 +646,11 @@ final class CoreEmitter implements Emitter {
                     .append(indent).append(INDENT).append(INDENT).append(c.status()).append(", ")
                     .append(listOf(c.contentTypes())).append(", ")
                     .append(c.bodyClass() == null ? "null" : JavaText.literal(c.bodyClass())).append(", ")
-                    .append(c.representative()).append(')');
+                    .append(c.representative()).append(",\n")
+                    .append(indent).append(INDENT).append(INDENT)
+                    .append(operation.operationId() == null ? "null" : JavaText.literal(operation.operationId()))
+                    .append(", ").append(listOf(declared.query())).append(", ").append(listOf(declared.headers()))
+                    .append(')');
         }
         out.append(");\n\n");
         out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n");
@@ -640,13 +667,15 @@ final class CoreEmitter implements Emitter {
     }
 
     /** A case as an emitter is given it: the values the generated {@code InvalidRequestCase} holds. */
-    private static InvalidRequestCase spiCase(InvalidRequests.Case c, int index) {
+    private static InvalidRequestCase spiCase(InvalidRequests.Case c, String operationId, Declared declared,
+                                              int index) {
         ValidRequests.Request r = c.request();
         ContractRequest request = new ContractRequest(r.method(), r.pathTemplate(), r.pathValues(),
                 spiPairs(r.query()), spiPairs(r.headers()), r.contentType(),
                 r.body() == null ? null : ValueJson.write(r.body()) + "\n");
         return new InvalidRequestCase(c.id(), c.description(), c.in(), c.name(), c.pointer(), c.keyword(), request,
-                c.status(), c.contentTypes(), c.bodyClass(), c.representative(), index);
+                c.status(), c.contentTypes(), c.bodyClass(), c.representative(), operationId, declared.query(),
+                declared.headers(), index);
     }
 
     private static List<ContractRequest.Pair> spiPairs(List<ValidRequests.Pair> pairs) {

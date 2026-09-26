@@ -127,12 +127,15 @@ class EmitterInvalidRequestCasesTest {
         ContractRequest request = new ContractRequest("GET", "/a", new ArrayList<>(List.of("x")),
                 new ArrayList<>(List.of(new ContractRequest.Pair("q", "1"))), new ArrayList<>(), null, null);
         InvalidRequestCase c = new InvalidRequestCase("query-q-type", "d", "query", "q", null, "type", request, 400,
-                new ArrayList<>(List.of("application/json")), null, true, 0);
+                new ArrayList<>(List.of("application/json")), null, true, "getA", new ArrayList<>(List.of("q")),
+                new ArrayList<>(List.of("X-A")), 0);
 
         assertThatThrownBy(() -> request.pathParameters().add("y")).isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> request.query().clear()).isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> request.headers().add(null)).isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> c.expectedContentTypes().clear()).isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> c.declaredQuery().add("r")).isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> c.declaredHeaders().clear()).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
