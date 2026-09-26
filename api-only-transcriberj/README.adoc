@@ -712,7 +712,7 @@ They are generated whether or not an emitter renders them.
 |Class |Holds
 
 |`InvalidRequestCase`, in the base package beside `ContractRequest`
-|One case: a record of `id`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass` and `representative`.
+|One case: a record of `id`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass`, `representative`, `operationId`, `declaredQuery` and `declaredHeaders`.
 
 |`<Operation>InvalidRequests`, for every operation -- `InitiateUserRegistrationInvalidRequests` beside `InitiateUserRegistrationOperation`
 |`CASES`, the operation's cases in canonical order, and `CASE_COUNT`.
@@ -735,6 +735,9 @@ For a missing required member and for an unknown member, the pointer names the m
 |`expectedStatus`, `expectedContentTypes` |The declared status, and every content type the declared response is declared with; empty when it has no content, and only the status is expected.
 |`responseBodyClass` |The simple name of the generated class for the declared response's body, resolved through a `$ref` to `components/responses` where there is one; `null` without content.
 |`representative` |Whether this is the case whose documentation is published: the first in canonical order, so exactly one per operation.
+|`operationId` |The operation's `operationId`, or `null` when the contract gives it none.
+|`declaredQuery`, `declaredHeaders` |The name of every query parameter and every header the operation declares -- its path item's and its own -- in declaration order, whether or not the request carries it; `Accept`, `Content-Type` and `Authorization` left out, as OpenAPI ignores them as parameters.
+A renderer that matches a request exactly, such as a stub, requires the ones the request leaves out to be absent: that is what tells a missing `required` parameter apart from a valid request.
 |===
 
 *Canonical order* is path parameters, then query parameters, then headers, then the body; within each, `required`, then `type`, then `null`, then the other keywords in the order of the table below; then by name or pointer.

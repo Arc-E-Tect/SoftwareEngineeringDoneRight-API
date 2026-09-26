@@ -22,15 +22,24 @@ import java.util.List;
  * @param responseBodyClass    the simple name of the core class for that response's body, or
  *                             null when it has none
  * @param representative       whether this is the case whose documentation is published
+ * @param operationId          the {@code operationId} of the case's operation, or null when the
+ *                             contract gives it none
+ * @param declaredQuery        the name of every query parameter the operation declares, whether
+ *                             or not the request carries it, in declaration order
+ * @param declaredHeaders      the name of every header parameter the operation declares, whether
+ *                             or not the request carries it, in declaration order; without
+ *                             {@code Accept}, {@code Content-Type} and {@code Authorization},
+ *                             which OpenAPI ignores as parameters
  * @param index                its position in the operation's generated {@code CASES}
  */
 public record InvalidRequestCase(String id, String description, String in, String name, String pointer,
                                  String keyword, ContractRequest request, int expectedStatus,
                                  List<String> expectedContentTypes, String responseBodyClass,
-                                 boolean representative, int index) {
+                                 boolean representative, String operationId, List<String> declaredQuery,
+                                 List<String> declaredHeaders, int index) {
 
     /**
-     * A case as given, with the content types copied so that they cannot change.
+     * A case as given, with the lists copied so that they cannot change.
      *
      * @param id                   its id
      * @param description          what is wrong with the request
@@ -43,9 +52,14 @@ public record InvalidRequestCase(String id, String description, String in, Strin
      * @param expectedContentTypes the declared content types
      * @param responseBodyClass    the class of the declared body, or null
      * @param representative       whether its documentation is published
+     * @param operationId          its operation's id, or null
+     * @param declaredQuery        the query parameters its operation declares
+     * @param declaredHeaders      the headers its operation declares
      * @param index                its position in {@code CASES}
      */
     public InvalidRequestCase {
         expectedContentTypes = List.copyOf(expectedContentTypes);
+        declaredQuery = List.copyOf(declaredQuery);
+        declaredHeaders = List.copyOf(declaredHeaders);
     }
 }
