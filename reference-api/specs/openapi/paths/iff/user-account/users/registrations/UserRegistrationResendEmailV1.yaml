@@ -7,7 +7,7 @@ post:
     Resend verification email
   description:
     Sends a new verification email to the email address associated with the pending registration identified by username.
-    The caller provides the username; IFF generates a new one-time verification link and dispatches
+    The caller provides the username; API-Only generates a new one-time verification link and dispatches
     a new verification email to the associated email address.
     This operation is intended for users who did not receive the original verification email.
   requestBody:

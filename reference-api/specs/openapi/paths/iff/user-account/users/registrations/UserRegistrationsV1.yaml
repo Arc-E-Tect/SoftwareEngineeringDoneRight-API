@@ -6,8 +6,8 @@ post:
   summary: >
     Initiate user registration
   description:
-    Starts the registration process for a new IFF user account.
-    The caller provides an email address; IFF sends a verification email containing a one-time
+    Starts the registration process for a new API-Only user account.
+    The caller provides an email address; API-Only sends a verification email containing a one-time
     verification link to that address.
     The account is not active until the user follows the link and confirms ownership of the address.
   requestBody:

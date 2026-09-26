@@ -1,13 +1,13 @@
 asyncapi: 3.1.0
 info:
-  title: IFF Async API (portfolio)
+  title: API-Only Async API (portfolio)
   version: 0.0.0
-  description: Every event contract published across the IFF landscape.
+  description: Every event contract published across the API-Only landscape.
 servers:
   kafka:
     host: kafka:9092
     protocol: kafka
-    description: IFF Kafka broker.
+    description: API-Only Kafka broker.
 channels:
   auditV1:
     x-fragment-path: asyncapi/channels/iff/useraccount/AuditV1.yaml

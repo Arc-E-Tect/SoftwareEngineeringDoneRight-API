@@ -1,8 +1,8 @@
 openapi: 3.1.1
 info:
-  title: IFF API (portfolio)
+  title: API-Only API (portfolio)
   version: 0.0.0
-  description: Every API published across the IFF landscape.
+  description: Every API published across the API-Only landscape.
   contact:
     name: Arc-E-Tect
     email: sedr@arc-e-tect.com
@@ -11,7 +11,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
 servers:
-  - url: https://api.iff.arc-e-tect.com
+  - url: https://api.api-only.arc-e-tect.com
     description: Production server
   - url: https://localhost:9090
     description: Local development server
@@ -154,11 +154,11 @@ paths:
       operationId: UserAccountInitiateUserRegistration
       summary: |
         Initiate user registration
-      description: Starts the registration process for a new IFF user account. The
-        caller provides an email address; IFF sends a verification email
-        containing a one-time verification link to that address. The account is
-        not active until the user follows the link and confirms ownership of the
-        address.
+      description: Starts the registration process for a new API-Only user account.
+        The caller provides an email address; API-Only sends a verification
+        email containing a one-time verification link to that address. The
+        account is not active until the user follows the link and confirms
+        ownership of the address.
       requestBody:
         required: true
         content:
@@ -210,10 +210,10 @@ paths:
         Resend verification email
       description: Sends a new verification email to the email address associated with
         the pending registration identified by username. The caller provides the
-        username; IFF generates a new one-time verification link and dispatches
-        a new verification email to the associated email address. This operation
-        is intended for users who did not receive the original verification
-        email.
+        username; API-Only generates a new one-time verification link and
+        dispatches a new verification email to the associated email address.
+        This operation is intended for users who did not receive the original
+        verification email.
       requestBody:
         required: true
         content:
@@ -254,11 +254,11 @@ paths:
       operationId: UserAccountCompleteUserRegistration
       summary: |
         Complete user registration
-      description: Completes the registration process for a new IFF user account. The
-        caller provides the verification link received by email; IFF validates
-        the link, creates the user account, and sends a confirmation email. The
-        verification link is a one-time token embedded in the verification
-        email.
+      description: Completes the registration process for a new API-Only user account.
+        The caller provides the verification link received by email; API-Only
+        validates the link, creates the user account, and sends a confirmation
+        email. The verification link is a one-time token embedded in the
+        verification email.
       parameters:
         - name: verificationLink
           in: path

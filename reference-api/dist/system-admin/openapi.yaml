@@ -1,6 +1,6 @@
 openapi: 3.1.1
 info:
-  title: 'IFF - Identification: Friend or Family API'
+  title: API-Only - Reference API Specification API
   version: 1.0.0
   contact:
     name: Arc-E-Tect
@@ -10,20 +10,20 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   x-logo:
-    url: assets/iff/images/sedr_iff.png
-    altText: IFF logo
+    url: assets/iff/images/api_only.png
+    altText: API-Only logo
   description: |
     # 📙  Introduction
 
     ###  Background
 
-    The IFF application is designed as an API-only application.
+    The API-Only application is designed as an API-only application.
 
 
-    IFF is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.
+    API-Only is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.
 
 
-    The basic idea behind IFF is to have an application that uses the [Six Degrees of Separation](https://en.wikipedia.org/wiki/Six_degrees_of_separation) idea to contact everybody worldwide.
+    The basic idea behind API-Only is to have an application that uses the [Six Degrees of Separation](https://en.wikipedia.org/wiki/Six_degrees_of_separation) idea to contact everybody worldwide.
     This idea assumes that every person knows 44 other people, and those 44 persons know 43 other than you, and so on, eventually covering the world population.
 
 
@@ -37,7 +37,7 @@ info:
 
     ###  API Reference
 
-    The IFF APIs are organized around [REST](https://en.wikipedia.org/wiki/REST).
+    The API-Only APIs are organized around [REST](https://en.wikipedia.org/wiki/REST).
     The API follows the [OpenAPI](https://swagger.io/specification/v3/) specification.
     The APIs accept request bodies in JSON format and returns JSON-encoded responses.
     We use standard HTTP response codes, and verbs.
@@ -163,7 +163,7 @@ info:
           </tr>
       </table>
 servers:
-  - url: https://api.iff.arc-e-tect.com
+  - url: https://api.api-only.arc-e-tect.com
     description: Production server
   - url: https://localhost:9090
     description: Local development server

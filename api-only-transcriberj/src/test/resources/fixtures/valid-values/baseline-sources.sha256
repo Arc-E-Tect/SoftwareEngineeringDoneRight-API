@@ -9,6 +9,10 @@
 # plain:  generateDocs off, no description bundle, recursionDepth 2.
 # docs:   generateDocs on, bundle docs.Descriptions, recursionDepth 3.
 # corpus: as plain.
+#
+# The four ContractManifest hashes of the reference API's contracts were re-recorded
+# when the reference API was renamed from IFF to API-Only, which changed their
+# CONTRACT_TITLE; every other hash is as recorded from main at 1172661.
 corpus/exclusive-3.0/com/example/contract/BoundsV1.java e91df8fcd7bbadee63a525f834f75c2189291cdf8254cc7949f12b2dcb324195
 corpus/exclusive-3.0/com/example/contract/ContractField.java ec194e2bff931f152728942e56a4211747cf016dd8faff31cd72faf814090eea
 corpus/exclusive-3.0/com/example/contract/ContractJson.java 6c696ec8531c22d3c3382bf9a1e1df3d22cb300eca3560f4fac4679d47ad3586
@@ -96,7 +100,7 @@ corpus/unsatisfiable/com/example/contract/UnsatisfiableV1.java 870b544a16f4a6b7e
 docs/system-admin/com/example/contract/ContractDescriptions.java c92fe66a66295dbb278bafb78194e8980f041de2364c4a0f8afe75c1cb6ed4ba
 docs/system-admin/com/example/contract/ContractField.java 328e94844c641e521e89d1201ed854b97929bdf3bb0ccfe62b35af9dae084bb0
 docs/system-admin/com/example/contract/ContractJson.java fa2c3bbd90463ab6617d2e2fde373b8d4c57e4db246019da93fbf74f1069e10d
-docs/system-admin/com/example/contract/ContractManifest.java f63f9e51e5d2d3645208d1c1956d8a8900a0d06ecb1ede913870f9c4129d279a
+docs/system-admin/com/example/contract/ContractManifest.java 7b1d1f07d51df48f86c5ac929abc8f481fca5e1d37d93f8bc528605ed5c2e279
 docs/system-admin/com/example/contract/GetHealthOperation.java cf801923b03191da992278ae95fe07c392d6f390e268c84bc3edbf6aa2c0c1b6
 docs/system-admin/com/example/contract/GetHealthResponse200.java 6e5270f215d58b22cd28bf8b09fd3357343dd6ab821c3c832f1aa6bda08ac5eb
 docs/system-admin/com/example/contract/GetRootOperation.java a8239ab8e3281f52a9fe2a1f2fea729ab6787cc330b89eca8c791e53bf9a3dbd
@@ -109,7 +113,7 @@ docs/user-account/com/example/contract/ConfirmationEmailSentEventV1.java 26ee55c
 docs/user-account/com/example/contract/ContractDescriptions.java de756abc26576022f2d5a8749edc234a7d360e106509df5671ff850c64d70419
 docs/user-account/com/example/contract/ContractField.java 1b3f538d97a510f8f654aef5bcc45bbfe4b5971466359149d13b98f5c54e4542
 docs/user-account/com/example/contract/ContractJson.java c1a8c49cb23b10ddbd6372ba1ac098369b96915a6d276b6d9aed6a712c1adba8
-docs/user-account/com/example/contract/ContractManifest.java 39682c17d3d159f47d5f90a8e12332f932be8117358497297c268096ad724856
+docs/user-account/com/example/contract/ContractManifest.java 34f38566feb7e5e7c84873237f1e45f4f0daa7885576d199ae6dc6f40b09da58
 docs/user-account/com/example/contract/ErrorDetailV1.java 500c3690895a5a7cd6e55261d69fb91bba9f8c64f829fc23e6cd5d47c7a87d0f
 docs/user-account/com/example/contract/GetHealthOperation.java 7b0915d8cb15d942c67d93e6c1d74618c0c1c182eae7c8eed129dc9327f6c3da
 docs/user-account/com/example/contract/GetHealthResponse200.java 4486cf9993421f10d1a357b16492c078ea6db7a2910d9f3d2071cb2ce0ec3a8f
@@ -163,7 +167,7 @@ docs/user-account/com/example/contract/VerificationLinkExpiredProblemV1.java d7c
 docs/user-account/com/example/contract/VerificationLinkSupersededProblemV1.java 0ee824431e4e930ec185da8dfa30155a2362d096ce238a204b25919ec2e5b51d
 plain/system-admin/com/example/contract/ContractField.java 1adf0b802b25e34632f6fe4f07d8e65b6e653af5adf6888f27989e2a36794fa6
 plain/system-admin/com/example/contract/ContractJson.java fa2c3bbd90463ab6617d2e2fde373b8d4c57e4db246019da93fbf74f1069e10d
-plain/system-admin/com/example/contract/ContractManifest.java f63f9e51e5d2d3645208d1c1956d8a8900a0d06ecb1ede913870f9c4129d279a
+plain/system-admin/com/example/contract/ContractManifest.java 7b1d1f07d51df48f86c5ac929abc8f481fca5e1d37d93f8bc528605ed5c2e279
 plain/system-admin/com/example/contract/GetHealthOperation.java cf801923b03191da992278ae95fe07c392d6f390e268c84bc3edbf6aa2c0c1b6
 plain/system-admin/com/example/contract/GetHealthResponse200.java 96d26046762abbfc3dfab4bfb878f8059a7dd26ce73ddeeae22fbe7dc80db05b
 plain/system-admin/com/example/contract/GetRootOperation.java a8239ab8e3281f52a9fe2a1f2fea729ab6787cc330b89eca8c791e53bf9a3dbd
@@ -175,7 +179,7 @@ plain/user-account/com/example/contract/CompleteUserRegistrationOperation.java 5
 plain/user-account/com/example/contract/ConfirmationEmailSentEventV1.java 52486ec187d95abf9bdddd9984923da44a6bfff2daee60f8626ee4e70bab7a84
 plain/user-account/com/example/contract/ContractField.java 496fb29b6770033ad9a21f54487eb6ed1cb63c66be906e5b22bb7ff9918d48ab
 plain/user-account/com/example/contract/ContractJson.java c1a8c49cb23b10ddbd6372ba1ac098369b96915a6d276b6d9aed6a712c1adba8
-plain/user-account/com/example/contract/ContractManifest.java 39682c17d3d159f47d5f90a8e12332f932be8117358497297c268096ad724856
+plain/user-account/com/example/contract/ContractManifest.java 34f38566feb7e5e7c84873237f1e45f4f0daa7885576d199ae6dc6f40b09da58
 plain/user-account/com/example/contract/ErrorDetailV1.java 2a2051efe5dbc460a240fb6d0326d2db39b6c3e68cac339cd08ac111fa34f7ed
 plain/user-account/com/example/contract/GetHealthOperation.java 7b0915d8cb15d942c67d93e6c1d74618c0c1c182eae7c8eed129dc9327f6c3da
 plain/user-account/com/example/contract/GetHealthResponse200.java fdfcb33a9e1455a0089cb6dbce2a27145036083b6512678553dcc4aaceea87af

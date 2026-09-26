@@ -108,9 +108,9 @@ targets:
       # info-contact and info-license are required by .redocly.lint.yaml; the
       # generated default has neither, so this landscape view needs its own.
       info:
-        title: IFF API (portfolio)
+        title: API-Only API (portfolio)
         version: 0.0.0
-        description: Every API published across the IFF landscape.
+        description: Every API published across the API-Only landscape.
         contact:
           name: Arc-E-Tect
           email: sedr@arc-e-tect.com
@@ -122,6 +122,6 @@ targets:
       aggregate:
         - user-account
       info:
-        title: IFF Async API (portfolio)
+        title: API-Only Async API (portfolio)
         version: 0.0.0
-        description: Every event contract published across the IFF landscape.
+        description: Every event contract published across the API-Only landscape.

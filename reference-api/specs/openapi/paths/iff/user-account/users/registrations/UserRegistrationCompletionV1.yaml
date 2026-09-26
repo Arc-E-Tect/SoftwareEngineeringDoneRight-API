@@ -6,8 +6,8 @@ get:
   summary: >
     Complete user registration
   description:
-    Completes the registration process for a new IFF user account.
-    The caller provides the verification link received by email; IFF validates the link,
+    Completes the registration process for a new API-Only user account.
+    The caller provides the verification link received by email; API-Only validates the link,
     creates the user account, and sends a confirmation email.
     The verification link is a one-time token embedded in the verification email.
   parameters:

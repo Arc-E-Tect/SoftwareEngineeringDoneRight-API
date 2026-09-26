@@ -1,15 +1,15 @@
 asyncapi: 3.1.0
 
 info:
-  title: IFF Async API
+  title: API-Only Async API
   version: 1.0.0
-  description: Asynchronous events published by the IFF platform over Apache Kafka.
+  description: Asynchronous events published by the API-Only platform over Apache Kafka.
 
 servers:
   kafka:
     host: kafka:9092
     protocol: kafka
-    description: IFF Kafka broker.
+    description: API-Only Kafka broker.
 
 channels:
   auditV1:

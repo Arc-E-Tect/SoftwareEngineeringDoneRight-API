@@ -36,7 +36,7 @@ class AsyncContractParserTest {
     void theAsyncapiDocumentsOwnTitleIsCarriedSeparatelyFromTheOpenapiOne() throws IOException {
         ContractModel model = userAccount();
 
-        assertThat(model.asyncTitle()).isEqualTo("IFF Async API");
+        assertThat(model.asyncTitle()).isEqualTo("API-Only Async API");
         assertThat(model.title()).isNotEqualTo(model.asyncTitle());
         assertThat(ContractParser.parse(OPENAPI, null).asyncTitle()).isNull();
     }

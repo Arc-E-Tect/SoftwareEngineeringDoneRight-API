@@ -26,7 +26,7 @@ It is a realistic library -- OpenAPI and AsyncAPI fragments, shared definitions,
 Its shape is inspired by the Usable Suspects project of the book _Software Engineering Done Right_.
 It lives here on its own terms: it depends on nothing outside this repository, and changes whenever the tooling here needs it to.
 
-It describes IFF, an API-only application, as two services:
+It describes API-Only, an API-only application, as two services:
 
 [cols="1,3", options="header"]
 |===
