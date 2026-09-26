@@ -35,6 +35,12 @@ public class TestEmitter implements Emitter {
     @Override
     public void emit(EmitterContext context) {
         String pkg = context.settings().basePackage() + "." + id();
+        java.util.Map<String, String> options = context.settings().emitterOptions(id());
+        if (!options.isEmpty()) {
+            StringBuilder written = new StringBuilder();
+            options.forEach((name, value) -> written.append(name).append('=').append(value).append('\n'));
+            context.writeResource(id() + "/options.properties", written.toString());
+        }
         for (GeneratedClass generated : context.names().all()) {
             if (!generated.bodyShaped() || !generated.exposed()) continue;
             String name = generated.simpleName() + "Count";

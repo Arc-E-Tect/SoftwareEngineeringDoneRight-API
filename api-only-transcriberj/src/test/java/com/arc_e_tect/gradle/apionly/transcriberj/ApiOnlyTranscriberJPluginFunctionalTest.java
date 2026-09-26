@@ -69,6 +69,12 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                     subscription('user-account') {
                         basePackage = 'com.example.contract'
                         recursionDepth = (findProperty('transcriberDepth') ?: '3') as int
+                        invalidRequestStatus = findProperty('invalidStatus') ?: '400'
+                        strictRequests = findProperty('lenient') == null
+                        validateFormats = (findProperty('formats') ?: '').tokenize(',')
+                        if (findProperty('countingOption')) {
+                            emitterOptions = [counting: [option: findProperty('countingOption')]]
+                        }
                         if (findProperty('moveOutputs')) {
                             reportFile = layout.projectDirectory.file('reports/user-account.txt')
                             endpointIndexFile = layout.projectDirectory.file('index/user-account.properties')
@@ -194,6 +200,45 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         BuildResult upgraded = runner("useContract", "-PcontractVersion=1.0.1").build();
         assertThat(upgraded.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(upgraded.getOutput()).contains("VERSION 1.0.1");
+    }
+
+    @Test
+    void eachInvalidRequestSettingRegeneratesAndTheConfigurationCacheIsReused() throws Exception {
+        BuildResult first = runner("generateContractSourcesUserAccount").build();
+        assertThat(first.getOutput()).contains("API-Only TranscriberJ: user-account 1.0.0: Invalid requests: ")
+                .contains(" case(s) derived, ").contains(" gap(s)");
+        BuildResult again = runner("generateContractSourcesUserAccount").build();
+        assertThat(again.getOutput()).contains("Configuration cache entry reused");
+        assertThat(again.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+
+        List<String> previous = new ArrayList<>();
+        for (String setting : List.of("-PinvalidStatus=422", "-Plenient", "-Pformats=email", "-PcountingOption=on")) {
+            previous.add(setting);
+            BuildResult changed = runner(withTask(previous)).build();
+            assertThat(changed.task(":generateContractSourcesUserAccount").getOutcome()).as(setting)
+                    .isEqualTo(TaskOutcome.SUCCESS);
+        }
+        assertThat(projectDir.resolve("build/generated/resources/transcriberj/user-account/counting/options.properties"))
+                .content().isEqualTo("option=on\n");
+    }
+
+    @Test
+    void turningStrictnessOffIsWarnedAboutOnEveryGeneration() throws Exception {
+        String warning = "strictRequests is off for contract 'user-account'";
+        BuildResult first = runner("generateContractSourcesUserAccount", "-Plenient").build();
+        assertThat(first.getOutput()).contains("warning: WARNING: " + warning).contains("OWASP API3:2023")
+                .contains("OWASP API10:2023");
+        BuildResult second = runner("generateContractSourcesUserAccount", "-Plenient", "-PinvalidStatus=422").build();
+        assertThat(second.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(second.getOutput()).contains("warning: WARNING: " + warning);
+        BuildResult strict = runner("generateContractSourcesUserAccount").build();
+        assertThat(strict.getOutput()).doesNotContain(warning);
+    }
+
+    private static String[] withTask(List<String> properties) {
+        List<String> out = new ArrayList<>(List.of("generateContractSourcesUserAccount"));
+        out.addAll(properties);
+        return out.toArray(String[]::new);
     }
 
     @Test

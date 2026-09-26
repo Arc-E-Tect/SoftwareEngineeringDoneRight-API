@@ -1,0 +1,58 @@
+# What the walk reports rather than derives: a keyword the model does not type, a oneOf of
+# references, a recursive reference beyond recursionDepth, and what asserts nothing.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, structure
+  version: 1.0.0
+paths:
+  /structure:
+    post:
+      operationId: postStructure
+      parameters:
+        - {name: optional, in: query, required: false, schema: {type: integer}}
+        - {name: tags, in: query, schema: {type: array, items: {type: string, minLength: 1}}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructureV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    StructureV1:
+      x-fragment-path: schemas/StructureV1.yaml
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 0, maxLength: 8}
+        list: {type: array, minItems: 0, uniqueItems: false, items: {type: integer}}
+        free: {type: object, minProperties: 0, required: [], additionalProperties: true}
+        negated: {type: string, not: {const: forbidden}}
+        pet:
+          oneOf:
+            - $ref: '#/components/schemas/CatV1'
+            - $ref: '#/components/schemas/DogV1'
+        tree:
+          $ref: '#/components/schemas/TreeV1'
+    CatV1:
+      x-fragment-path: schemas/CatV1.yaml
+      type: object
+      required: [meows]
+      properties:
+        meows: {type: boolean}
+    DogV1:
+      x-fragment-path: schemas/DogV1.yaml
+      type: object
+      required: [barks]
+      properties:
+        barks: {type: integer, minimum: 0}
+    TreeV1:
+      x-fragment-path: schemas/TreeV1.yaml
+      type: object
+      properties:
+        label: {type: string, maxLength: 4}
+        child:
+          $ref: '#/components/schemas/TreeV1'

@@ -66,6 +66,10 @@ public final class GenerationReport {
     private final List<Finding> undecided = new ArrayList<>();
     private final List<String> warnings = new ArrayList<>();
     private final List<String> notes = new ArrayList<>();
+    private final List<Map<String, Object>> invalidRequests = new ArrayList<>();
+    private final List<Map<String, Object>> coverage = new ArrayList<>();
+    private final List<Map<String, Object>> gaps = new ArrayList<>();
+    private final Map<String, String> formatRecommendations = new java.util.LinkedHashMap<>();
 
     /** Creates an empty report. */
     public GenerationReport() {
@@ -109,6 +113,109 @@ public final class GenerationReport {
      */
     public List<UnsupportedParameter> unsupportedParameters() {
         return List.copyOf(unsupportedParameters);
+    }
+
+    /** Records one operation's invalid-request cases, the coverage of its constraints, and its gap if it has one. */
+    void invalidRequests(String className, InvalidRequests.Result result, String status) {
+        Map<String, Object> entry = new java.util.LinkedHashMap<>();
+        entry.put("class", className);
+        entry.put("location", result.location());
+        entry.put("method", result.operation().method().name());
+        entry.put("pathTemplate", result.operation().path());
+        entry.put("declaresInvalidRequestStatus", result.declared());
+        entry.put("cases", result.cases().stream().map(CoreEmitter::caseJson).toList());
+        invalidRequests.add(entry);
+        for (InvalidRequests.Constraint c : result.constraints()) {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("class", className);
+            e.put("operation", result.location());
+            e.put("in", c.in);
+            e.put("name", c.name);
+            e.put("mediaType", c.mediaType);
+            e.put("pointer", c.pointer);
+            e.put("keyword", c.keyword);
+            e.put("schemaLocation", c.schemaLocation);
+            if (c.reason == null) {
+                e.put("cases", c.cases());
+            } else {
+                Map<String, Object> why = new java.util.LinkedHashMap<>();
+                why.put("code", c.reason.name());
+                why.put("label", c.reason.label);
+                why.put("detail", c.detail);
+                e.put("uncovered", why);
+            }
+            coverage.add(e);
+        }
+        if (result.gap()) {
+            Map<String, Object> gap = new java.util.LinkedHashMap<>();
+            gap.put("class", className);
+            gap.put("operation", result.location());
+            gap.put("recommendation", "declare a " + status + " response, so that its " + result.constraints().size()
+                    + " constraint(s) on request input can be tested with invalid requests");
+            gaps.add(gap);
+        }
+    }
+
+    void formatRecommendation(String location, String format) {
+        formatRecommendations.put(location, format);
+    }
+
+    private static String formatAdvice(String format) {
+        return "format " + format + " has no pattern; declare one, since what " + format + " accepts differs between "
+                + "validators, and a pattern says exactly";
+    }
+
+    /**
+     * How many invalid-request cases were derived.
+     *
+     * @return the count
+     */
+    public int invalidRequestCases() {
+        return invalidRequests.stream().mapToInt(e -> ((List<?>) e.get("cases")).size()).sum();
+    }
+
+    /**
+     * How many constraints on request input have a case, and how many have none, by reason.
+     *
+     * @return the counts: {@code covered}, then each reason's label, in order of first use
+     */
+    public Map<String, Integer> constraintCoverage() {
+        Map<String, Integer> out = new java.util.LinkedHashMap<>();
+        out.put("covered", 0);
+        for (Map<String, Object> e : coverage) {
+            if (e.containsKey("cases")) {
+                out.merge("covered", 1, Integer::sum);
+            } else {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> why = (Map<String, Object>) e.get("uncovered");
+                out.merge((String) why.get("label"), 1, Integer::sum);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * The operations that constrain their request input but declare no invalid-request status.
+     *
+     * @return their locations, in contract order
+     */
+    public List<String> gaps() {
+        return gaps.stream().map(g -> (String) g.get("operation")).toList();
+    }
+
+    /** The summary line of the invalid-request cases, as the build log prints it. */
+    String invalidRequestSummary() {
+        Map<String, Integer> counts = constraintCoverage();
+        int covered = counts.remove("covered");
+        int uncovered = counts.values().stream().mapToInt(Integer::intValue).sum();
+        StringBuilder out = new StringBuilder("Invalid requests: ").append(invalidRequestCases())
+                .append(" case(s) derived, ").append(covered).append(" constraint(s) covered, ").append(uncovered)
+                .append(" uncovered");
+        if (!counts.isEmpty()) {
+            out.append(" (").append(String.join(", ", counts.entrySet().stream()
+                    .map(e -> e.getKey() + ": " + e.getValue()).toList())).append(')');
+        }
+        return out.append(", ").append(gaps.size()).append(" gap(s)").toString();
     }
 
     void recommend(String location, String advice) {
@@ -200,6 +307,7 @@ public final class GenerationReport {
                 .append(warnings.size()).append(" warning(s), ")
                 .append(noValidValue.size()).append(" method(s) without a valid value, ")
                 .append(unsupportedParameters.size()).append(" parameter(s) not supported yet\n");
+        out.append(invalidRequestSummary()).append('\n');
         if (!warnings.isEmpty()) {
             out.append("\nWarnings:\n");
             warnings.forEach(w -> out.append("  ").append(w).append('\n'));
@@ -246,6 +354,37 @@ public final class GenerationReport {
                         .append(u.location()).append(": ").append(u.reason()).append('\n');
             }
         }
+        if (!gaps.isEmpty()) {
+            out.append("\nGaps -- these operations constrain their request input but declare no invalid-request status:\n");
+            for (Map<String, Object> g : gaps) {
+                out.append("  ").append(g.get("operation")).append(" (").append(g.get("class")).append("): ")
+                        .append(g.get("recommendation")).append('\n');
+            }
+        }
+        if (!formatRecommendations.isEmpty()) {
+            out.append("\nFormat recommendations:\n");
+            formatRecommendations.forEach((location, format) -> out.append("  ").append(location).append(": ")
+                    .append(formatAdvice(format)).append('\n'));
+        }
+        if (!coverage.isEmpty()) {
+            out.append("\nConstraint coverage -- every constraint on request input, and the cases that cover it:\n");
+            for (Map<String, Object> e : coverage) {
+                out.append("  ").append(e.get("class")).append(' ').append(e.get("in"));
+                if (e.get("name") != null) out.append(' ').append(e.get("name"));
+                if (e.get("mediaType") != null) out.append(' ').append(e.get("mediaType"));
+                if (!((String) e.get("pointer")).isEmpty()) out.append(' ').append(e.get("pointer"));
+                out.append(' ').append(e.get("keyword")).append(" (").append(e.get("schemaLocation")).append("): ");
+                if (e.containsKey("cases")) {
+                    out.append("covered by ").append(String.join(", ", ((List<?>) e.get("cases")).stream()
+                            .map(String::valueOf).toList()));
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> why = (Map<String, Object>) e.get("uncovered");
+                    out.append("uncovered, ").append(why.get("label")).append(" -- ").append(why.get("detail"));
+                }
+                out.append('\n');
+            }
+        }
         return out.toString();
     }
 
@@ -277,6 +416,19 @@ public final class GenerationReport {
             unsupported.add(entry);
         }
         out.put("unsupportedParameters", unsupported);
+        out.put("invalidRequests", invalidRequests.stream()
+                .sorted(java.util.Comparator.comparing(e -> (String) e.get("class"))).toList());
+        out.put("constraintCoverage", coverage);
+        out.put("gaps", gaps);
+        List<Object> formats = new ArrayList<>();
+        formatRecommendations.forEach((location, format) -> {
+            Map<String, Object> entry = new java.util.LinkedHashMap<>();
+            entry.put("location", location);
+            entry.put("format", format);
+            entry.put("advice", formatAdvice(format));
+            formats.add(entry);
+        });
+        out.put("formatRecommendations", formats);
         return ValueJson.write(sorted(out)) + "\n";
     }
 

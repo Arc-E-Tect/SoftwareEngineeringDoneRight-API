@@ -125,7 +125,12 @@ class UpdateApiOnlyTranscriberJDslTaskTest {
             .contains(STRICT_DEFAULT)
             .contains("subscriptions {")
             .contains("// orders {")
-            .contains("//     basePackage = 'com.example.orders.contract'");
+            .contains("//     basePackage = 'com.example.orders.contract'")
+            .contains("//     // invalidRequestStatus = '400'")
+            .contains("//     // strictRequests = true")
+            .contains("OWASP API3:2023, API10:2023")
+            .contains("//     // validateFormats = ['email']")
+            .contains("//     // emitterOptions = [restdocs: [tests: 'true']]");
         assertThat(Files.readString(backup())).isEqualTo(original);
     }
 

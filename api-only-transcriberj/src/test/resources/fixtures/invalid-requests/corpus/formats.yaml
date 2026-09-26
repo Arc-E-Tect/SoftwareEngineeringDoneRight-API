@@ -1,0 +1,31 @@
+# Format and pattern (T13.8). Generated twice: with validateFormats empty, and with
+# validateFormats = [email, duration], duration being a format no check exists for.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, formats
+  version: 1.0.0
+paths:
+  /formats:
+    post:
+      operationId: postFormats
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormatsV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    FormatsV1:
+      x-fragment-path: schemas/FormatsV1.yaml
+      type: object
+      required: [plain, patterned]
+      properties:
+        plain: {type: string, format: email}
+        patterned: {type: string, format: email, pattern: '^[a-z]+@example\.com$'}
+        # Optional: a value of a format no check exists for cannot be vouched for, so a
+        # request holding one is no baseline.
+        period: {type: string, format: duration}

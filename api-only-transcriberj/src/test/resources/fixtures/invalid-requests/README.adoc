@@ -1,0 +1,74 @@
+= Invalid-request fixtures
+
+What invalid-request derivation -- the `InvalidRequestCase` records each operation's `InvalidRequests` class lists -- is held to.
+Every case is checked against the same independent JSON Schema 2020-12 validator the valid values are (networknt, with ECMA-262 patterns by joni), a test-only dependency that never reaches the plugin's classpath.
+
+[cols="1,3",options="header"]
+|===
+|Path |What it is
+
+|`corpus/keywords.yaml`
+|Every row of the README's derivation table, on a body property, a nested property, an array item, and each parameter location where the keyword applies.
+Generated with `validateFormats = [date, uuid]`.
+
+|`corpus/isolation.yaml`
+|Constraints no value breaks alone: a length the pattern forces, a `maxLength` or `minimum` the `enum` rules out, more items than unique values exist.
+
+|`corpus/routes.yaml`
+|Path parameters: an empty value that would reach another route, and a pattern case that stays on the route.
+
+|`corpus/strictness.yaml`
+|The strict rule: an object without `additionalProperties`, with it `true`, with a schema, with `patternProperties`, with it `false` beside `patternProperties`, and an `allOf` of two branches.
+Generated with strictness on, and off.
+
+|`corpus/formats.yaml`
+|A format alone, a format beside a pattern, and a format no check exists for.
+Generated with `validateFormats` empty, and with `[email, duration]`.
+
+|`corpus/responses.yaml`
+|The expected response: `400` declared, not declared (`4XX` and `default` only), `422`, without content, through a `$ref` to `components/responses`, with several content types.
+Generated with the default `invalidRequestStatus`, and with `422`.
+
+|`corpus/degraded.yaml`
+|An inline `oneOf` on an optional member, beside constraints that still get cases.
+
+|`corpus/collisions.yaml`
+|Two constraints whose ids read the same: `/a-b` and `/a/b`.
+
+|`corpus/media.yaml`
+|A body declared as two JSON media types and one that is not JSON.
+
+|`corpus/structure.yaml`
+|What is reported rather than derived: a keyword the model does not type, a `oneOf` of references, recursion beyond `recursionDepth`, keywords that assert nothing, a parameter style not supported.
+
+|`golden/user-account.json`
+|The cases of the reference implementation's `user-account` contract -- id, keyword, pointer, violating request and expected response -- with the coverage of every constraint on its request input, the gaps and the format recommendations: the tests the reference implementation is run against.
+Re-record with `./gradlew recordInvalidRequestsGolden`, and review the diff.
+|===
+
+The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests.
+They are kept apart from `../valid-values/corpus`, whose generated sources are hashed in `../valid-values/baseline-sources.sha256`: a change to those contracts would change the hashes of sources generated before invalid requests were.
+
+Every test runs over every fixture contract where the requirement says so: the valid-value corpus, this corpus, and the reference contracts under `../contracts`.
+
+Which test covers which requirement:
+
+[cols="1,3",options="header"]
+|===
+|Requirement |Test
+
+|T13.1 The single-fault oracle |`InvalidRequestOracleTest`, with `Strictified` and `RequestValidation`
+|T13.2 Exhaustiveness |`CoverageExhaustivenessTest`
+|T13.3 The keyword corpus |`InvalidRequestKeywordCorpusTest`
+|T13.4 Non-coercible types |`NonCoercibleTypesTest`
+|T13.5 to T13.11 |`InvalidRequestRulesTest`, one nested class each
+|T13.12 Settings plumbing |`InvalidRequestSettingsTest`, `ApiOnlyTranscriberJPluginTest`, `ApiOnlyTranscriberJPluginFunctionalTest`, `ApiOnlyTranscriberJDslSchemaTest`, `UpdateApiOnlyTranscriberJDslTaskTest`
+|T13.13 Compile and call |`InvalidRequestCompileAndCallTest`
+|T13.14 The reference contract, as a golden file |`InvalidRequestGoldenTest`
+|T13.15 Determinism |`InvalidRequestDeterminismTest`
+|T13.16 No regression |every existing test; `BaselineSourcesTest` holds every existing source to its hash
+|===
+
+T13.1 validates a body against a strictified copy of the contract, where every object-level schema that declares neither `additionalProperties` nor `patternProperties` has `unevaluatedProperties: false`.
+Under JSON Schema 2020-12 a subschema that fails drops its annotations, so a member whose value breaks a keyword inside an `allOf` branch is also reported as unevaluated.
+The test drops exactly that report -- the member the case's fault is inside -- and nothing else.

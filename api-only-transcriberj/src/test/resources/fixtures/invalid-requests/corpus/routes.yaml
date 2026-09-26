@@ -1,0 +1,19 @@
+# Path parameters (T13.6): no required case ever, and no value that reaches another route.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, routes
+  version: 1.0.0
+paths:
+  /things/{name}/{slug}:
+    get:
+      operationId: getThing
+      parameters:
+        # Its only violating value is empty, which reaches /things//{slug}.
+        - {name: name, in: path, required: true, schema: {type: string, minLength: 1}}
+        # A pattern case, with a value that stays on the route.
+        - {name: slug, in: path, required: true, schema: {type: string, pattern: '^[a-z]+$'}}
+      responses:
+        '200':
+          description: The thing.
+        '400':
+          description: The request is invalid.

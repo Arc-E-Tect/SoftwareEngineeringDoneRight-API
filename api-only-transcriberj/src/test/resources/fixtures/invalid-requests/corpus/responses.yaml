@@ -1,0 +1,101 @@
+# The expected response (T13.9). Generated with the default invalidRequestStatus, and with
+# invalidRequestStatus = 422.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, responses
+  version: 1.0.0
+paths:
+  /declared:
+    post:
+      operationId: postDeclared
+      requestBody: {$ref: '#/components/requestBodies/NameBodyV1'}
+      responses:
+        '400':
+          description: The request is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV1'
+  /undeclared:
+    post:
+      operationId: postUndeclared
+      requestBody: {$ref: '#/components/requestBodies/NameBodyV1'}
+      responses:
+        '4XX':
+          description: Some client error.
+        default:
+          description: Anything else.
+  /unprocessable:
+    post:
+      operationId: postUnprocessable
+      requestBody: {$ref: '#/components/requestBodies/NameBodyV1'}
+      responses:
+        '422':
+          description: The request is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV1'
+  /bare:
+    post:
+      operationId: postBare
+      requestBody: {$ref: '#/components/requestBodies/NameBodyV1'}
+      responses:
+        '400':
+          description: The request is invalid, and nothing more is said.
+  /referenced:
+    post:
+      operationId: postReferenced
+      requestBody: {$ref: '#/components/requestBodies/NameBodyV1'}
+      responses:
+        '400':
+          $ref: '#/components/responses/InvalidV1'
+  /several:
+    post:
+      operationId: postSeveral
+      requestBody: {$ref: '#/components/requestBodies/NameBodyV1'}
+      responses:
+        '400':
+          description: The request is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV1'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemV1'
+  /unconstrained:
+    get:
+      operationId: getUnconstrained
+      responses:
+        '200':
+          description: Nothing to constrain.
+components:
+  requestBodies:
+    NameBodyV1:
+      x-fragment-path: requestBodies/NameBodyV1.yaml
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NameV1'
+  responses:
+    InvalidV1:
+      x-fragment-path: responses/InvalidV1.yaml
+      description: The request is invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemV1'
+  schemas:
+    ProblemV1:
+      x-fragment-path: schemas/ProblemV1.yaml
+      type: object
+      properties:
+        title: {type: string}
+    NameV1:
+      x-fragment-path: schemas/NameV1.yaml
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1}

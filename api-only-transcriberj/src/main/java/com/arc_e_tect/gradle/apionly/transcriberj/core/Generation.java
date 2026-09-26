@@ -29,6 +29,7 @@ public final class Generation {
 
     private static final Pattern PACKAGE =
             Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*");
+    private static final Pattern STATUS = Pattern.compile("[1-5][0-9][0-9]");
 
     private Generation() {
     }
@@ -83,6 +84,18 @@ public final class Generation {
         if (settings.basePackage() == null || !PACKAGE.matcher(settings.basePackage()).matches()) {
             throw new GenerationException("Contract " + settings.contract() + ": basePackage "
                     + settings.basePackage() + " is not a Java package name.");
+        }
+        if (!STATUS.matcher(settings.invalidRequestStatus()).matches()) {
+            throw new GenerationException("Contract " + settings.contract() + ": invalidRequestStatus "
+                    + settings.invalidRequestStatus() + " is not a status code; give one such as 400 or 422.");
+        }
+        List<String> unknown = settings.emitterOptions().keySet().stream()
+                .filter(id -> emitters.stream().noneMatch(e -> e.id().equals(id))).toList();
+        if (!unknown.isEmpty()) {
+            throw new GenerationException("Contract " + settings.contract() + ": emitterOptions names "
+                    + String.join(", ", unknown) + ", but no emitter with that id is on the transcriberjEmitters "
+                    + "classpath; the emitters there are " + (emitters.isEmpty() ? "none"
+                    : String.join(", ", emitters.stream().map(Emitter::id).toList())) + ".");
         }
         ContractModel model;
         try {

@@ -39,7 +39,7 @@ final class CoreClassNames implements ClassNames {
 
     /** The classes every generated tree has, whose names nothing else may take. */
     static final List<String> SUPPORT_CLASSES = List.of("ContractJson", "ContractField", "ContractManifest",
-            "ContractRequest");
+            "ContractRequest", "InvalidRequestCase");
 
     private static final String INLINE_ADVICE = "an inline schema; define it as a schema component and $ref it, "
             + "so that its class is named after its fragment rather than after the operation";
@@ -73,6 +73,7 @@ final class CoreClassNames implements ClassNames {
     }
 
     private final Map<String, GeneratedClass> byOperation = new LinkedHashMap<>();
+    private final Map<String, GeneratedClass> byInvalidRequests = new LinkedHashMap<>();
     private final Map<GeneratedClass, String> paths = new LinkedHashMap<>();
 
     CoreClassNames(ContractModel model, Shapes shapes, GenerationReport report) {
@@ -117,6 +118,12 @@ final class CoreClassNames implements ClassNames {
         for (Operation operation : model.operations()) {
             inline(operation, report);
         }
+        for (Operation operation : model.operations()) {
+            String location = operationLocation(operation);
+            candidates.add(new Candidate(Origin.INVALID_REQUESTS, location,
+                    new Provenance(null, CanonicalJson.sha256(operationSummary(operation))), null, location,
+                    operationName(operation) + "InvalidRequests"));
+        }
 
         for (AsyncChannel channel : model.channels()) {
             if (channel.provenance().fragmentPath() == null) {
@@ -139,6 +146,10 @@ final class CoreClassNames implements ClassNames {
         for (Candidate c : candidates) {
             GeneratedClass generated = new GeneratedClass(c.name, c.origin, c.key, c.exposed, c.provenance,
                     c.schema, c.schema != null && shapes.bodyShaped(c.schema));
+            if (c.origin == Origin.INVALID_REQUESTS) {
+                byInvalidRequests.put(c.key, generated);
+                continue;
+            }
             classes.add(generated);
             if (c.path != null) paths.put(generated, c.path);
             if (c.origin == Origin.OPERATION || c.origin == Origin.CHANNEL
@@ -449,6 +460,11 @@ final class CoreClassNames implements ClassNames {
      */
     String path(GeneratedClass generated) {
         return paths.get(generated);
+    }
+
+    @Override
+    public Optional<GeneratedClass> invalidRequests(String location) {
+        return Optional.ofNullable(byInvalidRequests.get(location));
     }
 
     @Override

@@ -1,0 +1,33 @@
+# Several media types: a case per JSON media type, its id naming the type; the constraints
+# of a media type that is not JSON are reported.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, media types
+  version: 1.0.0
+paths:
+  /media:
+    patch:
+      operationId: patchMedia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaV1'
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/MediaV1'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/MediaV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    MediaV1:
+      x-fragment-path: schemas/MediaV1.yaml
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, maxLength: 5}

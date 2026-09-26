@@ -129,6 +129,80 @@ class ApiOnlyTranscriberJPluginTest {
         }
     }
 
+    @Test
+    void theInvalidRequestSettingsHaveTheirDefaultsAndReachTheTask() {
+        project.getPluginManager().apply("java");
+        project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);
+        project.getExtensions().getByType(ApiOnlySubscriberExtension.class).subscribe("user-account");
+        ApiOnlyTranscriberJExtension extension = project.getExtensions().getByType(ApiOnlyTranscriberJExtension.class);
+        TranscriberJSubscription subscription = extension.subscription("user-account",
+                s -> s.getBasePackage().set("a.b"));
+        GenerateContractSourcesTask generate = (GenerateContractSourcesTask)
+                project.getTasks().getByName("generateContractSourcesUserAccount");
+
+        assertThat(subscription.getInvalidRequestStatus().get()).isEqualTo("400");
+        assertThat(subscription.getStrictRequests().get()).isTrue();
+        assertThat(subscription.getValidateFormats().get()).isEmpty();
+        assertThat(subscription.getEmitterOptions().get()).isEmpty();
+        assertThat(generate.getInvalidRequestStatus().get()).isEqualTo("400");
+        assertThat(generate.getStrictRequests().get()).isTrue();
+
+        subscription.getInvalidRequestStatus().set("422");
+        subscription.getStrictRequests().set(false);
+        subscription.getValidateFormats().set(List.of("email", "uuid"));
+        subscription.getEmitterOptions().put("restdocs", java.util.Map.of("tests", "true"));
+        assertThat(generate.getInvalidRequestStatus().get()).isEqualTo("422");
+        assertThat(generate.getStrictRequests().get()).isFalse();
+        assertThat(generate.getValidateFormats().get()).containsExactly("email", "uuid");
+        assertThat(generate.getEmitterOptions().get()).containsExactly(
+                java.util.Map.entry("restdocs", java.util.Map.of("tests", "true")));
+    }
+
+    @Test
+    void theGenerationActionPassesTheInvalidRequestSettingsOn() throws Exception {
+        Path contract = Path.of(System.getProperty("transcriberj.fixtures"), "contracts/user-account/openapi.yaml");
+        GenerateContractSourcesAction.Parameters parameters =
+                project.getObjects().newInstance(GenerateContractSourcesAction.Parameters.class);
+        parameters.getContract().set(contract.toFile());
+        parameters.getContractVersion().set("1.0.0");
+        parameters.getContractSha256().set("x");
+        parameters.getContractName().set("user-account");
+        parameters.getBasePackage().set("a.b");
+        parameters.getRecursionDepth().set(3);
+        parameters.getGenerateDocs().set(false);
+        parameters.getDescriptionPlaceholder().set("p");
+        parameters.getInvalidRequestStatus().set("422");
+        parameters.getStrictRequests().set(false);
+        parameters.getValidateFormats().set(List.of("email"));
+        parameters.getEmitterOptions().set(java.util.Map.of());
+        parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
+        parameters.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
+        parameters.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        parameters.getValidValuesReport().set(projectDir.resolve("report.json").toFile());
+        parameters.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
+        GenerateContractSourcesAction action = new GenerateContractSourcesAction() {
+            @Override
+            public Parameters getParameters() {
+                return parameters;
+            }
+        };
+
+        action.execute();
+
+        String report = Files.readString(projectDir.resolve("report.txt"));
+        assertThat(report).contains("strictRequests is off for contract 'user-account'")
+                .contains("declare a 422 response");
+        // It declares a 400 response, but not the 422 asked for; the registration declares both.
+        assertThat(Files.readString(projectDir.resolve("out/a/b/ResendVerificationEmailInvalidRequests.java")))
+                .contains("CASE_COUNT = 0;");
+        assertThat(Files.readString(projectDir.resolve("out/a/b/InitiateUserRegistrationInvalidRequests.java")))
+                .contains("expecting the declared 422 response").doesNotContain("unknown-member");
+
+        parameters.getEmitterOptions().set(java.util.Map.of("restdocs", java.util.Map.of("tests", "true")));
+        assertThatThrownBy(action::execute).isInstanceOf(GradleException.class)
+                .hasMessageContaining("emitterOptions names restdocs, but no emitter with that id");
+    }
+
     private Project managedProject(String ownVersion, boolean strict) throws Exception {
         project.getPluginManager().apply("java");
         project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);

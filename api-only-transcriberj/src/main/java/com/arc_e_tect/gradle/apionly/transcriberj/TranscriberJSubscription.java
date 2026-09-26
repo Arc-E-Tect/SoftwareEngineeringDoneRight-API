@@ -4,7 +4,10 @@ import org.gradle.api.Named;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
+
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -107,6 +110,55 @@ public abstract class TranscriberJSubscription implements Named {
      * @return the bundle's base name
      */
     public abstract Property<String> getDescriptionBundle();
+
+    /**
+     * The response status that means "the request is invalid". An invalid-request case is
+     * derived for an operation only when it declares exactly this status; an operation that
+     * constrains its request input without declaring it is reported as a gap.
+     *
+     * <p>Default: {@code "400"}.
+     *
+     * @return the status
+     */
+    public abstract Property<String> getInvalidRequestStatus();
+
+    /**
+     * Whether a request object that does not declare {@code additionalProperties} forbids
+     * members it does not declare, so that an unknown-member case is derived for it. An
+     * explicit {@code additionalProperties: true}, an {@code additionalProperties} schema,
+     * or {@code patternProperties} is respected either way.
+     *
+     * <p>Default: {@code true}. Turning it off prints a warning on every generation,
+     * citing OWASP API3:2023 and API10:2023, and records it in the report.
+     *
+     * @return the setting
+     */
+    public abstract Property<Boolean> getStrictRequests();
+
+    /**
+     * The formats, such as {@code email}, an invalid-request case is derived for. A format
+     * beside a pattern never gets one: the pattern wins.
+     *
+     * <p>Default: none.
+     *
+     * @return the format names
+     */
+    public abstract ListProperty<String> getValidateFormats();
+
+    /**
+     * Options for the emitters, by emitter id, each a map of names to values. The
+     * TranscriberJ passes them to the emitters unchanged, and fails the build when one
+     * names an emitter that is not on the {@code transcriberjEmitters} classpath.
+     *
+     * <pre>
+     * emitterOptions = [restdocs: [tests: 'true']]
+     * </pre>
+     *
+     * <p>Default: none.
+     *
+     * @return the options
+     */
+    public abstract MapProperty<String, Map<String, String>> getEmitterOptions();
 
     /**
      * Where the generation writes its report: every degraded method, recommendation and
