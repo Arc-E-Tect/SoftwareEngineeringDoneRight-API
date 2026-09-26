@@ -16,9 +16,11 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.RequestBody;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Response;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Reusable;
 import com.arc_e_tect.gradle.apionly.transcriberj.model.Schema;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractRequest;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.GeneratedClass;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.InvalidRequestCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Origin;
 
@@ -55,6 +57,9 @@ final class CoreEmitter implements Emitter {
     private final GenerationReport report;
     private ValidValues values;
     private ValidRequests requests;
+
+    /** Each operation's invalid-request cases, by the operation's JSON pointer, as emitters are given them. */
+    private final Map<String, List<InvalidRequestCase>> invalidRequestCases = new LinkedHashMap<>();
 
     /** Every key a bundle may carry, in the order the classes declare them. */
     private final java.util.Set<String> descriptionKeys = new java.util.LinkedHashSet<>();
@@ -568,6 +573,9 @@ final class CoreEmitter implements Emitter {
             GeneratedClass generated = names.invalidRequests(CoreClassNames.operationLocation(operation)).orElseThrow();
             InvalidRequests.Result result = invalid.derive(operation);
             sources.put(generated.simpleName(), invalidRequestsClass(context, generated, header, result));
+            List<InvalidRequestCase> cases = new ArrayList<>();
+            for (int i = 0; i < result.cases().size(); i++) cases.add(spiCase(result.cases().get(i), i));
+            invalidRequestCases.put(CoreClassNames.operationLocation(operation), List.copyOf(cases));
             report.invalidRequests(generated.simpleName(), result, context.settings().invalidRequestStatus());
         }
         invalid.warnings().forEach(report::warn);
@@ -621,6 +629,28 @@ final class CoreEmitter implements Emitter {
         out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n");
         out.append("}\n");
         return out.toString();
+    }
+
+    /**
+     * Each operation's invalid-request cases, by the operation's JSON pointer, as the generated
+     * {@code CASES} list them: what every emitter after this one is given.
+     */
+    Map<String, List<InvalidRequestCase>> invalidRequestCases() {
+        return java.util.Collections.unmodifiableMap(invalidRequestCases);
+    }
+
+    /** A case as an emitter is given it: the values the generated {@code InvalidRequestCase} holds. */
+    private static InvalidRequestCase spiCase(InvalidRequests.Case c, int index) {
+        ValidRequests.Request r = c.request();
+        ContractRequest request = new ContractRequest(r.method(), r.pathTemplate(), r.pathValues(),
+                spiPairs(r.query()), spiPairs(r.headers()), r.contentType(),
+                r.body() == null ? null : ValueJson.write(r.body()) + "\n");
+        return new InvalidRequestCase(c.id(), c.description(), c.in(), c.name(), c.pointer(), c.keyword(), request,
+                c.status(), c.contentTypes(), c.bodyClass(), c.representative(), index);
+    }
+
+    private static List<ContractRequest.Pair> spiPairs(List<ValidRequests.Pair> pairs) {
+        return pairs.stream().map(p -> new ContractRequest.Pair(p.name(), p.value())).toList();
     }
 
     /** A case as the machine-readable report records it. */

@@ -964,7 +964,8 @@ public interface Emitter {
     String id();                              // "restdocs": its package, and its name in reports
     List<ManagedDependency> dependencies();   // what its generated code needs
     Set<Construct> represents();              // which classified constructs it handles in full
-    void emit(EmitterContext context);        // model, settings, class names, writeJava, writeResource, degraded
+    void emit(EmitterContext context);        // model, settings, class names, invalid-request cases,
+                                              // writeJava, writeResource, degraded
 }
 ----
 
@@ -974,6 +975,8 @@ public interface Emitter {
 `EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
 `ClassNames.invalidRequests(location)` names an operation's `<Operation>InvalidRequests` class, which `ClassNames.all()` does not list: its origin is `Origin.INVALID_REQUESTS`.
 An emitter with an exhaustive `switch` over `Origin` has one more constant to handle.
+`EmitterContext.invalidRequestCases(location)` gives that class's cases themselves, in the order `CASES` lists them, each an `spi.InvalidRequestCase` holding what the generated record holds, and its `index` in `CASES`: an emitter that renders cases -- as tests, as stubs -- shapes its code by them, and takes their values from `CASES` at run time, so that the generated code states no value twice.
+The core derives them before any other emitter runs; the list is empty for an operation without cases.
 
 [#emitter-options]
 === Emitter options

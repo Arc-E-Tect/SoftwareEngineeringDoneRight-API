@@ -6,6 +6,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.Finding;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ClassNames;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.InvalidRequestCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -118,10 +120,11 @@ public final class Generation {
         DesignWarnings.check(model, settings, shapes, names, report);
 
         CoreEmitter core = new CoreEmitter(shapes, names, contractSha256, report);
-        core.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report, core.id()));
+        core.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report, core.id(),
+                Map.of()));
         for (Emitter emitter : emitters) {
             emitter.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report,
-                    emitter.id()));
+                    emitter.id(), core.invalidRequestCases()));
         }
         if (endpointIndex != null) {
             writeEndpointIndex(endpointIndex, settings, model, names);
@@ -181,10 +184,16 @@ public final class Generation {
         }
     }
 
-    /** What one emitter is given. */
+    /** What one emitter is given: the core emitter, which derives the cases, is given none. */
     private record Context(ContractModel model, Settings settings, ClassNames names, Path outputDirectory,
-                           Path resourceDirectory, GenerationReport report, String emitter)
+                           Path resourceDirectory, GenerationReport report, String emitter,
+                           Map<String, List<InvalidRequestCase>> cases)
             implements EmitterContext {
+
+        @Override
+        public List<InvalidRequestCase> invalidRequestCases(String location) {
+            return cases.getOrDefault(location, List.of());
+        }
 
         @Override
         public void writeJava(String packageName, String simpleName, String source) {
