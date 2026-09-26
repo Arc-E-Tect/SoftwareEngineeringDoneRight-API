@@ -1,0 +1,35 @@
+# Exclusive bounds in the OpenAPI 3.0 boolean form (T12.2), which the model keeps beside
+# the 3.1 numeric form in keywords.yaml. The oracle reads this document after rewriting
+# each boolean form into the numeric one JSON Schema 2020-12 knows.
+openapi: 3.0.3
+info:
+  title: Valid-value corpus, OpenAPI 3.0 bounds
+  version: 1.0.0
+paths:
+  /bounds:
+    post:
+      operationId: postBounds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundsV1'
+      responses:
+        '204':
+          description: Accepted.
+components:
+  schemas:
+    BoundsV1:
+      x-fragment-path: openapi/components/schemas/BoundsV1.yaml
+      type: object
+      required: [between, quarter, below, inclusive]
+      properties:
+        # > 5 and < 9: 6.
+        between: {type: integer, minimum: 5, exclusiveMinimum: true, maximum: 9, exclusiveMaximum: true}
+        # > 0, a multiple of 0.25: 0.25.
+        quarter: {type: number, minimum: 0, exclusiveMinimum: true, multipleOf: 0.25}
+        # < 0: -1.
+        below: {type: integer, maximum: 0, exclusiveMaximum: true}
+        # >= 3, the boolean form saying so: 3.
+        inclusive: {type: integer, minimum: 3, exclusiveMinimum: false}

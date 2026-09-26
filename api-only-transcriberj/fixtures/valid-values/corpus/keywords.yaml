@@ -1,0 +1,390 @@
+# The keyword corpus (T12.2): every rule of valid-value generation, in isolation and in
+# the combinations that matter. Each case is a component with one required member,
+# `value`, unless it says otherwise; CorpusV1 refers to all of them, so each is public
+# and has requiredBody() and fullBody(). The comment on each case is the value the rules
+# give; the tests check the values against an independent validator, not these comments.
+openapi: 3.1.0
+info:
+  title: Valid-value keyword corpus
+  version: 1.0.0
+paths:
+  /corpus:
+    post:
+      operationId: postCorpus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorpusV1'
+      responses:
+        '204':
+          description: Accepted.
+  /overlap:
+    post:
+      operationId: postOverlap
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AtLeastThreeV1'
+                - $ref: '#/components/schemas/AtLeastOneV1'
+      responses:
+        '204':
+          description: Accepted.
+components:
+  schemas:
+    CorpusV1:
+      x-fragment-path: openapi/components/schemas/CorpusV1.yaml
+      type: object
+      properties:
+        const: {$ref: '#/components/schemas/ConstV1'}
+        enum: {$ref: '#/components/schemas/EnumV1'}
+        enumPattern: {$ref: '#/components/schemas/EnumPatternV1'}
+        plain: {$ref: '#/components/schemas/StringPlainV1'}
+        minLengthZero: {$ref: '#/components/schemas/MinLengthZeroV1'}
+        maxLengthZero: {$ref: '#/components/schemas/MaxLengthZeroV1'}
+        lengthPattern: {$ref: '#/components/schemas/LengthPatternV1'}
+        anchored: {$ref: '#/components/schemas/AnchoredPatternV1'}
+        unanchored: {$ref: '#/components/schemas/UnanchoredPatternV1'}
+        classQuantifierAlternation: {$ref: '#/components/schemas/ClassQuantifierAlternationV1'}
+        astral: {$ref: '#/components/schemas/AstralV1'}
+        formats: {$ref: '#/components/schemas/FormatsV1'}
+        patternFormat: {$ref: '#/components/schemas/PatternFormatV1'}
+        integer: {$ref: '#/components/schemas/IntegerV1'}
+        integerBounds: {$ref: '#/components/schemas/IntegerBoundsV1'}
+        integerUpper: {$ref: '#/components/schemas/IntegerUpperV1'}
+        integerExclusive: {$ref: '#/components/schemas/IntegerExclusiveV1'}
+        number: {$ref: '#/components/schemas/NumberV1'}
+        numberBounds: {$ref: '#/components/schemas/NumberBoundsV1'}
+        tenths: {$ref: '#/components/schemas/TenthsV1'}
+        hundredths: {$ref: '#/components/schemas/HundredthsV1'}
+        numberExclusive: {$ref: '#/components/schemas/NumberExclusiveV1'}
+        boolean: {$ref: '#/components/schemas/BooleanV1'}
+        uniqueItems: {$ref: '#/components/schemas/UniqueItemsV1'}
+        minProperties: {$ref: '#/components/schemas/MinPropertiesV1'}
+        additionalOnly: {$ref: '#/components/schemas/AdditionalOnlyV1'}
+        patternProperties: {$ref: '#/components/schemas/PatternPropertiesV1'}
+        allOfCompatible: {$ref: '#/components/schemas/AllOfCompatibleV1'}
+        allOfConflicting: {$ref: '#/components/schemas/AllOfConflictingV1'}
+        overlap: {$ref: '#/components/schemas/OverlapV1'}
+        discriminated: {$ref: '#/components/schemas/DiscriminatedV1'}
+        recursive: {$ref: '#/components/schemas/RecursiveV1'}
+        untyped: {$ref: '#/components/schemas/UntypedV1'}
+
+    # const: the const value.
+    ConstV1:
+      x-fragment-path: openapi/components/schemas/ConstV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, const: fixed}
+    # enum: the first listed value: b.
+    EnumV1:
+      x-fragment-path: openapi/components/schemas/EnumV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, enum: [b, a, c]}
+    # enum + pattern: the first value that also matches: ab.
+    EnumPatternV1:
+      x-fragment-path: openapi/components/schemas/EnumPatternV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, enum: ['1x', ab, cd], pattern: '^[a-z]+$'}
+    # type: string, nothing else: the filler, a.
+    StringPlainV1:
+      x-fragment-path: openapi/components/schemas/StringPlainV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string}
+    # minLength: 0: still the filler, a.
+    MinLengthZeroV1:
+      x-fragment-path: openapi/components/schemas/MinLengthZeroV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, minLength: 0}
+    # maxLength: 0: the empty string.
+    MaxLengthZeroV1:
+      x-fragment-path: openapi/components/schemas/MaxLengthZeroV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, maxLength: 0}
+    # minLength + maxLength + pattern: Aaa.
+    LengthPatternV1:
+      x-fragment-path: openapi/components/schemas/LengthPatternV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, minLength: 3, maxLength: 5, pattern: '^[A-Z][a-z]*$'}
+    # An anchored pattern: 000.
+    AnchoredPatternV1:
+      x-fragment-path: openapi/components/schemas/AnchoredPatternV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, pattern: '^\d{3}$'}
+    # An unanchored pattern, found within a longer value: 00aa.
+    UnanchoredPatternV1:
+      x-fragment-path: openapi/components/schemas/UnanchoredPatternV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, minLength: 4, pattern: '\d{2}'}
+    # A class, a quantifier and an alternation: ab-0.
+    ClassQuantifierAlternationV1:
+      x-fragment-path: openapi/components/schemas/ClassQuantifierAlternationV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, pattern: '^(ab|[x-z]{2,3})-\d+$'}
+    # Astral-plane characters, counted as one code point each: two grinning faces.
+    AstralV1:
+      x-fragment-path: openapi/components/schemas/AstralV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, minLength: 2, maxLength: 2, pattern: "^\U0001F600+$"}
+    # Every supported format, the canonical value of each, and some made longer or
+    # shorter. The formats not supported -- hostname, ipv4, ipv6 and any other, such as
+    # x-custom -- are plain strings, and noted; the oracle does not assert them.
+    FormatsV1:
+      x-fragment-path: openapi/components/schemas/FormatsV1.yaml
+      type: object
+      required: [email, uuid, date, dateTime, time, uri, uriReference, hostname, ipv4, ipv6, longEmail, shortUri,
+                 longHostname, custom]
+      properties:
+        email: {type: string, format: email}
+        uuid: {type: string, format: uuid}
+        date: {type: string, format: date}
+        dateTime: {type: string, format: date-time}
+        time: {type: string, format: time}
+        uri: {type: string, format: uri}
+        uriReference: {type: string, format: uri-reference}
+        hostname: {type: string, format: hostname}
+        ipv4: {type: string, format: ipv4}
+        ipv6: {type: string, format: ipv6}
+        longEmail: {type: string, format: email, minLength: 24}
+        shortUri: {type: string, format: uri, maxLength: 19}
+        longHostname: {type: string, format: hostname, minLength: 80}
+        custom: {type: string, format: x-custom}
+    # pattern + format: the pattern wins: a.
+    PatternFormatV1:
+      x-fragment-path: openapi/components/schemas/PatternFormatV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, format: email, pattern: '^[a-z]+$'}
+    # type: integer: 0.
+    IntegerV1:
+      x-fragment-path: openapi/components/schemas/IntegerV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: integer}
+    # minimum + maximum + multipleOf: the smallest multiple of 3 from 5: 6.
+    IntegerBoundsV1:
+      x-fragment-path: openapi/components/schemas/IntegerBoundsV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: integer, minimum: 5, maximum: 10, multipleOf: 3}
+    # Only an upper bound below 0: the largest valid value: -3.
+    IntegerUpperV1:
+      x-fragment-path: openapi/components/schemas/IntegerUpperV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: integer, maximum: -3}
+    # Exclusive bounds in the 3.1 numeric form: > 5 and < 9: 6.
+    IntegerExclusiveV1:
+      x-fragment-path: openapi/components/schemas/IntegerExclusiveV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: integer, exclusiveMinimum: 5, exclusiveMaximum: 9}
+    # type: number: 0.
+    NumberV1:
+      x-fragment-path: openapi/components/schemas/NumberV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: number}
+    # minimum + maximum + multipleOf, as numbers: 1.5.
+    NumberBoundsV1:
+      x-fragment-path: openapi/components/schemas/NumberBoundsV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: number, minimum: 1.2, maximum: 2.5, multipleOf: 0.5}
+    # multipleOf: 0.1, exactly: 0.3, not 0.30000000000000004.
+    TenthsV1:
+      x-fragment-path: openapi/components/schemas/TenthsV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: number, minimum: 0.25, multipleOf: 0.1}
+    # multipleOf: 0.01 above an exclusive 1: 1.01.
+    HundredthsV1:
+      x-fragment-path: openapi/components/schemas/HundredthsV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: number, exclusiveMinimum: 1, multipleOf: 0.01}
+    # Exclusive number bounds with no whole number between them: the midpoint, 0.625.
+    NumberExclusiveV1:
+      x-fragment-path: openapi/components/schemas/NumberExclusiveV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: number, exclusiveMinimum: 0.5, exclusiveMaximum: 0.75}
+    # type: boolean: false.
+    BooleanV1:
+      x-fragment-path: openapi/components/schemas/BooleanV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: boolean}
+    # minItems + uniqueItems: [x, y] and [0, 1, 2].
+    UniqueItemsV1:
+      x-fragment-path: openapi/components/schemas/UniqueItemsV1.yaml
+      type: object
+      required: [letters, numbers, plain]
+      properties:
+        letters:
+          type: array
+          minItems: 2
+          uniqueItems: true
+          items: {type: string, enum: [x, y, z]}
+        numbers:
+          type: array
+          minItems: 3
+          uniqueItems: true
+          items: {type: integer, minimum: 0}
+        plain:
+          type: array
+          items: {type: string}
+    # minProperties + additionalProperties as a schema: the required a, the declared
+    # optional b, then one additional member: {a, b, additional1: 7}.
+    MinPropertiesV1:
+      x-fragment-path: openapi/components/schemas/MinPropertiesV1.yaml
+      type: object
+      required: [a]
+      minProperties: 3
+      properties:
+        a: {type: string}
+        b: {type: string}
+      additionalProperties: {type: integer, minimum: 7}
+    # minProperties with nothing declared: additional members only.
+    AdditionalOnlyV1:
+      x-fragment-path: openapi/components/schemas/AdditionalOnlyV1.yaml
+      type: object
+      minProperties: 2
+      additionalProperties: {type: string, enum: [ok]}
+    # minProperties met from patternProperties: a member named after the pattern.
+    PatternPropertiesV1:
+      x-fragment-path: openapi/components/schemas/PatternPropertiesV1.yaml
+      type: object
+      minProperties: 1
+      patternProperties:
+        '^x-': {type: boolean}
+      additionalProperties: false
+    # allOf, compatible: both patterns and both lengths hold: ab.
+    AllOfCompatibleV1:
+      x-fragment-path: openapi/components/schemas/AllOfCompatibleV1.yaml
+      allOf:
+        - $ref: '#/components/schemas/AllOfBaseV1'
+        - type: object
+          properties:
+            value: {type: string, maxLength: 4, pattern: b}
+    AllOfBaseV1:
+      x-fragment-path: openapi/components/schemas/AllOfBaseV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, minLength: 2, pattern: '^[a-z]+$'}
+    # allOf, conflicting definitions of one keyword: the stricter wins for the value
+    # (minLength 5, the common enum value), while the class's constants keep the first
+    # definition, as descriptors always have: bbbbb.
+    AllOfConflictingV1:
+      x-fragment-path: openapi/components/schemas/AllOfConflictingV1.yaml
+      allOf:
+        - type: object
+          required: [value, count]
+          properties:
+            value: {type: string, minLength: 2, enum: [aa, bbbbb, cccccc]}
+            count: {type: integer, minimum: 0, maximum: 10}
+        - type: object
+          properties:
+            value: {type: string, minLength: 5, maxLength: 5}
+            count: {type: integer, minimum: 4}
+    # oneOf whose first branch's value (3) is valid against the second too: the second
+    # branch's value, 1, valid against exactly one.
+    OverlapV1:
+      x-fragment-path: openapi/components/schemas/OverlapV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value:
+          oneOf:
+            - $ref: '#/components/schemas/AtLeastThreeV1'
+            - $ref: '#/components/schemas/AtLeastOneV1'
+    AtLeastThreeV1:
+      x-fragment-path: openapi/components/schemas/AtLeastThreeV1.yaml
+      type: integer
+      minimum: 3
+    AtLeastOneV1:
+      x-fragment-path: openapi/components/schemas/AtLeastOneV1.yaml
+      type: integer
+      minimum: 1
+    # A discriminator with a mapping: the mapped value, feline, not the shortest match.
+    DiscriminatedV1:
+      x-fragment-path: openapi/components/schemas/DiscriminatedV1.yaml
+      type: object
+      required: [pet]
+      properties:
+        pet: {$ref: '#/components/schemas/PetV1'}
+    PetV1:
+      x-fragment-path: openapi/components/schemas/PetV1.yaml
+      oneOf:
+        - $ref: '#/components/schemas/CatV1'
+        - $ref: '#/components/schemas/DogV1'
+      discriminator:
+        propertyName: petType
+        mapping:
+          feline: '#/components/schemas/CatV1'
+          canine: '#/components/schemas/DogV1'
+    CatV1:
+      x-fragment-path: openapi/components/schemas/CatV1.yaml
+      type: object
+      required: [petType]
+      properties:
+        petType: {type: string, pattern: '^(feline|kitty)$'}
+        whiskers: {type: integer, minimum: 1}
+    DogV1:
+      x-fragment-path: openapi/components/schemas/DogV1.yaml
+      type: object
+      required: [petType]
+      properties:
+        petType: {type: string, pattern: '^(canine|doggo)$'}
+        bark: {type: boolean}
+    # A recursive $ref within recursionDepth: required name, optional child.
+    RecursiveV1:
+      x-fragment-path: openapi/components/schemas/RecursiveV1.yaml
+      type: object
+      required: [name]
+      properties:
+        name: {type: string}
+        child: {$ref: '#/components/schemas/RecursiveV1'}
+    # A member with no type and no keyword implying one: null.
+    UntypedV1:
+      x-fragment-path: openapi/components/schemas/UntypedV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {description: Anything at all.}

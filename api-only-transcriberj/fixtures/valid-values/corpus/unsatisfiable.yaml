@@ -1,0 +1,203 @@
+# Unsatisfiable inputs (T12.3): one component per condition that leaves no valid value,
+# or none this generator can find. Each yields a finding naming the location and the
+# reason, and its requiredBody() throws UnsupportedOperationException carrying them; the
+# generation itself succeeds. UnsatisfiableV1 refers to all of them, so each is public.
+openapi: 3.1.0
+info:
+  title: Valid-value corpus, unsatisfiable inputs
+  version: 1.0.0
+paths:
+  /unsatisfiable:
+    post:
+      operationId: postUnsatisfiable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsatisfiableV1'
+      responses:
+        '204':
+          description: Accepted.
+components:
+  schemas:
+    UnsatisfiableV1:
+      x-fragment-path: openapi/components/schemas/UnsatisfiableV1.yaml
+      type: object
+      properties:
+        lengthsCross: {$ref: '#/components/schemas/LengthsCrossV1'}
+        patternTooLong: {$ref: '#/components/schemas/PatternTooLongV1'}
+        enumFailsPattern: {$ref: '#/components/schemas/EnumFailsPatternV1'}
+        requiredSelf: {$ref: '#/components/schemas/RequiredSelfV1'}
+        tooFewDistinct: {$ref: '#/components/schemas/TooFewDistinctV1'}
+        enumsDisjoint: {$ref: '#/components/schemas/EnumsDisjointV1'}
+        boundsCross: {$ref: '#/components/schemas/BoundsCrossV1'}
+        allOfBoundsCross: {$ref: '#/components/schemas/AllOfBoundsCrossV1'}
+        backreference: {$ref: '#/components/schemas/BackreferenceV1'}
+        lookahead: {$ref: '#/components/schemas/LookaheadV1'}
+        typesConflict: {$ref: '#/components/schemas/TypesConflictV1'}
+        noMultiple: {$ref: '#/components/schemas/NoMultipleV1'}
+        itemsCross: {$ref: '#/components/schemas/ItemsCrossV1'}
+        forbiddenRequired: {$ref: '#/components/schemas/ForbiddenRequiredV1'}
+        notKeyword: {$ref: '#/components/schemas/NotKeywordV1'}
+        constsDiffer: {$ref: '#/components/schemas/ConstsDifferV1'}
+        tooManyRequired: {$ref: '#/components/schemas/TooManyRequiredV1'}
+        fullClash: {$ref: '#/components/schemas/FullClashV1'}
+
+    # Contradictory keywords.
+    LengthsCrossV1:
+      x-fragment-path: openapi/components/schemas/LengthsCrossV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, minLength: 10, maxLength: 5}
+    # A pattern no value of the allowed length satisfies.
+    PatternTooLongV1:
+      x-fragment-path: openapi/components/schemas/PatternTooLongV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, pattern: '^\d{6}$', maxLength: 5}
+    # Enum values that all fail the pattern.
+    EnumFailsPatternV1:
+      x-fragment-path: openapi/components/schemas/EnumFailsPatternV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, enum: [A, B], pattern: '^[a-z]+$'}
+    # A required self-reference: it recurses beyond any recursion depth.
+    RequiredSelfV1:
+      x-fragment-path: openapi/components/schemas/RequiredSelfV1.yaml
+      type: object
+      required: [next]
+      properties:
+        next: {$ref: '#/components/schemas/RequiredSelfV1'}
+    # uniqueItems with fewer distinct values than minItems.
+    TooFewDistinctV1:
+      x-fragment-path: openapi/components/schemas/TooFewDistinctV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: array
+          minItems: 3
+          uniqueItems: true
+          items: {type: string, enum: [x, y]}
+    # Two enums with no common value.
+    EnumsDisjointV1:
+      x-fragment-path: openapi/components/schemas/EnumsDisjointV1.yaml
+      allOf:
+        - type: object
+          required: [value]
+          properties:
+            value: {type: string, enum: [a, b]}
+        - type: object
+          properties:
+            value: {type: string, enum: [c]}
+    # Bounds that cross.
+    BoundsCrossV1:
+      x-fragment-path: openapi/components/schemas/BoundsCrossV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: integer, minimum: 5, maximum: 3}
+    # Bounds that cross only once allOf is intersected.
+    AllOfBoundsCrossV1:
+      x-fragment-path: openapi/components/schemas/AllOfBoundsCrossV1.yaml
+      allOf:
+        - type: object
+          required: [value]
+          properties:
+            value: {type: integer, minimum: 10}
+        - type: object
+          properties:
+            value: {type: integer, maximum: 2}
+    # A backreference: unsatisfiable by this generator.
+    BackreferenceV1:
+      x-fragment-path: openapi/components/schemas/BackreferenceV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, pattern: '^(a)\1$'}
+    # A lookahead: unsatisfiable by this generator.
+    LookaheadV1:
+      x-fragment-path: openapi/components/schemas/LookaheadV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, pattern: '^(?=a)a$'}
+    # Types that exclude each other once allOf is intersected.
+    TypesConflictV1:
+      x-fragment-path: openapi/components/schemas/TypesConflictV1.yaml
+      allOf:
+        - type: object
+          required: [value]
+          properties:
+            value: {type: string}
+        - type: object
+          properties:
+            value: {type: integer}
+    # No multiple of 0.3 between 0.1 and 0.2.
+    NoMultipleV1:
+      x-fragment-path: openapi/components/schemas/NoMultipleV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: number, minimum: 0.1, maximum: 0.2, multipleOf: 0.3}
+    # minItems above maxItems.
+    ItemsCrossV1:
+      x-fragment-path: openapi/components/schemas/ItemsCrossV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: array, minItems: 3, maxItems: 1, items: {type: string}}
+    # A member one branch requires and another branch's additionalProperties: false forbids.
+    ForbiddenRequiredV1:
+      x-fragment-path: openapi/components/schemas/ForbiddenRequiredV1.yaml
+      allOf:
+        - type: object
+          properties:
+            a: {type: string}
+          additionalProperties: false
+        - type: object
+          required: [b]
+          properties:
+            b: {type: string}
+    # Validity that depends on a keyword the model does not type: reported, not guessed at.
+    NotKeywordV1:
+      x-fragment-path: openapi/components/schemas/NotKeywordV1.yaml
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, not: {const: a}}
+    # Two const values.
+    ConstsDifferV1:
+      x-fragment-path: openapi/components/schemas/ConstsDifferV1.yaml
+      allOf:
+        - type: object
+          required: [value]
+          properties:
+            value: {const: a}
+        - type: object
+          properties:
+            value: {const: b}
+    # More required members than maxProperties allows.
+    TooManyRequiredV1:
+      x-fragment-path: openapi/components/schemas/TooManyRequiredV1.yaml
+      type: object
+      required: [a, b]
+      maxProperties: 1
+      properties:
+        a: {type: string}
+        b: {type: string}
+    # Satisfiable with its required member alone, but not with every member it declares:
+    # requiredBody() has a value, and only fullBody() throws.
+    FullClashV1:
+      x-fragment-path: openapi/components/schemas/FullClashV1.yaml
+      type: object
+      required: [a]
+      maxProperties: 2
+      properties:
+        a: {type: string}
+        b: {type: string}
+        c: {type: string}

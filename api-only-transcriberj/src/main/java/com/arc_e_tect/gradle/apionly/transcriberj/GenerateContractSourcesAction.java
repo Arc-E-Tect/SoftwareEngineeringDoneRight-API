@@ -129,6 +129,14 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
          * @return the report
          */
         RegularFileProperty getReportFile();
+
+        /**
+         * Where the machine-readable report of every generated valid value goes; nothing is
+         * written when it is not set.
+         *
+         * @return the report
+         */
+        RegularFileProperty getValidValuesReport();
     }
 
     /** Creates the action. */
@@ -162,6 +170,11 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         try {
             Files.writeString(p.getReportFile().get().getAsFile().toPath(),
                     report.render(settings.contract(), p.getContractVersion().get()), StandardCharsets.UTF_8);
+            if (p.getValidValuesReport().isPresent()) {
+                Files.writeString(p.getValidValuesReport().get().getAsFile().toPath(),
+                        report.renderValidValues(settings.contract(), p.getContractVersion().get()),
+                        StandardCharsets.UTF_8);
+            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

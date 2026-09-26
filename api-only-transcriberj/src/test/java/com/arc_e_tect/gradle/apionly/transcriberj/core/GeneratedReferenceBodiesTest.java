@@ -78,7 +78,7 @@ class GeneratedReferenceBodiesTest {
     @Test
     void theGeneratedClassesAreTheHandWrittenOnesPlusTheInlineResponsesAndSupport() {
         assertThat(generated.classNames()).containsExactly(
-                "CompleteUserRegistrationOperation", "ContractField", "ContractJson", "ContractManifest",
+                "CompleteUserRegistrationOperation", "ContractField", "ContractJson", "ContractManifest", "ContractRequest",
                 "ErrorDetailV1", "GetHealthOperation", "GetHealthResponse200", "GetRootOperation",
                 "GetRootResponse200", "GetUserOperation", "InitiateUserRegistrationOperation",
                 "InternalServerProblemV1", "InvalidRequestProblemV1", "ProblemDetailsV1",

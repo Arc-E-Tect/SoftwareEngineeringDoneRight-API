@@ -26,6 +26,12 @@ sedr-library = "1.0.0"
 # Only the tests use it: the plugin reacts to idea-ext when a build applies it,
 # and reaches its model reflectively, so it compiles against nothing of it.
 gradle-idea-ext = "1.4.1"
+# The independent oracle the valid-value tests check every generated value with:
+# JSON Schema 2020-12, errors by keyword and instance location, format assertion
+# switchable. Test scope only; it never reaches the plugin's runtime classpath.
+json-schema-validator = "3.0.7"
+# Evaluates `pattern` as ECMA-262 for the oracle, rather than as java.util.regex.
+joni = "2.2.6"
 
 [libraries]
 dsl-updater-core = { module = "com.arc-e-tect:dsl-updater-core", version.ref = "dsl-updater-core" }
@@ -39,4 +45,6 @@ api-only-subscriber          = { module = "com.arc-e-tect:api-only-subscriber", 
 sedr-library                 = { module = "com.arc-e-tect.sedr.utils:sedr-library",            version.ref = "sedr-library" }
 snakeyaml-engine             = { module = "org.snakeyaml:snakeyaml-engine",                   version.ref = "snakeyaml-engine" }
 spring-restdocs-core         = { module = "org.springframework.restdocs:spring-restdocs-core", version.ref = "spring-restdocs" }
+json-schema-validator        = { module = "com.networknt:json-schema-validator",              version.ref = "json-schema-validator" }
+joni                         = { module = "org.jruby.joni:joni",                              version.ref = "joni" }
 gradle-idea-ext              = { module = "gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext", version.ref = "gradle-idea-ext" }

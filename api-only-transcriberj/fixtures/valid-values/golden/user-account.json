@@ -1,0 +1,762 @@
+{
+  "bodies": [
+    {
+      "class": "ConfirmationEmailSentEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/confirmationEmailSentMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "ErrorDetailV1",
+      "fullBody": {
+        "value": {
+          "context": "aaaaa",
+          "message": "aaaaa"
+        }
+      },
+      "location": "/components/schemas/ErrorDetailV1",
+      "requiredBody": {
+        "value": {
+          "context": "aaaaa",
+          "message": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "GetHealthResponse200",
+      "fullBody": {
+        "value": {
+          "status": "a"
+        }
+      },
+      "location": "/paths/~1v1~1actuator~1health/get/responses/200/content/application~1json/schema",
+      "requiredBody": {
+        "value": {}
+      }
+    },
+    {
+      "class": "GetRootResponse200",
+      "fullBody": {
+        "value": {
+          "dependencies": {},
+          "versionCode": 0,
+          "versionName": "aaa"
+        }
+      },
+      "location": "/paths/~1v1/get/responses/200/content/application~1json/schema",
+      "requiredBody": {
+        "value": {
+          "versionCode": 0,
+          "versionName": "aaa"
+        }
+      }
+    },
+    {
+      "class": "InternalServerProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 500,
+          "title": "Internal Server Error",
+          "type": "about:blank"
+        }
+      },
+      "location": "/components/schemas/InternalServerProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 500,
+          "title": "Internal Server Error",
+          "type": "about:blank"
+        }
+      }
+    },
+    {
+      "class": "InvalidRequestProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "errors": [
+            {
+              "context": "aaaaa",
+              "message": "aaaaa"
+            }
+          ],
+          "instance": "https://example.com/",
+          "status": 400,
+          "title": "Invalid Request",
+          "type": "https://api.iff.arc-e-tect.com/problems/invalid-request"
+        }
+      },
+      "location": "/components/schemas/InvalidRequestProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 400,
+          "title": "Invalid Request",
+          "type": "https://api.iff.arc-e-tect.com/problems/invalid-request"
+        }
+      }
+    },
+    {
+      "class": "NewVerificationEmailSentEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/newVerificationEmailSentMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "PersonDeletedEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/personDeletedMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "RegisteredRequestCannotBeProcessedProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 422,
+          "title": "Registration Request Cannot Be Processed",
+          "type": "https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed"
+        }
+      },
+      "location": "/components/schemas/RegisteredRequestCannotBeProcessedProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 422,
+          "title": "Registration Request Cannot Be Processed",
+          "type": "https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithExpiredLinkEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithExpiredLinkMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithExpiredRegistrationProcessEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithExpiredRegistrationProcessMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithInitiatedEmailAddressEventV1",
+      "fullBody": {
+        "value": {
+          "attemptedUsername": "aaaaa",
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithInitiatedEmailAddressMessage/payload",
+      "requiredBody": {
+        "value": {
+          "attemptedUsername": "aaaaa",
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithInvalidLinkEventV1",
+      "fullBody": {
+        "value": {
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "verificationLink": "https://example.com/"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithInvalidLinkMessage/payload",
+      "requiredBody": {
+        "value": {
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "verificationLink": "https://example.com/"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithReservedUsernameEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithReservedUsernameMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithTakenEmailAddressEventV1",
+      "fullBody": {
+        "value": {
+          "attemptedUsername": "aaaaa",
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithTakenEmailAddressMessage/payload",
+      "requiredBody": {
+        "value": {
+          "attemptedUsername": "aaaaa",
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "class": "RegistrationAttemptedWithTakenUsernameEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationAttemptedWithTakenUsernameMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "RegistrationInitiatedEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/registrationInitiatedMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "RegistrationNotFoundProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 404,
+          "title": "Registration Not Found",
+          "type": "https://api.iff.arc-e-tect.com/problems/registration-not-found"
+        }
+      },
+      "location": "/components/schemas/RegistrationNotFoundProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 404,
+          "title": "Registration Not Found",
+          "type": "https://api.iff.arc-e-tect.com/problems/registration-not-found"
+        }
+      }
+    },
+    {
+      "class": "RegistrationProcessExpiredProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 422,
+          "title": "Registration Process Expired",
+          "type": "https://api.iff.arc-e-tect.com/problems/registration-process-expired"
+        }
+      },
+      "location": "/components/schemas/RegistrationProcessExpiredProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 422,
+          "title": "Registration Process Expired",
+          "type": "https://api.iff.arc-e-tect.com/problems/registration-process-expired"
+        }
+      }
+    },
+    {
+      "class": "UserAccountCreatedEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/userAccountCreatedMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "UserAccountV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/components/schemas/UserAccountV1",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "UserNotFoundProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 404,
+          "title": "User Not Found",
+          "type": "https://api.iff.arc-e-tect.com/problems/user-not-found"
+        }
+      },
+      "location": "/components/schemas/UserNotFoundProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 404,
+          "title": "User Not Found",
+          "type": "https://api.iff.arc-e-tect.com/problems/user-not-found"
+        }
+      }
+    },
+    {
+      "class": "UserRegistrationRequestV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/components/schemas/UserRegistrationRequestV1",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "UserRegistrationResendEmailRequestV1",
+      "fullBody": {
+        "value": {
+          "username": "aaaaa"
+        }
+      },
+      "location": "/components/schemas/UserRegistrationResendEmailRequestV1",
+      "requiredBody": {
+        "value": {
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "UserRegistrationResponseV1",
+      "fullBody": {
+        "value": {
+          "message": "aaaaaaaaaa"
+        }
+      },
+      "location": "/components/schemas/UserRegistrationResponseV1",
+      "requiredBody": {
+        "value": {
+          "message": "aaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "class": "UserV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/components/schemas/UserV1",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "UsernameAlreadyRegisteredProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 409,
+          "title": "Username Already Registered",
+          "type": "https://api.iff.arc-e-tect.com/problems/username-already-registered"
+        }
+      },
+      "location": "/components/schemas/UsernameAlreadyRegisteredProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 409,
+          "title": "Username Already Registered",
+          "type": "https://api.iff.arc-e-tect.com/problems/username-already-registered"
+        }
+      }
+    },
+    {
+      "class": "VerificationEmailResendRequestedEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/verificationEmailResendRequestedMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "VerificationEmailSentEventV1",
+      "fullBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      },
+      "location": "/channels/auditV1/messages/verificationEmailSentMessage/payload",
+      "requiredBody": {
+        "value": {
+          "emailAddress": "user@example.com",
+          "occurredAt": "2000-01-01T00:00:00Z",
+          "username": "aaaaa"
+        }
+      }
+    },
+    {
+      "class": "VerificationLinkExpiredProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 422,
+          "title": "Verification Link Expired",
+          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-expired"
+        }
+      },
+      "location": "/components/schemas/VerificationLinkExpiredProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 422,
+          "title": "Verification Link Expired",
+          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-expired"
+        }
+      }
+    },
+    {
+      "class": "VerificationLinkSupersededProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "a",
+          "instance": "https://example.com/",
+          "status": 410,
+          "title": "Verification Link Superseded",
+          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-superseded"
+        }
+      },
+      "location": "/components/schemas/VerificationLinkSupersededProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "a",
+          "status": 410,
+          "title": "Verification Link Superseded",
+          "type": "https://api.iff.arc-e-tect.com/problems/verification-link-superseded"
+        }
+      }
+    }
+  ],
+  "contract": "user-account",
+  "requests": [
+    {
+      "class": "CompleteUserRegistrationOperation",
+      "fullRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [
+            "a"
+          ],
+          "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
+          "query": []
+        }
+      },
+      "location": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "method": "GET",
+      "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
+      "requiredRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [
+            "a"
+          ],
+          "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
+          "query": []
+        }
+      }
+    },
+    {
+      "class": "GetHealthOperation",
+      "fullRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [],
+          "pathTemplate": "/v1/actuator/health",
+          "query": []
+        }
+      },
+      "location": "/paths/~1v1~1actuator~1health/get",
+      "method": "GET",
+      "pathTemplate": "/v1/actuator/health",
+      "requiredRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [],
+          "pathTemplate": "/v1/actuator/health",
+          "query": []
+        }
+      }
+    },
+    {
+      "class": "GetRootOperation",
+      "fullRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [],
+          "pathTemplate": "/v1",
+          "query": []
+        }
+      },
+      "location": "/paths/~1v1/get",
+      "method": "GET",
+      "pathTemplate": "/v1",
+      "requiredRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [],
+          "pathTemplate": "/v1",
+          "query": []
+        }
+      }
+    },
+    {
+      "class": "GetUserOperation",
+      "fullRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [
+            "aaaaa"
+          ],
+          "pathTemplate": "/v1/users/{username}",
+          "query": []
+        }
+      },
+      "location": "/paths/~1v1~1users~1{username}/get",
+      "method": "GET",
+      "pathTemplate": "/v1/users/{username}",
+      "requiredRequest": {
+        "value": {
+          "body": null,
+          "contentType": null,
+          "headers": [],
+          "method": "GET",
+          "pathParameters": [
+            "aaaaa"
+          ],
+          "pathTemplate": "/v1/users/{username}",
+          "query": []
+        }
+      }
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "fullRequest": {
+        "value": {
+          "body": {
+            "emailAddress": "user@example.com",
+            "username": "aaaaa"
+          },
+          "contentType": "application/json",
+          "headers": [],
+          "method": "POST",
+          "pathParameters": [],
+          "pathTemplate": "/v1/users/registrations",
+          "query": []
+        }
+      },
+      "location": "/paths/~1v1~1users~1registrations/post",
+      "method": "POST",
+      "pathTemplate": "/v1/users/registrations",
+      "requiredRequest": {
+        "value": {
+          "body": {
+            "emailAddress": "user@example.com",
+            "username": "aaaaa"
+          },
+          "contentType": "application/json",
+          "headers": [],
+          "method": "POST",
+          "pathParameters": [],
+          "pathTemplate": "/v1/users/registrations",
+          "query": []
+        }
+      }
+    },
+    {
+      "class": "ResendVerificationEmailOperation",
+      "fullRequest": {
+        "value": {
+          "body": {
+            "username": "aaaaa"
+          },
+          "contentType": "application/json",
+          "headers": [],
+          "method": "POST",
+          "pathParameters": [],
+          "pathTemplate": "/v1/users/registrations/verification-email",
+          "query": []
+        }
+      },
+      "location": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "method": "POST",
+      "pathTemplate": "/v1/users/registrations/verification-email",
+      "requiredRequest": {
+        "value": {
+          "body": {
+            "username": "aaaaa"
+          },
+          "contentType": "application/json",
+          "headers": [],
+          "method": "POST",
+          "pathParameters": [],
+          "pathTemplate": "/v1/users/registrations/verification-email",
+          "query": []
+        }
+      }
+    }
+  ],
+  "schemaVersion": 1,
+  "unsupportedParameters": [],
+  "version": "1.0.0"
+}
