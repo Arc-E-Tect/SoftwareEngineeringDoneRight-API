@@ -78,12 +78,15 @@ class GeneratedReferenceBodiesTest {
     @Test
     void theGeneratedClassesAreTheHandWrittenOnesPlusTheInlineResponsesAndSupport() {
         assertThat(generated.classNames()).containsExactly(
-                "CompleteUserRegistrationOperation", "ContractField", "ContractJson", "ContractManifest", "ContractRequest",
-                "ErrorDetailV1", "GetHealthOperation", "GetHealthResponse200", "GetRootOperation",
-                "GetRootResponse200", "GetUserOperation", "InitiateUserRegistrationOperation",
-                "InternalServerProblemV1", "InvalidRequestProblemV1", "ProblemDetailsV1",
+                "CompleteUserRegistrationInvalidRequests", "CompleteUserRegistrationOperation", "ContractField",
+                "ContractJson", "ContractManifest", "ContractRequest",
+                "ErrorDetailV1", "GetHealthInvalidRequests", "GetHealthOperation", "GetHealthResponse200",
+                "GetRootInvalidRequests", "GetRootOperation", "GetRootResponse200", "GetUserInvalidRequests",
+                "GetUserOperation", "InitiateUserRegistrationInvalidRequests", "InitiateUserRegistrationOperation",
+                "InternalServerProblemV1", "InvalidRequestCase", "InvalidRequestProblemV1", "ProblemDetailsV1",
                 "RegisteredRequestCannotBeProcessedProblemV1", "RegistrationNotFoundProblemV1",
-                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailOperation", "UserAccountV1",
+                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailInvalidRequests",
+                "ResendVerificationEmailOperation", "UserAccountV1",
                 "UserNotFoundProblemV1", "UserRegistrationRequestV1", "UserRegistrationResendEmailRequestV1",
                 "UserRegistrationResponseV1", "UserV1", "UsernameAlreadyRegisteredProblemV1", "UsernameV1",
                 "VerificationLinkExpiredProblemV1", "VerificationLinkSupersededProblemV1");

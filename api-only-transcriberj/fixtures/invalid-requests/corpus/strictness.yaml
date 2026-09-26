@@ -1,0 +1,73 @@
+# The strict rule (T13.7): an object that does not declare additionalProperties forbids the
+# members none of its allOf declares; one that declares it, or patternProperties, does not.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, strictness
+  version: 1.0.0
+paths:
+  /strict:
+    post:
+      operationId: postStrict
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StrictV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    StrictV1:
+      x-fragment-path: schemas/StrictV1.yaml
+      type: object
+      required: [closed, open, typed, patterned, merged]
+      properties:
+        closed:
+          type: object
+          required: [a]
+          properties:
+            a: {type: string}
+        open:
+          type: object
+          additionalProperties: true
+          required: [a]
+          properties:
+            a: {type: string}
+        typed:
+          type: object
+          additionalProperties: {type: integer}
+          required: [a]
+          properties:
+            a: {type: string}
+        patterned:
+          type: object
+          patternProperties:
+            '^x-': {type: string}
+          required: [a]
+          properties:
+            a: {type: string}
+        forbidden:
+          type: object
+          additionalProperties: false
+          patternProperties:
+            '^x-': {type: string}
+          properties:
+            a: {type: string}
+        merged:
+          $ref: '#/components/schemas/MergedV1'
+    MergedV1:
+      x-fragment-path: schemas/MergedV1.yaml
+      allOf:
+        - $ref: '#/components/schemas/FirstHalfV1'
+        - type: object
+          required: [second]
+          properties:
+            second: {type: string}
+    FirstHalfV1:
+      x-fragment-path: schemas/FirstHalfV1.yaml
+      type: object
+      required: [first]
+      properties:
+        first: {type: string}

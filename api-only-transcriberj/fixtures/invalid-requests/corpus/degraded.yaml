@@ -1,0 +1,37 @@
+# A degraded construct (T13.11): an inline oneOf on an optional member. The body's other
+# constraints still get cases; those inside the oneOf are reported.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, degraded
+  version: 1.0.0
+paths:
+  /shapes:
+    post:
+      operationId: postShape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShapeRequestV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    ShapeRequestV1:
+      x-fragment-path: schemas/ShapeRequestV1.yaml
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1}
+        shape:
+          oneOf:
+            - type: object
+              required: [radius]
+              properties:
+                radius: {type: number, minimum: 0}
+            - type: object
+              required: [side]
+              properties:
+                side: {type: number, minimum: 0}

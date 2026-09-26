@@ -40,4 +40,15 @@ class ApiOnlyTranscriberJDslSchemaTest {
         assertThat(ApiOnlyTranscriberJDslSchema.SCHEMA.properties().get(1).containerStub().lines())
                 .allMatch(line -> line.isBlank() || line.stripLeading().startsWith("//"));
     }
+
+    @Test
+    @DisplayName("theSubscriptionExampleNamesEveryInvalidRequestSettingWithItsDefault")
+    void theSubscriptionExampleNamesEveryInvalidRequestSettingWithItsDefault() {
+        String example = ApiOnlyTranscriberJDslSchema.SCHEMA.properties().get(1).containerStub();
+        assertThat(example)
+                .contains("// invalidRequestStatus = '400'").contains("Default: '400'")
+                .contains("// strictRequests = true").contains("OWASP API3:2023, API10:2023")
+                .contains("// validateFormats = ['email']")
+                .contains("// emitterOptions = [restdocs: [tests: 'true']]");
+    }
 }

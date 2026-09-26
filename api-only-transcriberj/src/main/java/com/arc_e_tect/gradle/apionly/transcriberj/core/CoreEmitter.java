@@ -110,6 +110,7 @@ final class CoreEmitter implements Emitter {
                 default -> new ClassWriter(context, generated, header).write();
             });
         }
+        invalidRequests(context, header, sources);
         if (context.settings().descriptionBundle() != null) {
             context.writeJava(pkg, "ContractDescriptions", template("ContractDescriptions", header, pkg, Map.of(
                     "bundle", JavaText.literal(context.settings().descriptionBundle()),
@@ -223,7 +224,7 @@ final class CoreEmitter implements Emitter {
             case RESPONSE -> "/components/responses/" + Shapes.escape(g.key());
             case PARAMETER -> "/components/parameters/" + Shapes.escape(g.key());
             case REQUEST_BODY -> "/components/requestBodies/" + Shapes.escape(g.key());
-            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION, CHANNEL, ASYNC_OPERATION -> g.key();
+            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION, CHANNEL, ASYNC_OPERATION, INVALID_REQUESTS -> g.key();
         };
     }
 
@@ -532,9 +533,112 @@ final class CoreEmitter implements Emitter {
     }
 
     private static String requestExpression(ValidRequests.Request r) {
-        return "new ContractRequest(METHOD, PATH, " + listOf(r.pathValues()) + ", " + pairs(r.query()) + ", "
-                + pairs(r.headers()) + ", " + (r.contentType() == null ? "null" : JavaText.literal(r.contentType()))
+        return requestExpression(r, "METHOD", "PATH");
+    }
+
+    private static String requestExpression(ValidRequests.Request r, String method, String path) {
+        return "new ContractRequest(" + method + ", " + path + ", " + listOf(r.pathValues()) + ", " + pairs(r.query())
+                + ", " + pairs(r.headers()) + ", " + (r.contentType() == null ? "null" : JavaText.literal(r.contentType()))
                 + ", " + (r.body() == null ? "null" : bodyText(r.body())) + ")";
+    }
+
+    // ---------------------------------------------------- invalid requests
+
+    /** The warning every generation with strictness off prints, naming the contract. */
+    static String strictnessOffWarning(String contract) {
+        return "WARNING: strictRequests is off for contract '" + contract + "'. No request is tested for unknown "
+                + "members, so the service may accept them unnoticed: mass assignment (OWASP API3:2023 Broken Object "
+                + "Property Level Authorization) and unvalidated input passed on (OWASP API10:2023 Unsafe Consumption "
+                + "of APIs). Turn strictRequests back on; where a contract deliberately allows unknown members, declare "
+                + "additionalProperties: true instead.";
+    }
+
+    private void invalidRequests(EmitterContext context, String header, Map<String, String> sources) {
+        String pkg = context.settings().basePackage();
+        context.writeJava(pkg, "InvalidRequestCase", template("InvalidRequestCase", header, pkg, Map.of()));
+        if (!context.settings().strictRequests()) report.warn(strictnessOffWarning(context.settings().contract()));
+        for (String format : context.settings().validateFormats()) {
+            if (!Formats.supported(format)) {
+                report.warn("validateFormats names format " + format + ", which this generator has no check for; no "
+                        + "case is derived for it, and it is never guessed at");
+            }
+        }
+        InvalidRequests invalid = new InvalidRequests(shapes, names, values, requests, context.settings());
+        for (Operation operation : context.model().operations()) {
+            GeneratedClass generated = names.invalidRequests(CoreClassNames.operationLocation(operation)).orElseThrow();
+            InvalidRequests.Result result = invalid.derive(operation);
+            sources.put(generated.simpleName(), invalidRequestsClass(context, generated, header, result));
+            report.invalidRequests(generated.simpleName(), result, context.settings().invalidRequestStatus());
+        }
+        invalid.warnings().forEach(report::warn);
+        invalid.formatRecommendations().forEach(report::formatRecommendation);
+    }
+
+    private String invalidRequestsClass(EmitterContext context, GeneratedClass generated, String header,
+                                        InvalidRequests.Result result) {
+        Operation operation = result.operation();
+        String name = generated.simpleName();
+        String status = context.settings().invalidRequestStatus();
+        StringBuilder out = new StringBuilder(header);
+        out.append("package ").append(context.settings().basePackage()).append(";\n\n");
+        out.append("/**\n * The invalid requests of operation ").append(operation.method().name()).append(' ')
+                .append(JavaText.comment(operation.path())).append(": ");
+        if (!result.declared()) {
+            out.append("none, since it declares no ").append(status).append(" response")
+                    .append(result.constraints().isEmpty() ? "" : ", although its request input is constrained")
+                    .append(".\n");
+        } else if (result.constraints().isEmpty()) {
+            out.append("none, since it declares no constraint on its request input.\n");
+        } else {
+            out.append("for each constraint on its request input that can\n * be violated alone, a request that "
+                    + "violates only that one, expecting the declared ").append(status).append(" response.\n");
+        }
+        out.append(" *\n * <p>The generation report lists every constraint on the operation's request input, with\n"
+                + " * the cases that cover it or the one reason none does.\n */\n");
+        out.append(excludeFromCoverage());
+        out.append("public final class ").append(name).append(" {\n\n");
+        constant(out, "How many cases there are.", "int", "CASE_COUNT", String.valueOf(result.cases().size()));
+        out.append(INDENT).append("/** Every case, in canonical order; the first is the representative. */\n")
+                .append(INDENT).append("public static final java.util.List<InvalidRequestCase> CASES = java.util.List.of(");
+        for (int i = 0; i < result.cases().size(); i++) {
+            InvalidRequests.Case c = result.cases().get(i);
+            String indent = INDENT + INDENT + INDENT;
+            out.append(i == 0 ? "\n" : ",\n").append(indent).append("new InvalidRequestCase(")
+                    .append(JavaText.literal(c.id())).append(", ").append(JavaText.literal(c.description())).append(",\n")
+                    .append(indent).append(INDENT).append(INDENT).append(JavaText.literal(c.in())).append(", ")
+                    .append(c.name() == null ? "null" : JavaText.literal(c.name())).append(", ")
+                    .append(c.pointer() == null ? "null" : JavaText.literal(c.pointer())).append(", ")
+                    .append(JavaText.literal(c.keyword())).append(",\n")
+                    .append(indent).append(INDENT).append(INDENT)
+                    .append(requestExpression(c.request(), JavaText.literal(c.request().method()),
+                            JavaText.literal(c.request().pathTemplate()))).append(",\n")
+                    .append(indent).append(INDENT).append(INDENT).append(c.status()).append(", ")
+                    .append(listOf(c.contentTypes())).append(", ")
+                    .append(c.bodyClass() == null ? "null" : JavaText.literal(c.bodyClass())).append(", ")
+                    .append(c.representative()).append(')');
+        }
+        out.append(");\n\n");
+        out.append(INDENT).append("private ").append(name).append("() {\n").append(INDENT).append("}\n");
+        out.append("}\n");
+        return out.toString();
+    }
+
+    /** A case as the machine-readable report records it. */
+    static Map<String, Object> caseJson(InvalidRequests.Case c) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", c.id());
+        out.put("description", c.description());
+        out.put("in", c.in());
+        out.put("name", c.name());
+        out.put("pointer", c.pointer());
+        out.put("keyword", c.keyword());
+        out.put("request", requestJson(c.request()));
+        out.put("baseline", requestJson(c.baseline()));
+        out.put("expectedStatus", java.math.BigDecimal.valueOf(c.status()));
+        out.put("expectedContentTypes", c.contentTypes());
+        out.put("responseBodyClass", c.bodyClass());
+        out.put("representative", c.representative());
+        return out;
     }
 
     private static String pairs(List<ValidRequests.Pair> pairs) {
@@ -542,7 +646,7 @@ final class CoreEmitter implements Emitter {
                 + JavaText.literal(p.name()) + ", " + JavaText.literal(p.value()) + ")").toList()) + ")";
     }
 
-    private static Map<String, Object> requestJson(ValidRequests.Request r) {
+    static Map<String, Object> requestJson(ValidRequests.Request r) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("method", r.method());
         out.put("pathTemplate", r.pathTemplate());
@@ -688,7 +792,7 @@ final class CoreEmitter implements Emitter {
                 case REQUEST_BODY -> "Generated from request body " + from + ".";
                 case INLINE_REQUEST -> "Generated from the request body schema at " + from + ".";
                 case INLINE_RESPONSE -> "Generated from the response schema at " + from + ".";
-                case OPERATION, CHANNEL, ASYNC_OPERATION ->
+                case OPERATION, CHANNEL, ASYNC_OPERATION, INVALID_REQUESTS ->
                         throw new IllegalStateException("an operation's or channel's class is not a schema's");
             };
         }
@@ -705,7 +809,7 @@ final class CoreEmitter implements Emitter {
                         .findFirst().map(b -> b.value().description()).orElse(null);
                 case PARAMETER -> model.parameters().stream().filter(p -> p.name().equals(generated.key()))
                         .findFirst().map(p -> p.value().description()).orElse(null);
-                case OPERATION, CHANNEL, ASYNC_OPERATION ->
+                case OPERATION, CHANNEL, ASYNC_OPERATION, INVALID_REQUESTS ->
                         throw new IllegalStateException("an operation's or channel's class is not a schema's");
             };
         }

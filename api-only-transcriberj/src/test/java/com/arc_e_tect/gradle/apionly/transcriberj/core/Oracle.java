@@ -49,25 +49,46 @@ final class Oracle {
     private final Map<String, Schema> schemas = new HashMap<>();
 
     Oracle(Path contract) {
+        this(normalised(raw(contract)));
+    }
+
+    /** An oracle over a document already rewritten as the constructor from a file rewrites it. */
+    Oracle(ObjectNode root) {
+        root.put("$schema", "https://json-schema.org/draft/2020-12/schema");
+        root.put("$id", BASE);
+        this.document = root;
+        String text = JSON.writeValueAsString(root);
+        SchemaRegistryConfig config = new SchemaRegistryConfig.Builder()
+                .formatAssertionsEnabled(true)
+                .regularExpressionFactory(JoniRegularExpressionFactory.getInstance())
+                .build();
+        this.registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12, builder -> builder
+                .schemaRegistryConfig(config)
+                .schemas(Map.of(BASE, text)));
+    }
+
+    /** A contract document exactly as written, read as the plugin reads it: no rewrite at all. */
+    static ObjectNode raw(Path contract) {
         try {
             Object parsed = new Load(LoadSettings.builder().setSchema(new CoreSchema()).build())
                     .loadFromString(Files.readString(contract, StandardCharsets.UTF_8));
-            ObjectNode root = (ObjectNode) node(parsed);
-            normalise(root);
-            root.put("$schema", "https://json-schema.org/draft/2020-12/schema");
-            root.put("$id", BASE);
-            this.document = root;
-            String text = JSON.writeValueAsString(root);
-            SchemaRegistryConfig config = new SchemaRegistryConfig.Builder()
-                    .formatAssertionsEnabled(true)
-                    .regularExpressionFactory(JoniRegularExpressionFactory.getInstance())
-                    .build();
-            this.registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12, builder -> builder
-                    .schemaRegistryConfig(config)
-                    .schemas(Map.of(BASE, text)));
+            return (ObjectNode) node(parsed);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static ObjectNode normalised(ObjectNode root) {
+        normalise(root);
+        return root;
+    }
+
+    /** The errors validating an instance against the schema at a JSON pointer, as the validator reports them. */
+    List<Error> validate(String pointer, JsonNode instance) {
+        Schema schema = schemas.computeIfAbsent(pointer, p -> registry.getSchema(
+                "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"$ref\":\"" + BASE + "#"
+                        + encode(p) + "\"}"));
+        return schema.validate(instance);
     }
 
     /** The errors validating an instance against the schema at a JSON pointer into the document. */
@@ -125,7 +146,7 @@ final class Oracle {
     }
 
     /** Drops a format beside a pattern, and rewrites the 3.0 boolean exclusive bounds, everywhere. */
-    private static void normalise(JsonNode node) {
+    static void normalise(JsonNode node) {
         if (node instanceof ObjectNode o) {
             if (o.has("pattern") && o.get("pattern").isString() && o.has("format")) o.remove("format");
             exclusive(o, "exclusiveMinimum", "minimum");

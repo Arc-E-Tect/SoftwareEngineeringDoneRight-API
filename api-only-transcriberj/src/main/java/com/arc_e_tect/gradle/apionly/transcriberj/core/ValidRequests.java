@@ -63,7 +63,7 @@ final class ValidRequests {
     }
 
     /** A parameter, and where it is written. */
-    private record Located(Parameter parameter, String location) {
+    record Located(Parameter parameter, String location) {
     }
 
     private static final Set<String> IGNORED_HEADERS = Set.of("accept", "content-type", "authorization");
@@ -106,6 +106,19 @@ final class ValidRequests {
      * @throws Shapes.Unrepresentable    when a value reaches a construct no rule represents
      */
     Request request(Operation operation, Kind kind) {
+        return request(operation, kind, null);
+    }
+
+    /**
+     * A valid request whose body, when it has one, is of the given media type rather than
+     * the first JSON one.
+     *
+     * @param json the media type, or null for the first JSON one
+     * @throws ValidValues.Unsatisfiable when a parameter or the body has no valid value, or
+     *                                   a parameter the request needs is not supported yet
+     * @throws Shapes.Unrepresentable    when a value reaches a construct no rule represents
+     */
+    Request request(Operation operation, Kind kind, MediaType json) {
         ValidValues.Variant variant = kind == Kind.FULL ? ValidValues.Variant.FULL : ValidValues.Variant.REQUIRED;
         Map<String, String> path = new java.util.HashMap<>();
         List<Pair> query = new ArrayList<>();
@@ -147,16 +160,25 @@ final class ValidRequests {
             String at = requestBody.reference() != null
                     ? "/components/requestBodies/" + Shapes.escape(requestBody.reference().name())
                     : CoreClassNames.operationLocation(operation) + "/requestBody";
-            MediaType json = requestBody.content().stream().filter(t -> isJson(t.contentType())).findFirst()
+            MediaType chosen = json != null ? json : requestBody.content().stream()
+                    .filter(t -> isJson(t.contentType())).findFirst()
                     .orElseThrow(() -> new ValidValues.Unsatisfiable(at, "no JSON content type among "
                             + requestBody.content().stream().map(MediaType::contentType).toList()
                             + "; this generator writes JSON bodies only"));
-            contentType = json.contentType();
-            String schemaAt = at + "/content/" + Shapes.escape(json.contentType()) + "/schema";
-            body = json.schema() == null ? ValueJson.NULL : values.value(json.schema(), schemaAt, variant);
+            contentType = chosen.contentType();
+            String schemaAt = bodyLocation(operation) + "/content/" + Shapes.escape(chosen.contentType()) + "/schema";
+            body = chosen.schema() == null ? ValueJson.NULL : values.value(chosen.schema(), schemaAt, variant);
         }
         return new Request(operation.method().name(), operation.path(), List.copyOf(pathValues), List.copyOf(query),
                 List.copyOf(headers), contentType, body);
+    }
+
+    /** Where an operation's request body is written: the component it refers to, or the operation itself. */
+    static String bodyLocation(Operation operation) {
+        RequestBody requestBody = operation.requestBody();
+        return requestBody.reference() != null
+                ? "/components/requestBodies/" + Shapes.escape(requestBody.reference().name())
+                : CoreClassNames.operationLocation(operation) + "/requestBody";
     }
 
     /** {@code application/json}, or any {@code +json} type, parameters aside. */
@@ -170,7 +192,7 @@ final class ValidRequests {
      * declares one of the same name and location, then the operation's own; the
      * ignored headers left out.
      */
-    private List<Located> parameters(Operation operation) {
+    List<Located> parameters(Operation operation) {
         List<Located> out = new ArrayList<>();
         String itemAt = "/paths/" + Shapes.escape(operation.path());
         PathItem item = model.paths().stream().filter(i -> i.operations().contains(operation)).findFirst().orElse(null);
@@ -208,7 +230,7 @@ final class ValidRequests {
     }
 
     /** Why no value is generated for a parameter, or null when one is. */
-    private String unsupported(Parameter p) {
+    String unsupported(Parameter p) {
         if (p.in() == null || !DEFAULT_STYLE.containsKey(p.in())) {
             return "a parameter in " + p.in() + " is not supported yet";
         }
@@ -232,7 +254,7 @@ final class ValidRequests {
     }
 
     /** A value as it travels: a string as it is, a number and a boolean as JSON writes them, null as nothing. */
-    private static String wire(Object value, Located located) {
+    static String wire(Object value, Located located) {
         if (value instanceof String s) return s;
         if (value instanceof BigDecimal n) return ValueJson.number(n);
         if (value instanceof Boolean b) return b.toString();

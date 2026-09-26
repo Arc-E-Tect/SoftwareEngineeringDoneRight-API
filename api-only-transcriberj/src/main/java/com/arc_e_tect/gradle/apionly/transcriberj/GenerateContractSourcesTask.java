@@ -1,10 +1,13 @@
 package com.arc_e_tect.gradle.apionly.transcriberj;
 
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
@@ -25,6 +28,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Generates one contract's class tree.
@@ -37,8 +41,12 @@ import java.util.List;
 @CacheableTask
 public abstract class GenerateContractSourcesTask extends DefaultTask {
 
-    /** Creates the task. */
+    /** Creates the task, with the invalid-request settings at their defaults. */
     public GenerateContractSourcesTask() {
+        getInvalidRequestStatus().convention(Settings.DEFAULT_INVALID_REQUEST_STATUS);
+        getStrictRequests().convention(true);
+        getValidateFormats().convention(List.of());
+        getEmitterOptions().convention(Map.of());
     }
 
     /**
@@ -126,6 +134,38 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
     public abstract Property<String> getDescriptionPlaceholder();
 
     /**
+     * The status that means "the request is invalid".
+     *
+     * @return the status
+     */
+    @Input
+    public abstract Property<String> getInvalidRequestStatus();
+
+    /**
+     * Whether an undeclared {@code additionalProperties} forbids unknown members.
+     *
+     * @return the setting
+     */
+    @Input
+    public abstract Property<Boolean> getStrictRequests();
+
+    /**
+     * The formats an invalid-request case is derived for.
+     *
+     * @return the format names
+     */
+    @Input
+    public abstract ListProperty<String> getValidateFormats();
+
+    /**
+     * The options of each emitter, by emitter id.
+     *
+     * @return the options
+     */
+    @Input
+    public abstract MapProperty<String, Map<String, String>> getEmitterOptions();
+
+    /**
      * The emitter libraries, and everything they need.
      *
      * @return the classpath
@@ -206,6 +246,10 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             parameters.getGenerateDocs().set(getGenerateDocs());
             parameters.getDescriptionPlaceholder().set(getDescriptionPlaceholder());
             parameters.getDescriptionBundle().set(getDescriptionBundle());
+            parameters.getInvalidRequestStatus().set(getInvalidRequestStatus());
+            parameters.getStrictRequests().set(getStrictRequests());
+            parameters.getValidateFormats().set(getValidateFormats());
+            parameters.getEmitterOptions().set(getEmitterOptions());
             parameters.getOutputDirectory().set(getOutputDirectory());
             parameters.getResourceDirectory().set(getResourceDirectory());
             parameters.getReportFile().set(getReportFile());
@@ -218,6 +262,9 @@ public abstract class GenerateContractSourcesTask extends DefaultTask {
             List<String> report = Files.readAllLines(getReportFile().get().getAsFile().toPath());
             getLogger().lifecycle("{}: {} -- see {}", report.get(0), report.get(1),
                     getReportFile().get().getAsFile());
+            if (report.size() > 2 && report.get(2).startsWith("Invalid requests:")) {
+                getLogger().lifecycle("{}: {}", report.get(0), report.get(2));
+            }
             int warnings = report.indexOf("Warnings:");
             for (int i = warnings + 1; warnings >= 0 && i < report.size() && !report.get(i).isBlank(); i++) {
                 getLogger().warn("{}: warning: {}", report.get(0), report.get(i).strip());

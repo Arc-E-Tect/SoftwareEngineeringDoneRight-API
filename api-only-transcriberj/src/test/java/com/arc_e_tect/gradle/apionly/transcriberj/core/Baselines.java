@@ -63,13 +63,21 @@ public final class Baselines {
         return out;
     }
 
-    /** The hash of every source of every tree, the valid-value members stripped, ContractRequest left out. */
+    /**
+     * The hash of every source of every tree, the valid-value members stripped, and the classes
+     * added since left out: ContractRequest, InvalidRequestCase and each operation's
+     * InvalidRequests class. Those are additions; what was generated before is held to its hash.
+     */
     static Map<String, String> hashes(Map<String, GeneratedSources> trees) {
         Map<String, String> out = new TreeMap<>();
         trees.forEach((name, tree) -> {
             try (Stream<Path> files = Files.walk(tree.sources)) {
                 for (Path file : files.filter(p -> p.toString().endsWith(".java")).toList()) {
-                    if (file.getFileName().toString().equals("ContractRequest.java")) continue;
+                    String fileName = file.getFileName().toString();
+                    if (fileName.equals("ContractRequest.java") || fileName.equals("InvalidRequestCase.java")
+                            || fileName.endsWith("InvalidRequests.java")) {
+                        continue;
+                    }
                     String source = withoutValidValueMembers(Files.readString(file, StandardCharsets.UTF_8));
                     out.put(name + "/" + tree.sources.relativize(file).toString().replace('\\', '/'), sha256(source));
                 }
@@ -104,9 +112,19 @@ public final class Baselines {
         }
     }
 
-    /** A reference contract's machine-readable report, as its golden file holds it: indented, members sorted. */
+    /** The members of the machine-readable report that invalid-request derivation added, golden elsewhere. */
+    static final java.util.List<String> INVALID_REQUEST_MEMBERS = java.util.List.of("constraintCoverage",
+            "formatRecommendations", "gaps", "invalidRequests");
+
+    /**
+     * A reference contract's machine-readable report, as its golden file holds it: indented,
+     * members sorted, and without what invalid-request derivation added, which
+     * {@code fixtures/invalid-requests/golden} holds.
+     */
     static String golden(ValidValueFixtures.Fixture f) {
-        return pretty(f.report(), "") + "\n";
+        tools.jackson.databind.node.ObjectNode copy = (tools.jackson.databind.node.ObjectNode) f.report().deepCopy();
+        INVALID_REQUEST_MEMBERS.forEach(copy::remove);
+        return pretty(copy, "") + "\n";
     }
 
     /** JSON indented by two spaces, one member or item per line, independent of any library's printer. */
@@ -134,9 +152,10 @@ public final class Baselines {
 
     /**
      * Re-records a baseline: {@code sources} rewrites the hash file from what is generated
-     * now; {@code golden} rewrites the golden valid values. Review the diff.
+     * now; {@code golden} rewrites the golden valid values; {@code invalid-requests} rewrites the
+     * golden invalid-request cases of the user-account contract. Review the diff.
      *
-     * @param args {@code sources} or {@code golden}
+     * @param args {@code sources}, {@code golden} or {@code invalid-requests}
      * @throws IOException when a file cannot be written
      */
     public static void main(String[] args) throws IOException {
@@ -152,8 +171,13 @@ public final class Baselines {
                 ValidValueFixtures.Fixture f = ValidValueFixtures.reference(contract, into.resolve(contract));
                 Files.writeString(GOLDEN.resolve(contract + ".json"), golden(f), StandardCharsets.UTF_8);
             }
+        } else if (args.length == 1 && args[0].equals("invalid-requests")) {
+            Files.createDirectories(InvalidRequestFixtures.GOLDEN);
+            ValidValueFixtures.Fixture f = ValidValueFixtures.reference("user-account", into.resolve("user-account"));
+            Files.writeString(InvalidRequestFixtures.GOLDEN.resolve("user-account.json"), InvalidRequestFixtures.golden(f),
+                    StandardCharsets.UTF_8);
         } else {
-            throw new IllegalArgumentException("say what to record: sources or golden");
+            throw new IllegalArgumentException("say what to record: sources, golden or invalid-requests");
         }
     }
 }

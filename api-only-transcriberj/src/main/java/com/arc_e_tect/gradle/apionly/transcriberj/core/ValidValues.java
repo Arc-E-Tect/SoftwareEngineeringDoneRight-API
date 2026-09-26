@@ -103,6 +103,42 @@ final class ValidValues {
         return first(candidates(in, context), in);
     }
 
+    /**
+     * A valid value of several schemas at once: a member that more than one part of an
+     * {@code allOf} defines, for instance.
+     *
+     * @throws Unsatisfiable when no valid value exists or none can be found
+     * @throws Shapes.Unrepresentable when the value reaches a construct no rule represents
+     */
+    Object value(List<Faults.At> roots, Variant variant) {
+        Context context = new Context(variant, List.of());
+        Intersection in = intersection(at(roots), Set.of(), context);
+        return first(candidates(in, context), in);
+    }
+
+    /**
+     * Up to {@code count} distinct valid values of several schemas at once, in the order
+     * they are generated: fewer when fewer are found.
+     *
+     * @throws Unsatisfiable when no valid value exists or none can be found
+     * @throws Shapes.Unrepresentable when a value reaches a construct no rule represents
+     */
+    List<Object> values(List<Faults.At> roots, int count) {
+        Context context = new Context(Variant.REQUIRED, List.of());
+        Intersection in = intersection(at(roots), Set.of(), context);
+        Iterator<Object> candidates = Lazy.limit(candidates(in, context), SEARCH);
+        List<Object> out = new ArrayList<>();
+        while (out.size() < count && candidates.hasNext()) {
+            Object value = candidates.next();
+            if (out.stream().noneMatch(v -> ValueJson.equal(v, value))) out.add(value);
+        }
+        return out;
+    }
+
+    private static List<At> at(List<Faults.At> roots) {
+        return roots.stream().map(r -> new At(r.schema(), r.location())).toList();
+    }
+
     /** Whether a value is valid against a schema, as far as the keywords the model types go. */
     boolean valid(Object value, Schema schema, String location) {
         return valid(value, schema, location, 0);

@@ -9,6 +9,8 @@ import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.workers.WorkAction;
 import org.gradle.workers.WorkParameters;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
@@ -103,6 +106,34 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         Property<String> getDescriptionBundle();
 
         /**
+         * The status that means "the request is invalid".
+         *
+         * @return the status
+         */
+        Property<String> getInvalidRequestStatus();
+
+        /**
+         * Whether an undeclared {@code additionalProperties} forbids unknown members.
+         *
+         * @return the setting
+         */
+        Property<Boolean> getStrictRequests();
+
+        /**
+         * The formats an invalid-request case is derived for.
+         *
+         * @return the format names
+         */
+        ListProperty<String> getValidateFormats();
+
+        /**
+         * The options of each emitter, by emitter id.
+         *
+         * @return the options
+         */
+        MapProperty<String, Map<String, String>> getEmitterOptions();
+
+        /**
          * Where the sources go.
          *
          * @return the directory
@@ -155,7 +186,9 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         Settings settings = new Settings(p.getContractName().get(), p.getBasePackage().get(),
                 p.getGenerateDocs().get(),
                 p.getDescriptionPlaceholder().get(), p.getRecursionDepth().get(),
-                p.getDescriptionBundle().getOrNull());
+                p.getDescriptionBundle().getOrNull(), p.getInvalidRequestStatus().getOrNull(),
+                p.getStrictRequests().getOrElse(true), p.getValidateFormats().getOrElse(List.of()),
+                p.getEmitterOptions().getOrElse(Map.of()));
         GenerationReport report;
         try {
             report = Generation.run(p.getContract().get().getAsFile().toPath(), asyncContract(p),

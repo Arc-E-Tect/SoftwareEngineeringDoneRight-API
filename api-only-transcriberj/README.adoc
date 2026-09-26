@@ -148,6 +148,26 @@ apiOnlyTranscriberJ {
         // Default: INTENTIONALLY LEFT BLANK - WILL BE PROVIDED AT A LATER STAGE
         // descriptionPlaceholder = '...'
 
+        // The response status meaning "the request is invalid". Invalid-request cases are
+        // derived only for an operation that declares exactly this status; one that
+        // constrains its input without declaring it is reported as a gap.
+        // Default: '400'
+        // invalidRequestStatus = '422'
+
+        // Whether a request object that does not declare additionalProperties forbids the
+        // members it does not declare, so that an unknown-member case is derived for it.
+        // Turning it off is warned about on every generation: see "Strict requests".
+        // Default: true
+        // strictRequests = false
+
+        // The formats an invalid-request case is derived for. A pattern beside a format wins.
+        // Default: none
+        // validateFormats = ['email', 'uuid']
+
+        // Options for each emitter, by emitter id, passed to it unchanged: see "Emitters".
+        // Default: none
+        // emitterOptions = [restdocs: [tests: 'true']]
+
         // Where the sources are generated.
         // Default: build/generated/sources/transcriberj/<contract>
         // into = layout.buildDirectory.dir('generated/sources/transcriberj/orders')
@@ -157,7 +177,8 @@ apiOnlyTranscriberJ {
         // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders')
 
         // Where the generation report is written. The machine-readable report of
-        // every valid value goes beside it: orders.txt gives orders.valid-values.json.
+        // every valid value and invalid-request case goes beside it: orders.txt gives
+        // orders.valid-values.json.
         // Default: build/reports/transcriberj/<contract>.txt
         // reportFile = layout.buildDirectory.file('reports/transcriberj/orders.txt')
 
@@ -561,7 +582,8 @@ webTestClient.method(HttpMethod.valueOf(request.method()))
         .expectStatus().isCreated();
 ----
 
-Every value is valid by construction: nothing here generates an invalid one.
+Every value these members return is valid by construction.
+The invalid requests derived from them are in classes of their own: see <<invalid-requests,Invalid requests §>>.
 Each returns the same value on every call, and is a constant compiled into the class.
 
 [#valid-value-rules]
@@ -672,6 +694,184 @@ Each variant holds either `value`, the value the method returns, or `unsatisfiab
 `noBodyRequest` is present only where the method is.
 `schemaVersion` changes when the shape does.
 
+[#invalid-requests]
+=== Invalid requests
+
+A contract that declares a response for an invalid request makes a promise about every constraint it puts on request input: break one, and that response comes back.
+For each such constraint the tree derives a *case*: the operation's smallest valid request -- `requiredRequest()` -- with exactly that one constraint violated, paired with the response the contract declares.
+Nothing is taken from convention: a case expects a response only because the operation declares it.
+Every constraint either has a case or is listed in the report with the one reason it has none.
+None is left out.
+
+The cases are data.
+They render nothing and depend on nothing: an emitter turns them into tests or stubs, and a hand-written test can use them as they are.
+They are generated whether or not an emitter renders them.
+
+[cols="2,3", options="header"]
+|===
+|Class |Holds
+
+|`InvalidRequestCase`, in the base package beside `ContractRequest`
+|One case: a record of `id`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass` and `representative`.
+
+|`<Operation>InvalidRequests`, for every operation -- `InitiateUserRegistrationInvalidRequests` beside `InitiateUserRegistrationOperation`
+|`CASES`, the operation's cases in canonical order, and `CASE_COUNT`.
+Empty where the operation declares no invalid-request status, or no constraint on its input.
+|===
+
+[cols="1,3", options="header"]
+|===
+|Field |What it is
+
+|`id` |Readable, unique within the operation, and the same on every run: `query-page-minimum`, `body-emailAddress-maxLength`, `body-unknown-member`.
+It becomes a test method name and a snippet directory, so it is a valid Java identifier once converted, as `JavaText.variableName` converts it.
+Two cases whose ids would read the same -- `/a-b` and `/a/b` both give `body-a-b-type` -- are told apart by a suffix, `-2`, given in canonical order.
+Where a body declares more than one JSON media type, the media type is part of the id: `body-application-merge-patch-json-name-maxLength`.
+|`description` |One sentence for a display name: "`page` below its minimum of 0".
+|`in`, `name`, `pointer` |Where the fault is: `path`, `query`, `header` or `body`; the parameter's name, or the JSON pointer into the body -- the empty string for the body as a whole.
+For a missing required member and for an unknown member, the pointer names the member.
+|`keyword` |The violated keyword as the contract spells it -- `minimum`, `required`, `type`, `additionalProperties` -- and as a JSON Schema validator reports it: a `null` case records `type`, and a 3.0 `minimum` with `exclusiveMinimum: true` records `exclusiveMinimum`.
+|`request` |The complete violating request, as a `ContractRequest`. Its values are raw: encoding them for the path, the query or a header is the renderer's job.
+|`expectedStatus`, `expectedContentTypes` |The declared status, and every content type the declared response is declared with; empty when it has no content, and only the status is expected.
+|`responseBodyClass` |The simple name of the generated class for the declared response's body, resolved through a `$ref` to `components/responses` where there is one; `null` without content.
+|`representative` |Whether this is the case whose documentation is published: the first in canonical order, so exactly one per operation.
+|===
+
+*Canonical order* is path parameters, then query parameters, then headers, then the body; within each, `required`, then `type`, then `null`, then the other keywords in the order of the table below; then by name or pointer.
+
+[#invalid-request-derivation]
+==== How each case is derived
+
+Start from `requiredRequest()`, and change exactly one thing.
+A constraint of an optional parameter or member is reached by adding it first, with a valid value, then breaking it.
+Nested objects and array items are derived the same way, at their pointer -- `/items/0/quantity`, `/address/postalCode` -- as deep as `recursionDepth` allows.
+
+[cols="2,5", options="header"]
+|===
+|Keyword |The one change
+
+|`required`, a body member |The member removed.
+|`required`, a query or header parameter |The parameter left out.
+|`required`, the request body |No body.
+|`type` |A value of a type no binder coerces: see below.
+|`null` |`null`, for a member or item whose type does not allow it.
+|`enum` |A value of the right type that is not listed.
+|`const` |A value of the right type that differs from it.
+|`minLength`, `maxLength` |One code point too few or too many, still matching the pattern and the format where there is one.
+|`pattern` |A value of a valid length that does not match.
+|`format`, where `validateFormats` names it |A value of a valid length that is not of the format.
+|`minimum`, `maximum` |One unit below or above -- one `multipleOf` where there is one.
+|`exclusiveMinimum`, `exclusiveMaximum` |Exactly the bound.
+|`multipleOf` |A value within the bounds that is not a multiple.
+|`minItems`, `maxItems` |One item too few or too many, each item valid.
+|`uniqueItems` |Two equal valid items.
+|`minProperties`, `maxProperties` |One member too few or too many.
+|An unknown member |A member named `unexpectedMember`, or, where `patternProperties` names members, a name no pattern matches; its value `"unexpected"`. See <<strict-requests,Strict requests §>>.
+|===
+
+*One fault per case is not optional.*
+A case is kept only when the request breaks the one keyword at the one place and nothing else -- checked, keyword by keyword, against everything that applies there, including the `allOf` it is part of.
+Where no value breaks a constraint alone -- a `minLength` whose length the pattern forces, an `enum` that lists nothing shorter than `maxLength` -- there is no case, and the report names the keyword that breaks with it.
+A `minLength: 6` email is one: the shortest address a strict validator accepts, `a@b.co`, is six characters long.
+
+*Types a binder does not coerce.*
+Many JSON binders coerce by default: Jackson turns `5` into `"5"` for a string, truncates `1.5` into an integer, and reads `"5"` as a number.
+A type case sending a coercible value would pass or fail by the binder's settings rather than by the contract, so:
+
+* a string gets an object, `{}`;
+* a number or an integer gets the string `"not-a-number"`;
+* a boolean gets the string `"not-a-boolean"`;
+* an object gets an array, `[]`, and an array gets an object, `{}`.
+
+Coercible violations -- `5` for a string -- are not derived.
+They are real violations, and a lenient binder lets them through; a setting to derive them as well can be added when a project needs it.
+
+[#invalid-request-never]
+==== What is never derived, and why
+
+* *A `required` case for a path parameter.* A path without the segment is a different route: a test on it tests routing, not validation.
+* *A path value that is empty, or contains `/`, `?` or `#`,* even percent-encoded: it changes which endpoint the request reaches.
+* *A `type` case for a string parameter, and a `null` case for any parameter.* Every parameter travels as a string, and an empty one is not `null`.
+* *Positive boundary cases* -- a value exactly at a bound. They are valid requests, not invalid ones.
+* *Conditional keywords* -- `if`, `then`, `else`, `dependentSchemas` and every other keyword the model does not type. Reported, never guessed at.
+* *A case from a request that cannot be vouched for:* one holding a value of a format no check exists for, such as `duration`. The value might be invalid already, and a case must have one fault.
+* *Malformed JSON, an unsupported media type (`415`),* and anything that needs a fixture on the real implementation.
+
+[#invalid-request-status]
+==== The expected response
+
+`invalidRequestStatus`, `400` by default, is the status that means "the request is invalid".
+An operation must declare exactly that status for cases to be derived; neither a `4XX` range nor `default` counts, since both are too broad to be a promise about invalid input.
+An operation that constrains its request input and does not declare it is a *gap*: it gets no cases, and the report recommends declaring the status.
+
+[#strict-requests]
+==== Strict requests
+
+`strictRequests` is on by default: a request object that does not declare `additionalProperties` forbids the members it does not declare, and an unknown-member case is derived for it.
+An explicit `additionalProperties: true`, an `additionalProperties` schema, or `patternProperties` is respected, and no such case is derived; an explicit `additionalProperties: false` is the contract's own and always has its case.
+Strictness is judged against the members the whole `allOf` declares: a member one branch defines is known to the object.
+
+Turning it off prints, on every generation that runs, a warning that is meant to be hard to ignore, and records it in the report:
+
+----
+WARNING: strictRequests is off for contract 'orders'. No request is tested for unknown members, so the
+service may accept them unnoticed: mass assignment (OWASP API3:2023 Broken Object Property Level
+Authorization) and unvalidated input passed on (OWASP API10:2023 Unsafe Consumption of APIs). Turn
+strictRequests back on; where a contract deliberately allows unknown members, declare
+additionalProperties: true instead.
+----
+
+A generation that is up to date does not run, and prints nothing.
+
+[#validate-formats]
+==== Formats
+
+A format is only as exact as the validator that checks it, so format cases are opt-in, per format: `validateFormats = ['email']`.
+
+* A pattern wins over a format. Where both apply and the format's validation is on, the format is ignored, no format case is derived, and a warning says so.
+* A well-known format with no pattern beside it is recommended one, whether or not its validation is on: a pattern says exactly what is valid.
+* A format `validateFormats` names that no check exists for is reported, and never guessed at.
+
+[#constraint-coverage]
+==== Constraint coverage and gaps
+
+The report lists every constraint on request input -- every keyword of every parameter schema, of every request-body schema, and of every schema they reach within `recursionDepth`, and every object the strict rule applies to -- each with the ids of the cases that cover it, or exactly one reason it has none:
+
+[cols="1,3", options="header"]
+|===
+|Reason |Meaning
+
+|not isolatable |Every violating value breaks another keyword too; the report names it. Inside a `oneOf` or `anyOf` of references, that keyword is the choice itself.
+|changes the route |A path parameter's `required`, or a path value only an empty or `/`, `?` or `#` value would violate.
+|keyword not modelled |`not`, `if`, `contains` and the other keywords the model does not type -- and the other constraints of a schema whose validity depends on one.
+|parameter style not supported |A parameter no valid value is generated for: in a cookie, an array or an object, a `style` or `explode` other than the default, or described by `content`.
+|inside a degraded construct |Inside a `oneOf` or `anyOf` with an inline branch.
+|format validation not switched on |`validateFormats` does not name the format.
+|pattern overrides format |The format's validation is on, but a pattern applies there too.
+|operation declares no invalid-request status |The gap: every constraint of such an operation that has no reason of its own.
+|strictness turned off |The implied unknown-member rule, with `strictRequests = false`.
+|beyond `recursionDepth` |Reached only by following a reference more often than `recursionDepth` allows.
+|not expressible in a parameter |`type` of a string parameter: every parameter travels as a string.
+|format not supported |`validateFormats` names a format no check exists for.
+|no valid baseline |There is no valid request to change: the operation, or the member to add, has no valid value, or holds one that cannot be vouched for.
+|asserts nothing |A keyword no value can violate: `minLength: 0`, `uniqueItems: false`, `required: []`, a 3.0 `exclusiveMinimum: false`, a parameter's `required: false`.
+|no violation rule |`oneOf` or `anyOf` of references: it composes schemas rather than constraining a value.
+|media type not used |A request body media type that is not JSON.
+|===
+
+The list is closed: a constraint with a reason not on it is a change to this README first.
+
+The report also lists the *gaps*, each with the recommendation to declare the invalid-request status, and the *format recommendations*, each well-known format with no pattern and where it is.
+The build log prints the counts:
+
+----
+API-Only TranscriberJ: user-account 1.0.0: Invalid requests: 22 case(s) derived, 19 constraint(s) covered,
+9 uncovered (changes the route: 2, operation declares no invalid-request status: 5, not isolatable: 1,
+format validation not switched on: 1), 2 gap(s)
+----
+
+In the machine-readable report they are `invalidRequests` -- each operation's cases, and for each the valid `baseline` request it differs from in the one place the fault is -- `constraintCoverage`, `gaps` and `formatRecommendations`.
+
 [#unrepresentable]
 == Constructs no rule represents yet
 
@@ -772,6 +972,28 @@ public interface Emitter {
 `EmitterContext.writeResource(path, content)` writes a non-Java file -- a properties file a generated or hand-written class reads through `getResourceAsStream`, for instance -- to the resource root the project's source sets read from, the way `writeJava` writes a class to the sources root.
 `path` is `/`-separated and relative, such as `"META-INF/restdocs/service.properties"`; it may not be absolute, and may not use `.` or `..` segments.
 `EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
+`ClassNames.invalidRequests(location)` names an operation's `<Operation>InvalidRequests` class, which `ClassNames.all()` does not list: its origin is `Origin.INVALID_REQUESTS`.
+An emitter with an exhaustive `switch` over `Origin` has one more constant to handle.
+
+[#emitter-options]
+=== Emitter options
+
+A project configures an emitter with `emitterOptions`, per subscription, keyed by the emitter's id; each value is a map of names to strings:
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.orders.contract'
+        emitterOptions = [restdocs: [tests: 'true']]
+    }
+}
+----
+
+The TranscriberJ does not interpret them.
+It passes them to the emitter unchanged, through `EmitterContext.settings().emitterOptions(id())`, empty when the project gave none; what each option means is the emitter's README's to say.
+The options are an input of the generation task, so changing one regenerates.
+Options for an id no emitter on `transcriberjEmitters` has fail the build, naming the ids there are: a mistyped id is not silently ignored.
 
 [#emitter-dependencies]
 === What the generated code depends on
@@ -787,7 +1009,8 @@ After resolution, a version at or above the untested one is warned about: "not t
 [#hand-written-code]
 == Hand-written code beside the generated classes
 
-The generated tree does not cover every test: a degraded method throws, and an invalid body for a 4xx test is never generated.
+The generated tree does not cover every test: a degraded method throws, and the only invalid requests generated are the cases for the one status the contract declares for invalid input -- one fault each, see <<invalid-requests,Invalid requests §>>.
+A `409`, a `422` for a semantically invalid request, and whatever a constraint not isolatable leaves untested are written by hand.
 The code a project writes to fill those gaps goes beside the generated classes, and how it does so is a design decision, not an accident.
 
 [IMPORTANT]
@@ -843,7 +1066,7 @@ It does not prove that the payload is valid against the schema, and nothing here
 
 Constraints are constants, not checks.
 Generated bodies are built from the arguments given, and a body built from arguments that violate a constraint violates it too.
-Invalid and partial bodies, for the tests of 4xx responses, are written by hand, starting from a valid one: `requiredBody()`, `requiredRequest()` and the rest, in <<valid-values,Valid values §>>.
+For the invalid-request status, one invalid request per constraint on request input is derived, in <<invalid-requests,Invalid requests §>>; every other invalid or partial body, for the other 4xx responses, is written by hand, starting from a valid one: `requiredBody()`, `requiredRequest()` and the rest, in <<valid-values,Valid values §>>.
 link:../docs/guides/hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] says how to write them, and anything else the generator could not, on top of the generated classes -- and how many to write.
 
 [#development]
@@ -872,6 +1095,9 @@ The generated classes must write, for every input recorded in `src/test/resource
 
 `fixtures/valid-values` holds what valid-value generation is held to: a corpus of contracts written for it, one golden file of valid values per reference contract, and the hash of every source generated before valid values were.
 Its `README.adoc` says what each is for; `./gradlew recordValidValuesGolden` and `./gradlew recordBaselineSources` re-record them, for a deliberate change only.
+
+`fixtures/invalid-requests` holds what invalid-request derivation is held to: a corpus of contracts written for it, and the golden cases and coverage of the `user-account` contract, which are the tests the reference implementation is run against.
+Its `README.adoc` says which test covers which requirement; `./gradlew recordInvalidRequestsGolden` re-records the golden file, for a deliberate change only.
 
 The build gates on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
 The plugin's tasks are tested in-process as well as through TestKit, so the coverage agent sees them.

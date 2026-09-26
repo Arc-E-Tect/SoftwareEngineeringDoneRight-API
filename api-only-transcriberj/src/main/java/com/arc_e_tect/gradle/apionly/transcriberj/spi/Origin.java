@@ -19,5 +19,11 @@ public enum Origin {
     /** A channel of the contract's AsyncAPI document: an address messages travel over. */
     CHANNEL,
     /** An operation of that document: an application sending or receiving on a channel. */
-    ASYNC_OPERATION
+    ASYNC_OPERATION,
+    /**
+     * The invalid requests of an operation: one case per constraint on its request input.
+     * Such a class is named through {@link ClassNames#invalidRequests(String)}, never listed
+     * by {@link ClassNames#all()}.
+     */
+    INVALID_REQUESTS
 }

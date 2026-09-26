@@ -1,0 +1,31 @@
+# Two constraints whose ids read the same (T13.10): /a-b and /a/b both give body-a-b-type.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, collisions
+  version: 1.0.0
+paths:
+  /collisions:
+    post:
+      operationId: postCollisions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollisionsV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    CollisionsV1:
+      x-fragment-path: schemas/CollisionsV1.yaml
+      type: object
+      required: [a-b, a]
+      properties:
+        a-b: {type: string}
+        a:
+          type: object
+          required: [b]
+          properties:
+            b: {type: string}

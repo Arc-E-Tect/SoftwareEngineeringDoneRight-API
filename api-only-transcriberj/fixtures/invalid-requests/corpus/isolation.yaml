@@ -1,0 +1,40 @@
+# Constraints that cannot be violated alone (T13.5): each breaks another keyword with it,
+# and the coverage report names that keyword.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, isolation
+  version: 1.0.0
+paths:
+  /isolation:
+    post:
+      operationId: postIsolation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IsolationV1'
+      responses:
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    IsolationV1:
+      x-fragment-path: schemas/IsolationV1.yaml
+      type: object
+      required: [code, short, level, pair]
+      properties:
+        # The pattern forces the length: four letters match no string the pattern allows.
+        code: {type: string, minLength: 5, pattern: '^[a-z]{5}$'}
+        # The enum allows one value of the only length maxLength allows.
+        short: {type: string, maxLength: 3, enum: [abc]}
+        # The enum lists no value below the minimum.
+        level: {type: integer, minimum: 10, enum: [10, 11]}
+        # Three items cannot all differ when only two values exist: more items than maxItems
+        # breaks uniqueItems too.
+        pair:
+          type: array
+          minItems: 2
+          maxItems: 2
+          uniqueItems: true
+          items: {type: string, enum: [x, y]}

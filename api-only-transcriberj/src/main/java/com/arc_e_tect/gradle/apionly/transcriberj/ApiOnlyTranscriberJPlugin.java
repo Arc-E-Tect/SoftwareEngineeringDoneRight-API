@@ -6,6 +6,7 @@ import com.arc_e_tect.gradle.apionly.subscriber.Subscription;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
@@ -96,6 +97,10 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             subscription.getSourceSets().convention(List.of("test"));
             subscription.getRecursionDepth().convention(3);
             subscription.getGenerateDocs().convention(false);
+            subscription.getInvalidRequestStatus().convention(Settings.DEFAULT_INVALID_REQUEST_STATUS);
+            subscription.getStrictRequests().convention(true);
+            subscription.getValidateFormats().convention(List.of());
+            subscription.getEmitterOptions().convention(Map.of());
             subscription.getDescriptionPlaceholder()
                     .convention(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
             subscription.getInto().convention(
@@ -127,6 +132,10 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         task.getGenerateDocs().set(subscription.getGenerateDocs());
                         task.getDescriptionPlaceholder().set(subscription.getDescriptionPlaceholder());
                         task.getDescriptionBundle().set(subscription.getDescriptionBundle());
+                        task.getInvalidRequestStatus().set(subscription.getInvalidRequestStatus());
+                        task.getStrictRequests().set(subscription.getStrictRequests());
+                        task.getValidateFormats().set(subscription.getValidateFormats());
+                        task.getEmitterOptions().set(subscription.getEmitterOptions());
                         task.getEmitterClasspath().from(emitters);
                         task.getOutputDirectory().set(subscription.getInto());
                         task.getResourceDirectory().set(subscription.getIntoResources());

@@ -126,8 +126,11 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    // The reference contracts and the Publisher scaffold.
+    // The reference contracts and the Publisher scaffold, and the corpora: an input, so that
+    // changing a fixture runs the tests again.
     systemProperty 'transcriberj.fixtures', layout.projectDirectory.dir('fixtures').asFile.absolutePath
+    inputs.dir(layout.projectDirectory.dir('fixtures')).withPathSensitivity(PathSensitivity.RELATIVE)
+            .withPropertyName('fixtures')
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
@@ -183,9 +186,12 @@ tasks.register('recordHandwrittenEventPayloads', JavaExec) {
 // Re-records the committed baselines the valid-value work is held to: the hash of every
 // source generated before it (T12.11), and the valid values of the reference contracts
 // (T12.10). Only for a deliberate change; review the diff.
-['recordBaselineSources': 'sources', 'recordValidValuesGolden': 'golden'].each { name, what ->
+// recordInvalidRequestsGolden does the same for the invalid-request cases of the user-account
+// contract (T13.14), the tests the reference implementation is run against.
+['recordBaselineSources': 'sources', 'recordValidValuesGolden': 'golden',
+ 'recordInvalidRequestsGolden': 'invalid-requests'].each { name, what ->
     tasks.register(name, JavaExec) {
-        description = "Re-records the committed ${what == 'sources' ? 'hashes of the existing generated sources' : 'valid values of the reference contracts'}."
+        description = "Re-records the committed ${['sources': 'hashes of the existing generated sources', 'golden': 'valid values of the reference contracts', 'invalid-requests': 'invalid-request cases of the user-account contract'][what]}."
         group = 'verification'
         classpath = sourceSets.test.runtimeClasspath
         mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.core.Baselines'
