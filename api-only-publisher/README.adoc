@@ -988,13 +988,13 @@ So there is nothing to hoist and nothing to select: every fragment is stamped, a
 ----
 channels:
   auditV1:
-    x-fragment-path: asyncapi/channels/iff/useraccount/AuditV1.yaml
-    address: iff.useraccount.audit.v1
+    x-fragment-path: asyncapi/channels/apionly/useraccount/AuditV1.yaml
+    address: apionly.useraccount.audit.v1
     messages:
       registrationInitiatedMessage:
-        x-fragment-path: asyncapi/messages/iff/useraccount/RegistrationInitiatedMessageV1.yaml
+        x-fragment-path: asyncapi/messages/apionly/useraccount/RegistrationInitiatedMessageV1.yaml
         payload:
-          x-fragment-path: asyncapi/components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml
+          x-fragment-path: asyncapi/components/apionly/useraccount/schemas/RegistrationInitiatedEventV1.yaml
           properties:
             username:
               x-fragment-path: openapi/components/common/schemas/UsernameV1.yaml

@@ -3,7 +3,7 @@ title: Registration Attempted With Reserved Username
 summary: Audit event published when a registration is attempted using a reserved username.
 contentType: application/json
 payload:
-  $ref: '../../../components/iff/useraccount/schemas/RegistrationAttemptedWithReservedUsernameEventV1.yaml'
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationAttemptedWithReservedUsernameEventV1.yaml'
 examples:
   - name: RegistrationAttemptedWithReservedUsernameExample
     summary: A registration is attempted using the username alice while it is reserved by an existing person record.

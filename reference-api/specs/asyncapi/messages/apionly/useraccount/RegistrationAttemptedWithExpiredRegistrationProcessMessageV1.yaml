@@ -3,7 +3,7 @@ title: Registration Attempted With Expired Registration Process
 summary: Audit event published when a registration is attempted after the registration process has expired.
 contentType: application/json
 payload:
-  $ref: '../../../components/iff/useraccount/schemas/RegistrationAttemptedWithExpiredRegistrationProcessEventV1.yaml'
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationAttemptedWithExpiredRegistrationProcessEventV1.yaml'
 examples:
   - name: RegistrationAttemptedWithExpiredRegistrationProcessExample
     summary: alice tries to complete her registration after the registration process itself has expired.

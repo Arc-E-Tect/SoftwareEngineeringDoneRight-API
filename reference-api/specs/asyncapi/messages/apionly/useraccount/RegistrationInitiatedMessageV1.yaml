@@ -3,7 +3,7 @@ title: Registration Initiated
 summary: Audit event published when a user registration is initiated.
 contentType: application/json
 payload:
-  $ref: '../../../components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml'
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationInitiatedEventV1.yaml'
 examples:
   - name: RegistrationInitiatedExample
     summary: Alice initiates the registration process with username alice and email address alice@wonderland.com.

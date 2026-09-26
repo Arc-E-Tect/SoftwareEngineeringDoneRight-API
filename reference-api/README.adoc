@@ -81,7 +81,7 @@ Each tool's tests then run against it; a change that alters a contract shows up 
 reference-api/
 ├── package.json                    `npm run apionly` runs this repository's Publisher
 ├── apionly.yaml                    Declares what gets built, from where, and where it goes
-├── redocly.yaml                    Registers the portfolio as the "iff" API root for @redocly/cli
+├── redocly.yaml                    Registers the portfolio as the "apionly" API root for @redocly/cli
 ├── .redocly.lint.yaml              The lint rules every OpenAPI document is held to
 ├── docs/                           Policy: what counts as a breaking change
 ├── dist/                           The built contracts, committed
@@ -91,12 +91,12 @@ reference-api/
     │   ├── shared/                 info.yaml and servers.yaml, $ref'd by every bundle, and the *.md snippets info.yaml pulls in
     │   ├── paths/
     │   │   ├── common/             Path fragments every service has: root and health
-    │   │   └── iff/<service>/      Path fragments of one service
+    │   │   └── apionly/<service>/      Path fragments of one service
     │   ├── components/
     │   │   ├── common/             Schemas and RFC 9457 problem responses reusable across services
-    │   │   └── iff/<service>/      Request and response schemas of one service
+    │   │   └── apionly/<service>/      Request and response schemas of one service
     │   ├── tags/                   The same split, for tags
-    │   └── assets/iff/             Images info.yaml refers to
+    │   └── assets/apionly/             Images info.yaml refers to
     └── asyncapi/                   The same split applied to event contracts: bundles, channels, messages, components
 ----
 
@@ -116,12 +116,12 @@ servers:
   $ref: '../shared/servers.yaml'
 tags:
   - $ref: '../tags/common/SystemV1.yaml'
-  - $ref: '../tags/iff/user-account/UserAccountV1.yaml'
+  - $ref: '../tags/apionly/user-account/UserAccountV1.yaml'
 paths:
   /v1:
     $ref: '../paths/common/RootV1.yaml'
   /v1/users/{username}:
-    $ref: '../paths/iff/user-account/users/UserV1.yaml'
+    $ref: '../paths/apionly/user-account/users/UserV1.yaml'
   # ...
 ----
 
@@ -139,13 +139,13 @@ Raise it in the same change as the fragments it describes: major for a breaking 
 A shared fragment changes every contract that reaches it; `npm run apionly -- changed --since <ref>` lists them.
 
 [#shared-fragments]
-== Shared fragments: `common/` and `iff/<service>/`
+== Shared fragments: `common/` and `apionly/<service>/`
 
 `common/` means "not specific to any one service": the root and health paths, the `SystemV1` tag, the `UsernameV1` schema, and every RFC 9457 problem response, even those only one service returns today.
-`iff/<service>/` holds what belongs to one service: its resources, its paths, its tag.
-`iff` is the product's name, a naming convention no tool reads.
+`apionly/<service>/` holds what belongs to one service: its resources, its paths, its tag.
+`apionly` is the product's name, a naming convention no tool reads.
 
-A resource schema or a path goes under `iff/<service>/`; a problem response goes under link:specs/openapi/components/common/responses/errors/[components/common/responses/errors/ →], however specific its meaning.
+A resource schema or a path goes under `apionly/<service>/`; a problem response goes under link:specs/openapi/components/common/responses/errors/[components/common/responses/errors/ →], however specific its meaning.
 
 The AsyncAPI event schemas reuse the OpenAPI `UsernameV1`, so a username means the same whether it arrives over HTTP or as an event.
 That makes the two trees one `$ref` graph, which is why the build stages the whole `specs/` root for each.

@@ -3,7 +3,7 @@ title: Registration Attempted With Expired Link
 summary: Audit event published when a registration is attempted using an expired verification link.
 contentType: application/json
 payload:
-  $ref: '../../../components/iff/useraccount/schemas/RegistrationAttemptedWithExpiredLinkEventV1.yaml'
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationAttemptedWithExpiredLinkEventV1.yaml'
 examples:
   - name: RegistrationAttemptedWithExpiredLinkExample
     summary: alice clicks her verification link after it has expired.

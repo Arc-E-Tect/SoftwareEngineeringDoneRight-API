@@ -15,7 +15,7 @@ post:
     content:
       application/json:
         schema:
-          $ref: '../../../../../components/iff/user-account/schemas/UserRegistrationResendEmailRequestV1.yaml'
+          $ref: '../../../../../components/apionly/user-account/schemas/UserRegistrationResendEmailRequestV1.yaml'
   responses:
     '202':
       description:
@@ -23,7 +23,7 @@ post:
       content:
         application/json:
           schema:
-            $ref: '../../../../../components/iff/user-account/schemas/UserRegistrationResponseV1.yaml'
+            $ref: '../../../../../components/apionly/user-account/schemas/UserRegistrationResponseV1.yaml'
     '400':
       description: The request body is missing or contains an invalid username.
       content:

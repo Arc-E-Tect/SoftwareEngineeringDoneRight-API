@@ -371,7 +371,7 @@ A `oneOf` or `anyOf` whose branches are all references gets no class: each branc
 |Named after its `operationId`, followed by `Operation`: `publishRegistrationInitiated` is `PublishRegistrationInitiatedOperation`.
 |===
 
-Two fragments with the same file name are told apart by the nearest directory in which their paths differ: `iff/user-account/schemas/UserV1.yaml` and `iff/other/schemas/UserV1.yaml` become `UserAccountUserV1` and `OtherUserV1`.
+Two fragments with the same file name are told apart by the nearest directory in which their paths differ: `apionly/user-account/schemas/UserV1.yaml` and `apionly/other/schemas/UserV1.yaml` become `UserAccountUserV1` and `OtherUserV1`.
 Only colliding classes are renamed, so adding an unrelated fragment never renames an existing class.
 Names that still collide stop generation.
 

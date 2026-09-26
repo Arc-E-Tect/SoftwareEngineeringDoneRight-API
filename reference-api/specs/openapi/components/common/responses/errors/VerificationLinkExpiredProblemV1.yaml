@@ -11,9 +11,9 @@ allOf:
     properties:
       type:
         type: string
-        const: https://api.iff.arc-e-tect.com/problems/verification-link-expired
+        const: https://api.apionly.arc-e-tect.com/problems/verification-link-expired
         examples:
-          - https://api.iff.arc-e-tect.com/problems/verification-link-expired
+          - https://api.apionly.arc-e-tect.com/problems/verification-link-expired
       title:
         type: string
         const: Verification Link Expired

@@ -47,11 +47,11 @@ class AsyncContractParserTest {
 
         assertThat(model.channels()).singleElement().satisfies(channel -> {
             assertThat(channel.key()).isEqualTo("auditV1");
-            assertThat(channel.address()).isEqualTo("iff.useraccount.audit.v1");
+            assertThat(channel.address()).isEqualTo("apionly.useraccount.audit.v1");
             assertThat(channel.description()).isNotBlank();
             assertThat(channel.location()).isEqualTo("/channels/auditV1");
             assertThat(channel.provenance().fragmentPath())
-                    .isEqualTo("asyncapi/channels/iff/useraccount/AuditV1.yaml");
+                    .isEqualTo("asyncapi/channels/apionly/useraccount/AuditV1.yaml");
             assertThat(channel.messages()).hasSize(14);
         });
     }
@@ -70,7 +70,7 @@ class AsyncContractParserTest {
                     assertThat(message.name()).isEqualTo("RegistrationInitiatedV1");
                     assertThat(message.title()).isEqualTo("Registration Initiated");
                     assertThat(message.payload().provenance().fragmentPath())
-                            .isEqualTo("asyncapi/components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml");
+                            .isEqualTo("asyncapi/components/apionly/useraccount/schemas/RegistrationInitiatedEventV1.yaml");
                     assertThat(message.payload().location())
                             .isEqualTo("/channels/auditV1/messages/registrationInitiatedMessage/payload");
                 });

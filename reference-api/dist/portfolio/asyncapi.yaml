@@ -10,19 +10,20 @@ servers:
     description: API-Only Kafka broker.
 channels:
   auditV1:
-    x-fragment-path: asyncapi/channels/iff/useraccount/AuditV1.yaml
-    address: iff.useraccount.audit.v1
+    x-fragment-path: asyncapi/channels/apionly/useraccount/AuditV1.yaml
+    address: apionly.useraccount.audit.v1
     description: Audit events for the user-account domain.
     messages:
       registrationInitiatedMessage:
-        x-fragment-path: asyncapi/messages/iff/useraccount/RegistrationInitiatedMessageV1.yaml
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/RegistrationInitiatedMessageV1.yaml
         name: RegistrationInitiatedV1
         title: Registration Initiated
         summary: Audit event published when a user registration is initiated.
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationInitiatedEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationInitiatedEventV1.yaml
           type: object
           title: RegistrationInitiatedEventV1
           description: Audit event published when a user registration is initiated.
@@ -65,7 +66,8 @@ channels:
               emailAddress: alice@wonderland.com
               occurredAt: '2026-01-15T10:30:00Z'
       verificationEmailSentMessage:
-        x-fragment-path: asyncapi/messages/iff/useraccount/VerificationEmailSentMessageV1.yaml
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/VerificationEmailSentMessageV1.yaml
         name: VerificationEmailSentV1
         title: Verification Email Sent
         summary: >-
@@ -74,7 +76,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/VerificationEmailSentEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/VerificationEmailSentEventV1.yaml
           type: object
           title: VerificationEmailSentEventV1
           description: >-
@@ -120,7 +122,7 @@ channels:
               occurredAt: '2026-01-15T10:30:05Z'
       verificationEmailResendRequestedMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/VerificationEmailResendRequestedMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/VerificationEmailResendRequestedMessageV1.yaml
         name: VerificationEmailResendRequestedV1
         title: Verification Email Resend Requested
         summary: >-
@@ -129,7 +131,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/VerificationEmailResendRequestedEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/VerificationEmailResendRequestedEventV1.yaml
           type: object
           title: VerificationEmailResendRequestedEventV1
           description: >-
@@ -175,7 +177,7 @@ channels:
               occurredAt: '2026-01-15T10:32:00Z'
       newVerificationEmailSentMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/NewVerificationEmailSentMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/NewVerificationEmailSentMessageV1.yaml
         name: NewVerificationEmailSentV1
         title: New Verification Email Sent
         summary: >-
@@ -184,7 +186,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/NewVerificationEmailSentEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/NewVerificationEmailSentEventV1.yaml
           type: object
           title: NewVerificationEmailSentEventV1
           description: >-
@@ -229,14 +231,14 @@ channels:
               emailAddress: alice@wonderland.com
               occurredAt: '2026-01-15T10:32:05Z'
       userAccountCreatedMessage:
-        x-fragment-path: asyncapi/messages/iff/useraccount/UserAccountCreatedMessageV1.yaml
+        x-fragment-path: asyncapi/messages/apionly/useraccount/UserAccountCreatedMessageV1.yaml
         name: UserAccountCreatedV1
         title: User Account Created
         summary: Audit event published when a user account is created.
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/UserAccountCreatedEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/UserAccountCreatedEventV1.yaml
           type: object
           title: UserAccountCreatedEventV1
           description: Audit event published when a user account is created.
@@ -279,14 +281,15 @@ channels:
               emailAddress: alice@wonderland.com
               occurredAt: '2026-01-15T10:35:00Z'
       confirmationEmailSentMessage:
-        x-fragment-path: asyncapi/messages/iff/useraccount/ConfirmationEmailSentMessageV1.yaml
+        x-fragment-path: >-
+          asyncapi/messages/apionly/useraccount/ConfirmationEmailSentMessageV1.yaml
         name: ConfirmationEmailSentV1
         title: Confirmation Email Sent
         summary: Audit event published when a confirmation email has been sent.
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/ConfirmationEmailSentEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/ConfirmationEmailSentEventV1.yaml
           type: object
           title: ConfirmationEmailSentEventV1
           description: Audit event published when a confirmation email has been sent.
@@ -329,14 +332,14 @@ channels:
               emailAddress: alice@wonderland.com
               occurredAt: '2026-01-15T10:35:05Z'
       personDeletedMessage:
-        x-fragment-path: asyncapi/messages/iff/useraccount/PersonDeletedMessageV1.yaml
+        x-fragment-path: asyncapi/messages/apionly/useraccount/PersonDeletedMessageV1.yaml
         name: PersonDeletedV1
         title: Person Deleted
         summary: Audit event published when a person's registration data is deleted.
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/PersonDeletedEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/PersonDeletedEventV1.yaml
           type: object
           title: PersonDeletedEventV1
           description: Audit event published when a person's registration data is deleted.
@@ -380,7 +383,7 @@ channels:
               occurredAt: '2026-01-15T10:35:10Z'
       registrationAttemptedWithExpiredLinkMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithExpiredLinkMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithExpiredLinkMessageV1.yaml
         name: RegistrationAttemptedWithExpiredLinkV1
         title: Registration Attempted With Expired Link
         summary: >-
@@ -389,7 +392,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithExpiredLinkEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithExpiredLinkEventV1.yaml
           type: object
           title: RegistrationAttemptedWithExpiredLinkEventV1
           description: >-
@@ -433,7 +436,7 @@ channels:
               occurredAt: '2026-01-15T10:37:00Z'
       registrationAttemptedWithExpiredRegistrationProcessMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithExpiredRegistrationProcessMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithExpiredRegistrationProcessMessageV1.yaml
         name: RegistrationAttemptedWithExpiredRegistrationProcessV1
         title: Registration Attempted With Expired Registration Process
         summary: >-
@@ -442,7 +445,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithExpiredRegistrationProcessEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithExpiredRegistrationProcessEventV1.yaml
           type: object
           title: RegistrationAttemptedWithExpiredRegistrationProcessEventV1
           description: >-
@@ -488,7 +491,7 @@ channels:
               occurredAt: '2026-01-15T10:38:00Z'
       registrationAttemptedWithReservedUsernameMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithReservedUsernameMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithReservedUsernameMessageV1.yaml
         name: RegistrationAttemptedWithReservedUsernameV1
         title: Registration Attempted With Reserved Username
         summary: >-
@@ -497,7 +500,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithReservedUsernameEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithReservedUsernameEventV1.yaml
           type: object
           title: RegistrationAttemptedWithReservedUsernameEventV1
           description: >-
@@ -543,7 +546,7 @@ channels:
               occurredAt: '2026-01-15T10:39:00Z'
       registrationAttemptedWithTakenUsernameMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithTakenUsernameMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithTakenUsernameMessageV1.yaml
         name: RegistrationAttemptedWithTakenUsernameV1
         title: Registration Attempted With Taken Username
         summary: >-
@@ -552,7 +555,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithTakenUsernameEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithTakenUsernameEventV1.yaml
           type: object
           title: RegistrationAttemptedWithTakenUsernameEventV1
           description: >-
@@ -600,7 +603,7 @@ channels:
               occurredAt: '2026-01-15T10:40:00Z'
       registrationAttemptedWithInvalidLinkMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithInvalidLinkMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithInvalidLinkMessageV1.yaml
         name: RegistrationAttemptedWithInvalidLinkV1
         title: Registration Attempted With Invalid Link
         summary: >-
@@ -609,7 +612,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithInvalidLinkEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithInvalidLinkEventV1.yaml
           type: object
           title: RegistrationAttemptedWithInvalidLinkEventV1
           description: >-
@@ -633,11 +636,11 @@ channels:
               alice clicks her original verification link after already
               requesting a resend, so it's no longer valid.
             payload:
-              verificationLink: https://iff.example.com/verify/alices-original-link
+              verificationLink: https://apionly.example.com/verify/alices-original-link
               occurredAt: '2026-01-15T10:36:00Z'
       registrationAttemptedWithInitiatedEmailAddressMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithInitiatedEmailAddressMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithInitiatedEmailAddressMessageV1.yaml
         name: RegistrationAttemptedWithInitiatedEmailAddressV1
         title: Registration Attempted With Initiated Email Address
         summary: >-
@@ -646,7 +649,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithInitiatedEmailAddressEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithInitiatedEmailAddressEventV1.yaml
           type: object
           title: RegistrationAttemptedWithInitiatedEmailAddressEventV1
           description: >-
@@ -692,7 +695,7 @@ channels:
               occurredAt: '2026-01-15T10:41:00Z'
       registrationAttemptedWithTakenEmailAddressMessage:
         x-fragment-path: >-
-          asyncapi/messages/iff/useraccount/RegistrationAttemptedWithTakenEmailAddressMessageV1.yaml
+          asyncapi/messages/apionly/useraccount/RegistrationAttemptedWithTakenEmailAddressMessageV1.yaml
         name: RegistrationAttemptedWithTakenEmailAddressV1
         title: Registration Attempted With Taken Email Address
         summary: >-
@@ -701,7 +704,7 @@ channels:
         contentType: application/json
         payload:
           x-fragment-path: >-
-            asyncapi/components/iff/useraccount/schemas/RegistrationAttemptedWithTakenEmailAddressEventV1.yaml
+            asyncapi/components/apionly/useraccount/schemas/RegistrationAttemptedWithTakenEmailAddressEventV1.yaml
           type: object
           title: RegistrationAttemptedWithTakenEmailAddressEventV1
           description: >-

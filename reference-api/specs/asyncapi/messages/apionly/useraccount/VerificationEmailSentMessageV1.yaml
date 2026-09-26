@@ -3,7 +3,7 @@ title: Verification Email Sent
 summary: Audit event published when a verification email has been sent successfully.
 contentType: application/json
 payload:
-  $ref: '../../../components/iff/useraccount/schemas/VerificationEmailSentEventV1.yaml'
+  $ref: '../../../components/apionly/useraccount/schemas/VerificationEmailSentEventV1.yaml'
 examples:
   - name: VerificationEmailSentExample
     summary: A verification email is sent to alice@wonderland.com during alice's initial registration.

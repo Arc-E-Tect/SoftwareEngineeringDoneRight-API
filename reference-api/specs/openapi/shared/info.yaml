@@ -1,4 +1,4 @@
-title: 'API-Only - Reference API Specification API'
+title: 'API-Only - Reference API Specification'
 version: '0.0.0'
 contact:
   name: Arc-E-Tect
@@ -8,14 +8,14 @@ license:
   name: MIT
   url: https://opensource.org/licenses/MIT
 x-logo:
-  url: 'assets/iff/images/api_only.png'
+  url: 'assets/apionly/images/api_only.png'
   altText: 'API-Only logo'
 description: |
   # 📙  Introduction
 
   ###  Background
 
-  The API-Only application is designed as an API-only application.
+  The reference application is designed as an API-only application.
 
 
   API-Only is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.

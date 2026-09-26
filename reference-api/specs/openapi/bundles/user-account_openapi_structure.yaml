@@ -5,17 +5,17 @@ servers:
   $ref: '../shared/servers.yaml'
 tags:
   - $ref: '../tags/common/SystemV1.yaml'
-  - $ref: '../tags/iff/user-account/UserAccountV1.yaml'
+  - $ref: '../tags/apionly/user-account/UserAccountV1.yaml'
 paths:
   /v1:
     $ref: '../paths/common/RootV1.yaml'
   /v1/actuator/health:
     $ref: '../paths/common/health/HealthV1.yaml'
   /v1/users/{username}:
-    $ref: '../paths/iff/user-account/users/UserV1.yaml'
+    $ref: '../paths/apionly/user-account/users/UserV1.yaml'
   /v1/users/registrations:
-    $ref: '../paths/iff/user-account/users/registrations/UserRegistrationsV1.yaml'
+    $ref: '../paths/apionly/user-account/users/registrations/UserRegistrationsV1.yaml'
   /v1/users/registrations/verification-email:
-    $ref: '../paths/iff/user-account/users/registrations/UserRegistrationResendEmailV1.yaml'
+    $ref: '../paths/apionly/user-account/users/registrations/UserRegistrationResendEmailV1.yaml'
   /v1/users/registrations/completion/{verificationLink}:
-    $ref: '../paths/iff/user-account/users/registrations/UserRegistrationCompletionV1.yaml'
+    $ref: '../paths/apionly/user-account/users/registrations/UserRegistrationCompletionV1.yaml'

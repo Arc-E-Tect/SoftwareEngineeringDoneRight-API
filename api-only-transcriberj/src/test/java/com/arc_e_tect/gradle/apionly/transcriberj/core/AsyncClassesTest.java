@@ -35,7 +35,7 @@ class AsyncClassesTest {
     void everyEventPayloadIsAClassLikeAnyOtherSchemaComponent() throws Throwable {
         assertThat(generated.source("RegistrationInitiatedEventV1"))
                 .contains("public final class RegistrationInitiatedEventV1")
-                .contains("FRAGMENT_PATH = \"asyncapi/components/iff/useraccount/schemas/"
+                .contains("FRAGMENT_PATH = \"asyncapi/components/apionly/useraccount/schemas/"
                         + "RegistrationInitiatedEventV1.yaml\"");
 
         assertThat(generated.call("RegistrationInitiatedEventV1", "body", new Class<?>[]{String.class, String.class,
@@ -55,10 +55,10 @@ class AsyncClassesTest {
 
     @Test
     void aChannelSaysWhereItsMessagesTravel() {
-        assertThat(generated.constant("AuditV1Channel", "ADDRESS")).isEqualTo("iff.useraccount.audit.v1");
+        assertThat(generated.constant("AuditV1Channel", "ADDRESS")).isEqualTo("apionly.useraccount.audit.v1");
         assertThat(generated.constant("AuditV1Channel", "LOCATION")).isEqualTo("/channels/auditV1");
         assertThat(generated.constant("AuditV1Channel", "FRAGMENT_PATH"))
-                .isEqualTo("asyncapi/channels/iff/useraccount/AuditV1.yaml");
+                .isEqualTo("asyncapi/channels/apionly/useraccount/AuditV1.yaml");
         assertThat(generated.constant("AuditV1Channel", "CONTRACT_VERSION")).isEqualTo("1.0.0");
         assertThat(generated.source("AuditV1Channel")).contains("Audit events for the user-account domain");
     }
@@ -69,7 +69,7 @@ class AsyncClassesTest {
                 .isEqualTo("publishRegistrationInitiated");
         assertThat(generated.constant("PublishRegistrationInitiatedOperation", "ACTION")).isEqualTo("send");
         assertThat(generated.constant("PublishRegistrationInitiatedOperation", "CHANNEL_ADDRESS"))
-                .isEqualTo("iff.useraccount.audit.v1");
+                .isEqualTo("apionly.useraccount.audit.v1");
         assertThat(generated.constant("PublishRegistrationInitiatedOperation", "CONTENT_TYPE"))
                 .isEqualTo("application/json");
         assertThat(generated.constant("PublishRegistrationInitiatedOperation", "MESSAGE_NAME"))

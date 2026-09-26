@@ -11,9 +11,9 @@ allOf:
     properties:
       type:
         type: string
-        const: https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed
+        const: https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed
         examples:
-          - https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed
+          - https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed
       title:
         type: string
         const: Registration Request Cannot Be Processed

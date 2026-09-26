@@ -11,9 +11,9 @@ allOf:
     properties:
       type:
         type: string
-        const: https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+        const: https://api.apionly.arc-e-tect.com/problems/verification-link-superseded
         examples:
-          - https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+          - https://api.apionly.arc-e-tect.com/problems/verification-link-superseded
       title:
         type: string
         const: Verification Link Superseded

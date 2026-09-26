@@ -1,6 +1,6 @@
 openapi: 3.1.1
 info:
-  title: API-Only - Reference API Specification API
+  title: API-Only - Reference API Specification
   version: 1.0.0
   contact:
     name: Arc-E-Tect
@@ -10,14 +10,14 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   x-logo:
-    url: assets/iff/images/api_only.png
+    url: assets/apionly/images/api_only.png
     altText: API-Only logo
   description: |
     # 📙  Introduction
 
     ###  Background
 
-    The API-Only application is designed as an API-only application.
+    The reference application is designed as an API-only application.
 
 
     API-Only is an application that will help you manage your network by using demographics, sociology, and psychology to determine whether somebody introduced to you is a friend or family, an acquaintance, or just a random person.
@@ -467,7 +467,7 @@ components:
           type: string
           format: uri
           examples:
-            - https://api.iff.arc-e-tect.com/v1/users/registrations
+            - https://api.apionly.arc-e-tect.com/v1/users/registrations
       additionalProperties: true
     InternalServerProblemV1:
       x-fragment-path: openapi/components/common/responses/errors/InternalServerProblemV1.yaml
@@ -515,7 +515,7 @@ components:
         - alice_1
         - user-name
     UserV1:
-      x-fragment-path: openapi/components/iff/user-account/schemas/UserV1.yaml
+      x-fragment-path: openapi/components/apionly/user-account/schemas/UserV1.yaml
       title: User
       type: object
       required:
@@ -547,9 +547,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/user-not-found
+              const: https://api.apionly.arc-e-tect.com/problems/user-not-found
               examples:
-                - https://api.iff.arc-e-tect.com/problems/user-not-found
+                - https://api.apionly.arc-e-tect.com/problems/user-not-found
             title:
               type: string
               const: User Not Found
@@ -565,7 +565,7 @@ components:
               examples:
                 - No user account with the given username exists.
     UserRegistrationRequestV1:
-      x-fragment-path: openapi/components/iff/user-account/schemas/UserRegistrationRequestV1.yaml
+      x-fragment-path: openapi/components/apionly/user-account/schemas/UserRegistrationRequestV1.yaml
       title: User Registration Request
       type: object
       required:
@@ -583,7 +583,7 @@ components:
           examples:
             - alice@wonderland.com
     UserRegistrationResponseV1:
-      x-fragment-path: openapi/components/iff/user-account/schemas/UserRegistrationResponseV1.yaml
+      x-fragment-path: openapi/components/apionly/user-account/schemas/UserRegistrationResponseV1.yaml
       title: User Registration Response
       type: object
       required:
@@ -634,9 +634,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/invalid-request
+              const: https://api.apionly.arc-e-tect.com/problems/invalid-request
               examples:
-                - https://api.iff.arc-e-tect.com/problems/invalid-request
+                - https://api.apionly.arc-e-tect.com/problems/invalid-request
             title:
               type: string
               const: Invalid Request
@@ -672,9 +672,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/username-already-registered
+              const: https://api.apionly.arc-e-tect.com/problems/username-already-registered
               examples:
-                - https://api.iff.arc-e-tect.com/problems/username-already-registered
+                - https://api.apionly.arc-e-tect.com/problems/username-already-registered
             title:
               type: string
               const: Username Already Registered
@@ -704,9 +704,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed
+              const: https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed
               examples:
-                - https://api.iff.arc-e-tect.com/problems/registration-request-cannot-be-processed
+                - https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed
             title:
               type: string
               const: Registration Request Cannot Be Processed
@@ -722,7 +722,7 @@ components:
               examples:
                 - A registration request that is syntactically valid but semantically invalid and cannot be processed for that reason.
     UserRegistrationResendEmailRequestV1:
-      x-fragment-path: openapi/components/iff/user-account/schemas/UserRegistrationResendEmailRequestV1.yaml
+      x-fragment-path: openapi/components/apionly/user-account/schemas/UserRegistrationResendEmailRequestV1.yaml
       type: object
       description: Request body for resending a verification email to a pending registration identified by username.
       required:
@@ -745,9 +745,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/registration-not-found
+              const: https://api.apionly.arc-e-tect.com/problems/registration-not-found
               examples:
-                - https://api.iff.arc-e-tect.com/problems/registration-not-found
+                - https://api.apionly.arc-e-tect.com/problems/registration-not-found
             title:
               type: string
               const: Registration Not Found
@@ -763,7 +763,7 @@ components:
               examples:
                 - No pending registration exists for the given username.
     UserAccountV1:
-      x-fragment-path: openapi/components/iff/user-account/schemas/UserAccountV1.yaml
+      x-fragment-path: openapi/components/apionly/user-account/schemas/UserAccountV1.yaml
       title: User Account
       type: object
       required:
@@ -795,9 +795,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+              const: https://api.apionly.arc-e-tect.com/problems/verification-link-superseded
               examples:
-                - https://api.iff.arc-e-tect.com/problems/verification-link-superseded
+                - https://api.apionly.arc-e-tect.com/problems/verification-link-superseded
             title:
               type: string
               const: Verification Link Superseded
@@ -827,9 +827,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/verification-link-expired
+              const: https://api.apionly.arc-e-tect.com/problems/verification-link-expired
               examples:
-                - https://api.iff.arc-e-tect.com/problems/verification-link-expired
+                - https://api.apionly.arc-e-tect.com/problems/verification-link-expired
             title:
               type: string
               const: Verification Link Expired
@@ -859,9 +859,9 @@ components:
           properties:
             type:
               type: string
-              const: https://api.iff.arc-e-tect.com/problems/registration-process-expired
+              const: https://api.apionly.arc-e-tect.com/problems/registration-process-expired
               examples:
-                - https://api.iff.arc-e-tect.com/problems/registration-process-expired
+                - https://api.apionly.arc-e-tect.com/problems/registration-process-expired
             title:
               type: string
               const: Registration Process Expired

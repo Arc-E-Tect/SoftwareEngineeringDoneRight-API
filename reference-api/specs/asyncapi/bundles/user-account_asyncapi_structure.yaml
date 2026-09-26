@@ -13,7 +13,7 @@ servers:
 
 channels:
   auditV1:
-    $ref: ../channels/iff/useraccount/AuditV1.yaml
+    $ref: ../channels/apionly/useraccount/AuditV1.yaml
 
 operations:
   publishRegistrationInitiated:

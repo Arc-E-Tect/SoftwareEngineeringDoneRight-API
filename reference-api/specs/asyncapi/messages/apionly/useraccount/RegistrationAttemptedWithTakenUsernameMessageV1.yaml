@@ -3,7 +3,7 @@ title: Registration Attempted With Taken Username
 summary: Audit event published when a registration is attempted using a username that is already taken.
 contentType: application/json
 payload:
-  $ref: '../../../components/iff/useraccount/schemas/RegistrationAttemptedWithTakenUsernameEventV1.yaml'
+  $ref: '../../../components/apionly/useraccount/schemas/RegistrationAttemptedWithTakenUsernameEventV1.yaml'
 examples:
   - name: RegistrationAttemptedWithTakenUsernameExample
     summary: sylvia attempts to register using the already-taken username alice; the event carries the attempted username alongside sylvia's own email address, exactly as RegisterUserService constructs it from the request -- not a self-consistent identity.

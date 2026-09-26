@@ -23,7 +23,7 @@ get:
       content:
         application/json:
           schema:
-            $ref: '../../../../components/iff/user-account/schemas/UserV1.yaml'
+            $ref: '../../../../components/apionly/user-account/schemas/UserV1.yaml'
     '404':
       description:
         No user account with the given username exists.

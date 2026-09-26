@@ -95,12 +95,12 @@ test("the asyncapi message names the operation, the message, and says the bundle
     const message = asyncapiMessage({
         operationId: "publishRegistrationInitiated",
         messageKey: "registrationInitiatedMessage",
-        fragmentPath: "asyncapi/messages/iff/useraccount/RegistrationInitiatedMessageV1.yaml",
+        fragmentPath: "asyncapi/messages/apionly/useraccount/RegistrationInitiatedMessageV1.yaml",
     });
 
     assert.strictEqual(message,
         "AsyncAPI operation 'publishRegistrationInitiated': message 'registrationInitiatedMessage' " +
-        "(asyncapi/messages/iff/useraccount/RegistrationInitiatedMessageV1.yaml) carries no example, " +
+        "(asyncapi/messages/apionly/useraccount/RegistrationInitiatedMessageV1.yaml) carries no example, " +
         "so this bundle cannot be used for Microcks-based conformance testing.");
 });
 

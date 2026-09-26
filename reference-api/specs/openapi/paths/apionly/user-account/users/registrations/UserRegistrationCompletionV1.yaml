@@ -26,7 +26,7 @@ get:
       content:
         application/json:
           schema:
-            $ref: '../../../../../components/iff/user-account/schemas/UserAccountV1.yaml'
+            $ref: '../../../../../components/apionly/user-account/schemas/UserAccountV1.yaml'
     '410':
       description: The verification link has been superseded and is no longer valid. A new verification email has been sent; use the new link to complete registration.
       content:

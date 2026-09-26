@@ -97,7 +97,7 @@ test("every stamp in a document is found, wherever it sits", () => {
         channels: {
             auditV1: {
                 [KEY]: "asyncapi/channels/Audit.yaml",
-                address: "iff.audit.v1",
+                address: "apionly.audit.v1",
                 messages: {
                     registered: {
                         [KEY]: "asyncapi/messages/Registered.yaml",

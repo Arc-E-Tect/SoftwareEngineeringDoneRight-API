@@ -40,5 +40,5 @@ properties:
     type: string
     format: uri
     examples:
-      - https://api.iff.arc-e-tect.com/v1/users/registrations
+      - https://api.apionly.arc-e-tect.com/v1/users/registrations
 additionalProperties: true

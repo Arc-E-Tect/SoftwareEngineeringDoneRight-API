@@ -11,9 +11,9 @@ allOf:
     properties:
       type:
         type: string
-        const: https://api.iff.arc-e-tect.com/problems/user-not-found
+        const: https://api.apionly.arc-e-tect.com/problems/user-not-found
         examples:
-          - https://api.iff.arc-e-tect.com/problems/user-not-found
+          - https://api.apionly.arc-e-tect.com/problems/user-not-found
       title:
         type: string
         const: User Not Found
