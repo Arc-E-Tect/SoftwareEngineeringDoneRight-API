@@ -1,3 +1,20 @@
+# [0.9.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.8.0...api-only-transcriberj-v0.9.0) (2026-09-26)
+
+
+### ✅ Tests
+
+* **api-only-transcriberj:** test against a reference API kept in this repository ([#51](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/51)) ([3a0918e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3a0918edd5fdf202489ed3781574f9bdb14603dc)), closes [#51](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/51) [#50](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/50) [#50](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/50)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** give emitters each operation's invalid-request cases ([#52](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/52)) ([9bfb015](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/9bfb015308332ee4fcfa92d3ff37f31aa07e4eb5)), closes [#52](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/52)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.8.0 [skip ci] ([4833e0c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/4833e0cc0a42f71788406edded1650305f629882))
+
 # [0.8.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.7.0...api-only-transcriberj-v0.8.0) (2026-09-26)
 
 
