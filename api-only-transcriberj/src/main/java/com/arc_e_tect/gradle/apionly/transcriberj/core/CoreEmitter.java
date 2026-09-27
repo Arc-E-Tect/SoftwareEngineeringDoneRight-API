@@ -24,6 +24,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Origin;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ResponseBody;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,6 +62,7 @@ final class CoreEmitter implements Emitter {
 
     /** Each operation's invalid-request cases, by the operation's JSON pointer, as emitters are given them. */
     private final Map<String, List<ContractCase>> contractCases = new LinkedHashMap<>();
+    private final Map<String, ResponseBody> validBodies = new LinkedHashMap<>();
 
     /** Every key a bundle may carry, in the order the classes declare them. */
     private final java.util.Set<String> descriptionKeys = new java.util.LinkedHashSet<>();
@@ -492,6 +494,20 @@ final class CoreEmitter implements Emitter {
             start = end;
         }
         return "String.join(\"\", " + String.join(", ", parts) + ")";
+    }
+
+    /** An outcome as an emitter is given it: the text its method returns, or where and why it throws. */
+    private static ResponseBody.Body spiBody(Outcome outcome) {
+        return outcome.value() != null ? new ResponseBody.Body(ValueJson.write(outcome.value()) + "\n", null, null)
+                : new ResponseBody.Body(null, outcome.location(), outcome.reason());
+    }
+
+    /**
+     * The valid bodies of every class that has them, by the class's simple name: what every
+     * emitter after this one is given through {@link EmitterContext#responseBody}.
+     */
+    Map<String, ResponseBody> validBodies() {
+        return java.util.Collections.unmodifiableMap(validBodies);
     }
 
     /** A body as its method returns it: compact JSON followed by a newline. */
@@ -1286,6 +1302,7 @@ final class CoreEmitter implements Emitter {
             entry.put("requiredBody", reported(required, v -> v));
             entry.put("fullBody", reported(full, v -> v));
             report.validBody(entry);
+            validBodies.put(name, new ResponseBody(name, spiBody(required), spiBody(full)));
         }
 
         // ------------------------------------------------------------ fields

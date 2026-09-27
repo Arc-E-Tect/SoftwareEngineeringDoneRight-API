@@ -7,6 +7,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.spi.ClassNames;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ResponseBody;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 
 import java.io.IOException;
@@ -141,8 +142,9 @@ public final class Generation {
         CoreEmitter core = new CoreEmitter(shapes, names, contractSha256, report);
         BufferSink buffer = new BufferSink();
         RequestSchemas schemas = new RequestSchemas(contract, settings);
-        core.emit(new Context(model, settings, names, buffer, report, core.id(), Map.of(), schemas));
-        return new Derivation(model, settings, names, report, core.contractCases(), buffer, schemas);
+        core.emit(new Context(model, settings, names, buffer, report, core.id(), Map.of(), Map.of(), schemas));
+        return new Derivation(model, settings, names, report, core.contractCases(), core.validBodies(), buffer,
+                schemas);
     }
 
     /** Settings no generation can start from: a package that is none, a status that is none. */
@@ -210,16 +212,19 @@ public final class Generation {
         private final CoreClassNames names;
         private final GenerationReport report;
         private final Map<String, List<ContractCase>> cases;
+        private final Map<String, ResponseBody> bodies;
         private final BufferSink buffer;
         private final RequestSchemas schemas;
 
         private Derivation(ContractModel model, Settings settings, CoreClassNames names, GenerationReport report,
-                           Map<String, List<ContractCase>> cases, BufferSink buffer, RequestSchemas schemas) {
+                           Map<String, List<ContractCase>> cases, Map<String, ResponseBody> bodies, BufferSink buffer,
+                           RequestSchemas schemas) {
             this.model = model;
             this.settings = settings;
             this.names = names;
             this.report = report;
             this.cases = cases;
+            this.bodies = bodies;
             this.buffer = buffer;
             this.schemas = schemas;
         }
@@ -234,7 +239,7 @@ public final class Generation {
         }
 
         private EmitterContext context(String emitter, Sink sink, GenerationReport into) {
-            return new Context(model, settings, names, sink, into, emitter, cases, schemas);
+            return new Context(model, settings, names, sink, into, emitter, cases, bodies, schemas);
         }
     }
 
@@ -361,10 +366,19 @@ public final class Generation {
     }
 
     /** What one emitter is given: the core emitter, which derives the cases, is given none. */
-    private record Context(ContractModel model, Settings settings, ClassNames names, Sink sink,
+    private record Context(ContractModel model, Settings settings, CoreClassNames names, Sink sink,
                            GenerationReport report, String emitter,
-                           Map<String, List<ContractCase>> cases, RequestSchemas schemas)
+                           Map<String, List<ContractCase>> cases, Map<String, ResponseBody> bodies,
+                           RequestSchemas schemas)
             implements EmitterContext {
+
+        @Override
+        public java.util.Optional<ResponseBody> responseBody(String location, String status) {
+            return operation(location).flatMap(o -> o.responses() == null ? java.util.Optional.empty()
+                    : o.responses().stream().filter(r -> r.status().equals(status)).findFirst()
+                    .map(r -> InvalidRequests.expected(names, o, r).bodyClass())
+                    .map(bodies::get));
+        }
 
         @Override
         public java.util.Optional<String> requestBodySchema(String location, String mediaType) {

@@ -1,0 +1,28 @@
+# A response body the core cannot build: its only required member has no value that
+# satisfies both bounds, so the generated requiredBody() and fullBody() throw, and an
+# emitter is given the reason instead of a text.
+openapi: 3.1.0
+info:
+  title: Response bodies, unbuildable
+  version: 1.0.0
+paths:
+  /counts:
+    get:
+      operationId: getCount
+      responses:
+        '200':
+          description: A count nobody can give.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountV1'
+        '204':
+          description: No content.
+components:
+  schemas:
+    CountV1:
+      x-fragment-path: schemas/CountV1.yaml
+      type: object
+      required: [count]
+      properties:
+        count: {type: integer, minimum: 5, maximum: 2}
