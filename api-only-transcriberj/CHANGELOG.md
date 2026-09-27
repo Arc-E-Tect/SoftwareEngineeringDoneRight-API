@@ -1,3 +1,15 @@
+# [0.11.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.10.0...api-only-transcriberj-v0.11.0) (2026-09-27)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** configure each emitter on its own ([#54](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/54)) ([26664ba](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/26664ba1c827310c01c9411b64a4fe8adbfbbac8)), closes [#54](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/54)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.10.0 [skip ci] ([7830982](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/78309826d23000832fd2345c5af7da84ecc59cf1))
+
 # [0.10.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.9.0...api-only-transcriberj-v0.10.0) (2026-09-26)
 
 
