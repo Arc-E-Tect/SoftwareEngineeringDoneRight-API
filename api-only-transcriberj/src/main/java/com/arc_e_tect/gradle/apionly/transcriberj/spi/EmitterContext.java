@@ -110,6 +110,21 @@ public interface EmitterContext {
     }
 
     /**
+     * The body of a response an operation declares, in its first content type: the class that
+     * response's contract cases name, and the text its generated {@code requiredBody()} and
+     * {@code fullBody()} return, or why the core cannot build one. An emitter that writes a
+     * response as a file, which cannot call those methods, takes its text from here.
+     *
+     * @param location the JSON pointer of the operation, such as {@code /paths/~1v1~1users/get}
+     * @param status   the response's key as the contract declares it, such as {@code 200}
+     * @return the body; empty when the operation declares no such response, or it has no content
+     *         or no generated body class
+     */
+    default java.util.Optional<ResponseBody> responseBody(String location, String status) {
+        return java.util.Optional.empty();
+    }
+
+    /**
      * The schema a request body of an operation must satisfy, as a self-contained JSON Schema
      * 2020-12 document: every {@code $ref} bundled into {@code $defs}, strict as the core's own
      * notion of validity is when {@code strictRequests} is on, and with {@code format} asserted

@@ -1477,6 +1477,18 @@ Each is a self-contained JSON Schema 2020-12 document, as JSON text, and is exac
 Both are empty where the operation, the media type or the parameter has no schema.
 They are given to emitters only, and not written beside the report.
 
+[#response-bodies]
+==== Response bodies
+
+A stub written as a file cannot call a generated class's `requiredBody()` or `fullBody()`, so it needs their text when it is generated.
+`EmitterContext.responseBody(location, status)` gives the body of a response an operation declares, in its first content type -- the one its cases expect first -- as a `spi.ResponseBody`:
+
+* `bodyClass`, the generated class, exactly as the response's cases name it in `responseBodyClass`;
+* `required` and `full`, each exactly the text that class's `requiredBody()` and `fullBody()` return: compact JSON followed by a newline.
+
+Where the core cannot build a body -- a construct no rule represents, or constraints no value satisfies -- that `Body` has no `text`, and gives instead the `location` and `reason` the generated method throws with, so that an emitter can leave the stub out and say why rather than answer with a body the contract does not allow.
+It is empty where the operation declares no such response, or the response has no content or no generated body class.
+
 [#emitter-options]
 === Emitter options
 
