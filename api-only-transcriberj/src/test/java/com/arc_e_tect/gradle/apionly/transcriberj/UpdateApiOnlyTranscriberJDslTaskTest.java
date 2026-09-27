@@ -89,6 +89,7 @@ class UpdateApiOnlyTranscriberJDslTaskTest {
                 strictDependencies = true
                 subscription('orders') {
                     basePackage = 'com.example.contract'
+                    schemaClasses = 'shared'
                 }
             }
             """);
@@ -130,6 +131,10 @@ class UpdateApiOnlyTranscriberJDslTaskTest {
             .contains("//     // strictRequests = true")
             .contains("OWASP API3:2023, API10:2023")
             .contains("//     // validateFormats = ['email']")
+            .contains("//     schemaClasses = 'perSourceSet'")
+            .contains("//     // emitter('restdocs') {")
+            .contains("//     //     options = [tests: 'true']")
+            .contains("//     // Deprecated, removed in 1.0.0: use emitter('<id>') { options = [...] } instead.")
             .contains("//     // emitterOptions = [restdocs: [tests: 'true']]");
         assertThat(Files.readString(backup())).isEqualTo(original);
     }
@@ -187,5 +192,89 @@ class UpdateApiOnlyTranscriberJDslTaskTest {
             .isInstanceOf(GradleException.class)
             .hasMessageContaining("failed to write");
         assertThat(Files.readString(buildFile())).isEqualTo(original);
+    }
+
+    @Test
+    @DisplayName("T18.12 adds schemaClasses to every subscription block that lacks it, and leaves emitters alone")
+    void addsSchemaClassesToEachSubscription() throws Exception {
+        written("""
+            apiOnlyTranscriberJ {
+                strictDependencies = true
+                subscription('orders') {
+                    basePackage = 'com.example.contract' // a comment { with a brace
+                    emitter('restdocs') {
+                        options = [tests: 'true']
+                    }
+                }
+                subscription("refunds") {
+                    basePackage = "com.example.refunds"
+                    schemaClasses = 'shared'
+                }
+                subscription('payments') {
+                    basePackage = 'com.example.payments'
+                }
+            }
+            """);
+
+        task().updateDsl();
+
+        assertThat(Files.readString(buildFile())).isEqualTo("""
+            apiOnlyTranscriberJ {
+                strictDependencies = true
+                subscription('orders') {
+                    // How the schema classes reach the source sets: 'perSourceSet', each compiling them, or 'shared', one source set
+                    // compiling them for the others. Default: 'perSourceSet'
+                    schemaClasses = 'perSourceSet'
+                    basePackage = 'com.example.contract' // a comment { with a brace
+                    emitter('restdocs') {
+                        options = [tests: 'true']
+                    }
+                }
+                subscription("refunds") {
+                    basePackage = "com.example.refunds"
+                    schemaClasses = 'shared'
+                }
+                subscription('payments') {
+                    // How the schema classes reach the source sets: 'perSourceSet', each compiling them, or 'shared', one source set
+                    // compiling them for the others. Default: 'perSourceSet'
+                    schemaClasses = 'perSourceSet'
+                    basePackage = 'com.example.payments'
+                }
+            }
+            """);
+        assertThat(backup()).exists();
+    }
+
+    @Test
+    @DisplayName("T18.12 adds schemaClasses without a comment when comments are stripped")
+    void addsSchemaClassesWithoutACommentWhenCleaning() throws Exception {
+        written("""
+            apiOnlyTranscriberJ {
+                strictDependencies = true
+                subscription('orders') {
+                    basePackage = 'com.example.contract'
+                }
+            }
+            """);
+        UpdateApiOnlyTranscriberJDslTask task = task();
+        task.applyCleanupDsl(true);
+
+        task.updateDsl();
+
+        assertThat(Files.readString(buildFile())).contains("        schemaClasses = 'perSourceSet'\n")
+                .doesNotContain("How the schema classes");
+    }
+
+    @Test
+    @DisplayName("T18.12 finds no subscription outside the apiOnlyTranscriberJ block, and survives strings and comments")
+    void subscriptionBlocksAreOnlyThoseOfTheExtension() {
+        String source = "subscription('x') {\n}\n";
+        assertThat(SubscriptionBlocks.addMissing(source, true).updated()).isEmpty();
+        String tricky = "apiOnlyTranscriberJ {\n    /* } */\n    subscription('a') {\n        x = '}'\n"
+                + "        y = \"\\\"}\"\n    }\n}\n";
+        assertThat(SubscriptionBlocks.addMissing(tricky, false).source())
+                .isEqualTo("apiOnlyTranscriberJ {\n    /* } */\n    subscription('a') {\n        schemaClasses = "
+                        + "'perSourceSet'\n        x = '}'\n        y = \"\\\"}\"\n    }\n}\n");
+        assertThat(SubscriptionBlocks.closing("{ /* unterminated", 0)).isEqualTo(17);
     }
 }

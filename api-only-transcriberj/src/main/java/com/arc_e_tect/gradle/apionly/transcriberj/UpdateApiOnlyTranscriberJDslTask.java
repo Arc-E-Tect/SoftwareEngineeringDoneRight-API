@@ -107,8 +107,9 @@ public abstract class UpdateApiOnlyTranscriberJDslTask extends DefaultTask {
         DslUpdater.Outcome outcome = DslUpdater.update(
                 original, ApiOnlyTranscriberJDslSchema.SCHEMA, options);
         UpdateDslResult result = outcome.result();
+        SubscriptionBlocks.Outcome subscriptions = SubscriptionBlocks.addMissing(outcome.source(), !getCleanupDsl().get());
 
-        if (!result.changed()) {
+        if (!result.changed() && subscriptions.updated().isEmpty()) {
             if (!result.blockFoundBefore()) {
                 getLogger().lifecycle(
                         "API-Only TranscriberJ: updateApiOnlyTranscriberJDSL found no apiOnlyTranscriberJ block in {} "
@@ -126,7 +127,7 @@ public abstract class UpdateApiOnlyTranscriberJDslTask extends DefaultTask {
         Path backup = buildFile.resolveSibling(buildFile.getFileName() + ".bak");
         try {
             Files.copy(buildFile, backup, StandardCopyOption.REPLACE_EXISTING);
-            Files.writeString(buildFile, outcome.source(), StandardCharsets.UTF_8);
+            Files.writeString(buildFile, subscriptions.source(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new GradleException("API-Only TranscriberJ: failed to write " + buildFile, e);
         }
@@ -144,6 +145,10 @@ public abstract class UpdateApiOnlyTranscriberJDslTask extends DefaultTask {
                     "API-Only TranscriberJ: updateApiOnlyTranscriberJDSL added {} missing {} to the "
                             + "apiOnlyTranscriberJ block in {}",
                     result.addedProperties().size(), propertyWord, buildFile);
+        }
+        for (String contract : subscriptions.updated()) {
+            getLogger().lifecycle("API-Only TranscriberJ: updateApiOnlyTranscriberJDSL added schemaClasses to "
+                    + "subscription('{}') in {}", contract, buildFile);
         }
         if (result.cleaned()) {
             getLogger().lifecycle(
