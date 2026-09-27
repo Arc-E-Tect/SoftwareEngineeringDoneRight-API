@@ -1,3 +1,15 @@
+# [0.13.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.12.0...api-only-transcriberj-v0.13.0) (2026-09-27)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** give emitters the text of each response body ([#56](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/56)) ([32a2234](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/32a22340ca1a0a1e8960c2278317debe0b9869ef)), closes [#56](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/56)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.12.0 [skip ci] ([567e6a4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/567e6a4158fd137924165bf0a6e9cc07a8bcff13))
+
 # [0.12.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.11.0...api-only-transcriberj-v0.12.0) (2026-09-27)
 
 
