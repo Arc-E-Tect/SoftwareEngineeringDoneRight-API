@@ -175,6 +175,13 @@ link:migration/from-a-checked-in-document/tutorial.adoc[Tutorial →] +
 link:migration/from-a-checked-in-document/prompt-claude-code.md[Claude Code prompt →] +
 link:migration/from-a-checked-in-document/prompt-codex.md[Codex prompt →]
 
+A build that uses the API-Only TranscriberJ's emitters moves to configuring each emitter on its own before 1.0.0, which removes `emitterOptions` and unnamed emitters:
+
+link:migration/to-per-emitter-configuration/overview.adoc[Overview →] +
+link:migration/to-per-emitter-configuration/tutorial.adoc[Tutorial →] +
+link:migration/to-per-emitter-configuration/prompt-claude-code.md[Claude Code prompt →] +
+link:migration/to-per-emitter-configuration/prompt-codex.md[Codex prompt →]
+
 [#documents]
 == What each use case gives you
 

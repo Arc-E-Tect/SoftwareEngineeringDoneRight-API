@@ -35,7 +35,7 @@ record EmitterPlan(String contract, String schemaClasses, List<String> coreSourc
 
     /** Where the migration guide for the settings deprecated before 1.0.0 is. */
     static final String MIGRATION_GUIDE = "https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/"
-            + "docs/guides/emitter-configuration/migrating.adoc";
+            + "docs/migration/to-per-emitter-configuration/overview.adoc";
 
     /**
      * One emitter's part of the plan.
