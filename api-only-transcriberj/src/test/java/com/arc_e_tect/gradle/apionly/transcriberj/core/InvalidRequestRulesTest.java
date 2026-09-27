@@ -60,7 +60,7 @@ class InvalidRequestRulesTest {
 
     /** An operation's entry in the report, by the class its cases are listed on. */
     static JsonNode operation(String fixture, String className) {
-        for (JsonNode op : FIXTURES.get(fixture).report().get("invalidRequests")) {
+        for (JsonNode op : InvalidRequestFixtures.invalidRequests(FIXTURES.get(fixture).report())) {
             if (op.get("class").stringValue().equals(className)) return op;
         }
         throw new AssertionError("no " + className + " in " + fixture);
@@ -259,7 +259,7 @@ class InvalidRequestRulesTest {
 
         @Test
         void aDeclared400IsExpectedWithItsContentTypeAndBodyClass() {
-            JsonNode op = operation("responses", "PostDeclaredInvalidRequests");
+            JsonNode op = operation("responses", "PostDeclaredContractCases");
             assertThat(op.get("cases")).isNotEmpty();
             for (JsonNode c : op.get("cases")) {
                 assertThat(c.get("expectedStatus").intValue()).isEqualTo(400);
@@ -270,7 +270,7 @@ class InvalidRequestRulesTest {
 
         @Test
         void anUndeclaredStatusIsAGapAnd4xxOrDefaultDoNotCount() {
-            JsonNode op = operation("responses", "PostUndeclaredInvalidRequests");
+            JsonNode op = operation("responses", "PostUndeclaredContractCases");
             assertThat(op.get("cases")).isEmpty();
             assertThat(op.get("declaresInvalidRequestStatus").booleanValue()).isFalse();
             assertThat(FIXTURES.get("responses").sources().report.gaps()).contains("/paths/~1undeclared/post");
@@ -279,16 +279,16 @@ class InvalidRequestRulesTest {
 
         @Test
         void aConfiguredStatusIsExpected() {
-            assertThat(operation("responses", "PostUnprocessableInvalidRequests").get("cases")).isEmpty();
-            JsonNode op = operation("responses-422", "PostUnprocessableInvalidRequests");
+            assertThat(operation("responses", "PostUnprocessableContractCases").get("cases")).isEmpty();
+            JsonNode op = operation("responses-422", "PostUnprocessableContractCases");
             assertThat(op.get("cases")).isNotEmpty();
             op.get("cases").forEach(c -> assertThat(c.get("expectedStatus").intValue()).isEqualTo(422));
-            assertThat(operation("responses-422", "PostDeclaredInvalidRequests").get("cases")).isEmpty();
+            assertThat(operation("responses-422", "PostDeclaredContractCases").get("cases")).isEmpty();
         }
 
         @Test
         void aDeclaredStatusWithoutContentIsTheStatusOnly() {
-            for (JsonNode c : operation("responses", "PostBareInvalidRequests").get("cases")) {
+            for (JsonNode c : operation("responses", "PostBareContractCases").get("cases")) {
                 assertThat(c.get("expectedContentTypes")).isEmpty();
                 assertThat(c.get("responseBodyClass").isNull()).isTrue();
             }
@@ -296,34 +296,34 @@ class InvalidRequestRulesTest {
 
         @Test
         void aReferencedResponseIsResolved() {
-            JsonNode c = operation("responses", "PostReferencedInvalidRequests").get("cases").get(0);
+            JsonNode c = operation("responses", "PostReferencedContractCases").get("cases").get(0);
             assertThat(c.get("expectedContentTypes").toString()).isEqualTo("[\"application/problem+json\"]");
             assertThat(c.get("responseBodyClass").stringValue()).isEqualTo("ProblemV1");
         }
 
         @Test
         void everyDeclaredContentTypeIsRecorded() {
-            JsonNode c = operation("responses", "PostSeveralInvalidRequests").get("cases").get(0);
+            JsonNode c = operation("responses", "PostSeveralContractCases").get("cases").get(0);
             assertThat(c.get("expectedContentTypes").toString())
                     .isEqualTo("[\"application/problem+json\",\"application/json\"]");
         }
 
         @Test
         void anOperationWithoutConstrainedInputIsNoGap() {
-            JsonNode op = operation("responses", "GetUnconstrainedInvalidRequests");
+            JsonNode op = operation("responses", "GetUnconstrainedContractCases");
             assertThat(op.get("cases")).isEmpty();
             assertThat(FIXTURES.get("responses").sources().report.gaps()).doesNotContain("/paths/~1unconstrained/get");
         }
     }
 
     @Nested
-    @DisplayName("T13.10 Canonical order, ids and representatives")
+    @DisplayName("T13.10 Canonical order and ids")
     class OrderAndIds {
 
         @Test
         void theOrderIsLocationThenKeywordThenNameOrPointer() {
             for (String fixture : FIXTURES.keySet()) {
-                for (JsonNode op : FIXTURES.get(fixture).report().get("invalidRequests")) {
+                for (JsonNode op : InvalidRequestFixtures.invalidRequests(FIXTURES.get(fixture).report())) {
                     List<JsonNode> list = new ArrayList<>();
                     op.get("cases").forEach(list::add);
                     for (int i = 1; i < list.size(); i++) {
@@ -335,34 +335,28 @@ class InvalidRequestRulesTest {
         }
 
         @Test
-        void idsAreUniqueIdentifiersOnceConvertedAndExactlyTheFirstIsTheRepresentative() {
+        void idsAreUniqueIdentifiersOnceConverted() {
             for (String fixture : FIXTURES.keySet()) {
-                for (JsonNode op : FIXTURES.get(fixture).report().get("invalidRequests")) {
+                for (JsonNode op : InvalidRequestFixtures.invalidRequests(FIXTURES.get(fixture).report())) {
                     List<String> ids = new ArrayList<>();
                     List<String> identifiers = new ArrayList<>();
-                    int representatives = 0;
                     for (int i = 0; i < op.get("cases").size(); i++) {
                         JsonNode c = op.get("cases").get(i);
                         ids.add(c.get("id").stringValue());
                         String identifier = JavaText.variableName(c.get("id").stringValue());
                         assertThat(javax.lang.model.SourceVersion.isName(identifier)).as(identifier).isTrue();
                         identifiers.add(identifier);
-                        if (c.get("representative").booleanValue()) {
-                            representatives++;
-                            assertThat(i).isZero();
-                        }
                     }
                     assertThat(ids).doesNotHaveDuplicates();
                     assertThat(identifiers).doesNotHaveDuplicates();
-                    assertThat(representatives).isEqualTo(op.get("cases").isEmpty() ? 0 : 1);
                 }
             }
         }
 
         @Test
         void idsAreStableAcrossRuns(@TempDir Path again) {
-            JsonNode first = FIXTURES.get("keywords").report().get("invalidRequests");
-            JsonNode second = InvalidRequestFixtures.corpus("keywords", again).report().get("invalidRequests");
+            JsonNode first = InvalidRequestFixtures.invalidRequests(FIXTURES.get("keywords").report());
+            JsonNode second = InvalidRequestFixtures.invalidRequests(InvalidRequestFixtures.corpus("keywords", again).report());
             assertThat(second).isEqualTo(first);
         }
 

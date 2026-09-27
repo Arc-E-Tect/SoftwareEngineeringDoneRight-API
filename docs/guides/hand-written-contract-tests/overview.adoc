@@ -41,6 +41,11 @@ Knowing the boundary is what makes it workable; discovering it by surprise makes
 * **Field descriptions are a projection.**
 A field is a path, a type, whether it is optional, and a description.
 A test that checks a response against them proves the response has the fields the contract describes, of those types -- not that it is valid against the schema.
+* **Some cases are not derived, because their request cannot be vouched for.**
+A value of a format the generator has no check for -- `duration`, a custom format -- is a plain string, which a service that checks the format rejects.
+A case whose request holds one is left out, and the report says so: an optional member costs the operation its full success case, a required one every case but the invalid requests.
+Put a `pattern` beside the format where you can; otherwise write the case by hand from the generated request, with a real value in its place.
+link:../../../api-only-transcriberj/README.adoc#unvouched-values[When a request cannot be vouched for →] shows how.
 * **Some constructs degrade.**
 A construct no rule represents yet, such as a `oneOf` with a branch written inline, turns the methods it reaches into ones that throw `UnsupportedOperationException`, with the reason and, where there is one, the remedy.
 The build never stops over it; the generation report lists every such method.

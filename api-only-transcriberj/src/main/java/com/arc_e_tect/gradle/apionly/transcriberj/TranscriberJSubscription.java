@@ -85,6 +85,17 @@ public abstract class TranscriberJSubscription implements Named {
     public abstract Property<String> getSchemaClasses();
 
     /**
+     * The kinds of contract case derived: {@code success}, {@code notFound}, {@code notAcceptable},
+     * {@code unsupportedMediaType} and {@code invalidRequest}. A kind left out derives no case, and
+     * the response coverage says why for every response it would have covered.
+     *
+     * <p>Default: every kind.
+     *
+     * @return the kinds
+     */
+    public abstract ListProperty<String> getDerive();
+
+    /**
      * The contract's name.
      *
      * @return the name

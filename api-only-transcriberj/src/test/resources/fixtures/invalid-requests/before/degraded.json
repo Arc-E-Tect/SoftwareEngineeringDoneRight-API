@@ -1,0 +1,246 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "`name` shorter than its minLength of 1",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": ""
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/shapes",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostShapeInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1shapes/post",
+      "method": "POST",
+      "pathTemplate": "/shapes"
+    }
+  ]
+}

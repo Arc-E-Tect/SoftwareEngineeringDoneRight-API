@@ -34,7 +34,8 @@ class CoverageExhaustivenessTest {
     static final List<String> REASONS = List.of("NOT_ISOLATABLE", "CHANGES_ROUTE", "KEYWORD_NOT_MODELLED",
             "PARAMETER_STYLE_NOT_SUPPORTED", "DEGRADED_CONSTRUCT", "FORMAT_VALIDATION_OFF", "PATTERN_OVERRIDES_FORMAT",
             "NO_INVALID_REQUEST_STATUS", "STRICTNESS_OFF", "BEYOND_RECURSION_DEPTH", "NOT_EXPRESSIBLE_IN_PARAMETER",
-            "FORMAT_NOT_SUPPORTED", "NO_VALID_BASELINE", "ASSERTS_NOTHING", "NO_VIOLATION_RULE", "MEDIA_TYPE_NOT_USED");
+            "FORMAT_NOT_SUPPORTED", "NO_VALID_BASELINE", "ASSERTS_NOTHING", "NO_VIOLATION_RULE", "MEDIA_TYPE_NOT_USED",
+            "KIND_SWITCHED_OFF");
 
     private static final List<String> KEYWORDS = List.of("type", "const", "enum", "minLength", "maxLength", "pattern",
             "format", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minItems", "maxItems",
@@ -103,7 +104,7 @@ class CoverageExhaustivenessTest {
                 }
             }
             // Every id a constraint names is a case of its operation, and every case covers something.
-            for (JsonNode operation : f.report().get("invalidRequests")) {
+            for (JsonNode operation : InvalidRequestFixtures.invalidRequests(f.report())) {
                 Set<String> ids = new LinkedHashSet<>();
                 operation.get("cases").forEach(c -> ids.add(c.get("id").stringValue()));
                 Set<String> named = new HashSet<>();

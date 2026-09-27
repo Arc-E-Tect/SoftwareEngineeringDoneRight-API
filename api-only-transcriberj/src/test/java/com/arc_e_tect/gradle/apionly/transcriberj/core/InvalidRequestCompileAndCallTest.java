@@ -16,11 +16,11 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * T13.13: the case classes of every fixture contract compile with {@code -Xlint:all} and no
- * diagnostic but notes, and every case they hold equals, field for field, what the
- * machine-readable report records.
+ * T13.13 and T19.12: the case classes of every fixture contract compile with {@code -Xlint:all}
+ * and no diagnostic but notes, and every case they hold, of every kind, equals, field for field,
+ * what the machine-readable report records.
  */
-@DisplayName("T13.13 Compile and call")
+@DisplayName("T13.13, T19.12 Compile and call")
 class InvalidRequestCompileAndCallTest {
 
     @TempDir
@@ -30,7 +30,7 @@ class InvalidRequestCompileAndCallTest {
 
     @BeforeAll
     static void generate() {
-        fixtures = InvalidRequestFixtures.all(directory);
+        fixtures = ContractCaseFixtures.all(directory);
         fixtures.forEach(f -> f.sources().compile());
     }
 
@@ -38,7 +38,7 @@ class InvalidRequestCompileAndCallTest {
     Stream<DynamicTest> everyCaseIsWhatTheReportRecords() {
         List<DynamicTest> tests = new ArrayList<>();
         for (ValidValueFixtures.Fixture f : fixtures) {
-            for (JsonNode entry : f.report().get("invalidRequests")) {
+            for (JsonNode entry : f.report().get("contractCases")) {
                 String className = entry.get("class").stringValue();
                 tests.add(DynamicTest.dynamicTest(f.name() + " " + className, () -> {
                     List<?> cases = (List<?>) f.sources().constant(className, "CASES");
@@ -56,21 +56,23 @@ class InvalidRequestCompileAndCallTest {
     Stream<DynamicTest> everyOperationHasItsCaseClassNamedThroughClassNames() {
         return fixtures.stream().map(f -> DynamicTest.dynamicTest(f.name(), () -> {
             List<String> classes = new ArrayList<>();
-            f.report().get("invalidRequests").forEach(e -> classes.add(e.get("class").stringValue()));
-            assertThat(f.sources().names().stream().filter(n -> n.endsWith("InvalidRequests")).toList())
+            f.report().get("contractCases").forEach(e -> classes.add(e.get("class").stringValue()));
+            assertThat(f.sources().names().stream().filter(n -> n.endsWith("ContractCases")).toList())
                     .containsExactlyInAnyOrderElementsOf(classes);
-            assertThat(f.sources().names()).contains("InvalidRequestCase");
+            assertThat(f.sources().names()).contains("ContractCase", "CaseKind");
         }));
     }
 
     private static void assertEquivalent(Object c, JsonNode recorded) throws Exception {
-        assertThat(c.getClass().getSimpleName()).isEqualTo("InvalidRequestCase");
-        for (String field : List.of("id", "description", "in", "name", "pointer", "keyword", "responseBodyClass")) {
+        assertThat(c.getClass().getSimpleName()).isEqualTo("ContractCase");
+        assertThat(component(c, "kind").toString()).isEqualTo(recorded.get("kind").stringValue());
+        assertThat(component(c, "requiresState")).isEqualTo(recorded.get("requiresState").booleanValue());
+        for (String field : List.of("id", "variant", "description", "in", "name", "pointer", "keyword",
+                "responseBodyClass")) {
             JsonNode value = recorded.get(field);
             assertThat(component(c, field)).as(field).isEqualTo(value.isNull() ? null : value.stringValue());
         }
         assertThat(component(c, "expectedStatus")).isEqualTo(recorded.get("expectedStatus").intValue());
-        assertThat(component(c, "representative")).isEqualTo(recorded.get("representative").booleanValue());
         List<String> types = new ArrayList<>();
         recorded.get("expectedContentTypes").forEach(t -> types.add(t.stringValue()));
         assertThat(component(c, "expectedContentTypes")).isEqualTo(types);

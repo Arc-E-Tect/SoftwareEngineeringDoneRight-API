@@ -1,7 +1,7 @@
 {
   "constraintCoverage": [
     {
-      "class": "GetUserInvalidRequests",
+      "class": "GetUserContractCases",
       "in": "path",
       "keyword": "required",
       "mediaType": null,
@@ -16,7 +16,7 @@
       }
     },
     {
-      "class": "GetUserInvalidRequests",
+      "class": "GetUserContractCases",
       "in": "path",
       "keyword": "type",
       "mediaType": null,
@@ -31,7 +31,7 @@
       }
     },
     {
-      "class": "GetUserInvalidRequests",
+      "class": "GetUserContractCases",
       "in": "path",
       "keyword": "minLength",
       "mediaType": null,
@@ -46,7 +46,7 @@
       }
     },
     {
-      "class": "GetUserInvalidRequests",
+      "class": "GetUserContractCases",
       "in": "path",
       "keyword": "maxLength",
       "mediaType": null,
@@ -61,7 +61,7 @@
       }
     },
     {
-      "class": "GetUserInvalidRequests",
+      "class": "GetUserContractCases",
       "in": "path",
       "keyword": "pattern",
       "mediaType": null,
@@ -79,7 +79,7 @@
       "cases": [
         "body-required"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "required",
       "mediaType": null,
@@ -92,7 +92,7 @@
       "cases": [
         "body-type"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "type",
       "mediaType": "application/json",
@@ -105,7 +105,7 @@
       "cases": [
         "body-username-required"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "required",
       "mediaType": "application/json",
@@ -118,7 +118,7 @@
       "cases": [
         "body-emailAddress-required"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "required",
       "mediaType": "application/json",
@@ -131,7 +131,7 @@
       "cases": [
         "body-unknown-member"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "additionalProperties",
       "mediaType": "application/json",
@@ -145,7 +145,7 @@
         "body-username-type",
         "body-username-null"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "type",
       "mediaType": "application/json",
@@ -158,7 +158,7 @@
       "cases": [
         "body-username-minLength"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "minLength",
       "mediaType": "application/json",
@@ -171,7 +171,7 @@
       "cases": [
         "body-username-maxLength"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "maxLength",
       "mediaType": "application/json",
@@ -184,7 +184,7 @@
       "cases": [
         "body-username-pattern"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "pattern",
       "mediaType": "application/json",
@@ -198,7 +198,7 @@
         "body-emailAddress-type",
         "body-emailAddress-null"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "type",
       "mediaType": "application/json",
@@ -208,7 +208,7 @@
       "schemaLocation": "/components/schemas/UserRegistrationRequestV1/properties/emailAddress"
     },
     {
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "minLength",
       "mediaType": "application/json",
@@ -226,7 +226,7 @@
       "cases": [
         "body-emailAddress-maxLength"
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "maxLength",
       "mediaType": "application/json",
@@ -236,7 +236,7 @@
       "schemaLocation": "/components/schemas/UserRegistrationRequestV1/properties/emailAddress"
     },
     {
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "in": "body",
       "keyword": "format",
       "mediaType": "application/json",
@@ -254,7 +254,7 @@
       "cases": [
         "body-required"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "required",
       "mediaType": null,
@@ -267,7 +267,7 @@
       "cases": [
         "body-type"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "type",
       "mediaType": "application/json",
@@ -280,7 +280,7 @@
       "cases": [
         "body-username-required"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "required",
       "mediaType": "application/json",
@@ -293,7 +293,7 @@
       "cases": [
         "body-unknown-member"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "additionalProperties",
       "mediaType": "application/json",
@@ -307,7 +307,7 @@
         "body-username-type",
         "body-username-null"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "type",
       "mediaType": "application/json",
@@ -320,7 +320,7 @@
       "cases": [
         "body-username-minLength"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "minLength",
       "mediaType": "application/json",
@@ -333,7 +333,7 @@
       "cases": [
         "body-username-maxLength"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "maxLength",
       "mediaType": "application/json",
@@ -346,7 +346,7 @@
       "cases": [
         "body-username-pattern"
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "in": "body",
       "keyword": "pattern",
       "mediaType": "application/json",
@@ -356,7 +356,7 @@
       "schemaLocation": "/components/schemas/UsernameV1"
     },
     {
-      "class": "CompleteUserRegistrationInvalidRequests",
+      "class": "CompleteUserRegistrationContractCases",
       "in": "path",
       "keyword": "required",
       "mediaType": null,
@@ -371,7 +371,7 @@
       }
     },
     {
-      "class": "CompleteUserRegistrationInvalidRequests",
+      "class": "CompleteUserRegistrationContractCases",
       "in": "path",
       "keyword": "type",
       "mediaType": null,
@@ -386,53 +386,199 @@
       }
     }
   ],
-  "formatRecommendations": [
+  "contractCases": [
     {
-      "advice": "format email has no pattern; declare one, since what email accepts differs between validators, and a pattern says exactly",
-      "format": "email",
-      "location": "/components/schemas/UserRegistrationRequestV1/properties/emailAddress"
-    }
-  ],
-  "gaps": [
-    {
-      "class": "GetUserInvalidRequests",
-      "operation": "/paths/~1v1~1users~1{username}/get",
-      "recommendation": "declare a 400 response, so that its 5 constraint(s) on request input can be tested with invalid requests"
-    },
-    {
-      "class": "CompleteUserRegistrationInvalidRequests",
-      "operation": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
-      "recommendation": "declare a 400 response, so that its 2 constraint(s) on request input can be tested with invalid requests"
-    }
-  ],
-  "invalidRequests": [
-    {
-      "cases": [],
-      "class": "CompleteUserRegistrationInvalidRequests",
+      "cases": [
+        {
+          "baseline": null,
+          "description": "a valid request with the required parameters and body members only",
+          "expectedContentTypes": [
+            "application/json"
+          ],
+          "expectedStatus": 200,
+          "id": "success-200-required",
+          "in": null,
+          "keyword": null,
+          "kind": "SUCCESS",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "GET",
+            "pathParameters": [
+              "a"
+            ],
+            "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "UserAccountV1",
+          "variant": "required"
+        }
+      ],
+      "class": "CompleteUserRegistrationContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
       "method": "GET",
       "pathTemplate": "/v1/users/registrations/completion/{verificationLink}"
     },
     {
-      "cases": [],
-      "class": "GetHealthInvalidRequests",
+      "cases": [
+        {
+          "baseline": null,
+          "description": "a valid request with the required parameters and body members only",
+          "expectedContentTypes": [
+            "application/json"
+          ],
+          "expectedStatus": 200,
+          "id": "success-200-required",
+          "in": null,
+          "keyword": null,
+          "kind": "SUCCESS",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "GET",
+            "pathParameters": [],
+            "pathTemplate": "/v1/actuator/health",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "GetHealthResponse200",
+          "variant": "required"
+        }
+      ],
+      "class": "GetHealthContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1v1~1actuator~1health/get",
       "method": "GET",
       "pathTemplate": "/v1/actuator/health"
     },
     {
-      "cases": [],
-      "class": "GetRootInvalidRequests",
+      "cases": [
+        {
+          "baseline": null,
+          "description": "a valid request with the required parameters and body members only",
+          "expectedContentTypes": [
+            "application/json"
+          ],
+          "expectedStatus": 200,
+          "id": "success-200-required",
+          "in": null,
+          "keyword": null,
+          "kind": "SUCCESS",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "GET",
+            "pathParameters": [],
+            "pathTemplate": "/v1",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "GetRootResponse200",
+          "variant": "required"
+        }
+      ],
+      "class": "GetRootContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1v1/get",
       "method": "GET",
       "pathTemplate": "/v1"
     },
     {
-      "cases": [],
-      "class": "GetUserInvalidRequests",
+      "cases": [
+        {
+          "baseline": null,
+          "description": "a valid request with the required parameters and body members only",
+          "expectedContentTypes": [
+            "application/json"
+          ],
+          "expectedStatus": 200,
+          "id": "success-200-required",
+          "in": null,
+          "keyword": null,
+          "kind": "SUCCESS",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "GET",
+            "pathParameters": [
+              "aaaaa"
+            ],
+            "pathTemplate": "/v1/users/{username}",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "UserV1",
+          "variant": "required"
+        },
+        {
+          "baseline": null,
+          "description": "a valid request naming a resource that does not exist",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 404,
+          "id": "not-found",
+          "in": null,
+          "keyword": null,
+          "kind": "NOT_FOUND",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "GET",
+            "pathParameters": [
+              "aaaab"
+            ],
+            "pathTemplate": "/v1/users/{username}",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "UserNotFoundProblemV1",
+          "variant": null
+        }
+      ],
+      "class": "GetUserContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1v1~1users~1{username}/get",
       "method": "GET",
@@ -440,6 +586,40 @@
     },
     {
       "cases": [
+        {
+          "baseline": null,
+          "description": "a valid request with the required parameters and body members only",
+          "expectedContentTypes": [
+            "application/json"
+          ],
+          "expectedStatus": 202,
+          "id": "success-202-required",
+          "in": null,
+          "keyword": null,
+          "kind": "SUCCESS",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "UserRegistrationResponseV1",
+          "variant": "required"
+        },
         {
           "baseline": {
             "body": {
@@ -461,19 +641,26 @@
           "id": "body-required",
           "in": "body",
           "keyword": "required",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "",
-          "representative": true,
           "request": {
             "body": null,
             "contentType": null,
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -496,21 +683,28 @@
           "id": "body-emailAddress-required",
           "in": "body",
           "keyword": "required",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/emailAddress",
-          "representative": false,
           "request": {
             "body": {
               "username": "aaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -533,21 +727,28 @@
           "id": "body-username-required",
           "in": "body",
           "keyword": "required",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -570,19 +771,26 @@
           "id": "body-type",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -605,22 +813,29 @@
           "id": "body-emailAddress-type",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/emailAddress",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": {},
               "username": "aaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -643,22 +858,29 @@
           "id": "body-username-type",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com",
               "username": {}
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -681,22 +903,29 @@
           "id": "body-emailAddress-null",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/emailAddress",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": null,
               "username": "aaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -719,22 +948,29 @@
           "id": "body-username-null",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com",
               "username": null
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -757,22 +993,29 @@
           "id": "body-username-minLength",
           "in": "body",
           "keyword": "minLength",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com",
               "username": "aaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -795,22 +1038,29 @@
           "id": "body-emailAddress-maxLength",
           "in": "body",
           "keyword": "maxLength",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/emailAddress",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example.com",
               "username": "aaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -833,22 +1083,29 @@
           "id": "body-username-maxLength",
           "in": "body",
           "keyword": "maxLength",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com",
               "username": "aaaaaaaaaaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -871,22 +1128,29 @@
           "id": "body-username-pattern",
           "in": "body",
           "keyword": "pattern",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com",
               "username": "%%%%%"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -909,9 +1173,9 @@
           "id": "body-unknown-member",
           "in": "body",
           "keyword": "additionalProperties",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "emailAddress": "user@example.com",
@@ -919,16 +1183,23 @@
               "username": "aaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         }
       ],
-      "class": "InitiateUserRegistrationInvalidRequests",
+      "class": "InitiateUserRegistrationContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1v1~1users~1registrations/post",
       "method": "POST",
@@ -936,6 +1207,39 @@
     },
     {
       "cases": [
+        {
+          "baseline": null,
+          "description": "a valid request with the required parameters and body members only",
+          "expectedContentTypes": [
+            "application/json"
+          ],
+          "expectedStatus": 202,
+          "id": "success-202-required",
+          "in": null,
+          "keyword": null,
+          "kind": "SUCCESS",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "requiresState": true,
+          "responseBodyClass": "UserRegistrationResponseV1",
+          "variant": "required"
+        },
         {
           "baseline": {
             "body": {
@@ -956,19 +1260,26 @@
           "id": "body-required",
           "in": "body",
           "keyword": "required",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "",
-          "representative": true,
           "request": {
             "body": null,
             "contentType": null,
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -990,19 +1301,26 @@
           "id": "body-username-required",
           "in": "body",
           "keyword": "required",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {},
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1024,19 +1342,26 @@
           "id": "body-type",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1058,21 +1383,28 @@
           "id": "body-username-type",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "username": {}
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1094,21 +1426,28 @@
           "id": "body-username-null",
           "in": "body",
           "keyword": "type",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "username": null
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1130,21 +1469,28 @@
           "id": "body-username-minLength",
           "in": "body",
           "keyword": "minLength",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "username": "aaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1166,21 +1512,28 @@
           "id": "body-username-maxLength",
           "in": "body",
           "keyword": "maxLength",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "username": "aaaaaaaaaaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1202,21 +1555,28 @@
           "id": "body-username-pattern",
           "in": "body",
           "keyword": "pattern",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/username",
-          "representative": false,
           "request": {
             "body": {
               "username": "%%%%%"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         },
         {
           "baseline": {
@@ -1238,29 +1598,259 @@
           "id": "body-unknown-member",
           "in": "body",
           "keyword": "additionalProperties",
+          "kind": "INVALID_REQUEST",
           "name": null,
           "pointer": "/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "unexpectedMember": "unexpected",
               "username": "aaaaa"
             },
             "contentType": "application/json",
-            "headers": [],
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
             "method": "POST",
             "pathParameters": [],
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
-          "responseBodyClass": "InvalidRequestProblemV1"
+          "requiresState": false,
+          "responseBodyClass": "InvalidRequestProblemV1",
+          "variant": null
         }
       ],
-      "class": "ResendVerificationEmailInvalidRequests",
+      "class": "ResendVerificationEmailContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1v1~1users~1registrations~1verification-email/post",
       "method": "POST",
       "pathTemplate": "/v1/users/registrations/verification-email"
+    }
+  ],
+  "formatRecommendations": [
+    {
+      "advice": "format email has no pattern; declare one, since what email accepts differs between validators, and a pattern says exactly",
+      "format": "email",
+      "location": "/components/schemas/UserRegistrationRequestV1/properties/emailAddress"
+    }
+  ],
+  "gaps": [
+    {
+      "class": "GetUserContractCases",
+      "operation": "/paths/~1v1~1users~1{username}/get",
+      "recommendation": "declare a 400 response, so that its 5 constraint(s) on request input can be tested with invalid requests"
+    },
+    {
+      "class": "CompleteUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "recommendation": "declare a 400 response, so that its 2 constraint(s) on request input can be tested with invalid requests"
+    }
+  ],
+  "responseCoverage": [
+    {
+      "cases": [
+        "success-200-required"
+      ],
+      "class": "GetRootContractCases",
+      "operation": "/paths/~1v1/get",
+      "status": "200"
+    },
+    {
+      "class": "GetRootContractCases",
+      "operation": "/paths/~1v1/get",
+      "status": "500",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 500",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "cases": [
+        "success-200-required"
+      ],
+      "class": "GetHealthContractCases",
+      "operation": "/paths/~1v1~1actuator~1health/get",
+      "status": "200"
+    },
+    {
+      "class": "GetHealthContractCases",
+      "operation": "/paths/~1v1~1actuator~1health/get",
+      "status": "500",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 500",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "cases": [
+        "success-200-required"
+      ],
+      "class": "GetUserContractCases",
+      "operation": "/paths/~1v1~1users~1{username}/get",
+      "status": "200"
+    },
+    {
+      "cases": [
+        "not-found"
+      ],
+      "class": "GetUserContractCases",
+      "operation": "/paths/~1v1~1users~1{username}/get",
+      "status": "404"
+    },
+    {
+      "class": "GetUserContractCases",
+      "operation": "/paths/~1v1~1users~1{username}/get",
+      "status": "500",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 500",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "cases": [
+        "success-202-required"
+      ],
+      "class": "InitiateUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations/post",
+      "status": "202"
+    },
+    {
+      "cases": [
+        "body-required",
+        "body-emailAddress-required",
+        "body-username-required",
+        "body-type",
+        "body-emailAddress-type",
+        "body-username-type",
+        "body-emailAddress-null",
+        "body-username-null",
+        "body-username-minLength",
+        "body-emailAddress-maxLength",
+        "body-username-maxLength",
+        "body-username-pattern",
+        "body-unknown-member"
+      ],
+      "class": "InitiateUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations/post",
+      "status": "400"
+    },
+    {
+      "class": "InitiateUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations/post",
+      "status": "409",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 409",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "class": "InitiateUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations/post",
+      "status": "422",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 422",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "class": "InitiateUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations/post",
+      "status": "500",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 500",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "cases": [
+        "success-202-required"
+      ],
+      "class": "ResendVerificationEmailContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "status": "202"
+    },
+    {
+      "cases": [
+        "body-required",
+        "body-username-required",
+        "body-type",
+        "body-username-type",
+        "body-username-null",
+        "body-username-minLength",
+        "body-username-maxLength",
+        "body-username-pattern",
+        "body-unknown-member"
+      ],
+      "class": "ResendVerificationEmailContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "status": "400"
+    },
+    {
+      "class": "ResendVerificationEmailContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "status": "404",
+      "uncovered": {
+        "code": "NOT_FOUND_WITHOUT_PATH_PARAMETER",
+        "detail": "/v1/users/registrations/verification-email names no resource by a path parameter",
+        "label": "404 without a path parameter"
+      }
+    },
+    {
+      "class": "ResendVerificationEmailContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "status": "500",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 500",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "cases": [
+        "success-200-required"
+      ],
+      "class": "CompleteUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "status": "200"
+    },
+    {
+      "class": "CompleteUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "status": "410",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 410",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "class": "CompleteUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "status": "422",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 422",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
+    },
+    {
+      "class": "CompleteUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "status": "500",
+      "uncovered": {
+        "code": "BEHAVIOUR_OR_STATE",
+        "detail": "the contract does not say what provokes 500",
+        "label": "depends on behaviour or state the contract does not describe"
+      }
     }
   ]
 }

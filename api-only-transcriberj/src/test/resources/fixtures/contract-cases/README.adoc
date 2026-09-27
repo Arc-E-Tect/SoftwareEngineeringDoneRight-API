@@ -1,0 +1,54 @@
+= Contract-case fixtures
+
+What the derivation of contract cases of every kind -- success, not found, not acceptable, unsupported media type -- and the response coverage are held to.
+The invalid-request cases have fixtures of their own, in `../invalid-requests`; every test here runs over those contracts too, and over the reference API's.
+
+[cols="1,3",options="header"]
+|===
+|Path |What it is
+
+|`corpus/success.yaml`
+|Success cases: optional members that give a full request beside the required one, none that do, an operation declaring `200` and `201`, an optional body that gives a noBody case, a body with no valid value, requests holding a value of a format no check exists for, which cannot be vouched for, and the same format with a pattern beside it, which can.
+
+|`corpus/not-found.yaml`
+|Not-found cases: a path parameter with a second valid value, a single `enum` value with none, an operation without a path parameter, and two path parameters that give one case.
+
+|`corpus/negotiation.yaml`
+|Not-acceptable and unsupported-media-type cases: a media type no response offers, responses offering `*/*`, ranges, or every candidate, responses without content, a body sent as `text/plain`, bodies accepting `*/*`, ranges, or every candidate, and a `415` without a body.
+
+|`corpus/coverage.yaml`
+|Response coverage: every status whose answer the contract does not describe, ranges and `default`, the invalid-request status with and without something to violate, and a success whose valid request reaches a degraded construct.
+Generated with every kind, and with `success` only.
+|===
+
+`not-found.yaml` is also generated without `notFound`.
+`ContractCaseFixtures` lists each generation with its settings.
+
+The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests.
+
+Which test covers which requirement:
+
+[cols="1,3",options="header"]
+|===
+|Requirement |Test
+
+|T19.1 Every non-invalid request is valid |`ContractCaseValidityTest`, with `RequestValidation`
+|T19.2 Not found differs only in path values |`NotFoundCaseTest`
+|T19.3 Media-type choices |`MediaTypeChoiceTest`, with a media-type matcher of its own
+|T19.4 Success variants |`SuccessVariantsTest`
+|T19.5 Response coverage is exhaustive |`ResponseCoverageTest`, with a walk over the contract of its own
+|T19.6 A corpus per kind and reason |`ContractCaseCorpusTest`
+|T19.7 Invalid-request cases unchanged |`InvalidRequestsUnchangedTest`, against `../invalid-requests/before`
+|T19.7a `Accept` on every case |`AcceptHeaderTest`
+|T19.8 Canonical order |`ContractCaseOrderTest`
+|T19.9 Determinism |`InvalidRequestDeterminismTest`
+|T19.10 The request body schema |`RequestSchemasTest`
+|T19.11 Settings |`ContractCaseSettingsTest`, `ApiOnlyTranscriberJPluginFunctionalTest`, `ApiOnlyTranscriberJDslSchemaTest`, `UpdateApiOnlyTranscriberJDslTaskTest`
+|T19.12 Compile and call |`InvalidRequestCompileAndCallTest`
+|T19.13 SPI |`EmitterContractCasesTest`
+|T19.14 The reference contract |`InvalidRequestGoldenTest`, against `../invalid-requests/golden/user-account.json`
+|T19.15 No regression |every existing test
+|===
+
+T19.10 leaves out one schema: the valid-value corpus's back-reference pattern, `^(a)\1$`, which is valid ECMA-262 but which the test's validator, joni, does not compile.
+The generator reports that pattern as unsatisfiable, so no case depends on it; a test asserts that it is exactly that schema, for exactly that reason.

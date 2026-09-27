@@ -1,0 +1,2793 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`closed` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-closed-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/closed",
+          "representative": false,
+          "request": {
+            "body": {
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`closed.a` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-closed-a-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/closed/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {},
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/merged",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged.first` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-first-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/merged/first",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged.second` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-second-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/merged/second",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`open` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-open-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/open",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`open.a` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-open-a-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/open/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {},
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned.a` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-a-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/patterned/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {},
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/typed",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed.a` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-a-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/typed/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`closed` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-closed-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/closed",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": [],
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`closed.a` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-closed-a-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/closed/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": {}
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {},
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/forbidden",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": [],
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden.a` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-a-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/forbidden/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "a": {}
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "x-": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden.x-` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-x--type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/forbidden/x-",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "x-": {}
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged.first` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-first-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/merged/first",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": {},
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged.second` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-second-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/merged/second",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": {}
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`open` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-open-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/open",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": [],
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`open.a` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-open-a-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/open/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": {}
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": [],
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned.a` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-a-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": {}
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a",
+                "x-": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned.x-` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-x--type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned/x-",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a",
+                "x-": {}
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/typed",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": []
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed.a` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-a-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/typed/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": {}
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a",
+                "additionalMember": 0
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed.additionalMember` sent as the string \"not-a-number\", where the contract requires an integer",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-additionalMember-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/typed/additionalMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a",
+                "additionalMember": "not-a-number"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`closed` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-closed-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/closed",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": null,
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`closed.a` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-closed-a-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/closed/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": null
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {},
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/forbidden",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": null,
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden.a` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-a-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/forbidden/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "a": null
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "x-": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden.x-` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-x--null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/forbidden/x-",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "x-": null
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged.first` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-first-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/merged/first",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": null,
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`merged.second` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-merged-second-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/merged/second",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": null
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`open` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-open-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/open",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": null,
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`open.a` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-open-a-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/open/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": null
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": null,
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned.a` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-a-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": null
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a",
+                "x-": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`patterned.x-` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-x--null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned/x-",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a",
+                "x-": null
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/typed",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed.a` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-a-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/typed/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": null
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a",
+                "additionalMember": 0
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`typed.additionalMember` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-typed-additionalMember-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/typed/additionalMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a",
+                "additionalMember": null
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {},
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "description": "`forbidden` with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-forbidden-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/forbidden/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "closed": {
+                "a": "a"
+              },
+              "forbidden": {
+                "unexpectedMember": "unexpected"
+              },
+              "merged": {
+                "first": "a",
+                "second": "a"
+              },
+              "open": {
+                "a": "a"
+              },
+              "patterned": {
+                "a": "a"
+              },
+              "typed": {
+                "a": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/strict",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostStrictInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1strict/post",
+      "method": "POST",
+      "pathTemplate": "/strict"
+    }
+  ]
+}

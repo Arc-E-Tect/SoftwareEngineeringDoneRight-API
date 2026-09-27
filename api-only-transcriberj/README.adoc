@@ -182,6 +182,12 @@ apiOnlyTranscriberJ {
         // Default: none
         // validateFormats = ['email', 'uuid']
 
+        // The kinds of contract case derived: any of success, notFound, notAcceptable,
+        // unsupportedMediaType and invalidRequest. A response only a kind left out would
+        // cover is reported as not covered: see "Choosing the kinds".
+        // Default: every kind
+        // derive = ['success', 'invalidRequest']
+
         // Deprecated, and removed in 1.0.0: options for each emitter, by emitter id.
         // Use emitter('<id>') { options = [...] } instead. Default: none
         // emitterOptions = [restdocs: [tests: 'true']]
@@ -195,7 +201,7 @@ apiOnlyTranscriberJ {
         // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders/core')
 
         // Where the generation report is written. The machine-readable report of
-        // every valid value and invalid-request case goes beside it: orders.txt gives
+        // every valid value and contract case goes beside it: orders.txt gives
         // orders.valid-values.json; and the report as AsciiDoc, orders.adoc.
         // Default: build/reports/transcriberj/<contract>.txt
         // reportFile = layout.buildDirectory.file('reports/transcriberj/orders.txt')
@@ -438,7 +444,7 @@ The plugin does not render it; a project's own Asciidoctor task can.
 |Task |What it does
 
 |`generateContractSources<Contract>`
-|Generates the core of the class tree -- the schema classes, the operations, the invalid-request cases and the endpoint index -- replacing whatever its directories held, and the machine-readable report of every valid value, `<contract>.valid-values.json` beside `reportFile`.
+|Generates the core of the class tree -- the schema classes, the operations, the contract cases and the endpoint index -- replacing whatever its directories held, and the machine-readable report of every valid value, `<contract>.valid-values.json` beside `reportFile`.
 Runs whenever the contract document, the lockfile or a setting the core depends on changes; the fetch runs first.
 
 |`generateContractSources<Contract><Emitter>`
@@ -718,7 +724,7 @@ One test can assert that the whole tree corresponds to the locked contract.
 [#valid-values]
 === Valid values
 
-A test of a `409` or a `422` starts from a request the contract accepts and changes one thing about it.
+Every generated case starts from a request the contract accepts, and so does a hand-written test of a `409` or a `422`, which changes one thing about it.
 The tree generates that starting point, from the contract's constraints alone -- never from its `example` or `examples` -- so it changes when the contract does:
 
 [cols="2,3", options="header"]
@@ -759,7 +765,7 @@ webTestClient.method(HttpMethod.valueOf(request.method()))
 ----
 
 Every value these members return is valid by construction.
-The invalid requests derived from them are in classes of their own: see <<invalid-requests,Invalid requests §>>.
+The contract cases derived from them are in classes of their own: see <<contract-cases,Contract cases §>>.
 Each returns the same value on every call, and is a constant compiled into the class.
 
 [#valid-value-rules]
@@ -835,7 +841,7 @@ It is compact, its members sorted by name, and its entries by class, so the same
 [source,json]
 ----
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contract": "orders",
   "version": "1.4.0",
   "bodies": [
@@ -868,16 +874,48 @@ It is compact, its members sorted by name, and its entries by class, so the same
 
 Each variant holds either `value`, the value the method returns, or `unsatisfiable`, with the `location` and the `reason` the method throws.
 `noBodyRequest` is present only where the method is.
-`schemaVersion` changes when the shape does.
+The same file holds the contract cases and their coverage: `contractCases`, `responseCoverage`, `constraintCoverage`, `gaps` and `formatRecommendations`, described in <<contract-cases-report,The cases in the machine-readable report §>>.
+`schemaVersion` changes when the shape does: it is `2` since 0.12.0, which replaced `invalidRequests` with `contractCases` and added `responseCoverage`.
 
-[#invalid-requests]
-=== Invalid requests
+[#contract-cases]
+=== Contract cases
 
-A contract that declares a response for an invalid request makes a promise about every constraint it puts on request input: break one, and that response comes back.
-For each such constraint the tree derives a *case*: the operation's smallest valid request -- `requiredRequest()` -- with exactly that one constraint violated, paired with the response the contract declares.
-Nothing is taken from convention: a case expects a response only because the operation declares it.
-Every constraint either has a case or is listed in the report with the one reason it has none.
-None is left out.
+A contract promises more than how a bad request is refused.
+For every response it can derive from the contract alone, the tree derives a *contract case*: a request, and the response the contract declares for it.
+Nothing is taken from convention: a case expects a response only because the operation declares that status, exactly.
+
+[cols="2,3,4,2", options="header"]
+|===
+|Kind |When |Request |Expected
+
+|*Success*
+|Every exact `2xx` the operation declares
+|The minimal valid request, the full valid request when it differs, and the request without the optional body where there is one
+|That `2xx`
+
+|*Not found*
+|The operation declares `404` and has a path parameter
+|A valid request naming a resource the fixture guarantees does not exist
+|`404`
+
+|*Not acceptable*
+|The operation declares `406`
+|A valid request whose `Accept` no declared response offers
+|`406`
+
+|*Unsupported media type*
+|The operation declares `415` and has a request body
+|The valid body, sent with a content type the request body does not accept
+|`415`
+
+|*Invalid request*
+|The operation declares `invalidRequestStatus`
+|The minimal valid request with one constraint violated: see <<invalid-requests,Invalid requests §>>
+|`invalidRequestStatus`, `400` by default
+|===
+
+Every other declared response -- a `409`, `422`, `429`, `401` or `403`, any `3xx` or `5xx`, a range such as `4XX`, `default` -- depends on behaviour or state the contract does not describe.
+None is derived, and each is *reported* as not covered, with the reason, so that nothing is left out silently: see <<response-coverage,Response coverage §>>.
 
 The cases are data.
 They render nothing and depend on nothing: an emitter turns them into tests or stubs, and a hand-written test can use them as they are.
@@ -887,36 +925,285 @@ They are generated whether or not an emitter renders them.
 |===
 |Class |Holds
 
-|`InvalidRequestCase`, in the base package beside `ContractRequest`
-|One case: a record of `id`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass`, `representative`, `operationId`, `declaredQuery` and `declaredHeaders`.
+|`ContractCase`, in the base package beside `ContractRequest`
+|One case: a record of `id`, `kind`, `requiresState`, `variant`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass`, `operationId`, `declaredQuery` and `declaredHeaders`.
 
-|`<Operation>InvalidRequests`, for every operation -- `InitiateUserRegistrationInvalidRequests` beside `InitiateUserRegistrationOperation`
+|`CaseKind`, beside it
+|The kinds: `SUCCESS`, `NOT_FOUND`, `NOT_ACCEPTABLE`, `UNSUPPORTED_MEDIA_TYPE` and `INVALID_REQUEST`, each with `requiresState()`.
+
+|`<Operation>ContractCases`, for every operation -- `InitiateUserRegistrationContractCases` beside `InitiateUserRegistrationOperation`
 |`CASES`, the operation's cases in canonical order, and `CASE_COUNT`.
-Empty where the operation declares no invalid-request status, or no constraint on its input.
+Empty where the operation declares no response a case can be derived for.
 |===
 
 [cols="1,3", options="header"]
 |===
 |Field |What it is
 
-|`id` |Readable, unique within the operation, and the same on every run: `query-page-minimum`, `body-emailAddress-maxLength`, `body-unknown-member`.
+|`id` |Readable, unique within the operation, and the same on every run: `success-201-required`, `success-201-full`, `success-204-no-body`, `not-found`, `not-acceptable`, `unsupported-media-type`, and for invalid requests `query-page-minimum`, `body-emailAddress-maxLength`, `body-unknown-member`.
 It becomes a test method name and a snippet directory, so it is a valid Java identifier once converted, as `JavaText.variableName` converts it.
-Two cases whose ids would read the same -- `/a-b` and `/a/b` both give `body-a-b-type` -- are told apart by a suffix, `-2`, given in canonical order.
-Where a body declares more than one JSON media type, the media type is part of the id: `body-application-merge-patch-json-name-maxLength`.
-|`description` |One sentence for a display name: "`page` below its minimum of 0".
-|`in`, `name`, `pointer` |Where the fault is: `path`, `query`, `header` or `body`; the parameter's name, or the JSON pointer into the body -- the empty string for the body as a whole.
-For a missing required member and for an unknown member, the pointer names the member.
-|`keyword` |The violated keyword as the contract spells it -- `minimum`, `required`, `type`, `additionalProperties` -- and as a JSON Schema validator reports it: a `null` case records `type`, and a 3.0 `minimum` with `exclusiveMinimum: true` records `exclusiveMinimum`.
-|`request` |The complete violating request, as a `ContractRequest`. Its values are raw: encoding them for the path, the query or a header is the renderer's job.
+|`kind` |What the case tests, a `CaseKind`.
+|`requiresState` |Whether the target must be put in a particular state before the request is sent: true for `SUCCESS` and `NOT_FOUND`. See <<requires-state,State, and what a fixture must do §>>.
+|`variant` |For a success case, the valid request it sends: `required`, `full` or `noBody`. `null` for every other kind.
+|`description` |One sentence for a display name.
+|`in`, `name`, `pointer`, `keyword` |For an invalid request, where the fault is and which constraint it breaks: see <<invalid-requests,Invalid requests §>>. `null` for every other kind.
+|`request` |The complete request, as a `ContractRequest`. Its values are raw: encoding them for the path, the query or a header is the renderer's job.
 |`expectedStatus`, `expectedContentTypes` |The declared status, and every content type the declared response is declared with; empty when it has no content, and only the status is expected.
 |`responseBodyClass` |The simple name of the generated class for the declared response's body, resolved through a `$ref` to `components/responses` where there is one; `null` without content.
-|`representative` |Whether this is the case whose documentation is published: the first in canonical order, so exactly one per operation.
 |`operationId` |The operation's `operationId`, or `null` when the contract gives it none.
 |`declaredQuery`, `declaredHeaders` |The name of every query parameter and every header the operation declares -- its path item's and its own -- in declaration order, whether or not the request carries it; `Accept`, `Content-Type` and `Authorization` left out, as OpenAPI ignores them as parameters.
 A renderer that matches a request exactly, such as a stub, requires the ones the request leaves out to be absent: that is what tells a missing `required` parameter apart from a valid request.
 |===
 
-*Canonical order* is path parameters, then query parameters, then headers, then the body; within each, `required`, then `type`, then `null`, then the other keywords in the order of the table below; then by name or pointer.
+*Canonical order*, per operation:
+
+. success cases, by status, then by variant: `required`, `full`, `noBody`;
+. not found;
+. not acceptable;
+. unsupported media type;
+. the invalid requests, in their own order.
+
+[#contract-case-derivation]
+==== How each kind is derived
+
+Every request is built from the valid values in <<valid-values,Valid values §>>, never from `example` or `examples`, and changes one thing relative to a valid request, or nothing.
+
+*Success.*
+One case per variant per exact `2xx` the operation declares: `required` sends `requiredRequest()`, `full` sends `fullRequest()`, and `noBody` sends `noBodyRequest()` where the operation declares a body it does not require.
+Where the full request is the required one -- the operation declares no optional parameter or member -- only `required` is derived, and the report notes why.
+An operation that declares several `2xx` statuses -- a `PUT` that answers `200` or `201` -- gets cases for all of them: the same request expects different statuses, and it is the fixture's state that decides which one is right.
+Each case's description names its status, so that the fixture can tell them apart.
+
+*Not found.*
+`requiredRequest()` with different path values: for each path parameter, the next valid value after the one `requiredRequest()` has, in the generator's own order -- `aaa` gives `aab`, `1` gives `2`, and a `uuid` the next documentation UUID.
+It is never the required request's own value, so that a double can serve a success case and a not-found case of the same operation without either stub matching the other's request.
+One case per operation, whatever the number of path parameters: which resource is missing is the fixture's decision.
+
+*Not acceptable.*
+`requiredRequest()` with an `Accept` no media type any of the operation's responses declares matches.
+Matching follows media-type rules, not string equality: `*/*` and ranges such as `application/*` match, and parameters and case are ignored.
+The media type is the first of these that nothing matches:
+
+. `application/vnd.apionly.not-acceptable`
+. `text/vnd.apionly.not-acceptable`
+
+*Unsupported media type.*
+`requiredRequest()` with its body text unchanged and a `Content-Type` none of the request body's media types matches, chosen the same way from:
+
+. `text/plain`
+. `application/vnd.apionly.unsupported-media-type`
+. `text/vnd.apionly.unsupported-media-type`
+
+*Invalid request.*
+As <<invalid-requests,Invalid requests §>> describes.
+
+For every kind, the expected content types and the response class come from the declared response, through a `$ref` where there is one.
+
+*Every case sends `Accept`*, except where no response of the operation declares content.
+Its value is the same for every case of an operation: every media type any of its responses declares, success and error alike, each once, in declaration order -- `application/json, application/problem+json`.
+A server that negotiates content then answers every case, a `404` or a `400` included, with a body the contract declares.
+The not-acceptable case is the exception: its `Accept` is its one fault, so it sends only the value chosen above.
+The unsupported-media-type case sends the normal `Accept`, so that the only thing wrong with it is its `Content-Type`.
+
+*A request that cannot be vouched for is never sent*: see <<unvouched-values,When a request cannot be vouched for §>>.
+
+[#unvouched-values]
+==== When a request cannot be vouched for
+
+[IMPORTANT]
+====
+A case is only as good as its request.
+A success case whose request the service rightly rejects fails against a correct implementation, and a not-found or `415` case whose request is invalid already may pass for the wrong reason.
+So a case is derived only from a request the generator can *vouch for*: one it knows to be valid.
+====
+
+*What makes a request unvouchable.*
+A value of a `format` the generator has no check for, and no value for -- `duration`, `iri`, `regex`, a custom `x-...` format, anything outside the list in <<valid-value-rules,How a value is chosen §>> -- is a plain string, `a`.
+It may or may not be of the format, so no request holding it is sent as valid.
+This holds whether or not `validateFormats` names the format: the setting says which formats this plugin asserts, not which ones the service checks, and a service that validates `duration` rejects `a` whatever the setting says.
+It is the rule the <<invalid-requests,invalid requests §>> have always followed: a request holding such a value is never their baseline either.
+
+*What it does to the cases.*
+
+* An *optional* member of such a format: `fullRequest()` holds it, so no `success-<status>-full` case is derived. The other cases are.
+* A *required* member or parameter of such a format: `requiredRequest()` holds it, so no success, not-found, not-acceptable or unsupported-media-type case is derived for the operation, and its invalid requests have no baseline.
+
+*How to see it.*
+The report says so for every case it leaves out, naming the value and the format:
+
+----
+Notes:
+  PostPeriodContractCases: success-201-full is not derived: the valid request holds a value at /period for the
+  format declared at /components/schemas/PeriodV1/properties/period, which no check exists for, so it cannot be
+  vouched for
+  No value is generated for format duration at /components/schemas/PeriodV1/properties/period; valid values
+  there are plain strings
+
+Response coverage -- every response each operation declares, and the cases that cover it:
+  PostDurationContractCases 201: uncovered, no valid value -- the valid request holds a value at /duration for the
+  format declared at /components/schemas/DurationV1/properties/duration, which no check exists for, so it cannot
+  be vouched for
+----
+
+*How to address it.*
+
+. *Put a `pattern` beside the format, in the contract.*
+A pattern says exactly what is valid, and wins over the format: the generator generates a value from the pattern, vouches for it, and derives every case.
+`{type: string, format: duration, pattern: '^P[0-9]+D$'}` gives `P0D`.
+It is the remedy the report already recommends for every well-known format without a pattern, and it helps every consumer of the contract, not only this build.
+. *Where the contract cannot change, write the missing test by hand*, as <<hand-written-code,Hand-written code beside the generated classes §>> says: in the generated package, from the generated request, with the one value replaced by a real one of the format.
++
+[source,java]
+----
+// success-201-full for PostPeriod, which the generator could not vouch for.
+ContractRequest full = PostPeriodOperation.fullRequest();
+String body = full.body().replace("\"period\":\"a\"", "\"period\":\"P1D\"");
+webTestClient.method(HttpMethod.valueOf(full.method()))
+        .uri(PostPeriodOperation.PATH, full.pathParameters().toArray())
+        .contentType(MediaType.parseMediaType(full.contentType()))
+        .bodyValue(body)
+        .exchange()
+        .expectStatus().isCreated();
+----
++
+The value you type is yours to keep valid: pin the test to the fragment it was written against, as <<your-responsibilities,What the generated classes do not hold §>> says, and delete it when the report stops noting the value -- after a pattern is added, or when a later release learns the format.
+For a required member, the same applies to each case the operation lost: the success case, and the not-found, not-acceptable and unsupported-media-type cases where it declares those statuses, each built from `requiredRequest()` with the value replaced.
+
+[#requires-state]
+==== State, and what a fixture must do
+
+Two kinds *require state*.
+A success case can only pass if the resource it reads, updates or deletes exists, or if the one it creates does not.
+A not-found case can only pass if its resource is absent.
+The case says so in `requiresState`, and what a target's fixture must do before its request is sent is:
+
+[cols="1,3,2", options="header"]
+|===
+|Kind |Real implementation |Double
+
+|`SUCCESS`
+|Put the service in the state that makes this status the right answer: the resource exists for a read, an update or a delete, and does not exist for a create.
+|Serve the case's response.
+
+|`NOT_FOUND`
+|Make sure the resource the path names does not exist.
+|Serve the case's response.
+
+|Every other kind
+|Nothing: the request is refused before any state is consulted.
+|Serve the case's response.
+|===
+
+An emitter that renders the cases as tests gives each stateful case a fixture hook.
+Its generated default fails with a clear "fixture not implemented yet", as Cucumber does for a step without a definition, so a freshly generated project compiles and runs, and each stateful test says exactly what it is waiting for.
+
+[IMPORTANT]
+.Which generated tests are independent
+====
+*A generated test that needs no state violates test independence.*
+The not-acceptable, unsupported-media-type and invalid-request cases need nothing from the target, and a correct implementation refuses them without storing anything.
+But a request the implementation _wrongly_ accepts may leave state behind -- a user registered with an over-long name -- and the cases after it then run against a target that is no longer what they assume.
+Such a test is only as independent as the implementation is correct.
+
+*A case that requires state is the opposite.*
+The success and not-found cases say what state they need, and with a correct fixture each is independent and repeatable, whatever ran before it.
+
+This is a consequence of generating tests from a specification rather than from an implementation: the generator cannot know what an implementation stores, or how.
+The `ContractCase` Javadoc says the same, beside each kind.
+====
+
+[#response-coverage]
+==== Response coverage
+
+The report lists every response every operation declares, in declaration order, each with the ids of the cases that cover it, or *exactly one* reason it has none:
+
+[cols="1,3", options="header"]
+|===
+|Reason |Meaning
+
+|range status or default |`2XX`, `4XX` and the other ranges, and `default`: too broad to provoke.
+|depends on behaviour or state the contract does not describe |`409`, `422`, `429`, `401`, `403`, any `3xx` or `5xx`, and every other status the table in <<contract-cases,Contract cases §>> does not name.
+|404 without a path parameter |There is no path parameter to name a missing resource by.
+|404 without a second valid path value |A path parameter has one valid value only, such as a single `enum` value or a `const`.
+|406 or 415 with no media type left to choose |Every candidate is matched -- by `*/*`, by a range, or by the contract declaring it -- or, for a `406`, no response declares content, so no `Accept` can be refused.
+|415 without a request body |The operation declares no request body to send with the wrong content type.
+|no valid value |The operation has no valid request, or none that can be vouched for.
+|inside a degraded construct |The valid request reaches a construct no rule represents yet.
+|kind switched off |A case of this kind would have covered it, but `derive` does not name the kind. A response no case of the kind could cover keeps its own reason.
+|the invalid-request status, covered by the constraint coverage |The operation declares `invalidRequestStatus`, but no constraint on its input has a case; <<constraint-coverage,the constraint coverage §>> says why for each.
+|===
+
+The list is closed: a response with a reason not on it is a change to this README first.
+The build log prints the counts per kind, and the responses not covered, by reason:
+
+----
+API-Only TranscriberJ: user-account 1.0.0: Contract cases: 6 success, 1 not found, 0 not acceptable,
+0 unsupported media type, 22 invalid request; 11 declared response(s) not covered (depends on behaviour
+or state the contract does not describe: 10, 404 without a path parameter: 1)
+----
+
+[#derive]
+==== Choosing the kinds
+
+`derive` names the kinds derived, by `success`, `notFound`, `notAcceptable`, `unsupportedMediaType` and `invalidRequest`; every kind by default.
+A kind left out derives no cases, and every response a case of it would have covered is reported with the reason _kind switched off_, as is, for `invalidRequest`, every constraint that would have had a case.
+The order the kinds are written in does not matter, and a name that is not a kind fails the build while it is configured.
+`derive` is an input of the generation task, so changing it regenerates, with or without the configuration cache.
+
+[#contract-cases-report]
+==== The cases in the machine-readable report
+
+In the machine-readable report, `contractCases` lists every operation, with its class, `location`, `method`, `pathTemplate`, whether it `declaresInvalidRequestStatus`, and its cases in canonical order, each with the fields of `ContractCase` and, for an invalid request, the valid `baseline` request it differs from in the one place the fault is.
+`responseCoverage` lists every declared response, as the text report does, with `cases` or `uncovered`, a `code`, a `label` and a `detail`.
+`constraintCoverage`, `gaps` and `formatRecommendations` are the invalid requests', in <<constraint-coverage,Constraint coverage and gaps §>>.
+
+[#upgrading-to-0-12]
+==== Upgrading from 0.11
+
+0.12.0 generalised the invalid-request cases into contract cases of every kind, and renamed what held them.
+Code that used the old names does not compile until it uses the new ones:
+
+[cols="1,1", options="header"]
+|===
+|Until 0.11 |From 0.12
+
+|`InvalidRequestCase`, generated and in `spi` |`ContractCase`, with `kind`, `requiresState` and `variant`, and without `representative`
+|`<Operation>InvalidRequests` |`<Operation>ContractCases`, listing the invalid requests after the cases of the other kinds
+|`ClassNames.invalidRequests(location)` |`ClassNames.contractCases(location)`
+|`Origin.INVALID_REQUESTS` |`Origin.CONTRACT_CASES`
+|`EmitterContext.invalidRequestCases(location)` |`EmitterContext.contractCases(location)`, which gives every kind: filter on `kind()` for the invalid requests alone
+|`invalidRequests` in the machine-readable report, `schemaVersion` 1 |`contractCases` and `responseCoverage`, `schemaVersion` 2
+|===
+
+The invalid-request cases themselves are unchanged -- their ids, their faults, their requests and the responses they expect -- except that each now sends the operation's `Accept`, and its `index` counts the cases before it.
+`representative` is gone: a renderer that documents one case per operation picks it itself.
+An emitter built against 0.11 or earlier does not run with 0.12, as it calls `invalidRequestCases`: use a release of it built for 0.12.
+`derive = ['invalidRequest']` generates the invalid requests alone, as 0.11 did, apart from the `Accept`.
+
+[#invalid-requests]
+=== Invalid requests
+
+A contract that declares a response for an invalid request makes a promise about every constraint it puts on request input: break one, and that response comes back.
+For each such constraint the tree derives a contract case of the kind `INVALID_REQUEST`: the operation's smallest valid request -- `requiredRequest()` -- with exactly that one constraint violated, paired with the response the contract declares.
+Every constraint either has a case or is listed in the report with the one reason it has none.
+None is left out.
+
+Its fields `in`, `name`, `pointer` and `keyword` say where the fault is:
+
+[cols="1,3", options="header"]
+|===
+|Field |What it is
+
+|`id` |`query-page-minimum`, `body-emailAddress-maxLength`, `body-unknown-member`.
+Two cases whose ids would read the same -- `/a-b` and `/a/b` both give `body-a-b-type` -- are told apart by a suffix, `-2`, given in canonical order.
+Where a body declares more than one JSON media type, the media type is part of the id: `body-application-merge-patch-json-name-maxLength`.
+|`description` |"`page` below its minimum of 0".
+|`in`, `name`, `pointer` |Where the fault is: `path`, `query`, `header` or `body`; the parameter's name, or the JSON pointer into the body -- the empty string for the body as a whole.
+For a missing required member and for an unknown member, the pointer names the member.
+|`keyword` |The violated keyword as the contract spells it -- `minimum`, `required`, `type`, `additionalProperties` -- and as a JSON Schema validator reports it: a `null` case records `type`, and a 3.0 `minimum` with `exclusiveMinimum: true` records `exclusiveMinimum`.
+|===
+
+*Canonical order* among the invalid requests is path parameters, then query parameters, then headers, then the body; within each, `required`, then `type`, then `null`, then the other keywords in the order of the table below; then by name or pointer.
 
 [#invalid-request-derivation]
 ==== How each case is derived
@@ -974,7 +1261,7 @@ They are real violations, and a lenient binder lets them through; a setting to d
 * *Positive boundary cases* -- a value exactly at a bound. They are valid requests, not invalid ones.
 * *Conditional keywords* -- `if`, `then`, `else`, `dependentSchemas` and every other keyword the model does not type. Reported, never guessed at.
 * *A case from a request that cannot be vouched for:* one holding a value of a format no check exists for, such as `duration`. The value might be invalid already, and a case must have one fault.
-* *Malformed JSON, an unsupported media type (`415`),* and anything that needs a fixture on the real implementation.
+* *Malformed JSON,* and anything that needs a fixture on the real implementation. An unsupported media type is a contract case of its own kind: see <<contract-cases,Contract cases §>>.
 
 [#invalid-request-status]
 ==== The expected response
@@ -1036,6 +1323,7 @@ The report lists every constraint on request input -- every keyword of every par
 |asserts nothing |A keyword no value can violate: `minLength: 0`, `uniqueItems: false`, `required: []`, a 3.0 `exclusiveMinimum: false`, a parameter's `required: false`.
 |no violation rule |`oneOf` or `anyOf` of references: it composes schemas rather than constraining a value.
 |media type not used |A request body media type that is not JSON.
+|kind switched off |The constraint would have a case, but `derive` does not name `invalidRequest`: see <<derive,Choosing the kinds §>>.
 |===
 
 The list is closed: a constraint with a reason not on it is a change to this README first.
@@ -1049,7 +1337,7 @@ API-Only TranscriberJ: user-account 1.0.0: Invalid requests: 22 case(s) derived,
 format validation not switched on: 1), 2 gap(s)
 ----
 
-In the machine-readable report they are `invalidRequests` -- each operation's cases, and for each the valid `baseline` request it differs from in the one place the fault is -- `constraintCoverage`, `gaps` and `formatRecommendations`.
+In the machine-readable report they are `constraintCoverage`, `gaps` and `formatRecommendations`, and the cases themselves are in `contractCases`: see <<contract-cases-report,The cases in the machine-readable report §>>.
 
 [#unrepresentable]
 == Constructs no rule represents yet
@@ -1149,8 +1437,9 @@ public interface Emitter {
     default Set<Output> produces(Map<String, String> options) {   // what it writes with these options
         return EnumSet.of(Output.JAVA, Output.RESOURCES);
     }
-    void emit(EmitterContext context);        // model, settings, class names, invalid-request cases,
-                                              // writeJava, writeResource, writeFile, degraded
+    void emit(EmitterContext context);        // model, settings, class names, contract cases,
+                                              // request schemas, writeJava, writeResource,
+                                              // writeFile, degraded
 }
 ----
 
@@ -1169,10 +1458,24 @@ An emitter that does not override `produces` is taken to write Java and resource
 `path` is `/`-separated and relative, such as `"META-INF/restdocs/service.properties"`; it may not be absolute, and may not use `.` or `..` segments.
 `EmitterContext.writeFile(path, content)`, with bytes or text, writes a file that belongs on no classpath -- a mapping file, part of an archive -- to the emitter's files directory, with the same rules for `path`.
 `EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
-`ClassNames.invalidRequests(location)` names an operation's `<Operation>InvalidRequests` class, which `ClassNames.all()` does not list: its origin is `Origin.INVALID_REQUESTS`.
-An emitter with an exhaustive `switch` over `Origin` has one more constant to handle.
-`EmitterContext.invalidRequestCases(location)` gives that class's cases themselves, in the order `CASES` lists them, each an `spi.InvalidRequestCase` holding what the generated record holds, and its `index` in `CASES`: an emitter that renders cases -- as tests, as stubs -- shapes its code by them, and takes their values from `CASES` at run time, so that the generated code states no value twice.
+`ClassNames.contractCases(location)` names an operation's `<Operation>ContractCases` class, which `ClassNames.all()` does not list: its origin is `Origin.CONTRACT_CASES`.
+`EmitterContext.contractCases(location)` gives that class's cases themselves, of every kind, in the order `CASES` lists them, each an `spi.ContractCase` holding what the generated record holds, and its `index` in `CASES`: an emitter that renders cases -- as tests, as stubs -- shapes its code by them, and takes their values from `CASES` at run time, so that the generated code states no value twice.
 The core derives them before any other emitter runs; the list is empty for an operation without cases.
+
+[#request-schemas]
+==== Request schemas
+
+A stub that answers _any_ valid request, not only the generated ones, needs to know what a valid request is.
+`EmitterContext.requestBodySchema(location, mediaType)` gives the schema of an operation's request body in one of its media types, and `EmitterContext.parameterSchema(location, in, name)` the schema of one of its path, query or header parameters, so that a stub can match a path segment by its `pattern`.
+Each is a self-contained JSON Schema 2020-12 document, as JSON text, and is exactly the schema the core's own notion of validity uses:
+
+* every component it refers to, including through a `discriminator` mapping, is bundled into `$defs`;
+* with `strictRequests` on, it is strict as <<strict-requests,Strict requests §>> says, with an `allOf` judged as a whole; with it off, it is not;
+* a `format` is asserted only where `validateFormats` names it, and is kept as the annotation `x-format` otherwise; a `format` beside a `pattern` is dropped, as the pattern decides;
+* an OpenAPI 3.0 boolean `exclusiveMinimum` or `exclusiveMaximum` becomes the 2020-12 number.
+
+Both are empty where the operation, the media type or the parameter has no schema.
+They are given to emitters only, and not written beside the report.
 
 [#emitter-options]
 === Emitter options
@@ -1212,8 +1515,8 @@ After resolution, a version at or above the untested one is warned about: "not t
 [#hand-written-code]
 == Hand-written code beside the generated classes
 
-The generated tree does not cover every test: a degraded method throws, and the only invalid requests generated are the cases for the one status the contract declares for invalid input -- one fault each, see <<invalid-requests,Invalid requests §>>.
-A `409`, a `422` for a semantically invalid request, and whatever a constraint not isolatable leaves untested are written by hand.
+The generated tree does not cover every test: a degraded method throws, and the contract cases cover only the responses the contract alone determines -- see <<contract-cases,Contract cases §>>.
+A `409`, a `422` for a semantically invalid request, every other response the <<response-coverage,response coverage §>> lists as not covered, every case left out because its request <<unvouched-values,cannot be vouched for §>>, and whatever a constraint not isolatable leaves untested are written by hand.
 The code a project writes to fill those gaps goes beside the generated classes, and how it does so is a design decision, not an accident.
 
 [IMPORTANT]
@@ -1269,7 +1572,7 @@ It does not prove that the payload is valid against the schema, and nothing here
 
 Constraints are constants, not checks.
 Generated bodies are built from the arguments given, and a body built from arguments that violate a constraint violates it too.
-For the invalid-request status, one invalid request per constraint on request input is derived, in <<invalid-requests,Invalid requests §>>; every other invalid or partial body, for the other 4xx responses, is written by hand, starting from a valid one: `requiredBody()`, `requiredRequest()` and the rest, in <<valid-values,Valid values §>>.
+The contract cases, in <<contract-cases,Contract cases §>>, cover the success statuses, `404`, `406`, `415` and one invalid request per constraint on request input; every other invalid or partial body, for the other 4xx responses, is written by hand, starting from a valid one: `requiredBody()`, `requiredRequest()` and the rest, in <<valid-values,Valid values §>>.
 link:../docs/guides/hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] says how to write them, and anything else the generator could not, on top of the generated classes -- and how many to write.
 
 [#development]
@@ -1292,7 +1595,10 @@ They also read fixtures of their own from `src/test/resources/fixtures/`: the Pu
 Its `README.adoc` says what each is for; `./gradlew recordValidValuesGolden` and `./gradlew recordBaselineSources` re-record them, for a deliberate change only.
 
 `src/test/resources/fixtures/invalid-requests` holds what invalid-request derivation is held to: a corpus of contracts written for it, and the golden cases and coverage of the reference API's `user-account` contract, which are the tests an implementation of it is run against.
-Its `README.adoc` says which test covers which requirement; `./gradlew recordInvalidRequestsGolden` re-records the golden file, for a deliberate change only.
+Its `README.adoc` says which test covers which requirement; `./gradlew recordInvalidRequestsGolden` re-records the golden file, which holds the cases of every kind, for a deliberate change only.
+Its `before` directory holds the invalid-request cases as they were before cases of every kind were derived, which they are still compared with.
+
+`src/test/resources/fixtures/contract-cases` holds a corpus of contracts written for the other kinds and for response coverage: one per derivation rule and per reason. Its `README.adoc` says which test covers which requirement.
 
 The build gates on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
 The plugin's tasks are tested in-process as well as through TestKit, so the coverage agent sees them.

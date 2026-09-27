@@ -1,0 +1,1045 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "GetUnconstrainedInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1unconstrained/get",
+      "method": "GET",
+      "pathTemplate": "/unconstrained"
+    },
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "`name` shorter than its minLength of 1",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": ""
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/bare",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostBareInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1bare/post",
+      "method": "POST",
+      "pathTemplate": "/bare"
+    },
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "`name` shorter than its minLength of 1",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": ""
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/declared",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        }
+      ],
+      "class": "PostDeclaredInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1declared/post",
+      "method": "POST",
+      "pathTemplate": "/declared"
+    },
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "`name` shorter than its minLength of 1",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": ""
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/referenced",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        }
+      ],
+      "class": "PostReferencedInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1referenced/post",
+      "method": "POST",
+      "pathTemplate": "/referenced"
+    },
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "`name` shorter than its minLength of 1",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-name-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": ""
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [
+            "application/problem+json",
+            "application/json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/several",
+            "query": []
+          },
+          "responseBodyClass": "ProblemV1"
+        }
+      ],
+      "class": "PostSeveralInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1several/post",
+      "method": "POST",
+      "pathTemplate": "/several"
+    },
+    {
+      "cases": [],
+      "class": "PostUndeclaredInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1undeclared/post",
+      "method": "POST",
+      "pathTemplate": "/undeclared"
+    },
+    {
+      "cases": [],
+      "class": "PostUnprocessableInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1unprocessable/post",
+      "method": "POST",
+      "pathTemplate": "/unprocessable"
+    }
+  ]
+}

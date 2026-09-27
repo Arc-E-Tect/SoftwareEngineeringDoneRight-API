@@ -6,7 +6,8 @@ import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractRequest;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.GeneratedClass;
-import com.arc_e_tect.gradle.apionly.transcriberj.spi.InvalidRequestCase;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -27,21 +28,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * An emitter is given each operation's invalid-request cases through
- * {@link EmitterContext#invalidRequestCases(String)}: exactly what the operation's generated
+ * T19.13: an emitter is given each operation's contract cases, of every kind, through
+ * {@link EmitterContext#contractCases(String)}: exactly what the operation's generated
  * {@code CASES} holds, in its order, each with its position there.
  */
-@DisplayName("Invalid-request cases, as an emitter sees them")
-class EmitterInvalidRequestCasesTest {
+@DisplayName("T19.13 Contract cases, as an emitter sees them")
+class EmitterContractCasesTest {
 
     @TempDir
     static Path directory;
 
     /** Records, per operation class, the cases the context gives. */
-    static final class Capturing implements Emitter {
+    static class Capturing implements Emitter {
 
-        final Map<String, List<InvalidRequestCase>> seen = new LinkedHashMap<>();
-        List<InvalidRequestCase> unknown;
+        final Map<String, List<ContractCase>> seen = new LinkedHashMap<>();
+        List<ContractCase> unknown;
 
         @Override
         public String id() {
@@ -62,10 +63,10 @@ class EmitterInvalidRequestCasesTest {
         public void emit(EmitterContext context) {
             for (Operation operation : context.model().operations()) {
                 String location = CoreClassNames.operationLocation(operation);
-                GeneratedClass cases = context.names().invalidRequests(location).orElseThrow();
-                seen.put(cases.simpleName(), context.invalidRequestCases(location));
+                GeneratedClass cases = context.names().contractCases(location).orElseThrow();
+                seen.put(cases.simpleName(), context.contractCases(location));
             }
-            unknown = context.invalidRequestCases("/paths/~1no~1such~1operation/get");
+            unknown = context.contractCases("/paths/~1no~1such~1operation/get");
         }
     }
 
@@ -76,12 +77,38 @@ class EmitterInvalidRequestCasesTest {
             Path document = InvalidRequestFixtures.CORPUS_DIRECTORY.resolve(v.contract() + ".yaml");
             tests.add(DynamicTest.dynamicTest(v.name(), () -> assertSeen(document, v.settings(), v.name())));
         }
+        for (InvalidRequestFixtures.Variant v : ContractCaseFixtures.CORPUS) {
+            Path document = ContractCaseFixtures.CORPUS_DIRECTORY.resolve(v.contract() + ".yaml");
+            tests.add(DynamicTest.dynamicTest(v.name(), () -> assertSeen(document, v.settings(), "contract-" + v.name())));
+        }
         for (String name : ValidValueFixtures.REFERENCE) {
             Path document = GeneratedSources.CONTRACTS.resolve(name).resolve("openapi.yaml");
             tests.add(DynamicTest.dynamicTest(name, () ->
                     assertSeen(document, GeneratedSources.settings(name), "reference-" + name)));
         }
         return tests.stream();
+    }
+
+    @Test
+    void anEmitterSeesEveryKind() {
+        java.util.Set<String> kinds = new java.util.TreeSet<>();
+        for (String name : List.of("success", "not-found", "negotiation")) {
+            InvalidRequestFixtures.Variant v = ContractCaseFixtures.variant(name);
+            Capturing capturing = new Capturing();
+            GeneratedSources.generate(ContractCaseFixtures.CORPUS_DIRECTORY.resolve(v.contract() + ".yaml"), "1.0.0",
+                    directory.resolve("kinds-" + name), v.settings(), List.of(capturing));
+            capturing.seen.values().forEach(cases -> cases.forEach(c -> kinds.add(c.kind().name())));
+        }
+        GeneratedSources.generate(InvalidRequestFixtures.CORPUS_DIRECTORY.resolve("routes.yaml"), "1.0.0",
+                directory.resolve("kinds-routes"), InvalidRequestFixtures.settings("routes"), List.of(new Capturing() {
+                    @Override
+                    public void emit(EmitterContext context) {
+                        super.emit(context);
+                        seen.values().forEach(cases -> cases.forEach(c -> kinds.add(c.kind().name())));
+                    }
+                }));
+        assertThat(kinds).containsExactlyInAnyOrder(java.util.Arrays.stream(CaseKind.values()).map(Enum::name)
+                .toArray(String[]::new));
     }
 
     private static void assertSeen(Path document, com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings settings,
@@ -91,9 +118,9 @@ class EmitterInvalidRequestCasesTest {
                 List.of(capturing));
         assertThat(capturing.seen).isNotEmpty();
         assertThat(capturing.unknown).isEmpty();
-        for (Map.Entry<String, List<InvalidRequestCase>> operation : capturing.seen.entrySet()) {
+        for (Map.Entry<String, List<ContractCase>> operation : capturing.seen.entrySet()) {
             List<?> generated = (List<?>) sources.type(operation.getKey()).getField("CASES").get(null);
-            List<InvalidRequestCase> seen = operation.getValue();
+            List<ContractCase> seen = operation.getValue();
             assertThat(seen).as(operation.getKey()).hasSameSizeAs(generated);
             for (int i = 0; i < seen.size(); i++) {
                 assertThat(seen.get(i).index()).isEqualTo(i);
@@ -109,7 +136,7 @@ class EmitterInvalidRequestCasesTest {
         for (RecordComponent c : record.getClass().getRecordComponents()) {
             if (c.getName().equals("index")) continue;
             Object value = c.getAccessor().invoke(record);
-            out.put(c.getName(), value);
+            out.put(c.getName(), value instanceof Enum<?> e ? e.name() : value);
         }
         if (out.get("request") instanceof Record request) out.put("request", components(request));
         for (String pairs : List.of("query", "headers")) {
@@ -126,9 +153,9 @@ class EmitterInvalidRequestCasesTest {
     void theCasesCannotChange() {
         ContractRequest request = new ContractRequest("GET", "/a", new ArrayList<>(List.of("x")),
                 new ArrayList<>(List.of(new ContractRequest.Pair("q", "1"))), new ArrayList<>(), null, null);
-        InvalidRequestCase c = new InvalidRequestCase("query-q-type", "d", "query", "q", null, "type", request, 400,
-                new ArrayList<>(List.of("application/json")), null, true, "getA", new ArrayList<>(List.of("q")),
-                new ArrayList<>(List.of("X-A")), 0);
+        ContractCase c = new ContractCase("query-q-type", CaseKind.INVALID_REQUEST, false, null, "d", "query", "q",
+                null, "type", request, 400, new ArrayList<>(List.of("application/json")), null, "getA",
+                new ArrayList<>(List.of("q")), new ArrayList<>(List.of("X-A")), 0);
 
         assertThatThrownBy(() -> request.pathParameters().add("y")).isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> request.query().clear()).isInstanceOf(UnsupportedOperationException.class);
@@ -171,6 +198,8 @@ class EmitterInvalidRequestCasesTest {
             }
         };
 
-        assertThat(context.invalidRequestCases("/paths/~1a/get")).isEmpty();
+        assertThat(context.contractCases("/paths/~1a/get")).isEmpty();
+        assertThat(context.requestBodySchema("/paths/~1a/get", "application/json")).isEmpty();
+        assertThat(context.parameterSchema("/paths/~1a/get", "path", "id")).isEmpty();
     }
 }

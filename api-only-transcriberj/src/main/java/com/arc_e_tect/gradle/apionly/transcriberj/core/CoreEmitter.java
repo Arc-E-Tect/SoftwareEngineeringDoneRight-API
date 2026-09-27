@@ -20,7 +20,8 @@ import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractRequest;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.GeneratedClass;
-import com.arc_e_tect.gradle.apionly.transcriberj.spi.InvalidRequestCase;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Origin;
 
@@ -59,7 +60,7 @@ final class CoreEmitter implements Emitter {
     private ValidRequests requests;
 
     /** Each operation's invalid-request cases, by the operation's JSON pointer, as emitters are given them. */
-    private final Map<String, List<InvalidRequestCase>> invalidRequestCases = new LinkedHashMap<>();
+    private final Map<String, List<ContractCase>> contractCases = new LinkedHashMap<>();
 
     /** Every key a bundle may carry, in the order the classes declare them. */
     private final java.util.Set<String> descriptionKeys = new java.util.LinkedHashSet<>();
@@ -115,7 +116,7 @@ final class CoreEmitter implements Emitter {
                 default -> new ClassWriter(context, generated, header).write();
             });
         }
-        invalidRequests(context, header, sources);
+        contractCases(context, header, sources);
         if (context.settings().descriptionBundle() != null) {
             context.writeJava(pkg, "ContractDescriptions", template("ContractDescriptions", header, pkg, Map.of(
                     "bundle", JavaText.literal(context.settings().descriptionBundle()),
@@ -229,7 +230,7 @@ final class CoreEmitter implements Emitter {
             case RESPONSE -> "/components/responses/" + Shapes.escape(g.key());
             case PARAMETER -> "/components/parameters/" + Shapes.escape(g.key());
             case REQUEST_BODY -> "/components/requestBodies/" + Shapes.escape(g.key());
-            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION, CHANNEL, ASYNC_OPERATION, INVALID_REQUESTS -> g.key();
+            case INLINE_REQUEST, INLINE_RESPONSE, OPERATION, CHANNEL, ASYNC_OPERATION, CONTRACT_CASES -> g.key();
         };
     }
 
@@ -558,9 +559,10 @@ final class CoreEmitter implements Emitter {
                 + "additionalProperties: true instead.";
     }
 
-    private void invalidRequests(EmitterContext context, String header, Map<String, String> sources) {
+    private void contractCases(EmitterContext context, String header, Map<String, String> sources) {
         String pkg = context.settings().basePackage();
-        context.writeJava(pkg, "InvalidRequestCase", template("InvalidRequestCase", header, pkg, Map.of()));
+        context.writeJava(pkg, "CaseKind", template("CaseKind", header, pkg, Map.of()));
+        context.writeJava(pkg, "ContractCase", template("ContractCase", header, pkg, Map.of()));
         if (!context.settings().strictRequests()) report.warn(strictnessOffWarning(context.settings().contract()));
         for (String format : context.settings().validateFormats()) {
             if (!Formats.supported(format)) {
@@ -569,17 +571,24 @@ final class CoreEmitter implements Emitter {
             }
         }
         InvalidRequests invalid = new InvalidRequests(shapes, names, values, requests, context.settings());
+        ContractCases derivation = new ContractCases(names, values, requests, invalid, context.settings());
         for (Operation operation : context.model().operations()) {
-            GeneratedClass generated = names.invalidRequests(CoreClassNames.operationLocation(operation)).orElseThrow();
-            InvalidRequests.Result result = invalid.derive(operation);
+            String location = CoreClassNames.operationLocation(operation);
+            GeneratedClass generated = names.contractCases(location).orElseThrow();
+            InvalidRequests.Result invalidResult = invalid.derive(operation);
+            if (!context.settings().derives(CaseKind.INVALID_REQUEST)) {
+                invalidResult = InvalidRequests.switchedOff(invalidResult);
+            }
+            ContractCases.Result result = derivation.derive(operation, invalidResult);
             Declared declared = declared(operation);
-            sources.put(generated.simpleName(), invalidRequestsClass(context, generated, header, result, declared));
-            List<InvalidRequestCase> cases = new ArrayList<>();
+            sources.put(generated.simpleName(), contractCasesClass(context, generated, header, result, declared));
+            List<ContractCase> cases = new ArrayList<>();
             for (int i = 0; i < result.cases().size(); i++) {
                 cases.add(spiCase(result.cases().get(i), operation.operationId(), declared, i));
             }
-            invalidRequestCases.put(CoreClassNames.operationLocation(operation), List.copyOf(cases));
-            report.invalidRequests(generated.simpleName(), result, context.settings().invalidRequestStatus());
+            contractCases.put(location, List.copyOf(cases));
+            report.contractCases(generated.simpleName(), invalidResult, result,
+                    context.settings().invalidRequestStatus());
         }
         invalid.warnings().forEach(report::warn);
         invalid.formatRecommendations().forEach(report::formatRecommendation);
@@ -605,50 +614,45 @@ final class CoreEmitter implements Emitter {
         return new Declared(List.copyOf(query), List.copyOf(headers));
     }
 
-    private String invalidRequestsClass(EmitterContext context, GeneratedClass generated, String header,
-                                        InvalidRequests.Result result, Declared declared) {
+    private String contractCasesClass(EmitterContext context, GeneratedClass generated, String header,
+                                      ContractCases.Result result, Declared declared) {
         Operation operation = result.operation();
         String name = generated.simpleName();
-        String status = context.settings().invalidRequestStatus();
         StringBuilder out = new StringBuilder(header);
         out.append("package ").append(context.settings().basePackage()).append(";\n\n");
-        out.append("/**\n * The invalid requests of operation ").append(operation.method().name()).append(' ')
+        out.append("/**\n * The contract cases of operation ").append(operation.method().name()).append(' ')
                 .append(JavaText.comment(operation.path())).append(": ");
-        if (!result.declared()) {
-            out.append("none, since it declares no ").append(status).append(" response")
-                    .append(result.constraints().isEmpty() ? "" : ", although its request input is constrained")
-                    .append(".\n");
-        } else if (result.constraints().isEmpty()) {
-            out.append("none, since it declares no constraint on its request input.\n");
+        if (result.cases().isEmpty()) {
+            out.append("none, since the contract declares no response a case can\n * be derived for.\n");
         } else {
-            out.append("for each constraint on its request input that can\n * be violated alone, a request that "
-                    + "violates only that one, expecting the declared ").append(status).append(" response.\n");
+            out.append("for each response the contract declares and says how to\n * provoke, the requests "
+                    + "that provoke it, in canonical order.\n");
         }
-        out.append(" *\n * <p>The generation report lists every constraint on the operation's request input, with\n"
-                + " * the cases that cover it or the one reason none does.\n */\n");
+        out.append(" *\n * <p>The generation report lists every response the operation declares, with the cases\n"
+                + " * that cover it or the one reason none does; and every constraint on its request input, with\n"
+                + " * the invalid-request cases that cover it or the one reason none does.\n */\n");
         out.append(excludeFromCoverage());
         out.append("public final class ").append(name).append(" {\n\n");
         constant(out, "How many cases there are.", "int", "CASE_COUNT", String.valueOf(result.cases().size()));
-        out.append(INDENT).append("/** Every case, in canonical order; the first is the representative. */\n")
-                .append(INDENT).append("public static final java.util.List<InvalidRequestCase> CASES = java.util.List.of(");
+        out.append(INDENT).append("/** Every case, in canonical order. */\n")
+                .append(INDENT).append("public static final java.util.List<ContractCase> CASES = java.util.List.of(");
         for (int i = 0; i < result.cases().size(); i++) {
-            InvalidRequests.Case c = result.cases().get(i);
+            ContractCases.Case c = result.cases().get(i);
             String indent = INDENT + INDENT + INDENT;
-            out.append(i == 0 ? "\n" : ",\n").append(indent).append("new InvalidRequestCase(")
-                    .append(JavaText.literal(c.id())).append(", ").append(JavaText.literal(c.description())).append(",\n")
-                    .append(indent).append(INDENT).append(INDENT).append(JavaText.literal(c.in())).append(", ")
-                    .append(c.name() == null ? "null" : JavaText.literal(c.name())).append(", ")
-                    .append(c.pointer() == null ? "null" : JavaText.literal(c.pointer())).append(", ")
-                    .append(JavaText.literal(c.keyword())).append(",\n")
-                    .append(indent).append(INDENT).append(INDENT)
-                    .append(requestExpression(c.request(), JavaText.literal(c.request().method()),
+            String more = indent + INDENT + INDENT;
+            out.append(i == 0 ? "\n" : ",\n").append(indent).append("new ContractCase(")
+                    .append(JavaText.literal(c.id())).append(", CaseKind.").append(c.kind().name()).append(", ")
+                    .append(c.kind().requiresState()).append(", ")
+                    .append(c.variant() == null ? "null" : JavaText.literal(c.variant())).append(",\n")
+                    .append(more).append(JavaText.literal(c.description())).append(",\n")
+                    .append(more).append(literalOrNull(c.in())).append(", ").append(literalOrNull(c.name()))
+                    .append(", ").append(literalOrNull(c.pointer())).append(", ").append(literalOrNull(c.keyword()))
+                    .append(",\n")
+                    .append(more).append(requestExpression(c.request(), JavaText.literal(c.request().method()),
                             JavaText.literal(c.request().pathTemplate()))).append(",\n")
-                    .append(indent).append(INDENT).append(INDENT).append(c.status()).append(", ")
-                    .append(listOf(c.contentTypes())).append(", ")
-                    .append(c.bodyClass() == null ? "null" : JavaText.literal(c.bodyClass())).append(", ")
-                    .append(c.representative()).append(",\n")
-                    .append(indent).append(INDENT).append(INDENT)
-                    .append(operation.operationId() == null ? "null" : JavaText.literal(operation.operationId()))
+                    .append(more).append(c.status()).append(", ").append(listOf(c.contentTypes())).append(", ")
+                    .append(literalOrNull(c.bodyClass())).append(",\n")
+                    .append(more).append(literalOrNull(operation.operationId()))
                     .append(", ").append(listOf(declared.query())).append(", ").append(listOf(declared.headers()))
                     .append(')');
         }
@@ -658,24 +662,27 @@ final class CoreEmitter implements Emitter {
         return out.toString();
     }
 
-    /**
-     * Each operation's invalid-request cases, by the operation's JSON pointer, as the generated
-     * {@code CASES} list them: what every emitter after this one is given.
-     */
-    Map<String, List<InvalidRequestCase>> invalidRequestCases() {
-        return java.util.Collections.unmodifiableMap(invalidRequestCases);
+    private static String literalOrNull(String value) {
+        return value == null ? "null" : JavaText.literal(value);
     }
 
-    /** A case as an emitter is given it: the values the generated {@code InvalidRequestCase} holds. */
-    private static InvalidRequestCase spiCase(InvalidRequests.Case c, String operationId, Declared declared,
-                                              int index) {
+    /**
+     * Each operation's contract cases, by the operation's JSON pointer, as the generated
+     * {@code CASES} list them: what every emitter after this one is given.
+     */
+    Map<String, List<ContractCase>> contractCases() {
+        return java.util.Collections.unmodifiableMap(contractCases);
+    }
+
+    /** A case as an emitter is given it: the values the generated {@code ContractCase} holds. */
+    private static ContractCase spiCase(ContractCases.Case c, String operationId, Declared declared, int index) {
         ValidRequests.Request r = c.request();
         ContractRequest request = new ContractRequest(r.method(), r.pathTemplate(), r.pathValues(),
                 spiPairs(r.query()), spiPairs(r.headers()), r.contentType(),
                 r.body() == null ? null : ValueJson.write(r.body()) + "\n");
-        return new InvalidRequestCase(c.id(), c.description(), c.in(), c.name(), c.pointer(), c.keyword(), request,
-                c.status(), c.contentTypes(), c.bodyClass(), c.representative(), operationId, declared.query(),
-                declared.headers(), index);
+        return new ContractCase(c.id(), c.kind(), c.kind().requiresState(), c.variant(), c.description(), c.in(),
+                c.name(), c.pointer(), c.keyword(), request, c.status(), c.contentTypes(), c.bodyClass(), operationId,
+                declared.query(), declared.headers(), index);
     }
 
     private static List<ContractRequest.Pair> spiPairs(List<ValidRequests.Pair> pairs) {
@@ -683,20 +690,22 @@ final class CoreEmitter implements Emitter {
     }
 
     /** A case as the machine-readable report records it. */
-    static Map<String, Object> caseJson(InvalidRequests.Case c) {
+    static Map<String, Object> caseJson(ContractCases.Case c) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", c.id());
+        out.put("kind", c.kind().name());
+        out.put("requiresState", c.kind().requiresState());
+        out.put("variant", c.variant());
         out.put("description", c.description());
         out.put("in", c.in());
         out.put("name", c.name());
         out.put("pointer", c.pointer());
         out.put("keyword", c.keyword());
         out.put("request", requestJson(c.request()));
-        out.put("baseline", requestJson(c.baseline()));
+        out.put("baseline", c.baseline() == null ? null : requestJson(c.baseline()));
         out.put("expectedStatus", java.math.BigDecimal.valueOf(c.status()));
         out.put("expectedContentTypes", c.contentTypes());
         out.put("responseBodyClass", c.bodyClass());
-        out.put("representative", c.representative());
         return out;
     }
 
@@ -851,7 +860,7 @@ final class CoreEmitter implements Emitter {
                 case REQUEST_BODY -> "Generated from request body " + from + ".";
                 case INLINE_REQUEST -> "Generated from the request body schema at " + from + ".";
                 case INLINE_RESPONSE -> "Generated from the response schema at " + from + ".";
-                case OPERATION, CHANNEL, ASYNC_OPERATION, INVALID_REQUESTS ->
+                case OPERATION, CHANNEL, ASYNC_OPERATION, CONTRACT_CASES ->
                         throw new IllegalStateException("an operation's or channel's class is not a schema's");
             };
         }
@@ -868,7 +877,7 @@ final class CoreEmitter implements Emitter {
                         .findFirst().map(b -> b.value().description()).orElse(null);
                 case PARAMETER -> model.parameters().stream().filter(p -> p.name().equals(generated.key()))
                         .findFirst().map(p -> p.value().description()).orElse(null);
-                case OPERATION, CHANNEL, ASYNC_OPERATION, INVALID_REQUESTS ->
+                case OPERATION, CHANNEL, ASYNC_OPERATION, CONTRACT_CASES ->
                         throw new IllegalStateException("an operation's or channel's class is not a schema's");
             };
         }

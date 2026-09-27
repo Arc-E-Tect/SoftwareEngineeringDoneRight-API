@@ -114,6 +114,13 @@ public interface ContractParameters extends WorkParameters {
     ListProperty<String> getValidateFormats();
 
     /**
+     * The kinds of contract case derived.
+     *
+     * @return the kinds, by their setting names
+     */
+    ListProperty<String> getDerive();
+
+    /**
      * The settings these parameters describe, with the options of the emitters given.
      *
      * @param emitterOptions each emitter's options, by id
@@ -123,7 +130,7 @@ public interface ContractParameters extends WorkParameters {
         return new Settings(getContractName().get(), getBasePackage().get(), getGenerateDocs().get(),
                 getDescriptionPlaceholder().get(), getRecursionDepth().get(), getDescriptionBundle().getOrNull(),
                 getInvalidRequestStatus().getOrNull(), getStrictRequests().getOrElse(true),
-                getValidateFormats().getOrElse(List.of()), emitterOptions);
+                getValidateFormats().getOrElse(List.of()), emitterOptions, getDerive().getOrNull());
     }
 
     /**

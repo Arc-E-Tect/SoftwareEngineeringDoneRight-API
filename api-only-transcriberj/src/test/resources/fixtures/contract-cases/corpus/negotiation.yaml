@@ -1,0 +1,136 @@
+# Not-acceptable and unsupported-media-type cases (T19.3): a media type no response offers,
+# responses that offer everything, responses offering every candidate, responses without content, a
+# body sent as text/plain, a body that accepts anything, a body whose ranges match every candidate,
+# a body accepting every candidate, and a 415 without a body.
+openapi: 3.1.0
+info:
+  title: Contract-case corpus, negotiation
+  version: 1.0.0
+paths:
+  /report:
+    get:
+      operationId: getReport
+      responses:
+        '200':
+          description: The report.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReportV1'}
+        '406':
+          description: Not acceptable.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/ReportV1'}
+  /anything:
+    get:
+      operationId: getAnything
+      responses:
+        '200':
+          description: Anything.
+          content:
+            '*/*': {}
+        '406':
+          description: Not acceptable.
+  /typed:
+    get:
+      operationId: getTyped
+      responses:
+        '200':
+          description: Something.
+          content:
+            'application/*': {}
+            'text/*; charset=utf-8': {}
+        '406':
+          description: Not acceptable.
+  /candidates:
+    get:
+      operationId: getCandidates
+      responses:
+        '200':
+          description: Every candidate.
+          content:
+            application/vnd.apionly.not-acceptable: {}
+            text/vnd.apionly.not-acceptable: {}
+        '406':
+          description: Not acceptable.
+    post:
+      operationId: postCandidates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReportV1'}
+          text/plain: {}
+          application/vnd.apionly.unsupported-media-type: {}
+          text/vnd.apionly.unsupported-media-type; charset=utf-8: {}
+      responses:
+        '202':
+          description: Accepted.
+        '415':
+          description: Unsupported.
+  /empty:
+    get:
+      operationId: getEmpty
+      responses:
+        '204':
+          description: Nothing.
+        '406':
+          description: Not acceptable.
+  /upload:
+    post:
+      operationId: postUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReportV1'}
+      responses:
+        '202':
+          description: Accepted.
+        '415':
+          description: Unsupported.
+  /wide:
+    post:
+      operationId: postWide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReportV1'}
+          '*/*': {}
+      responses:
+        '202':
+          description: Accepted.
+        '415':
+          description: Unsupported.
+  /ranged:
+    post:
+      operationId: postRanged
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReportV1'}
+          'text/*': {}
+          'application/*': {}
+      responses:
+        '202':
+          description: Accepted.
+        '415':
+          description: Unsupported.
+  /nobody:
+    get:
+      operationId: getNobody
+      responses:
+        '200':
+          description: Found.
+        '415':
+          description: Unsupported, oddly.
+components:
+  schemas:
+    ReportV1:
+      x-fragment-path: schemas/ReportV1.yaml
+      type: object
+      required: [name]
+      properties:
+        name: {type: string}

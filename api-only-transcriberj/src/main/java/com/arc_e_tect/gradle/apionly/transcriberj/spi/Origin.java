@@ -21,9 +21,9 @@ public enum Origin {
     /** An operation of that document: an application sending or receiving on a channel. */
     ASYNC_OPERATION,
     /**
-     * The invalid requests of an operation: one case per constraint on its request input.
-     * Such a class is named through {@link ClassNames#invalidRequests(String)}, never listed
-     * by {@link ClassNames#all()}.
+     * The contract cases of an operation: its success, not-found, not-acceptable,
+     * unsupported-media-type and invalid-request cases. Such a class is named through
+     * {@link ClassNames#contractCases(String)}, never listed by {@link ClassNames#all()}.
      */
-    INVALID_REQUESTS
+    CONTRACT_CASES
 }

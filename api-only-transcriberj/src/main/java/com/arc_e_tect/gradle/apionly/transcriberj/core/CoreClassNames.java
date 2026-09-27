@@ -39,7 +39,7 @@ final class CoreClassNames implements ClassNames {
 
     /** The classes every generated tree has, whose names nothing else may take. */
     static final List<String> SUPPORT_CLASSES = List.of("ContractJson", "ContractField", "ContractManifest",
-            "ContractRequest", "InvalidRequestCase");
+            "ContractRequest", "ContractCase", "CaseKind");
 
     private static final String INLINE_ADVICE = "an inline schema; define it as a schema component and $ref it, "
             + "so that its class is named after its fragment rather than after the operation";
@@ -73,7 +73,7 @@ final class CoreClassNames implements ClassNames {
     }
 
     private final Map<String, GeneratedClass> byOperation = new LinkedHashMap<>();
-    private final Map<String, GeneratedClass> byInvalidRequests = new LinkedHashMap<>();
+    private final Map<String, GeneratedClass> byContractCases = new LinkedHashMap<>();
     private final Map<GeneratedClass, String> paths = new LinkedHashMap<>();
 
     CoreClassNames(ContractModel model, Shapes shapes, GenerationReport report) {
@@ -120,9 +120,9 @@ final class CoreClassNames implements ClassNames {
         }
         for (Operation operation : model.operations()) {
             String location = operationLocation(operation);
-            candidates.add(new Candidate(Origin.INVALID_REQUESTS, location,
+            candidates.add(new Candidate(Origin.CONTRACT_CASES, location,
                     new Provenance(null, CanonicalJson.sha256(operationSummary(operation))), null, location,
-                    operationName(operation) + "InvalidRequests"));
+                    operationName(operation) + "ContractCases"));
         }
 
         for (AsyncChannel channel : model.channels()) {
@@ -146,8 +146,8 @@ final class CoreClassNames implements ClassNames {
         for (Candidate c : candidates) {
             GeneratedClass generated = new GeneratedClass(c.name, c.origin, c.key, c.exposed, c.provenance,
                     c.schema, c.schema != null && shapes.bodyShaped(c.schema));
-            if (c.origin == Origin.INVALID_REQUESTS) {
-                byInvalidRequests.put(c.key, generated);
+            if (c.origin == Origin.CONTRACT_CASES) {
+                byContractCases.put(c.key, generated);
                 continue;
             }
             classes.add(generated);
@@ -463,8 +463,8 @@ final class CoreClassNames implements ClassNames {
     }
 
     @Override
-    public Optional<GeneratedClass> invalidRequests(String location) {
-        return Optional.ofNullable(byInvalidRequests.get(location));
+    public Optional<GeneratedClass> contractCases(String location) {
+        return Optional.ofNullable(byContractCases.get(location));
     }
 
     @Override

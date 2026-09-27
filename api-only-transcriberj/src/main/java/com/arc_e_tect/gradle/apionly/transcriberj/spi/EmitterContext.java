@@ -97,14 +97,48 @@ public interface EmitterContext {
     String degraded(String className, String method, Finding finding);
 
     /**
-     * The invalid-request cases of an operation, in the order its generated {@code CASES}
-     * lists them: what an emitter that renders cases shapes its code by. The core derives them
-     * before any other emitter runs.
+     * The contract cases of an operation, in the order its generated {@code CASES} lists them:
+     * success, not found, not acceptable, unsupported media type, then invalid requests. What an
+     * emitter that renders cases shapes its code by. The core derives them before any other
+     * emitter runs.
      *
      * @param location the JSON pointer of the operation, such as {@code /paths/~1v1~1users/get}
      * @return the cases; empty when the operation has none, or there is no such operation
      */
-    default List<InvalidRequestCase> invalidRequestCases(String location) {
+    default List<ContractCase> contractCases(String location) {
         return List.of();
+    }
+
+    /**
+     * The schema a request body of an operation must satisfy, as a self-contained JSON Schema
+     * 2020-12 document: every {@code $ref} bundled into {@code $defs}, strict as the core's own
+     * notion of validity is when {@code strictRequests} is on, and with {@code format} asserted
+     * only for the formats {@code validateFormats} names -- any other is written as the
+     * annotation {@code x-format}. It is exactly the schema the core generates valid bodies for
+     * and derives invalid ones against.
+     *
+     * @param location  the JSON pointer of the operation
+     * @param mediaType the request body's media type, as the operation declares it
+     * @return the schema's JSON text; empty when the operation declares no such body or its
+     *         schema
+     */
+    default java.util.Optional<String> requestBodySchema(String location, String mediaType) {
+        return java.util.Optional.empty();
+    }
+
+    /**
+     * The schema a path, query or header parameter of an operation must satisfy, as a
+     * self-contained JSON Schema 2020-12 document, made as {@link #requestBodySchema} makes a
+     * body's. A value travels as a string: the schema is that of the value it stands for, so a
+     * stub matching a path segment by its {@code pattern} reads it here.
+     *
+     * @param location the JSON pointer of the operation
+     * @param in       where the parameter is: {@code path}, {@code query} or {@code header}
+     * @param name     the parameter's name
+     * @return the schema's JSON text; empty when the operation declares no such parameter or its
+     *         schema
+     */
+    default java.util.Optional<String> parameterSchema(String location, String in, String name) {
+        return java.util.Optional.empty();
     }
 }

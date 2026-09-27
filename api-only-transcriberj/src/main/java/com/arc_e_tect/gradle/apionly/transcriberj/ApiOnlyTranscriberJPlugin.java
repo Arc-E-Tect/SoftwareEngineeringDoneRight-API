@@ -140,6 +140,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
         subscription.getInvalidRequestStatus().convention(Settings.DEFAULT_INVALID_REQUEST_STATUS);
         subscription.getStrictRequests().convention(true);
         subscription.getValidateFormats().convention(List.of());
+        subscription.getDerive().convention(com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.settings());
         emitterOptions(subscription).convention(Map.of());
         subscription.getDescriptionPlaceholder()
                 .convention(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
@@ -234,6 +235,9 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
         task.getInvalidRequestStatus().set(subscription.getInvalidRequestStatus());
         task.getStrictRequests().set(subscription.getStrictRequests());
         task.getValidateFormats().set(subscription.getValidateFormats());
+        // In the kinds' own order, and each once: the same kinds are the same input, however written.
+        task.getDerive().set(subscription.getDerive().map(kinds -> com.arc_e_tect.gradle.apionly.transcriberj.spi
+                .CaseKind.settings().stream().filter(kinds::contains).toList()));
     }
 
     /** The emitters' tasks, archives and placement, once the build has said which it configures. */
@@ -247,6 +251,14 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
         for (EmitterSpec spec : subscription.getEmitters()) {
             configured.put(spec.getName(), new EmitterPlan.Configured(spec.getSourceSets().getOrNull(),
                     spec.getOptions().getOrElse(Map.of())));
+        }
+        for (String kind : subscription.getDerive().get()) {
+            try {
+                com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.ofSetting(kind);
+            } catch (IllegalArgumentException e) {
+                throw new org.gradle.api.GradleException("apiOnlyTranscriberJ: subscription('" + contract + "') "
+                        + e.getMessage());
+            }
         }
         EmitterPlan plan = EmitterPlan.of(contract, subscription.getSchemaClasses().get(),
                 subscription.getSourceSets().get(), emitterOptions(subscription).get(), configured, catalog.emitters());

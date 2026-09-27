@@ -6,7 +6,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.Finding;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ClassNames;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.EmitterContext;
-import com.arc_e_tect.gradle.apionly.transcriberj.spi.InvalidRequestCase;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 
 import java.io.IOException;
@@ -140,8 +140,9 @@ public final class Generation {
 
         CoreEmitter core = new CoreEmitter(shapes, names, contractSha256, report);
         BufferSink buffer = new BufferSink();
-        core.emit(new Context(model, settings, names, buffer, report, core.id(), Map.of()));
-        return new Derivation(model, settings, names, report, core.invalidRequestCases(), buffer);
+        RequestSchemas schemas = new RequestSchemas(contract, settings);
+        core.emit(new Context(model, settings, names, buffer, report, core.id(), Map.of(), schemas));
+        return new Derivation(model, settings, names, report, core.contractCases(), buffer, schemas);
     }
 
     /** Settings no generation can start from: a package that is none, a status that is none. */
@@ -208,17 +209,19 @@ public final class Generation {
         private final Settings settings;
         private final CoreClassNames names;
         private final GenerationReport report;
-        private final Map<String, List<InvalidRequestCase>> cases;
+        private final Map<String, List<ContractCase>> cases;
         private final BufferSink buffer;
+        private final RequestSchemas schemas;
 
         private Derivation(ContractModel model, Settings settings, CoreClassNames names, GenerationReport report,
-                           Map<String, List<InvalidRequestCase>> cases, BufferSink buffer) {
+                           Map<String, List<ContractCase>> cases, BufferSink buffer, RequestSchemas schemas) {
             this.model = model;
             this.settings = settings;
             this.names = names;
             this.report = report;
             this.cases = cases;
             this.buffer = buffer;
+            this.schemas = schemas;
         }
 
         /**
@@ -231,7 +234,7 @@ public final class Generation {
         }
 
         private EmitterContext context(String emitter, Sink sink, GenerationReport into) {
-            return new Context(model, settings, names, sink, into, emitter, cases);
+            return new Context(model, settings, names, sink, into, emitter, cases, schemas);
         }
     }
 
@@ -360,11 +363,27 @@ public final class Generation {
     /** What one emitter is given: the core emitter, which derives the cases, is given none. */
     private record Context(ContractModel model, Settings settings, ClassNames names, Sink sink,
                            GenerationReport report, String emitter,
-                           Map<String, List<InvalidRequestCase>> cases)
+                           Map<String, List<ContractCase>> cases, RequestSchemas schemas)
             implements EmitterContext {
 
         @Override
-        public List<InvalidRequestCase> invalidRequestCases(String location) {
+        public java.util.Optional<String> requestBodySchema(String location, String mediaType) {
+            return operation(location).flatMap(o -> schemas.body(o, mediaType));
+        }
+
+        @Override
+        public java.util.Optional<String> parameterSchema(String location, String in, String name) {
+            return operation(location).flatMap(o -> schemas.parameter(o, in, name));
+        }
+
+        private java.util.Optional<com.arc_e_tect.gradle.apionly.transcriberj.model.Operation> operation(
+                String location) {
+            return model.operations().stream()
+                    .filter(o -> CoreClassNames.operationLocation(o).equals(location)).findFirst();
+        }
+
+        @Override
+        public List<ContractCase> contractCases(String location) {
             return cases.getOrDefault(location, List.of());
         }
 

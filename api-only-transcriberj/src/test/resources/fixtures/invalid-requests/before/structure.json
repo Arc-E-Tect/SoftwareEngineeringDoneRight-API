@@ -1,0 +1,1276 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": [
+              {
+                "name": "optional",
+                "value": "0"
+              }
+            ]
+          },
+          "description": "`optional` sent as the string \"not-a-number\", where the contract requires an integer",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "query-optional-type",
+          "in": "query",
+          "keyword": "type",
+          "name": "optional",
+          "pointer": null,
+          "representative": true,
+          "request": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": [
+              {
+                "name": "optional",
+                "value": "not-a-number"
+              }
+            ]
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "free": {},
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`free` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-free-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/free",
+          "representative": false,
+          "request": {
+            "body": {
+              "free": [],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "list": [],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`list` sent as an object, where the contract requires an array",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-list-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/list",
+          "representative": false,
+          "request": {
+            "body": {
+              "list": {},
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "list": [
+                0
+              ],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`list[0]` sent as the string \"not-a-number\", where the contract requires an integer",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-list-0-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/list/0",
+          "representative": false,
+          "request": {
+            "body": {
+              "list": [
+                "not-a-number"
+              ],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": []
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {}
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": []
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {}
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.child` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-child-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child/child",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": []
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "label": "a"
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.child.label` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-child-label-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child/child/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "label": {}
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "label": "a"
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.label` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-label-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "label": {}
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "label": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.label` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-label-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "label": {}
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "free": {},
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`free` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-free-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/free",
+          "representative": false,
+          "request": {
+            "body": {
+              "free": null,
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "list": [],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`list` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-list-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/list",
+          "representative": false,
+          "request": {
+            "body": {
+              "list": null,
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "list": [
+                0
+              ],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`list[0]` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-list-0-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/list/0",
+          "representative": false,
+          "request": {
+            "body": {
+              "list": [
+                null
+              ],
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {}
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": null
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {}
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.child` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-child-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child/child",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": null
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "label": "a"
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.child.label` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-child-label-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child/child/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "label": null
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "label": "a"
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.label` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-label-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/child/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "label": null
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "label": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.label` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-label-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/tree/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "label": null
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`name` longer than its maxLength of 8",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-name-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "aaaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "label": "a"
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.child.label` longer than its maxLength of 4",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-child-label-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/tree/child/child/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "label": "aaaaa"
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "label": "a"
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.label` longer than its maxLength of 4",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-label-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/tree/child/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "label": "aaaaa"
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "label": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.label` longer than its maxLength of 4",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-label-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/tree/label",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "label": "aaaaa"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {}
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child.child` with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-child-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/tree/child/child/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "child": {
+                    "unexpectedMember": "unexpected"
+                  }
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {}
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree.child` with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-child-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/tree/child/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "child": {
+                  "unexpectedMember": "unexpected"
+                }
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "tree": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "`tree` with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-tree-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/tree/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "tree": {
+                "unexpectedMember": "unexpected"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostStructureInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1structure/post",
+      "method": "POST",
+      "pathTemplate": "/structure"
+    }
+  ]
+}

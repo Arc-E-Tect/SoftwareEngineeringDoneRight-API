@@ -1,0 +1,766 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`code` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-code-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/code",
+          "representative": false,
+          "request": {
+            "body": {
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`level` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-level-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/level",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`pair` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pair-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/pair",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`short` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-short-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/short",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ]
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`code` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-code-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/code",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": {},
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`pair` sent as an object, where the contract requires an array",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pair-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pair",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": {},
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`code` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-code-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/code",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": null,
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`pair` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pair-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pair",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": null,
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`level` not one of its enum values",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-level-enum",
+          "in": "body",
+          "keyword": "enum",
+          "name": null,
+          "pointer": "/level",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 12,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`pair[0]` not one of its enum values",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pair-0-enum",
+          "in": "body",
+          "keyword": "enum",
+          "name": null,
+          "pointer": "/pair/0",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "a",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`short` not one of its enum values",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-short-enum",
+          "in": "body",
+          "keyword": "enum",
+          "name": null,
+          "pointer": "/short",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`code` not matching its pattern ^[a-z]{5}$",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-code-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/code",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "%%%%%",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`pair` with fewer items than its minItems of 2",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pair-minItems",
+          "in": "body",
+          "keyword": "minItems",
+          "name": null,
+          "pointer": "/pair",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "`pair` with two equal items, though its items must be unique",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pair-uniqueItems",
+          "in": "body",
+          "keyword": "uniqueItems",
+          "name": null,
+          "pointer": "/pair",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "x"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "code": "aaaaa",
+              "level": 10,
+              "pair": [
+                "x",
+                "y"
+              ],
+              "short": "abc",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/isolation",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostIsolationInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1isolation/post",
+      "method": "POST",
+      "pathTemplate": "/isolation"
+    }
+  ]
+}

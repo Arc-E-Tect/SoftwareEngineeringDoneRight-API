@@ -33,6 +33,7 @@ public abstract class ContractSourcesTask extends DefaultTask {
         getInvalidRequestStatus().convention(Settings.DEFAULT_INVALID_REQUEST_STATUS);
         getStrictRequests().convention(true);
         getValidateFormats().convention(List.of());
+        getDerive().convention(com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.settings());
     }
 
     /**
@@ -138,6 +139,14 @@ public abstract class ContractSourcesTask extends DefaultTask {
     public abstract ListProperty<String> getValidateFormats();
 
     /**
+     * The kinds of contract case derived.
+     *
+     * @return the kinds, by their setting names
+     */
+    @Input
+    public abstract ListProperty<String> getDerive();
+
+    /**
      * The locked version and hash, after checking the subscription names a package.
      *
      * @return the locked contract
@@ -170,5 +179,6 @@ public abstract class ContractSourcesTask extends DefaultTask {
         parameters.getInvalidRequestStatus().set(getInvalidRequestStatus());
         parameters.getStrictRequests().set(getStrictRequests());
         parameters.getValidateFormats().set(getValidateFormats());
+        parameters.getDerive().set(getDerive());
     }
 }

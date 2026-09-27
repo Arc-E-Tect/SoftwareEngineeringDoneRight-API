@@ -65,8 +65,8 @@ public final class Baselines {
 
     /**
      * The hash of every source of every tree, the valid-value members stripped, and the classes
-     * added since left out: ContractRequest, InvalidRequestCase and each operation's
-     * InvalidRequests class. Those are additions; what was generated before is held to its hash.
+     * added since left out: ContractRequest, ContractCase, CaseKind and each operation's
+     * ContractCases class. Those are additions; what was generated before is held to its hash.
      */
     static Map<String, String> hashes(Map<String, GeneratedSources> trees) {
         Map<String, String> out = new TreeMap<>();
@@ -74,8 +74,8 @@ public final class Baselines {
             try (Stream<Path> files = Files.walk(tree.sources)) {
                 for (Path file : files.filter(p -> p.toString().endsWith(".java")).toList()) {
                     String fileName = file.getFileName().toString();
-                    if (fileName.equals("ContractRequest.java") || fileName.equals("InvalidRequestCase.java")
-                            || fileName.endsWith("InvalidRequests.java")) {
+                    if (fileName.equals("ContractRequest.java") || fileName.equals("ContractCase.java")
+                            || fileName.equals("CaseKind.java") || fileName.endsWith("ContractCases.java")) {
                         continue;
                     }
                     String source = withoutValidValueMembers(Files.readString(file, StandardCharsets.UTF_8));
@@ -112,9 +112,9 @@ public final class Baselines {
         }
     }
 
-    /** The members of the machine-readable report that invalid-request derivation added, golden elsewhere. */
+    /** The members of the machine-readable report that case derivation added, golden elsewhere. */
     static final java.util.List<String> INVALID_REQUEST_MEMBERS = java.util.List.of("constraintCoverage",
-            "formatRecommendations", "gaps", "invalidRequests");
+            "contractCases", "formatRecommendations", "gaps", "responseCoverage");
 
     /**
      * A reference contract's machine-readable report, as its golden file holds it: indented,

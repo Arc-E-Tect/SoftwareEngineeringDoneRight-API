@@ -1,0 +1,12 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "PostUnsatisfiableInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1unsatisfiable/post",
+      "method": "POST",
+      "pathTemplate": "/unsatisfiable"
+    }
+  ]
+}

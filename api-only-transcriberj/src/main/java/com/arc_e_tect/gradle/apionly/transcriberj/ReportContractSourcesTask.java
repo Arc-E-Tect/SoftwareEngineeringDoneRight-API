@@ -117,8 +117,10 @@ public abstract class ReportContractSourcesTask extends DefaultTask {
 
         List<String> lines = List.of(text.split("\n"));
         getLogger().lifecycle("{}: {} -- see {}", lines.get(0), lines.get(1), reportFile.toFile());
-        if (lines.size() > 2 && lines.get(2).startsWith("Invalid requests:")) {
-            getLogger().lifecycle("{}: {}", lines.get(0), lines.get(2));
+        for (String line : lines.subList(2, Math.min(4, lines.size()))) {
+            if (line.startsWith("Invalid requests:") || line.startsWith("Contract cases:")) {
+                getLogger().lifecycle("{}: {}", lines.get(0), line);
+            }
         }
         int warnings = lines.indexOf("Warnings:");
         for (int i = warnings + 1; warnings >= 0 && i < lines.size() && !lines.get(i).isBlank(); i++) {

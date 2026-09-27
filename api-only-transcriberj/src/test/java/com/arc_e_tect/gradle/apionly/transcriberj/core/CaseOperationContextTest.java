@@ -1,6 +1,6 @@
 package com.arc_e_tect.gradle.apionly.transcriberj.core;
 
-import com.arc_e_tect.gradle.apionly.transcriberj.spi.InvalidRequestCase;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -96,15 +96,15 @@ class CaseOperationContextTest {
 
     @Test
     void everyCaseCarriesItsOperationsIdAndDeclaredParameters() throws Exception {
-        EmitterInvalidRequestCasesTest.Capturing capturing = new EmitterInvalidRequestCasesTest.Capturing();
+        EmitterContractCasesTest.Capturing capturing = new EmitterContractCasesTest.Capturing();
         GeneratedSources sources = GeneratedSources.generate(CONTRACT, directory, List.of(capturing));
 
         Map<String, Expected> expected = Map.of(
-                "GetItemInvalidRequests", new Expected("getItem", List.of("page", "filter"), List.of("X-Trace", "X-Mode")),
-                "DeleteItemsByIdInvalidRequests", new Expected(null, List.of("page"), List.of("X-Trace")));
+                "GetItemContractCases", new Expected("getItem", List.of("page", "filter"), List.of("X-Trace", "X-Mode")),
+                "DeleteItemsByIdContractCases", new Expected(null, List.of("page"), List.of("X-Trace")));
         assertThat(capturing.seen).containsOnlyKeys(expected.keySet());
 
-        for (Map.Entry<String, List<InvalidRequestCase>> operation : capturing.seen.entrySet()) {
+        for (Map.Entry<String, List<ContractCase>> operation : capturing.seen.entrySet()) {
             Expected e = expected.get(operation.getKey());
             assertThat(operation.getValue()).as(operation.getKey()).isNotEmpty().allSatisfy(c -> {
                 assertThat(c.operationId()).isEqualTo(e.operationId());

@@ -1,0 +1,49 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "GET",
+            "pathParameters": [
+              "a",
+              "a"
+            ],
+            "pathTemplate": "/things/{name}/{slug}",
+            "query": []
+          },
+          "description": "`slug` not matching its pattern ^[a-z]+$",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "path-slug-pattern",
+          "in": "path",
+          "keyword": "pattern",
+          "name": "slug",
+          "pointer": null,
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "GET",
+            "pathParameters": [
+              "a",
+              "%"
+            ],
+            "pathTemplate": "/things/{name}/{slug}",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "GetThingInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1things~1{name}~1{slug}/get",
+      "method": "GET",
+      "pathTemplate": "/things/{name}/{slug}"
+    }
+  ]
+}

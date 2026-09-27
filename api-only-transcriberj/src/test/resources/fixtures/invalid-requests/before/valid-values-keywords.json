@@ -1,0 +1,20 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "PostCorpusInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1corpus/post",
+      "method": "POST",
+      "pathTemplate": "/corpus"
+    },
+    {
+      "cases": [],
+      "class": "PostOverlapInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1overlap/post",
+      "method": "POST",
+      "pathTemplate": "/overlap"
+    }
+  ]
+}

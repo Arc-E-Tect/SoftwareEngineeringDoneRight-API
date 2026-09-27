@@ -78,7 +78,7 @@ class ValidValueReportTest {
                             "noBodyRequest").filter(e::has).map(e::get))
                     .filter(v -> v.has("unsatisfiable")).count();
             assertThat(withoutValue).as(f.name()).isEqualTo(f.sources().report.noValidValue().size());
-            assertThat(f.report().get("schemaVersion").intValue()).isEqualTo(1);
+            assertThat(f.report().get("schemaVersion").intValue()).isEqualTo(2);
             assertThat(f.report().get("contract").stringValue()).isEqualTo(f.name());
             assertThat(ValidValueFixtures.list(f.report().get("unsupportedParameters")))
                     .hasSize(f.sources().report.unsupportedParameters().size());
