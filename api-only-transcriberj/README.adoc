@@ -1005,9 +1005,69 @@ A server that negotiates content then answers every case, a `404` or a `400` inc
 The not-acceptable case is the exception: its `Accept` is its one fault, so it sends only the value chosen above.
 The unsupported-media-type case sends the normal `Accept`, so that the only thing wrong with it is its `Content-Type`.
 
-*A request that cannot be vouched for is never sent.*
-A request holding a value of a format no check exists for, such as `duration`, may be invalid already, as <<invalid-requests,invalid requests §>> never take one for a baseline either.
-A full request holding one gives no `full` case, and the report notes why; a required request holding one gives no case of any kind but the invalid requests', and its responses are reported as having no valid value.
+*A request that cannot be vouched for is never sent*: see <<unvouched-values,When a request cannot be vouched for §>>.
+
+[#unvouched-values]
+==== When a request cannot be vouched for
+
+[IMPORTANT]
+====
+A case is only as good as its request.
+A success case whose request the service rightly rejects fails against a correct implementation, and a not-found or `415` case whose request is invalid already may pass for the wrong reason.
+So a case is derived only from a request the generator can *vouch for*: one it knows to be valid.
+====
+
+*What makes a request unvouchable.*
+A value of a `format` the generator has no check for, and no value for -- `duration`, `iri`, `regex`, a custom `x-...` format, anything outside the list in <<valid-value-rules,How a value is chosen §>> -- is a plain string, `a`.
+It may or may not be of the format, so no request holding it is sent as valid.
+This holds whether or not `validateFormats` names the format: the setting says which formats this plugin asserts, not which ones the service checks, and a service that validates `duration` rejects `a` whatever the setting says.
+It is the rule the <<invalid-requests,invalid requests §>> have always followed: a request holding such a value is never their baseline either.
+
+*What it does to the cases.*
+
+* An *optional* member of such a format: `fullRequest()` holds it, so no `success-<status>-full` case is derived. The other cases are.
+* A *required* member or parameter of such a format: `requiredRequest()` holds it, so no success, not-found, not-acceptable or unsupported-media-type case is derived for the operation, and its invalid requests have no baseline.
+
+*How to see it.*
+The report says so for every case it leaves out, naming the value and the format:
+
+----
+Notes:
+  PostPeriodContractCases: success-201-full is not derived: the valid request holds a value at /period for the
+  format declared at /components/schemas/PeriodV1/properties/period, which no check exists for, so it cannot be
+  vouched for
+  No value is generated for format duration at /components/schemas/PeriodV1/properties/period; valid values
+  there are plain strings
+
+Response coverage -- every response each operation declares, and the cases that cover it:
+  PostDurationContractCases 201: uncovered, no valid value -- the valid request holds a value at /duration for the
+  format declared at /components/schemas/DurationV1/properties/duration, which no check exists for, so it cannot
+  be vouched for
+----
+
+*How to address it.*
+
+. *Put a `pattern` beside the format, in the contract.*
+A pattern says exactly what is valid, and wins over the format: the generator generates a value from the pattern, vouches for it, and derives every case.
+`{type: string, format: duration, pattern: '^P[0-9]+D$'}` gives `P0D`.
+It is the remedy the report already recommends for every well-known format without a pattern, and it helps every consumer of the contract, not only this build.
+. *Where the contract cannot change, write the missing test by hand*, as <<hand-written-code,Hand-written code beside the generated classes §>> says: in the generated package, from the generated request, with the one value replaced by a real one of the format.
++
+[source,java]
+----
+// success-201-full for PostPeriod, which the generator could not vouch for.
+ContractRequest full = PostPeriodOperation.fullRequest();
+String body = full.body().replace("\"period\":\"a\"", "\"period\":\"P1D\"");
+webTestClient.method(HttpMethod.valueOf(full.method()))
+        .uri(PostPeriodOperation.PATH, full.pathParameters().toArray())
+        .contentType(MediaType.parseMediaType(full.contentType()))
+        .bodyValue(body)
+        .exchange()
+        .expectStatus().isCreated();
+----
++
+The value you type is yours to keep valid: pin the test to the fragment it was written against, as <<your-responsibilities,What the generated classes do not hold §>> says, and delete it when the report stops noting the value -- after a pattern is added, or when a later release learns the format.
+For a required member, the same applies to each case the operation lost: the success case, and the not-found, not-acceptable and unsupported-media-type cases where it declares those statuses, each built from `requiredRequest()` with the value replaced.
 
 [#requires-state]
 ==== State, and what a fixture must do
@@ -1456,7 +1516,7 @@ After resolution, a version at or above the untested one is warned about: "not t
 == Hand-written code beside the generated classes
 
 The generated tree does not cover every test: a degraded method throws, and the contract cases cover only the responses the contract alone determines -- see <<contract-cases,Contract cases §>>.
-A `409`, a `422` for a semantically invalid request, every other response the <<response-coverage,response coverage §>> lists as not covered, and whatever a constraint not isolatable leaves untested are written by hand.
+A `409`, a `422` for a semantically invalid request, every other response the <<response-coverage,response coverage §>> lists as not covered, every case left out because its request <<unvouched-values,cannot be vouched for §>>, and whatever a constraint not isolatable leaves untested are written by hand.
 The code a project writes to fill those gaps goes beside the generated classes, and how it does so is a design decision, not an accident.
 
 [IMPORTANT]

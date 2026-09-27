@@ -1,7 +1,8 @@
 # Success cases (T19.4): optional members give a full request besides the required one; none
 # give the required one only; 200 and 201 both get cases; an optional body gets a noBody case;
 # and a body with no valid value gets none. A request holding a value of a format no check exists
-# for, duration, cannot be vouched for: an optional one gives no full case, a required one no case.
+# for, duration, cannot be vouched for: an optional one gives no full case, a required one no case;
+# with a pattern beside the format, the pattern decides, and the full case is derived.
 openapi: 3.1.0
 info:
   title: Contract-case corpus, success
@@ -88,6 +89,17 @@ paths:
       responses:
         '201':
           description: Created.
+  /patterned-period:
+    post:
+      operationId: postPatternedPeriod
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PatternedPeriodV1'}
+      responses:
+        '201':
+          description: Created.
 components:
   schemas:
     NoteV1:
@@ -116,3 +128,10 @@ components:
       required: [duration]
       properties:
         duration: {type: string, format: duration}
+    PatternedPeriodV1:
+      x-fragment-path: schemas/PatternedPeriodV1.yaml
+      type: object
+      required: [title]
+      properties:
+        title: {type: string}
+        period: {type: string, format: duration, pattern: '^P[0-9]+D$'}

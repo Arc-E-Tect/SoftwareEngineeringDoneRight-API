@@ -8,7 +8,7 @@ The invalid-request cases have fixtures of their own, in `../invalid-requests`; 
 |Path |What it is
 
 |`corpus/success.yaml`
-|Success cases: optional members that give a full request beside the required one, none that do, an operation declaring `200` and `201`, an optional body that gives a noBody case, a body with no valid value, and requests holding a value of a format no check exists for, which cannot be vouched for.
+|Success cases: optional members that give a full request beside the required one, none that do, an operation declaring `200` and `201`, an optional body that gives a noBody case, a body with no valid value, requests holding a value of a format no check exists for, which cannot be vouched for, and the same format with a pattern beside it, which can.
 
 |`corpus/not-found.yaml`
 |Not-found cases: a path parameter with a second valid value, a single `enum` value with none, an operation without a path parameter, and two path parameters that give one case.

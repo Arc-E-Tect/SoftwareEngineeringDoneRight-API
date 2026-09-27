@@ -38,6 +38,8 @@ class ContractCaseCorpusTest {
                 "PostMaybeContractCases success-204-no-body SUCCESS 204 path[] - []",
                 "PostOptionalContractCases success-201-required SUCCESS 201 path[] application/json [Accept=application/json]",
                 "PostOptionalContractCases success-201-full SUCCESS 201 path[] application/json [Accept=application/json]",
+                "PostPatternedPeriodContractCases success-201-required SUCCESS 201 path[] application/json []",
+                "PostPatternedPeriodContractCases success-201-full SUCCESS 201 path[] application/json []",
                 "PostPeriodContractCases success-201-required SUCCESS 201 path[] application/json []",
                 "PutEitherContractCases success-200-required SUCCESS 200 path[a] application/json []",
                 "PutEitherContractCases success-200-full SUCCESS 200 path[a] application/json []",
@@ -50,7 +52,8 @@ class ContractCaseCorpusTest {
                 "PostMaybeContractCases 204 [success-204-required, success-204-full, success-204-no-body]",
                 "PostImpossibleContractCases 201 NO_VALID_VALUE",
                 "PostPeriodContractCases 201 [success-201-required]",
-                "PostDurationContractCases 201 NO_VALID_VALUE"));
+                "PostDurationContractCases 201 NO_VALID_VALUE",
+                "PostPatternedPeriodContractCases 201 [success-201-required, success-201-full]"));
     }
 
     @Test

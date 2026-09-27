@@ -111,6 +111,16 @@ class SuccessVariantsTest {
     }
 
     @Test
+    void aPatternBesideTheFormatDecidesAndTheFullCaseIsDerived() {
+        assertThat(ids("PostPatternedPeriodContractCases")).containsExactly("success-201-required",
+                "success-201-full");
+        JsonNode full = ContractCaseFixtures.cases(corpus.report(), "SUCCESS").stream()
+                .filter(c -> c.get("class").stringValue().equals("PostPatternedPeriodContractCases")
+                        && c.get("variant").stringValue().equals("full")).findFirst().orElseThrow();
+        assertThat(full.get("request").get("body").get("period").stringValue()).matches("P[0-9]+D");
+    }
+
+    @Test
     void noValidValueGivesNoCaseAndSaysSo() {
         assertThat(ids("PostImpossibleContractCases")).isEmpty();
         assertThat(ContractCaseFixtures.coverage(corpus.report(), "PostImpossibleContractCases"))
