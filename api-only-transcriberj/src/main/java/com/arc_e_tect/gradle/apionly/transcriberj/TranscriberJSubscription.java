@@ -36,6 +36,55 @@ public abstract class TranscriberJSubscription implements Named {
     }
 
     /**
+     * Gradle's object factory, which creates each {@code emitter(...)} block.
+     *
+     * @return the factory
+     */
+    @Inject
+    protected abstract org.gradle.api.model.ObjectFactory getObjects();
+
+    private org.gradle.api.NamedDomainObjectContainer<EmitterSpec> emitters;
+
+    /**
+     * Every emitter this subscription configures with {@code emitter(...)}, by id.
+     *
+     * @return the emitters
+     */
+    public org.gradle.api.NamedDomainObjectContainer<EmitterSpec> getEmitters() {
+        if (emitters == null) {
+            emitters = getObjects().domainObjectContainer(EmitterSpec.class,
+                    id -> getObjects().newInstance(EmitterSpec.class, id));
+        }
+        return emitters;
+    }
+
+    /**
+     * Configures one emitter for this subscription: its source sets, its options and where its
+     * output goes.
+     *
+     * @param id     the emitter's id, as it names itself, such as {@code restdocs}
+     * @param action its configuration
+     * @return the emitter's block
+     */
+    public EmitterSpec emitter(String id, org.gradle.api.Action<? super EmitterSpec> action) {
+        EmitterSpec spec = getEmitters().maybeCreate(id);
+        action.execute(spec);
+        return spec;
+    }
+
+    /**
+     * How the schema classes reach the subscription's source sets: {@code perSourceSet}, where
+     * each source set compiles them, or {@code shared}, where one source set,
+     * {@code transcriberj<Contract>}, compiles them once and every listed source set depends on
+     * it.
+     *
+     * <p>Default: {@code perSourceSet}.
+     *
+     * @return the mode
+     */
+    public abstract Property<String> getSchemaClasses();
+
+    /**
      * The contract's name.
      *
      * @return the name
@@ -157,7 +206,10 @@ public abstract class TranscriberJSubscription implements Named {
      * <p>Default: none.
      *
      * @return the options
+     * @deprecated Configure each emitter in its own block, {@code emitter('<id>') { options = [...] }}.
+     *             Supported until 1.0.0, which removes it; every generation warns while it is set.
      */
+    @Deprecated
     public abstract MapProperty<String, Map<String, String>> getEmitterOptions();
 
     /**
@@ -197,18 +249,20 @@ public abstract class TranscriberJSubscription implements Named {
     public abstract RegularFileProperty getEndpointIndex();
 
     /**
-     * Where the sources are generated.
+     * Where the core's sources -- the schema classes, operations and cases -- are generated.
+     * Each emitter's go where its {@code emitter(...)} block says.
      *
-     * <p>Default: {@code build/generated/sources/transcriberj/<contract>}.
+     * <p>Default: {@code build/generated/sources/transcriberj/<contract>/core}.
      *
      * @return the directory
      */
     public abstract DirectoryProperty getInto();
 
     /**
-     * Where a resource an emitter writes is generated.
+     * Where the core's resources are generated. Each emitter's go where its {@code emitter(...)}
+     * block says.
      *
-     * <p>Default: {@code build/generated/resources/transcriberj/<contract>}.
+     * <p>Default: {@code build/generated/resources/transcriberj/<contract>/core}.
      *
      * @return the directory
      */

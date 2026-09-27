@@ -1,0 +1,165 @@
+= Tutorial: migrating to per-emitter configuration
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#start]
+== Where we start
+
+A service implements the `orders` contract.
+Its build has the REST Docs emitter, with its invalid-request tests switched on, and the Microcks emitter, and compiles the generated classes in three test suites:
+
+.build.gradle, before
+[source,groovy]
+----
+dependencies {
+    transcriberjEmitters 'com.arc-e-tect:api-only-transcriberj-restdocs:0.3.0'
+    transcriberjEmitters 'com.arc-e-tect:api-only-transcriberj-microcks:1.3.0'
+}
+
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.orders.contract'
+        sourceSets = ['testComponent', 'testContract', 'testSystem']
+        emitterOptions = [restdocs: [tests: 'true']]
+    }
+}
+
+doppelgangerApiDetector {
+    testDirs.from(apiOnlyTranscriberJ.subscriptions.named('orders').flatMap { it.into })
+}
+----
+
+Building it with TranscriberJ 0.11.0 works, and prints three warnings:
+
+----
+apiOnlyTranscriberJ: subscription('orders') sets emitterOptions, which is deprecated and is removed in 1.0.0. ...
+apiOnlyTranscriberJ: subscription('orders'): emitter 'microcks' is on transcriberjEmitters but not configured with emitter('microcks'), ...
+apiOnlyTranscriberJ: subscription('orders'): emitter 'restdocs' is on transcriberjEmitters but not configured with emitter('restdocs'), ...
+----
+
+[#step-1]
+== Step 1: name every emitter
+
+Add a block for each emitter the warnings name, empty for now:
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.orders.contract'
+        sourceSets = ['testComponent', 'testContract', 'testSystem']
+        emitterOptions = [restdocs: [tests: 'true']]
+
+        emitter('restdocs') {
+        }
+        emitter('microcks') {
+        }
+    }
+}
+----
+
+The two warnings about unnamed emitters are gone.
+Each emitter still runs with the subscription's source sets, as before: `sourceSets` in an emitter block defaults to the subscription's.
+
+[#step-2]
+== Step 2: move the options
+
+Move each entry of `emitterOptions` into its emitter's block, and delete `emitterOptions`:
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.orders.contract'
+        sourceSets = ['testComponent', 'testContract', 'testSystem']
+
+        emitter('restdocs') {
+            options = [tests: 'true']
+        }
+        emitter('microcks') {
+        }
+    }
+}
+----
+
+Do it in one edit per emitter.
+While both are set for one emitter, the build fails:
+
+----
+apiOnlyTranscriberJ: subscription('orders') sets the options of emitter 'restdocs' twice: in
+emitterOptions and in emitter('restdocs') { options }. Keep emitter('restdocs') { options = ... } and
+remove 'restdocs' from emitterOptions, which is deprecated.
+----
+
+The last warning is gone.
+
+[#step-3]
+== Step 3: the paths the build names
+
+The Doppelganger detector read the generated tests from the subscription's `into`.
+That is now the core's directory, `build/generated/sources/transcriberj/orders/core`, and the REST Docs emitter's tests are in their own, `.../orders/restdocs`.
+Give the detector both:
+
+[source,groovy]
+----
+doppelgangerApiDetector {
+    def orders = apiOnlyTranscriberJ.subscriptions.named('orders')
+    testDirs.from(orders.flatMap { it.into })
+    testDirs.from(orders.flatMap { it.emitters.named('restdocs').get().intoJava })
+}
+----
+
+Search the build for anything else that names the TranscriberJ's output:
+
+[source,console]
+----
+grep -rn "generated/sources/transcriberj\|generated/resources/transcriberj\|generateContractSources" --include=*.gradle --include=*.kts .
+----
+
+Replace every hard-coded directory with the property that holds it, as above.
+A task that depended on `generateContractSourcesOrders` to get the REST Docs tests depends on `generateContractSourcesOrdersRestdocs` instead.
+
+[#step-4]
+== Step 4: build, and check
+
+[source,console]
+----
+./gradlew build
+----
+
+* The log has no `deprecated` and no `not configured with emitter(` warning.
+* The same classes compile in the same source sets as before, from their new directories.
+* `build/reports/transcriberj/orders.txt` is the report you had, and `orders.adoc` beside it is the same report in AsciiDoc.
+
+The build is ready for 1.0.0.
+
+[#after]
+== What you can do now
+
+Each emitter has a block of its own, so you can say where each one belongs:
+
+[source,groovy]
+----
+emitter('restdocs') {
+    // The REST Docs descriptors and contract tests belong to contract testing only.
+    sourceSets = ['testContract']
+    options = [tests: 'true']
+}
+----
+
+Every source set an emitter compiles in must be one of the subscription's `sourceSets`, so that it sees the schema classes; the build says so when one is not.
+link:../../../api-only-transcriberj/README.adoc#emitter-configuration[The TranscriberJ's README →] describes the rest: emitters that write files, the archives they are packaged in, and sharing the schema classes between source sets with `schemaClasses = 'shared'`.

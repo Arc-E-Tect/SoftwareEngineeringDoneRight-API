@@ -432,6 +432,182 @@ public final class GenerationReport {
         return ValueJson.write(sorted(out)) + "\n";
     }
 
+    /**
+     * The report as a fragment one generation task writes, as JSON: what {@link #render} shows,
+     * and nothing else, so that a task that runs one emitter writes only that emitter's part.
+     * {@link #fromFragment} reads it back.
+     *
+     * @return the JSON text, with a final newline
+     */
+    public String fragment() {
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("degraded", degraded.stream().map(d -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("emitter", d.emitter());
+            e.put("className", d.className());
+            e.put("method", d.method());
+            e.put("finding", finding(d.finding()));
+            return (Object) e;
+        }).toList());
+        out.put("recommendations", recommendations.stream().map(r -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("location", r.location());
+            e.put("advice", r.advice());
+            return (Object) e;
+        }).toList());
+        out.put("undecided", undecided.stream().map(f -> (Object) finding(f)).toList());
+        out.put("warnings", List.copyOf(warnings));
+        out.put("notes", List.copyOf(notes));
+        out.put("noValidValue", noValidValue.stream().map(n -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("className", n.className());
+            e.put("method", n.method());
+            e.put("location", n.location());
+            e.put("reason", n.reason());
+            return (Object) e;
+        }).toList());
+        out.put("unsupportedParameters", unsupportedParameters.stream().map(u -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("className", u.className());
+            e.put("location", u.location());
+            e.put("name", u.name());
+            e.put("reason", u.reason());
+            return (Object) e;
+        }).toList());
+        out.put("invalidRequests", invalidRequests.stream().map(r -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("class", r.get("class"));
+            e.put("cases", ((List<?>) r.get("cases")).stream()
+                    .map(c -> c instanceof Map<?, ?> m ? m.get("id") : c).toList());
+            return (Object) e;
+        }).toList());
+        out.put("coverage", coverage.stream().map(c -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>(c);
+            if (e.get("cases") instanceof List<?> cases) e.put("cases", cases.stream().map(String::valueOf).toList());
+            return (Object) e;
+        }).toList());
+        out.put("gaps", List.copyOf(gaps));
+        out.put("formatRecommendations", formatRecommendations.entrySet().stream().map(f -> {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("location", f.getKey());
+            e.put("format", f.getValue());
+            return (Object) e;
+        }).toList());
+        return ValueJson.write(out) + "\n";
+    }
+
+    private static Map<String, Object> finding(Finding f) {
+        Map<String, Object> e = new java.util.LinkedHashMap<>();
+        e.put("location", f.location());
+        e.put("construct", f.construct().name());
+        e.put("treatment", f.treatment().name());
+        e.put("detail", f.detail());
+        return e;
+    }
+
+    /**
+     * Reads a fragment {@link #fragment} wrote.
+     *
+     * @param json the fragment
+     * @return the report it holds
+     */
+    @SuppressWarnings("unchecked")
+    public static GenerationReport fromFragment(String json) {
+        Map<String, Object> in = (Map<String, Object>) new org.snakeyaml.engine.v2.api.Load(
+                org.snakeyaml.engine.v2.api.LoadSettings.builder().build()).loadFromString(json);
+        GenerationReport report = new GenerationReport();
+        for (Map<String, Object> e : (List<Map<String, Object>>) in.get("degraded")) {
+            report.degraded.add(new Degraded((String) e.get("emitter"), (String) e.get("className"),
+                    (String) e.get("method"), finding((Map<String, Object>) e.get("finding"))));
+        }
+        for (Map<String, Object> e : (List<Map<String, Object>>) in.get("recommendations")) {
+            report.recommendations.add(new Recommendation((String) e.get("location"), (String) e.get("advice")));
+        }
+        for (Map<String, Object> e : (List<Map<String, Object>>) in.get("undecided")) {
+            report.undecided.add(finding(e));
+        }
+        report.warnings.addAll((List<String>) in.get("warnings"));
+        report.notes.addAll((List<String>) in.get("notes"));
+        for (Map<String, Object> e : (List<Map<String, Object>>) in.get("noValidValue")) {
+            report.noValidValue.add(new NoValidValue((String) e.get("className"), (String) e.get("method"),
+                    (String) e.get("location"), (String) e.get("reason")));
+        }
+        for (Map<String, Object> e : (List<Map<String, Object>>) in.get("unsupportedParameters")) {
+            report.unsupportedParameters.add(new UnsupportedParameter((String) e.get("className"),
+                    (String) e.get("location"), (String) e.get("name"), (String) e.get("reason")));
+        }
+        report.invalidRequests.addAll((List<Map<String, Object>>) in.get("invalidRequests"));
+        report.coverage.addAll((List<Map<String, Object>>) in.get("coverage"));
+        report.gaps.addAll((List<Map<String, Object>>) in.get("gaps"));
+        for (Map<String, Object> e : (List<Map<String, Object>>) in.get("formatRecommendations")) {
+            report.formatRecommendations.put((String) e.get("location"), (String) e.get("format"));
+        }
+        return report;
+    }
+
+    private static Finding finding(Map<String, Object> e) {
+        return new Finding((String) e.get("location"),
+                com.arc_e_tect.gradle.apionly.transcriberj.model.Construct.valueOf((String) e.get("construct")),
+                Treatment.valueOf((String) e.get("treatment")), (String) e.get("detail"));
+    }
+
+    /**
+     * Adds what one emitter reported -- the methods it degraded -- after everything already here,
+     * as a run of every emitter in one pass would have.
+     *
+     * @param emitter the emitter's part of a report
+     */
+    public void add(GenerationReport emitter) {
+        degraded.addAll(emitter.degraded);
+    }
+
+    /**
+     * The report's findings as an AsciiDoc fragment, included by the frame
+     * {@link #renderAsciiDocFrame} writes: one section per kind of finding that has any, each
+     * finding shown verbatim, so that nothing a contract says is read as AsciiDoc markup.
+     *
+     * @param title the fragment's heading, such as {@code Core} or {@code Emitter restdocs}
+     * @return the AsciiDoc text
+     */
+    public String renderAsciiDoc(String title) {
+        String text = render("", "");
+        StringBuilder out = new StringBuilder("= ").append(title).append("\n");
+        String[] sections = text.split("\n\n");
+        boolean any = false;
+        for (int i = 1; i < sections.length; i++) {
+            String[] lines = sections[i].split("\n", 2);
+            String heading = lines[0].endsWith(":") ? lines[0].substring(0, lines[0].length() - 1) : lines[0];
+            out.append("\n== ").append(heading).append("\n\n....\n")
+                    .append(lines.length > 1 ? lines[1].stripTrailing().replaceAll("(?m)^  ", "") : "")
+                    .append("\n....\n");
+            any = true;
+        }
+        if (!any) out.append("\nNothing to report.\n");
+        return out.toString();
+    }
+
+    /**
+     * The frame of the AsciiDoc report: the summary of the whole report, and an {@code include::}
+     * of each fragment, in the order given.
+     *
+     * @param contract  the contract's name
+     * @param version   the contract's version
+     * @param fragments each fragment's path, relative to the frame
+     * @return the AsciiDoc text
+     */
+    public String renderAsciiDocFrame(String contract, String version, List<String> fragments) {
+        String[] summary = render(contract, version).split("\n", 4);
+        StringBuilder out = new StringBuilder()
+                .append("= API-Only TranscriberJ report: ").append(contract).append(' ').append(version).append("\n")
+                .append(":toc:\n")
+                .append("// Written by the API-Only TranscriberJ. Do not edit: every build replaces it.\n\n")
+                .append("....\n").append(summary[1]).append("\n").append(summary[2]).append("\n....\n");
+        for (String fragment : fragments) {
+            out.append("\ninclude::").append(fragment).append("[leveloffset=+1]\n");
+        }
+        return out.toString();
+    }
+
     private static Object sorted(Object value) {
         if (value instanceof Map<?, ?> map) {
             Map<String, Object> out = new java.util.TreeMap<>();

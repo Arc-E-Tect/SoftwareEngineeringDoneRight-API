@@ -128,9 +128,27 @@ apiOnlyTranscriberJ {
         // The package the core classes are generated into. Required.
         basePackage = 'com.example.orders.contract'
 
-        // The source sets that compile the generated classes.
-        // Default: ['test']
-        // sourceSets = ['testContract', 'testContractWireMock']
+        // The source sets that use the schema classes: every test suite that exercises
+        // the API. Default: ['test']
+        // sourceSets = ['testComponent', 'testContract', 'testSystem']
+
+        // How the schema classes reach those source sets: 'perSourceSet', where each
+        // compiles them, or 'shared', where one source set, transcriberj<Contract>,
+        // compiles them once and the others depend on it. See "Schema classes, per
+        // source set or shared". Default: 'perSourceSet'
+        // schemaClasses = 'shared'
+
+        // Each emitter, configured on its own: see "Configuring each emitter".
+        // emitter('restdocs') {
+        //     // Where its Java and resources compile; each must be one of sourceSets.
+        //     // Default: sourceSets, or none for an emitter that writes only files
+        //     sourceSets = ['testContract']
+        //     // Its options, passed to it unchanged. Default: none
+        //     options = [tests: 'true']
+        //     // Where its output goes. Default: build/generated/{sources,resources,files}/
+        //     // transcriberj/<contract>/<emitterId>
+        //     // intoJava = ...; intoResources = ...; intoFiles = ...
+        // }
 
         // How many times a recursive $ref is followed in field descriptions
         // before the rest is documented as a subsection. Above 3 is warned
@@ -164,21 +182,21 @@ apiOnlyTranscriberJ {
         // Default: none
         // validateFormats = ['email', 'uuid']
 
-        // Options for each emitter, by emitter id, passed to it unchanged: see "Emitters".
-        // Default: none
+        // Deprecated, and removed in 1.0.0: options for each emitter, by emitter id.
+        // Use emitter('<id>') { options = [...] } instead. Default: none
         // emitterOptions = [restdocs: [tests: 'true']]
 
-        // Where the sources are generated.
-        // Default: build/generated/sources/transcriberj/<contract>
-        // into = layout.buildDirectory.dir('generated/sources/transcriberj/orders')
+        // Where the core's sources are generated.
+        // Default: build/generated/sources/transcriberj/<contract>/core
+        // into = layout.buildDirectory.dir('generated/sources/transcriberj/orders/core')
 
-        // Where a resource an emitter writes is generated.
-        // Default: build/generated/resources/transcriberj/<contract>
-        // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders')
+        // Where the core's resources are generated.
+        // Default: build/generated/resources/transcriberj/<contract>/core
+        // intoResources = layout.buildDirectory.dir('generated/resources/transcriberj/orders/core')
 
         // Where the generation report is written. The machine-readable report of
         // every valid value and invalid-request case goes beside it: orders.txt gives
-        // orders.valid-values.json.
+        // orders.valid-values.json; and the report as AsciiDoc, orders.adoc.
         // Default: build/reports/transcriberj/<contract>.txt
         // reportFile = layout.buildDirectory.file('reports/transcriberj/orders.txt')
 
@@ -269,6 +287,149 @@ The generation report names the configured bundle and how many keys it may carry
 Without `descriptionBundle`::
 Nothing resolves and nothing is generated to resolve with: the classes are the ones generated before bundles existed, with their descriptions compiled in.
 
+[#emitter-configuration]
+== Configuring each emitter
+
+Each emitter's output belongs somewhere else:
+
+* the **core** generates the schema classes, the operations and the invalid-request cases, which every test that exercises the API uses: component tests of the inbound adapter, contract tests, system tests, end-to-end tests;
+* the **REST Docs** emitter generates `*Docs` descriptors and contract tests, which belong to contract testing only;
+* the **WireMock** emitter generates stubs to be packaged and handed to the developers of the API's consumers, which belong on no source set at all.
+
+So a subscription configures each emitter in a block of its own:
+
+[source,groovy]
+----
+dependencies {
+    transcriberjEmitters 'com.arc-e-tect:api-only-transcriberj-restdocs:<version>'
+    transcriberjEmitters 'com.arc-e-tect:api-only-transcriberj-wiremock:<version>'
+}
+
+apiOnlyTranscriberJ {
+    subscription('orders') {
+        basePackage = 'com.example.orders.contract'
+
+        // The schema classes: every test suite that exercises the API.
+        sourceSets = ['testComponent', 'testContract', 'testContractWireMock', 'testSystem']
+
+        // REST Docs: contract tests only.
+        emitter('restdocs') {
+            sourceSets = ['testContract', 'testContractWireMock']
+            options = [tests: 'true']
+        }
+
+        // WireMock: files, packaged for the API's consumers, on no source set.
+        emitter('wiremock') {
+            intoFiles = layout.buildDirectory.dir('wiremock/orders')
+        }
+    }
+}
+----
+
+Which options an emitter takes, and whether it writes Java, resources or files with them, is its README's to say; the WireMock example assumes an emitter version that writes files.
+
+[#placement-rules]
+=== Where each emitter's output goes
+
+[cols="1,3", options="header"]
+|===
+|Setting |Rule
+
+|`emitter('<id>')`
+|Configures one emitter for one subscription.
+An id no emitter on `transcriberjEmitters` has fails the build, naming the ids there are.
+
+|`sourceSets`
+|The source sets the emitter's Java sources and classpath resources go to.
+Default: the subscription's `sourceSets` for an emitter that writes Java or resources, and none for one that writes only files.
+Each must see the schema classes: with `perSourceSet`, each must be one of the subscription's `sourceSets`; with `shared`, the same, since those are the source sets that depend on the shared one.
+
+|`options`
+|Passed to the emitter unchanged.
+Default: none.
+
+|`intoJava`, `intoResources`, `intoFiles`
+|Where the emitter's Java sources, classpath resources and files go.
+Default: `build/generated/sources/transcriberj/<contract>/<emitterId>`, `build/generated/resources/transcriberj/<contract>/<emitterId>` and `build/generated/files/transcriberj/<contract>/<emitterId>`.
+The core's go to the subscription's `into` and `intoResources`, by default `.../<contract>/core`.
+|===
+
+The plugin asks each emitter what it writes with the options it is given, and checks the configuration against it while the build is configured.
+Each of these fails, naming the emitter, the source set and the fix:
+
+* an emitter id that no loaded emitter has;
+* an emitter source set that does not see the schema classes;
+* source sets on an emitter that writes only files;
+* an empty `sourceSets` on an emitter that writes Java or resources;
+* options set both in `emitterOptions` and in the emitter's block;
+* a `schemaClasses` that is neither `perSourceSet` nor `shared`;
+* a source set the project does not have.
+
+An emitter on `transcriberjEmitters` that no `emitter(...)` block names still runs, with the subscription's source sets and no options, and the build warns about it.
+**1.0.0 runs only the emitters a subscription names**, and removes `emitterOptions`: link:../docs/migration/to-per-emitter-configuration/overview.adoc[the migration →] says how to move a build over, in one pull request.
+
+[#schema-classes]
+=== Schema classes, per source set or shared
+
+The schema classes reach several source sets in one of two ways, and which suits a build is the build's choice.
+
+[cols="1,2,2", options="header"]
+|===
+| |`perSourceSet` (the default) |`shared`
+
+|How
+|The core's directory is added to every listed source set, and each compiles it.
+|The plugin creates one source set, `transcriberj<Contract>`, that compiles the schema classes once, and every listed source set depends on its output, as Gradle's `java-test-fixtures` plugin wires a test-fixtures source set.
+
+|For
+|No wiring between source sets, which suits builds whose test suites each compile several shared directories already.
+|Each class is compiled once, and has one identity.
+
+|Against
+|The same classes are compiled once per source set, which costs build time, and a class exists more than once if two such source sets ever share a classpath.
+|One more source set, with dependency wiring, and one more module in the IDE.
+|===
+
+Hand-written code in the generated package, in a listed source set, may use the generated classes' package-private members -- `ContractJson`, for one -- in either mode: on a classpath, one package can span source sets.
+It would not under the Java module system, where a package belongs to one module; the TranscriberJ's generated code is not meant to be put in a named module.
+
+Emitter output is compiled in the emitter's own source sets in both modes.
+
+[#archives]
+=== Archives of files
+
+An emitter that writes files gets `package<Contract><Emitter>`, a `Zip` of its files directory and an `apionly-provenance.json`: the contract's name, version and document hash, as the lockfile records them, the TranscriberJ's version, and the emitter's id, version and options.
+It is written to `build/distributions/<contract>-<emitterId>-<contractVersion>.zip`, and is reproducible: fixed file order, no timestamps, and fixed permissions, whatever the machine, its time zone or its umask.
+`assemble` does not build it.
+
+The archive is the artifact of a consumable configuration, `transcriberj<Contract><Emitter>Elements`, and of a component, `transcriberj<Contract><Emitter>`, so a build publishes it without naming a task:
+
+[source,groovy]
+----
+plugins {
+    id 'maven-publish'
+}
+
+publishing {
+    publications {
+        ordersStubs(MavenPublication) {
+            from components.transcriberjOrdersWiremock
+            artifactId = 'orders-wiremock-stubs'
+        }
+    }
+}
+----
+
+A consumer resolves it as `'<group>:orders-wiremock-stubs:<version>@zip'`.
+The component and configuration exist for every emitter a subscription names; only an emitter that writes files has an archive in them.
+
+[#reports]
+=== One report, as text and as AsciiDoc
+
+Each generation task writes its part of the report, and `reportContractSources<Contract>` writes the one report of the subscription from them: `reportFile`, exactly as one generation of the core and every emitter would have written it, and `<contract>.adoc` beside it.
+The AsciiDoc report is a frame -- the summary, and an `include::` of each part, the core's first and then each emitter's -- over the parts in `<contract>/core.adoc` and `<contract>/<emitterId>.adoc`, with every finding shown verbatim.
+The plugin does not render it; a project's own Asciidoctor task can.
+
 [#tasks]
 == Tasks
 
@@ -277,11 +438,24 @@ Nothing resolves and nothing is generated to resolve with: the classes are the o
 |Task |What it does
 
 |`generateContractSources<Contract>`
-|Generates the class tree, replacing whatever the output directory held, and writes its report, by default `build/reports/transcriberj/<contract>.txt` (`reportFile`), with the machine-readable report of every valid value beside it, `<contract>.valid-values.json`.
-Runs whenever the contract document or the lockfile changes; the fetch runs first.
+|Generates the core of the class tree -- the schema classes, the operations, the invalid-request cases and the endpoint index -- replacing whatever its directories held, and the machine-readable report of every valid value, `<contract>.valid-values.json` beside `reportFile`.
+Runs whenever the contract document, the lockfile or a setting the core depends on changes; the fetch runs first.
+
+|`generateContractSources<Contract><Emitter>`
+|Generates one emitter's output, in directories of its own, over the same model the core derives.
+Its inputs are the contract, the settings the model depends on, and that emitter's options and library, so changing one emitter's options regenerates that emitter alone.
+`<Emitter>` is the emitter's id, spelt as `<Contract>` is: `restdocs` is `Restdocs`.
+
+|`reportContractSources<Contract>`
+|Writes the one report of the subscription, `reportFile`, by default `build/reports/transcriberj/<contract>.txt`, from the parts each generation task wrote, and the same report as AsciiDoc beside it, `<contract>.adoc`: a frame that summarises it and includes each task's part.
+Every generation task runs it when it finishes.
+
+|`package<Contract><Emitter>`
+|For an emitter that writes files: packages them, with their provenance, as `build/distributions/<contract>-<emitterId>-<contractVersion>.zip`.
+See <<archives,Archives of files §>>.
 
 |`verifyContractSources<Contract>`
-|Fails when the generated tree was generated from another version or document than the lockfile names.
+|Fails when the core's output, or any emitter's, was generated from another version or document than the lockfile names, naming the emitter.
 `check` runs it.
 
 |`updateApiOnlyTranscriberJDSL`
@@ -305,13 +479,15 @@ The plugin therefore tells each IDE what to run on sync, and which directory hol
 |When the build applies |The plugin
 
 |`org.jetbrains.gradle.plugin.idea-ext`
-|Registers every `generateContractSources<Contract>` as an `afterSync` trigger, so importing or re-syncing the project in IntelliJ IDEA generates the sources before indexing them.
+|Registers every generation task -- the core's and each emitter's -- as an `afterSync` trigger, so importing or re-syncing the project in IntelliJ IDEA generates the sources before indexing them.
 
 |`idea`
-|Adds each contract's output directory to `idea.module.generatedSourceDirs`, so IntelliJ indexes it as generated code rather than as hand-written source.
+|Adds the core's source and resource directories, and those of every emitter that is on a source set, to `idea.module.generatedSourceDirs`, so IntelliJ indexes them as generated code rather than as hand-written source.
+An emitter's files directory is never marked: its files belong on no classpath.
+With `schemaClasses = 'shared'`, the core's directories are the shared source set's.
 
 |`eclipse`
-|Adds every `generateContractSources<Contract>` to `eclipse.synchronizationTasks`, which Buildship runs when it synchronises the project.
+|Adds every generation task to `eclipse.synchronizationTasks`, which Buildship runs when it synchronises the project.
 |===
 
 IntelliJ's sync hook lives in the https://github.com/JetBrains/gradle-idea-ext-plugin[idea-ext plugin ↗], which is not part of Gradle, so a build that wants it applies it:
@@ -930,7 +1106,7 @@ A warning never fails the build.
 An emitter adds a dialect: companion classes in `<basePackage>.<emitter id>`, such as REST Docs descriptors or WireMock stubs, built on the core classes.
 None is included; a project adds the ones it wants to `transcriberjEmitters`.
 
-Two are published from https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library[the Library repository ↗]:
+Three are published from https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library[the Library repository ↗]:
 
 [cols="1,3",options="header"]
 |===
@@ -941,10 +1117,13 @@ Two are published from https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRigh
 
 |`com.arc-e-tect:api-only-transcriberj-microcks`
 |From the AsyncAPI document, one JUnit 5 conformance test per `send` operation, checking what an application publishes against a Microcks-imported copy of the contract, as `<basePackage>.microcks.AsyncConformanceHarness`. What a generator cannot know -- the broker, where the contract file is, how the application publishes each event -- is left to abstract methods the project implements. It also writes a properties resource, which is what `EmitterContext.writeResource` is for. It needs every message to carry an `examples` array, which the Publisher can enforce with `lint.examples.asyncapi`.
+
+|`com.arc-e-tect:api-only-transcriberj-wiremock`
+|For every invalid-request case, an exact WireMock stub that answers the case as the contract declares, so that the same generated contract tests run against the real implementation and against a WireMock double (`<basePackage>.wiremock.InvalidRequestStubs`).
 |===
 
-Each one's README lists what it needs of the project.
-They run after the core emitter, each in a class loader built from that configuration, so their dependencies never mix with the build script's.
+Each one's README lists what it needs of the project, and the options it takes.
+Each runs in a task of its own, `generateContractSources<Contract><Emitter>`, after the core, over the same model, in a class loader built from that configuration, so its dependencies never mix with the build script's.
 
 An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`, and names its implementation in `META-INF/services/com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`.
 The interface is part of the plugin: an emitter compiles against `com.arc-e-tect:api-only-transcriberj`, from the Gradle Plugin Portal's repository, as a `compileOnly` dependency, since the plugin provides it when it loads the emitter.
@@ -967,14 +1146,28 @@ public interface Emitter {
     String id();                              // "restdocs": its package, and its name in reports
     List<ManagedDependency> dependencies();   // what its generated code needs
     Set<Construct> represents();              // which classified constructs it handles in full
+    default Set<Output> produces(Map<String, String> options) {   // what it writes with these options
+        return EnumSet.of(Output.JAVA, Output.RESOURCES);
+    }
     void emit(EmitterContext context);        // model, settings, class names, invalid-request cases,
-                                              // writeJava, writeResource, degraded
+                                              // writeJava, writeResource, writeFile, degraded
 }
 ----
+
+[#emitter-produces]
+==== What an emitter must declare
+
+`produces(options)` says what the emitter writes with the options a project gives it: `Output.JAVA` for sources written with `writeJava`, `Output.RESOURCES` for classpath resources written with `writeResource`, and `Output.FILES` for files that belong on no classpath, written with `writeFile`.
+The plugin places each where it belongs -- Java and resources in the emitter's source sets, files in its files directory and archive -- and checks a project's configuration against it before any task runs: source sets for an emitter that writes neither Java nor resources, or none for one that writes Java, fail the build.
+
+So declare exactly what the options select.
+An emitter whose option switches from Java to files returns `Output.FILES` alone for that option, and must then write nothing else: a write the declaration does not cover lands where no source set reads it.
+An emitter that does not override `produces` is taken to write Java and resources, as every emitter did before files existed, and keeps working unchanged.
 
 `EmitterContext.names()` gives every core class's name, so a companion always matches the class it belongs to.
 `EmitterContext.writeResource(path, content)` writes a non-Java file -- a properties file a generated or hand-written class reads through `getResourceAsStream`, for instance -- to the resource root the project's source sets read from, the way `writeJava` writes a class to the sources root.
 `path` is `/`-separated and relative, such as `"META-INF/restdocs/service.properties"`; it may not be absolute, and may not use `.` or `..` segments.
+`EmitterContext.writeFile(path, content)`, with bytes or text, writes a file that belongs on no classpath -- a mapping file, part of an archive -- to the emitter's files directory, with the same rules for `path`.
 `EmitterContext.degraded(...)` returns the statement a method that cannot represent a construct consists of, and records it in the report.
 `ClassNames.invalidRequests(location)` names an operation's `<Operation>InvalidRequests` class, which `ClassNames.all()` does not list: its origin is `Origin.INVALID_REQUESTS`.
 An emitter with an exhaustive `switch` over `Origin` has one more constant to handle.
@@ -984,28 +1177,32 @@ The core derives them before any other emitter runs; the list is empty for an op
 [#emitter-options]
 === Emitter options
 
-A project configures an emitter with `emitterOptions`, per subscription, keyed by the emitter's id; each value is a map of names to strings:
+A project gives an emitter its options in the emitter's block, per subscription, as a map of names to strings:
 
 [source,groovy]
 ----
 apiOnlyTranscriberJ {
     subscription('orders') {
         basePackage = 'com.example.orders.contract'
-        emitterOptions = [restdocs: [tests: 'true']]
+        emitter('restdocs') {
+            options = [tests: 'true']
+        }
     }
 }
 ----
 
 The TranscriberJ does not interpret them.
-It passes them to the emitter unchanged, through `EmitterContext.settings().emitterOptions(id())`, empty when the project gave none; what each option means is the emitter's README's to say.
-The options are an input of the generation task, so changing one regenerates.
-Options for an id no emitter on `transcriberjEmitters` has fail the build, naming the ids there are: a mistyped id is not silently ignored.
+It passes them to the emitter unchanged, through `EmitterContext.settings().emitterOptions(id())`, empty when the project gave none, and to `produces(options)`; what each option means is the emitter's README's to say.
+They are an input of that emitter's task alone, so changing one regenerates that emitter and leaves the core and every other emitter up to date.
+A block for an id no emitter on `transcriberjEmitters` has fails the build, naming the ids there are: a mistyped id is not silently ignored.
+
+`emitterOptions = [restdocs: [tests: 'true']]`, one map for every emitter, still works, and is warned about on every build: it is deprecated, and 1.0.0 removes it.
 
 [#emitter-dependencies]
 === What the generated code depends on
 
 An emitter declares the libraries its generated code needs, the version it was tested with, and the first version it was not.
-The plugin adds each to the source sets it generates into, at a version it only _prefers_: Gradle uses it when nothing else in the build asks for a version, declared or transitive, so a project's own choice always wins.
+The plugin adds each to the source sets that emitter's output is compiled in, at a version it only _prefers_: Gradle uses it when nothing else in the build asks for a version, declared or transitive, so a project's own choice always wins.
 
 The core generated code declares one of its own, on the same terms: `com.arc-e-tect.sedr.utils:sedr-library`, for the marker annotation in <<coverage,Generated code is not measured for coverage §>>.
 

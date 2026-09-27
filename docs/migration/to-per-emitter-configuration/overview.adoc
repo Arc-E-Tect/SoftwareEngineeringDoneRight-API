@@ -1,0 +1,117 @@
+= Migration: to per-emitter configuration in the API-Only TranscriberJ
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+From 0.11.0 the TranscriberJ configures each emitter on its own, with an `emitter('<id>') { }` block in the subscription, and runs each emitter in a task of its own.
+Two ways of configuring emitters that worked before still work, and are warned about on every build: `emitterOptions`, and an emitter on `transcriberjEmitters` that the subscription does not name.
+**1.0.0 removes both.**
+A build that still relies on either then stops running that emitter, or fails.
+
+Migrating takes one pull request, and usually changes nothing but the `apiOnlyTranscriberJ` block.
+When the build is warning-free, it is ready for 1.0.0.
+
+[#what-changed]
+== What changed in 0.11.0
+
+[cols="2,3,2", options="header"]
+|===
+|What |Before |From 0.11.0
+
+|Emitter options
+|`emitterOptions = [restdocs: [tests: 'true']]`, one map for every emitter
+|`emitter('restdocs') { options = [tests: 'true'] }`; `emitterOptions` deprecated, removed in 1.0.0
+
+|Which emitters run
+|Every emitter on `transcriberjEmitters`
+|The same, and an unnamed one is warned about; from 1.0.0 only an emitter named with `emitter(...)` runs
+
+|Where an emitter's output compiles
+|In every source set the subscription lists
+|In the emitter's own `sourceSets`, which default to the subscription's; an emitter that writes files is on none
+
+|Where the output is written
+|One directory: `build/generated/sources/transcriberj/<contract>`
+|`.../<contract>/core` for the core, `.../<contract>/<emitterId>` for each emitter, and `build/generated/files/transcriberj/<contract>/<emitterId>` for files
+
+|Tasks
+|`generateContractSources<Contract>` generated everything and wrote the report
+|It generates the core; `generateContractSources<Contract><Emitter>` each emitter; `reportContractSources<Contract>` writes the report
+|===
+
+The first two rows are what 1.0.0 removes, and what the migration is for.
+The last three changed already, and need attention only where a build refers to a directory or a task by name: see <<paths,Builds that refer to paths or tasks §>>.
+
+[#fits]
+== When this applies to you
+
+* The build sets `emitterOptions`, or
+* it has an emitter on `transcriberjEmitters` that no `emitter(...)` block names, which is every build written before 0.11.0 that has an emitter at all, or
+* it refers to the TranscriberJ's output directories, or to `generateContractSources<Contract>`'s report, by name.
+
+A build with no emitter, and no reference to the TranscriberJ's directories, has nothing to migrate.
+
+[#warnings]
+== The warnings that tell you
+
+Each is printed while the build is configured, once per subscription:
+
+----
+apiOnlyTranscriberJ: subscription('orders') sets emitterOptions, which is deprecated and is removed in
+1.0.0. Configure each emitter in its own block instead: emitter('<id>') { options = [...] }.
+
+apiOnlyTranscriberJ: subscription('orders'): emitter 'restdocs' is on transcriberjEmitters but not
+configured with emitter('restdocs'), so it runs with the subscription's source sets and no options.
+From 1.0.0 only an emitter named with emitter(...) runs: add emitter('restdocs') {} to keep it.
+----
+
+[#steps]
+== The steps
+
+. **Name every emitter.** For each emitter on `transcriberjEmitters`, add `emitter('<id>') { }` to each subscription that should run it.
+The ids are in the second warning, and in each emitter's README.
+. **Move its options.** Move each entry of `emitterOptions` into the emitter's block, as `options = [...]`, and delete `emitterOptions`.
+Setting both for one emitter fails the build, so move each emitter's options in one edit.
+. **Check the paths and tasks the build names**, as <<paths,below §>> says.
+. **Build, and read the log.** No deprecation warning is left, and the generated sources are the same as before; only their directories moved.
+
+Nothing else is required.
+What you may do next, now that each emitter has a block of its own, is in <<next,Where to go next §>>.
+
+[#paths]
+== Builds that refer to paths or tasks
+
+The generated sources are the same, byte for byte; only where they are written changed.
+A build is affected only where it names a directory or a task:
+
+* **A hard-coded path** such as `build/generated/sources/transcriberj/orders`.
+Use the properties instead, which carry the task that writes them: `apiOnlyTranscriberJ.subscriptions.named('orders').flatMap { it.into }` for the core, and `...flatMap { it.emitters.named('restdocs').get().intoJava }`, or the emitter block's `intoJava`, for an emitter.
+* **A tool that scans the generated tests**, such as a contract-coverage detector given the subscription's `into`.
+The core's directory no longer holds any emitter's output: give the tool the emitter's `intoJava` as well.
+* **The report**: `generateContractSources<Contract>` no longer has a `reportFile`.
+The subscription's `reportFile` is unchanged, and `reportContractSources<Contract>` writes it.
+* **Running only the core task** no longer regenerates the emitters' output.
+Compiling a source set runs every task whose output it compiles; to run one emitter on its own, run `generateContractSources<Contract><Emitter>`.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] migrates a build with the REST Docs emitter, step by step, with the build file before and after each step.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant do it in your own repository, stopping for your review.
+* link:../../../api-only-transcriberj/README.adoc#emitter-configuration[Configuring emitters →], in the TranscriberJ's README, covers what the new block can do beyond the migration: an emitter's own source sets, files that go on no classpath and the archive they are packaged in, and sharing the schema classes between source sets.

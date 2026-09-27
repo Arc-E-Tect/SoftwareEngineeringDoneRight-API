@@ -42,7 +42,7 @@ final class IdeIntegration {
      * @param sources   where that task writes the class tree
      * @param resources where that task writes a resource an emitter wrote
      */
-    static void wire(Project project, TaskProvider<GenerateContractSourcesTask> generate,
+    static void wire(Project project, TaskProvider<? extends org.gradle.api.Task> generate,
                      Provider<Directory> sources, Provider<Directory> resources) {
         project.getPluginManager().withPlugin("idea", applied -> {
             markGenerated(project, sources);
@@ -61,6 +61,37 @@ final class IdeIntegration {
     }
 
     /** Adds the directory to IntelliJ's generated source directories, keeping what is there. */
+    /**
+     * Marks an emitter's generated directories as generated code in the IDEA model.
+     *
+     * @param project     the project
+     * @param directories the directories
+     */
+    @SafeVarargs
+    static void markGenerated(Project project, Provider<Directory>... directories) {
+        project.getPluginManager().withPlugin("idea", applied -> {
+            for (Provider<Directory> directory : directories) {
+                markGenerated(project, directory);
+            }
+        });
+    }
+
+    /**
+     * Has the IDEs run a generation task when they synchronise the project.
+     *
+     * @param project  the project
+     * @param generate the task
+     */
+    static void sync(Project project, TaskProvider<? extends org.gradle.api.Task> generate) {
+        Project root = project.getRootProject();
+        root.getPluginManager().withPlugin(IDEA_EXT_PLUGIN, applied -> runOnSync(root, generate));
+        if (root != project) {
+            project.getPluginManager().withPlugin(IDEA_EXT_PLUGIN, applied -> runOnSync(root, generate));
+        }
+        project.getPluginManager().withPlugin("eclipse", applied ->
+                project.getExtensions().getByType(EclipseModel.class).synchronizationTasks(generate));
+    }
+
     private static void markGenerated(Project project, Provider<Directory> sources) {
         IdeaModel idea = project.getExtensions().getByType(IdeaModel.class);
         Set<File> directories = new LinkedHashSet<>(idea.getModule().getGeneratedSourceDirs());
@@ -77,7 +108,7 @@ final class IdeIntegration {
      * necessarily the ones this plugin could compile against, and its version is the
      * build's choice rather than this plugin's.
      */
-    private static void runOnSync(Project root, TaskProvider<GenerateContractSourcesTask> generate) {
+    private static void runOnSync(Project root, TaskProvider<? extends org.gradle.api.Task> generate) {
         if (registered(root).add(generate.getName())) {
             registerAfterSync(root, taskTriggers(root), generate);
         }
@@ -122,7 +153,7 @@ final class IdeIntegration {
      * @return true when the task was registered as an {@code afterSync} trigger
      */
     static boolean registerAfterSync(Project project, Object triggers,
-                                     TaskProvider<GenerateContractSourcesTask> generate) {
+                                     TaskProvider<? extends org.gradle.api.Task> generate) {
         if (triggers == null) {
             project.getLogger().warn("The API-Only TranscriberJ found {} applied without the task triggers it "
                     + "carries, so {} will not run on IDE sync. Run it by hand, or see the plugin's README.",

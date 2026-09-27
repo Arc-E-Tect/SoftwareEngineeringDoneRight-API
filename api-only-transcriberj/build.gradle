@@ -109,6 +109,13 @@ dependencies {
     testRuntimeOnly    libs.junit.platform.launcher
 }
 
+// The TranscriberJ's own version, which every archive's apionly-provenance.json records.
+def writeVersion = tasks.register('writeTranscriberJVersion', WriteProperties) {
+    destinationFile = layout.buildDirectory.file('generated/version/com/arc_e_tect/gradle/apionly/transcriberj/transcriberj.properties')
+    property 'version', project.version.toString()
+}
+sourceSets.main.resources.srcDir(writeVersion.map { layout.buildDirectory.dir('generated/version').get() })
+
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     // The Publisher scaffold and the corpora, read by path, and the contracts of the

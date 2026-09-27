@@ -74,13 +74,16 @@ class ValidValueReportFileTest {
         task.getDescriptionPlaceholder().set("P");
         task.getOutputDirectory().set(projectDir.resolve("out").toFile());
         task.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
-        task.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        task.getReportFragment().set(projectDir.resolve("report/core.json").toFile());
+        task.getAsciiDocFragment().set(projectDir.resolve("report/core.adoc").toFile());
         task.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
         task.getValidValuesReport().set(projectDir.resolve("report.valid-values.json").toFile());
 
         task.generate();
 
-        List<String> text = Files.readAllLines(projectDir.resolve("report.txt"));
+        List<String> text = List.of(com.arc_e_tect.gradle.apionly.transcriberj.core.GenerationReport
+                .fromFragment(Files.readString(projectDir.resolve("report/core.json")))
+                .render("parameters", "1.0.0").split("\n"));
         assertThat(text.get(1)).endsWith(", 4 method(s) without a valid value, 6 parameter(s) not supported yet");
         String json = Files.readString(projectDir.resolve("report.valid-values.json"));
         assertThat(json).startsWith("{\"bodies\":[").contains("\"contract\":\"parameters\"")
@@ -91,7 +94,7 @@ class ValidValueReportFileTest {
     }
 
     @Test
-    void withoutAPlaceForTheMachineReadableReportOnlyTheTextOneIsWritten() throws Exception {
+    void withoutAPlaceForTheMachineReadableReportOnlyTheFragmentsAreWritten() throws Exception {
         project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);
         Path contract = Path.of(System.getProperty("transcriberj.fixtures"), "valid-values/corpus/exclusive-3.0.yaml");
         Lockfile lock = new Lockfile();
@@ -109,12 +112,13 @@ class ValidValueReportFileTest {
         task.getDescriptionPlaceholder().set("P");
         task.getOutputDirectory().set(projectDir.resolve("out").toFile());
         task.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
-        task.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        task.getReportFragment().set(projectDir.resolve("report/core.json").toFile());
+        task.getAsciiDocFragment().set(projectDir.resolve("report/core.adoc").toFile());
         task.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
 
         task.generate();
 
-        assertThat(projectDir.resolve("report.txt")).exists();
+        assertThat(projectDir.resolve("report/core.json")).exists();
         try (var files = Files.list(projectDir)) {
             assertThat(files.map(p -> p.getFileName().toString())).noneMatch(n -> n.endsWith(".json"));
         }

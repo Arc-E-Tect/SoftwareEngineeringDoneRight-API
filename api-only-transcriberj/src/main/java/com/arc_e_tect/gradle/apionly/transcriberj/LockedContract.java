@@ -23,4 +23,26 @@ record LockedContract(String version, String sha256) {
         }
         return new LockedContract(entry.version(), entry.files().get(DOCUMENT));
     }
+
+    /**
+     * A contract's locked version, read from the lockfile's text, for what must be known before
+     * any task runs: an archive's name.
+     *
+     * @param lockfile the lockfile's text; empty when there is none yet
+     * @param contract the contract's name
+     * @return the version, or {@code unspecified} when the lockfile does not name the contract
+     */
+    static String version(String lockfile, String contract) {
+        boolean target = false;
+        for (String line : lockfile.split("\\R")) {
+            String[] parts = line.strip().split("\\s+", 2);
+            if (parts.length < 2) continue;
+            if (parts[0].equals("target")) {
+                target = parts[1].equals(contract);
+            } else if (target && parts[0].equals("version")) {
+                return parts[1];
+            }
+        }
+        return "unspecified";
+    }
 }
