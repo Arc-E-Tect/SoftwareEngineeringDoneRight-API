@@ -83,14 +83,7 @@ public final class Generation {
     public static GenerationReport run(Path contract, Path asyncContract, String contractVersion,
                                        String contractSha256, Settings settings, Path outputDirectory,
                                        Path resourceDirectory, List<Emitter> emitters, Path endpointIndex) {
-        if (settings.basePackage() == null || !PACKAGE.matcher(settings.basePackage()).matches()) {
-            throw new GenerationException("Contract " + settings.contract() + ": basePackage "
-                    + settings.basePackage() + " is not a Java package name.");
-        }
-        if (!STATUS.matcher(settings.invalidRequestStatus()).matches()) {
-            throw new GenerationException("Contract " + settings.contract() + ": invalidRequestStatus "
-                    + settings.invalidRequestStatus() + " is not a status code; give one such as 400 or 422.");
-        }
+        validate(settings);
         List<String> unknown = settings.emitterOptions().keySet().stream()
                 .filter(id -> emitters.stream().noneMatch(e -> e.id().equals(id))).toList();
         if (!unknown.isEmpty()) {
@@ -99,6 +92,35 @@ public final class Generation {
                     + "classpath; the emitters there are " + (emitters.isEmpty() ? "none"
                     : String.join(", ", emitters.stream().map(Emitter::id).toList())) + ".");
         }
+        Derivation derivation = derive(contract, asyncContract, contractVersion, contractSha256, settings);
+        writeCore(derivation, outputDirectory, resourceDirectory, endpointIndex);
+        Sink sink = new DirectorySink(outputDirectory, resourceDirectory, null);
+        for (Emitter emitter : emitters) {
+            emitter.emit(derivation.context(emitter.id(), sink, derivation.report));
+        }
+        return derivation.report;
+    }
+
+    /**
+     * Derives everything the core generates from a contract -- the model, the class names, the
+     * invalid-request cases, the report -- and the core's own sources, held in memory. Nothing is
+     * written: {@link #writeCore} writes the core's output, and {@link #runEmitter} runs one
+     * emitter over the same derivation.
+     *
+     * <p>Every step is deterministic, so two derivations of one contract with one set of
+     * settings are the same, whichever task makes them.
+     *
+     * @param contract        the fetched OpenAPI document
+     * @param asyncContract   the fetched AsyncAPI document, or {@code null} when the contract has none
+     * @param contractVersion the version the build locked the contract at
+     * @param contractSha256  the SHA-256 the build locked the document at
+     * @param settings        how the project asked for the classes
+     * @return the derivation
+     * @throws GenerationException when no sources can be generated from the contract
+     */
+    public static Derivation derive(Path contract, Path asyncContract, String contractVersion,
+                                    String contractSha256, Settings settings) {
+        validate(settings);
         ContractModel model;
         try {
             model = ContractParser.parse(contract, asyncContract);
@@ -110,9 +132,6 @@ public final class Generation {
                     + contractVersion + ", but " + contract + " says it is version " + model.version()
                     + ". Run fetchApiSpec, and check that the document was not edited.");
         }
-
-        clean(outputDirectory);
-        clean(resourceDirectory);
         GenerationReport report = new GenerationReport();
         report.findings(model.findings());
         Shapes shapes = new Shapes(model);
@@ -120,16 +139,100 @@ public final class Generation {
         DesignWarnings.check(model, settings, shapes, names, report);
 
         CoreEmitter core = new CoreEmitter(shapes, names, contractSha256, report);
-        core.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report, core.id(),
-                Map.of()));
-        for (Emitter emitter : emitters) {
-            emitter.emit(new Context(model, settings, names, outputDirectory, resourceDirectory, report,
-                    emitter.id(), core.invalidRequestCases()));
+        BufferSink buffer = new BufferSink();
+        core.emit(new Context(model, settings, names, buffer, report, core.id(), Map.of()));
+        return new Derivation(model, settings, names, report, core.invalidRequestCases(), buffer);
+    }
+
+    /** Settings no generation can start from: a package that is none, a status that is none. */
+    private static void validate(Settings settings) {
+        if (settings.basePackage() == null || !PACKAGE.matcher(settings.basePackage()).matches()) {
+            throw new GenerationException("Contract " + settings.contract() + ": basePackage "
+                    + settings.basePackage() + " is not a Java package name.");
         }
+        if (!STATUS.matcher(settings.invalidRequestStatus()).matches()) {
+            throw new GenerationException("Contract " + settings.contract() + ": invalidRequestStatus "
+                    + settings.invalidRequestStatus() + " is not a status code; give one such as 400 or 422.");
+        }
+    }
+
+    /**
+     * Writes the core's sources and resources, replacing whatever the two directories held, and
+     * the endpoint index.
+     *
+     * @param derivation        the derivation
+     * @param outputDirectory   where the core's sources go
+     * @param resourceDirectory where the core's resources go
+     * @param endpointIndex     where the endpoint index goes; {@code null} to write none
+     * @return the core's report
+     */
+    public static GenerationReport writeCore(Derivation derivation, Path outputDirectory, Path resourceDirectory,
+                                             Path endpointIndex) {
+        clean(outputDirectory);
+        clean(resourceDirectory);
+        derivation.buffer.flush(new DirectorySink(outputDirectory, resourceDirectory, null));
         if (endpointIndex != null) {
-            writeEndpointIndex(endpointIndex, settings, model, names);
+            writeEndpointIndex(endpointIndex, derivation.settings, derivation.model, derivation.names);
         }
+        return derivation.report;
+    }
+
+    /**
+     * Runs one emitter over a derivation, replacing whatever its three directories held.
+     *
+     * @param derivation        the derivation
+     * @param emitter           the emitter
+     * @param javaDirectory     where its Java sources go
+     * @param resourceDirectory where its classpath resources go
+     * @param filesDirectory    where its files go
+     * @return what this emitter reported: the methods it degraded
+     */
+    public static GenerationReport runEmitter(Derivation derivation, Emitter emitter, Path javaDirectory,
+                                              Path resourceDirectory, Path filesDirectory) {
+        clean(javaDirectory);
+        clean(resourceDirectory);
+        clean(filesDirectory);
+        GenerationReport report = new GenerationReport();
+        emitter.emit(derivation.context(emitter.id(),
+                new DirectorySink(javaDirectory, resourceDirectory, filesDirectory), report));
         return report;
+    }
+
+    /**
+     * What {@link #derive} works out once: the model, the class names, the cases and the core's
+     * report, and the core's output, not yet written.
+     */
+    public static final class Derivation {
+
+        private final ContractModel model;
+        private final Settings settings;
+        private final CoreClassNames names;
+        private final GenerationReport report;
+        private final Map<String, List<InvalidRequestCase>> cases;
+        private final BufferSink buffer;
+
+        private Derivation(ContractModel model, Settings settings, CoreClassNames names, GenerationReport report,
+                           Map<String, List<InvalidRequestCase>> cases, BufferSink buffer) {
+            this.model = model;
+            this.settings = settings;
+            this.names = names;
+            this.report = report;
+            this.cases = cases;
+            this.buffer = buffer;
+        }
+
+        /**
+         * The core's report.
+         *
+         * @return the report
+         */
+        public GenerationReport report() {
+            return report;
+        }
+
+        private EmitterContext context(String emitter, Sink sink, GenerationReport into) {
+            return new Context(model, settings, names, sink, into, emitter, cases);
+        }
     }
 
     private static void writeEndpointIndex(Path file, Settings settings, ContractModel model, CoreClassNames names) {
@@ -184,9 +287,79 @@ public final class Generation {
         }
     }
 
+    /** Where an emitter's output goes: directories on disk, or a buffer. */
+    private interface Sink {
+
+        void java(String packageName, String simpleName, String source);
+
+        void resource(String path, String content);
+
+        void file(String path, byte[] content);
+    }
+
+    /** Writes to directories; a {@code null} files directory refuses files. */
+    private record DirectorySink(Path javaDirectory, Path resourceDirectory, Path filesDirectory) implements Sink {
+
+        @Override
+        public void java(String packageName, String simpleName, String source) {
+            write(javaDirectory.resolve(packageName.replace('.', '/')).resolve(simpleName + ".java"),
+                    source.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public void resource(String path, String content) {
+            write(resourceDirectory.resolve(path), content.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public void file(String path, byte[] content) {
+            if (filesDirectory == null) {
+                throw new UnsupportedOperationException("This generation run has no files directory, so emitter "
+                        + "output " + path + " cannot be written.");
+            }
+            write(filesDirectory.resolve(path), content);
+        }
+
+        private static void write(Path file, byte[] content) {
+            try {
+                Files.createDirectories(file.getParent());
+                Files.write(file, content);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    /** Holds output in memory, in the order it was written, until it is flushed to a sink. */
+    private static final class BufferSink implements Sink {
+
+        private final List<Runnable> writes = new java.util.ArrayList<>();
+        private Sink target;
+
+        @Override
+        public void java(String packageName, String simpleName, String source) {
+            writes.add(() -> target.java(packageName, simpleName, source));
+        }
+
+        @Override
+        public void resource(String path, String content) {
+            writes.add(() -> target.resource(path, content));
+        }
+
+        @Override
+        public void file(String path, byte[] content) {
+            writes.add(() -> target.file(path, content));
+        }
+
+        void flush(Sink sink) {
+            target = sink;
+            writes.forEach(Runnable::run);
+        }
+    }
+
     /** What one emitter is given: the core emitter, which derives the cases, is given none. */
-    private record Context(ContractModel model, Settings settings, ClassNames names, Path outputDirectory,
-                           Path resourceDirectory, GenerationReport report, String emitter,
+    private record Context(ContractModel model, Settings settings, ClassNames names, Sink sink,
+                           GenerationReport report, String emitter,
                            Map<String, List<InvalidRequestCase>> cases)
             implements EmitterContext {
 
@@ -202,31 +375,27 @@ public final class Generation {
                 throw new GenerationException("Emitter " + emitter + " wrote a class with an invalid name: "
                         + packageName + "." + simpleName);
             }
-            Path file = outputDirectory.resolve(packageName.replace('.', '/')).resolve(simpleName + ".java");
-            try {
-                Files.createDirectories(file.getParent());
-                Files.writeString(file, source, StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            sink.java(packageName, simpleName, source);
         }
 
         @Override
         public void writeResource(String path, String content) {
-            if (!isValidResourcePath(path)) {
+            if (!isValidPath(path)) {
                 throw new GenerationException("Emitter " + emitter + " wrote a resource with an invalid path: "
                         + path);
             }
-            Path file = resourceDirectory.resolve(path);
-            try {
-                Files.createDirectories(file.getParent());
-                Files.writeString(file, content, StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            sink.resource(path, content);
         }
 
-        private static boolean isValidResourcePath(String path) {
+        @Override
+        public void writeFile(String path, byte[] content) {
+            if (!isValidPath(path)) {
+                throw new GenerationException("Emitter " + emitter + " wrote a file with an invalid path: " + path);
+            }
+            sink.file(path, content);
+        }
+
+        private static boolean isValidPath(String path) {
             if (path.isEmpty() || path.startsWith("/") || path.endsWith("/") || path.contains("\\")) {
                 return false;
             }

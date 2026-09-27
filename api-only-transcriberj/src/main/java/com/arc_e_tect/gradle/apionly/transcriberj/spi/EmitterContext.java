@@ -54,6 +54,36 @@ public interface EmitterContext {
     void writeResource(String path, String content);
 
     /**
+     * Writes one file that belongs on no classpath -- a mapping file, part of an archive --
+     * replacing any file already written at that path in this run. The plugin packages these
+     * files; it never compiles them or puts them on a classpath.
+     *
+     * <p>{@code path} follows the rules of {@link #writeResource(String, String)}: {@code /}-separated,
+     * relative, and without empty, {@code .} or {@code ..} segments. Only an emitter whose
+     * {@link Emitter#produces(java.util.Map)} includes {@link Output#FILES} may call it.
+     *
+     * @param path    the file's path within the emitter's files directory
+     * @param content the file's bytes
+     * @throws UnsupportedOperationException when this context has nowhere to write files: a
+     *                                       generation run without a files directory
+     */
+    default void writeFile(String path, byte[] content) {
+        throw new UnsupportedOperationException("This generation run has no files directory, so emitter output "
+                + path + " cannot be written.");
+    }
+
+    /**
+     * Writes one text file that belongs on no classpath, UTF-8 encoded, as
+     * {@link #writeFile(String, byte[])} does.
+     *
+     * @param path    the file's path within the emitter's files directory
+     * @param content the file's text
+     */
+    default void writeFile(String path, String content) {
+        writeFile(path, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /**
      * Records that a generated method cannot represent a construct, and returns the
      * statement its body consists of instead: one that throws
      * {@link UnsupportedOperationException} with the reason and, where there is one,
