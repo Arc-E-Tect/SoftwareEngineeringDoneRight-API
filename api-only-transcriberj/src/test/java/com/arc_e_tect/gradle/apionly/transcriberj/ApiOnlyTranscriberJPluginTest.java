@@ -438,7 +438,11 @@ class ApiOnlyTranscriberJPluginTest {
                 public void await() {
                 }
             };
-            return new org.gradle.workers.WorkerExecutor() {
+            return new Executor(project, queue);
+        }
+
+        /** Runs every queue here and now. */
+        record Executor(Project project, org.gradle.workers.WorkQueue queue) implements org.gradle.workers.WorkerExecutor {
                 @Override
                 public org.gradle.workers.WorkQueue noIsolation() {
                     return queue;
@@ -478,7 +482,6 @@ class ApiOnlyTranscriberJPluginTest {
                 @Override
                 public void await() {
                 }
-            };
         }
     }
 }
