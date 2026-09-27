@@ -1,0 +1,6 @@
+type: string
+description: How the book is published.
+enum:
+  - hardcover
+  - paperback
+  - ebook

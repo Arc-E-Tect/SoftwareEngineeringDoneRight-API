@@ -215,6 +215,19 @@ link:guides/hand-written-contract-tests/prompt-claude-code.md[Claude Code prompt
 link:guides/hand-written-contract-tests/prompt-codex.md[Codex prompt →]
 |===
 
+[#examples]
+== Examples
+
+An example is a runnable project, built against the released tools, that the guides use as their worked example.
+
+[cols="2,3", options="header"]
+|===
+|Example |What it shows
+
+|link:../examples/transcriberj/generated-contract-tests/README.adoc[Generated contract tests, fixtures, stubs and documentation →]
+|A small Spring Boot service, and everything the API-Only TranscriberJ and its REST Docs and WireMock emitters generate for it: schema classes in every test suite, generated contract tests run against the real service and against a WireMock double, the fixtures that make them pass, a hand-written contract test for what cannot be generated, the stubs as an archive and a Docker image, and published documentation from a documentation test suite.
+|===
+
 [#reference]
 == Reference
 

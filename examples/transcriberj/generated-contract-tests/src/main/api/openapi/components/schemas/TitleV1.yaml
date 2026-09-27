@@ -1,0 +1,4 @@
+type: string
+description: The book's title.
+minLength: 1
+maxLength: 120

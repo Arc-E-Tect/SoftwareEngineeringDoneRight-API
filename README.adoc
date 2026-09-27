@@ -75,6 +75,21 @@ A project that implements one contract and calls others combines both columns, a
 link:docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains how the two tools correspond, and where each part lives in the code.
 link:docs/reference/run-book.adoc[The run-book →] says how to operate them, and what to do when something fails.
 
+[#examples]
+== Examples
+
+Runnable projects that use the tools as any other project would: each is a standalone Gradle build, against the released versions, with a README that says what to look at and what to try.
+
+[cols="2,3", options="header"]
+|===
+|Example |What it shows
+
+|link:examples/transcriberj/generated-contract-tests/README.adoc[`examples/transcriberj/generated-contract-tests/` →]
+|A small Spring Boot service, and everything the API-Only TranscriberJ and its REST Docs and WireMock emitters generate for it: schema classes in every test suite, generated contract tests run against the real service and against a WireMock double, the fixtures that make them pass, the stubs as an archive and a Docker image, and published documentation from a documentation test suite.
+|===
+
+An example is versioned independently of every component, and is no part of any component's build, coverage or release: it has a build workflow of its own, whose path filters cover the example alone.
+
 [#why-one-repository]
 == Why they share a repository
 
@@ -110,6 +125,9 @@ cd api-only-transcriberj && ./gradlew check
 
 # The reference API every tool is tested against: rebuild it after changing a fragment
 cd reference-api && npm run apionly -- build
+
+# An example, against the released versions of the tools
+cd examples/transcriberj/generated-contract-tests && ./gradlew check
 ----
 
 link:reference-api/README.adoc[`reference-api/` →] is the specification library the tools are tested against: two services, `system-admin` and `user-account`, built with the Publisher in this repository.

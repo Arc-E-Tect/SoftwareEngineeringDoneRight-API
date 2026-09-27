@@ -1,0 +1,70 @@
+post:
+  operationId: createBook
+  summary: Add a book to the catalogue.
+  description: >-
+    The ISBN identifies a book: a second book with the same ISBN is refused
+    with 409.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/BookRequestV1.yaml
+  responses:
+    '201':
+      description: The book was added.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/BookV1.yaml
+    '400':
+      description: The request does not match the contract.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+    '409':
+      description: A book with this ISBN is already in the catalogue.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+    '415':
+      description: The request body is not JSON.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+get:
+  operationId: listBooks
+  summary: List the catalogue, a page at a time.
+  parameters:
+    - name: page
+      in: query
+      description: The page to return, the first being 0.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 1000
+        default: 0
+    - name: size
+      in: query
+      description: The number of books on a page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    '200':
+      description: One page of the catalogue, in ISBN order.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/BookPageV1.yaml
+    '400':
+      description: The request does not match the contract.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
