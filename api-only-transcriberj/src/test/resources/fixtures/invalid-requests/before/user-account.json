@@ -1,0 +1,860 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "CompleteUserRegistrationInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get",
+      "method": "GET",
+      "pathTemplate": "/v1/users/registrations/completion/{verificationLink}"
+    },
+    {
+      "cases": [],
+      "class": "GetHealthInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1v1~1actuator~1health/get",
+      "method": "GET",
+      "pathTemplate": "/v1/actuator/health"
+    },
+    {
+      "cases": [],
+      "class": "GetRootInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1v1/get",
+      "method": "GET",
+      "pathTemplate": "/v1"
+    },
+    {
+      "cases": [],
+      "class": "GetUserInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1v1~1users~1{username}/get",
+      "method": "GET",
+      "pathTemplate": "/v1/users/{username}"
+    },
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`emailAddress` missing, though it is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-emailAddress-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/emailAddress",
+          "representative": false,
+          "request": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`username` missing, though it is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`emailAddress` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-emailAddress-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/emailAddress",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": {},
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`username` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`emailAddress` null, which its type does not allow",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-emailAddress-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/emailAddress",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": null,
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`username` null, which its type does not allow",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`username` shorter than its minLength of 5",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`emailAddress` longer than its maxLength of 254",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-emailAddress-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/emailAddress",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`username` longer than its maxLength of 12",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaaaaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "`username` not matching its pattern ^[a-z][a-z0-9_-]*$",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "%%%%%"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "emailAddress": "user@example.com",
+              "unexpectedMember": "unexpected",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        }
+      ],
+      "class": "InitiateUserRegistrationInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1v1~1users~1registrations/post",
+      "method": "POST",
+      "pathTemplate": "/v1/users/registrations"
+    },
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "`username` missing, though it is required",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "`username` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "username": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "`username` null, which its type does not allow",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "username": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "`username` shorter than its minLength of 5",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "username": "aaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "`username` longer than its maxLength of 12",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "username": "aaaaaaaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "`username` not matching its pattern ^[a-z][a-z0-9_-]*$",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-username-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/username",
+          "representative": false,
+          "request": {
+            "body": {
+              "username": "%%%%%"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        },
+        {
+          "baseline": {
+            "body": {
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "unexpectedMember": "unexpected",
+              "username": "aaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "responseBodyClass": "InvalidRequestProblemV1"
+        }
+      ],
+      "class": "ResendVerificationEmailInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "method": "POST",
+      "pathTemplate": "/v1/users/registrations/verification-email"
+    }
+  ]
+}

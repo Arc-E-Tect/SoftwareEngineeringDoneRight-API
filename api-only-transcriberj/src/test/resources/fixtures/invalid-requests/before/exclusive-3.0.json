@@ -1,0 +1,12 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "PostBoundsInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1bounds/post",
+      "method": "POST",
+      "pathTemplate": "/bounds"
+    }
+  ]
+}

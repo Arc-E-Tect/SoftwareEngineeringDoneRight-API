@@ -1,0 +1,402 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`patterned` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`plain` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-plain-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/plain",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": "a@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`patterned` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": {},
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`plain` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-plain-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/plain",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`patterned` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": null,
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`plain` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-plain-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/plain",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`patterned` not matching its pattern ^[a-z]+@example\\.com$",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-patterned-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/patterned",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": "%%%%%%%%%%%%%",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "`plain` not a valid email",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-plain-format",
+          "in": "body",
+          "keyword": "format",
+          "name": null,
+          "pointer": "/plain",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "%%%%%%%%%%%%%%%%"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "patterned": "a@example.com",
+              "plain": "user@example.com",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/formats",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostFormatsInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1formats/post",
+      "method": "POST",
+      "pathTemplate": "/formats"
+    }
+  ]
+}

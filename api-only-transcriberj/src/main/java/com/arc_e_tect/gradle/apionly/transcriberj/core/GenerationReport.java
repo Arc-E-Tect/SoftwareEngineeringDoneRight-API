@@ -66,7 +66,8 @@ public final class GenerationReport {
     private final List<Finding> undecided = new ArrayList<>();
     private final List<String> warnings = new ArrayList<>();
     private final List<String> notes = new ArrayList<>();
-    private final List<Map<String, Object>> invalidRequests = new ArrayList<>();
+    private final List<Map<String, Object>> contractCases = new ArrayList<>();
+    private final List<Map<String, Object>> responseCoverage = new ArrayList<>();
     private final List<Map<String, Object>> coverage = new ArrayList<>();
     private final List<Map<String, Object>> gaps = new ArrayList<>();
     private final Map<String, String> formatRecommendations = new java.util.LinkedHashMap<>();
@@ -116,15 +117,32 @@ public final class GenerationReport {
     }
 
     /** Records one operation's invalid-request cases, the coverage of its constraints, and its gap if it has one. */
-    void invalidRequests(String className, InvalidRequests.Result result, String status) {
+    void contractCases(String className, InvalidRequests.Result result, ContractCases.Result cases, String status) {
         Map<String, Object> entry = new java.util.LinkedHashMap<>();
         entry.put("class", className);
         entry.put("location", result.location());
         entry.put("method", result.operation().method().name());
         entry.put("pathTemplate", result.operation().path());
         entry.put("declaresInvalidRequestStatus", result.declared());
-        entry.put("cases", result.cases().stream().map(CoreEmitter::caseJson).toList());
-        invalidRequests.add(entry);
+        entry.put("cases", cases.cases().stream().map(CoreEmitter::caseJson).toList());
+        contractCases.add(entry);
+        for (ContractCases.Coverage c : cases.coverage()) {
+            Map<String, Object> e = new java.util.LinkedHashMap<>();
+            e.put("class", className);
+            e.put("operation", result.location());
+            e.put("status", c.status());
+            if (c.reason() == null) {
+                e.put("cases", c.cases());
+            } else {
+                Map<String, Object> why = new java.util.LinkedHashMap<>();
+                why.put("code", c.reason().name());
+                why.put("label", c.reason().label);
+                why.put("detail", c.detail());
+                e.put("uncovered", why);
+            }
+            responseCoverage.add(e);
+        }
+        cases.notes().forEach(n -> notes.add(className + ": " + n));
         for (InvalidRequests.Constraint c : result.constraints()) {
             Map<String, Object> e = new java.util.LinkedHashMap<>();
             e.put("class", className);
@@ -171,7 +189,41 @@ public final class GenerationReport {
      * @return the count
      */
     public int invalidRequestCases() {
-        return invalidRequests.stream().mapToInt(e -> ((List<?>) e.get("cases")).size()).sum();
+        return (int) kinds().getOrDefault(com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.INVALID_REQUEST, 0L)
+                .longValue();
+    }
+
+    /** How many cases there are of each kind, in canonical order. */
+    private Map<com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind, Long> kinds() {
+        Map<com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind, Long> out = new java.util.EnumMap<>(
+                com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.class);
+        for (var kind : com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.values()) out.put(kind, 0L);
+        for (Map<String, Object> e : contractCases) {
+            for (Object c : (List<?>) e.get("cases")) {
+                out.merge(com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.valueOf(
+                        (String) ((Map<?, ?>) c).get("kind")), 1L, Long::sum);
+            }
+        }
+        return out;
+    }
+
+    /** The summary of every kind of case, and of the declared responses no case covers. */
+    String contractCaseSummary() {
+        Map<com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind, Long> kinds = kinds();
+        StringBuilder out = new StringBuilder("Contract cases: ").append(String.join(", ", kinds.entrySet().stream()
+                .map(k -> k.getValue() + " " + k.getKey().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' '))
+                .toList()));
+        Map<String, Integer> uncovered = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> e : responseCoverage) {
+            if (e.get("uncovered") instanceof Map<?, ?> why) uncovered.merge((String) why.get("label"), 1, Integer::sum);
+        }
+        int total = uncovered.values().stream().mapToInt(Integer::intValue).sum();
+        out.append("; ").append(total).append(" declared response(s) not covered");
+        if (!uncovered.isEmpty()) {
+            out.append(" (").append(String.join(", ", uncovered.entrySet().stream()
+                    .map(u -> u.getKey() + ": " + u.getValue()).toList())).append(')');
+        }
+        return out.toString();
     }
 
     /**
@@ -308,6 +360,7 @@ public final class GenerationReport {
                 .append(noValidValue.size()).append(" method(s) without a valid value, ")
                 .append(unsupportedParameters.size()).append(" parameter(s) not supported yet\n");
         out.append(invalidRequestSummary()).append('\n');
+        out.append(contractCaseSummary()).append('\n');
         if (!warnings.isEmpty()) {
             out.append("\nWarnings:\n");
             warnings.forEach(w -> out.append("  ").append(w).append('\n'));
@@ -385,6 +438,20 @@ public final class GenerationReport {
                 out.append('\n');
             }
         }
+        if (!responseCoverage.isEmpty()) {
+            out.append("\nResponse coverage -- every response each operation declares, and the cases that cover it:\n");
+            for (Map<String, Object> e : responseCoverage) {
+                out.append("  ").append(e.get("class")).append(' ').append(e.get("status")).append(": ");
+                if (e.containsKey("cases")) {
+                    out.append("covered by ").append(String.join(", ", ((List<?>) e.get("cases")).stream()
+                            .map(String::valueOf).toList()));
+                } else {
+                    Map<?, ?> why = (Map<?, ?>) e.get("uncovered");
+                    out.append("uncovered, ").append(why.get("label")).append(" -- ").append(why.get("detail"));
+                }
+                out.append('\n');
+            }
+        }
         return out.toString();
     }
 
@@ -399,7 +466,7 @@ public final class GenerationReport {
      */
     public String renderValidValues(String contract, String version) {
         Map<String, Object> out = new java.util.TreeMap<>();
-        out.put("schemaVersion", java.math.BigDecimal.ONE);
+        out.put("schemaVersion", java.math.BigDecimal.valueOf(2));
         out.put("contract", contract);
         out.put("version", version);
         out.put("bodies", validBodies.stream().sorted(java.util.Comparator.comparing(e -> (String) e.get("class")))
@@ -416,8 +483,9 @@ public final class GenerationReport {
             unsupported.add(entry);
         }
         out.put("unsupportedParameters", unsupported);
-        out.put("invalidRequests", invalidRequests.stream()
+        out.put("contractCases", contractCases.stream()
                 .sorted(java.util.Comparator.comparing(e -> (String) e.get("class"))).toList());
+        out.put("responseCoverage", responseCoverage);
         out.put("constraintCoverage", coverage);
         out.put("gaps", gaps);
         List<Object> formats = new ArrayList<>();
@@ -474,13 +542,18 @@ public final class GenerationReport {
             e.put("reason", u.reason());
             return (Object) e;
         }).toList());
-        out.put("invalidRequests", invalidRequests.stream().map(r -> {
+        out.put("contractCases", contractCases.stream().map(r -> {
             Map<String, Object> e = new java.util.LinkedHashMap<>();
             e.put("class", r.get("class"));
-            e.put("cases", ((List<?>) r.get("cases")).stream()
-                    .map(c -> c instanceof Map<?, ?> m ? m.get("id") : c).toList());
+            e.put("cases", ((List<?>) r.get("cases")).stream().map(c -> {
+                Map<String, Object> k = new java.util.LinkedHashMap<>();
+                k.put("id", ((Map<?, ?>) c).get("id"));
+                k.put("kind", ((Map<?, ?>) c).get("kind"));
+                return (Object) k;
+            }).toList());
             return (Object) e;
         }).toList());
+        out.put("responseCoverage", List.copyOf(responseCoverage));
         out.put("coverage", coverage.stream().map(c -> {
             Map<String, Object> e = new java.util.LinkedHashMap<>(c);
             if (e.get("cases") instanceof List<?> cases) e.put("cases", cases.stream().map(String::valueOf).toList());
@@ -536,7 +609,8 @@ public final class GenerationReport {
             report.unsupportedParameters.add(new UnsupportedParameter((String) e.get("className"),
                     (String) e.get("location"), (String) e.get("name"), (String) e.get("reason")));
         }
-        report.invalidRequests.addAll((List<Map<String, Object>>) in.get("invalidRequests"));
+        report.contractCases.addAll((List<Map<String, Object>>) in.get("contractCases"));
+        report.responseCoverage.addAll((List<Map<String, Object>>) in.get("responseCoverage"));
         report.coverage.addAll((List<Map<String, Object>>) in.get("coverage"));
         report.gaps.addAll((List<Map<String, Object>>) in.get("gaps"));
         for (Map<String, Object> e : (List<Map<String, Object>>) in.get("formatRecommendations")) {

@@ -40,16 +40,15 @@ public interface ClassNames {
     Optional<GeneratedClass> inline(String location);
 
     /**
-     * The class that lists an operation's invalid-request cases, such as
-     * {@code InitiateUserRegistrationInvalidRequests}: generated for every operation, with no
-     * cases where the operation declares no invalid-request status or no constraint on its
-     * input. It is not one of {@link #all()}, which lists the classes the contract's
-     * components and operations are generated into.
+     * The class that lists an operation's contract cases, such as
+     * {@code InitiateUserRegistrationContractCases}: generated for every operation, with no
+     * cases where the contract gives nothing to derive one from. It is not one of {@link #all()},
+     * which lists the classes the contract's components and operations are generated into.
      *
      * @param location the JSON pointer of the operation, such as {@code /paths/~1v1~1users/get}
      * @return the class, or empty when there is none
      */
-    default Optional<GeneratedClass> invalidRequests(String location) {
+    default Optional<GeneratedClass> contractCases(String location) {
         return Optional.empty();
     }
 }

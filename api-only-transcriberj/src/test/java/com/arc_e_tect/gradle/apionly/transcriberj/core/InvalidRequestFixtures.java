@@ -93,10 +93,38 @@ final class InvalidRequestFixtures {
         return new ValidValueFixtures.Fixture(name, document, sources, new Oracle(document), null, report);
     }
 
+    /**
+     * A report's invalid-request cases in the shape they had before contract cases of every kind
+     * were derived: each operation's entry with only its invalid-request cases, without the fields
+     * that came with the other kinds, and without the {@code Accept} every case now sends.
+     */
+    static JsonNode invalidRequests(JsonNode report) {
+        tools.jackson.databind.node.ArrayNode out = Oracle.JSON.createArrayNode();
+        for (JsonNode operation : report.get("contractCases")) {
+            tools.jackson.databind.node.ObjectNode entry = (tools.jackson.databind.node.ObjectNode) operation.deepCopy();
+            tools.jackson.databind.node.ArrayNode cases = Oracle.JSON.createArrayNode();
+            for (JsonNode c : operation.get("cases")) {
+                if (!c.get("kind").stringValue().equals("INVALID_REQUEST")) continue;
+                tools.jackson.databind.node.ObjectNode old = (tools.jackson.databind.node.ObjectNode) c.deepCopy();
+                old.remove(List.of("kind", "requiresState", "variant"));
+                tools.jackson.databind.node.ArrayNode headers = (tools.jackson.databind.node.ArrayNode)
+                        old.get("request").get("headers");
+                for (int i = headers.size() - 1; i >= 0; i--) {
+                    if (headers.get(i).get("name").stringValue().equals("Accept")) headers.remove(i);
+                }
+                cases.add(old);
+            }
+            entry.set("cases", cases);
+            out.add(entry);
+        }
+        return out;
+    }
+
     /** The invalid-request part of a machine-readable report, as its golden file holds it. */
     static String golden(ValidValueFixtures.Fixture f) {
         var out = Oracle.JSON.createObjectNode();
-        for (String key : List.of("constraintCoverage", "formatRecommendations", "gaps", "invalidRequests")) {
+        for (String key : List.of("constraintCoverage", "contractCases", "formatRecommendations", "gaps",
+                "responseCoverage")) {
             out.set(key, f.report().get(key));
         }
         return Baselines.pretty(out, "") + "\n";

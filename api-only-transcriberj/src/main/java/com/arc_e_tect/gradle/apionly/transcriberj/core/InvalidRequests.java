@@ -74,7 +74,9 @@ final class InvalidRequests {
         /** No rule derives a violation of the keyword. */
         NO_VIOLATION_RULE("no violation rule"),
         /** The constraint is in a media type no case is derived for. */
-        MEDIA_TYPE_NOT_USED("media type not used");
+        MEDIA_TYPE_NOT_USED("media type not used"),
+        /** Invalid-request cases are not derived: the {@code derive} setting does not name them. */
+        KIND_SWITCHED_OFF("invalid requests not derived");
 
         final String label;
 
@@ -135,11 +137,10 @@ final class InvalidRequests {
      * @param status         the declared invalid-request status
      * @param contentTypes   the declared response's content types
      * @param bodyClass      the simple name of the class of the declared response's body, or null
-     * @param representative whether it is the first case of its operation
      */
     record Case(String id, String description, String in, String name, String pointer, String keyword,
                 ValidRequests.Request request, ValidRequests.Request baseline, int status, List<String> contentTypes,
-                String bodyClass, boolean representative) {
+                String bodyClass) {
     }
 
     /** A case before its id is final: ids are made unique in canonical order. */
@@ -183,6 +184,11 @@ final class InvalidRequests {
         /** Whether it has constrained input but declares no invalid-request status: the S3 gap. */
         boolean gap() {
             return !declared && !constraints.isEmpty();
+        }
+
+        /** Whether cases were derived for it but dropped, as {@code derive} does not name invalid requests. */
+        boolean switchedOff() {
+            return constraints.stream().anyMatch(c -> c.reason == Reason.KIND_SWITCHED_OFF);
         }
     }
 
@@ -349,6 +355,21 @@ final class InvalidRequests {
             }
         }
         return new Result(operation, location, order(cases), constraints, true);
+    }
+
+    /**
+     * A derivation with its cases dropped, as when the {@code derive} setting does not name
+     * invalid requests: every constraint a case covered says so instead.
+     */
+    static Result switchedOff(Result result) {
+        for (Constraint c : result.constraints()) {
+            if (!c.drafts.isEmpty()) {
+                c.drafts.clear();
+                c.reason = Reason.KIND_SWITCHED_OFF;
+                c.detail = "derive does not name invalidRequest";
+            }
+        }
+        return new Result(result.operation(), result.location(), List.of(), result.constraints(), result.declared());
     }
 
     private void parameter(ValidRequests.Located located, List<Constraint> constraints) {
@@ -670,6 +691,14 @@ final class InvalidRequests {
     }
 
     private Expected expected(Operation operation, Response response) {
+        return expected(names, operation, response);
+    }
+
+    /**
+     * What a response an operation declares expects: its content types, and the generated class
+     * of its body, through a {@code $ref} to a reusable response where there is one.
+     */
+    static Expected expected(CoreClassNames names, Operation operation, Response response) {
         List<String> types = response.content() == null ? List.of()
                 : response.content().stream().map(MediaType::contentType).toList();
         String bodyClass = null;
@@ -756,7 +785,7 @@ final class InvalidRequests {
     }
 
     /** Why a valid request cannot be vouched for, or null when it can: a value of a format no check exists for. */
-    private String unverifiable(Operation operation, ValidRequests.Request request) {
+    String unverifiable(Operation operation, ValidRequests.Request request) {
         for (ValidRequests.Located located : requests.parameters(operation)) {
             Parameter p = located.parameter();
             if (p.schema() == null || p.in() == null) continue;
@@ -1573,7 +1602,7 @@ final class InvalidRequests {
 
     // -------------------------------------------------------------- order
 
-    /** The cases in canonical order, their ids made unique, the first marked the representative. */
+    /** The cases in canonical order, their ids made unique. */
     private List<Case> order(List<Draft> cases) {
         List<Draft> sorted = new ArrayList<>(cases);
         Map<Draft, Integer> found = new java.util.IdentityHashMap<>();
@@ -1596,7 +1625,7 @@ final class InvalidRequests {
             identifiers.add(JavaText.variableName(id));
             x.id = id;
             out.add(new Case(id, x.description, x.in, x.name, x.pointer, x.keyword, x.request, x.baseline, status,
-                    x.expected.contentTypes(), x.expected.bodyClass(), i == 0));
+                    x.expected.contentTypes(), x.expected.bodyClass()));
         }
         return out;
     }

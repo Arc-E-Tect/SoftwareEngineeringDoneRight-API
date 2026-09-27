@@ -1,0 +1,118 @@
+# Success cases (T19.4): optional members give a full request besides the required one; none
+# give the required one only; 200 and 201 both get cases; an optional body gets a noBody case;
+# and a body with no valid value gets none. A request holding a value of a format no check exists
+# for, duration, cannot be vouched for: an optional one gives no full case, a required one no case.
+openapi: 3.1.0
+info:
+  title: Contract-case corpus, success
+  version: 1.0.0
+paths:
+  /optional:
+    post:
+      operationId: postOptional
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteV1'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NoteV1'}
+  /plain:
+    get:
+      operationId: getPlain
+      responses:
+        '200':
+          description: Found.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NoteV1'}
+  /either/{id}:
+    put:
+      operationId: putEither
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[a-z]+$'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteV1'}
+      responses:
+        '200':
+          description: Replaced.
+        '201':
+          description: Created.
+  /maybe:
+    post:
+      operationId: postMaybe
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteV1'}
+      responses:
+        '204':
+          description: Accepted.
+  /impossible:
+    post:
+      operationId: postImpossible
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ImpossibleV1'}
+      responses:
+        '201':
+          description: Never.
+  /period:
+    post:
+      operationId: postPeriod
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PeriodV1'}
+      responses:
+        '201':
+          description: Created.
+  /duration:
+    post:
+      operationId: postDuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DurationV1'}
+      responses:
+        '201':
+          description: Created.
+components:
+  schemas:
+    NoteV1:
+      x-fragment-path: schemas/NoteV1.yaml
+      type: object
+      required: [title]
+      properties:
+        title: {type: string, maxLength: 20}
+        note: {type: string}
+    ImpossibleV1:
+      x-fragment-path: schemas/ImpossibleV1.yaml
+      type: object
+      required: [code]
+      properties:
+        code: {type: string, minLength: 5, maxLength: 2}
+    PeriodV1:
+      x-fragment-path: schemas/PeriodV1.yaml
+      type: object
+      required: [title]
+      properties:
+        title: {type: string}
+        period: {type: string, format: duration}
+    DurationV1:
+      x-fragment-path: schemas/DurationV1.yaml
+      type: object
+      required: [duration]
+      properties:
+        duration: {type: string, format: duration}

@@ -1,0 +1,58 @@
+# Not-found cases (T19.2): a path parameter gets a second valid value; a single enum value has
+# none; an operation without a path parameter has nothing to name; two path parameters give one
+# case.
+openapi: 3.1.0
+info:
+  title: Contract-case corpus, not found
+  version: 1.0.0
+paths:
+  /items/{id}:
+    get:
+      operationId: getItem
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[a-z]+$', minLength: 3}}
+      responses:
+        '200':
+          description: Found.
+        '404':
+          description: Not found.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/ProblemV1'}
+  /single/{kind}:
+    get:
+      operationId: getSingle
+      parameters:
+        - {name: kind, in: path, required: true, schema: {type: string, enum: [only]}}
+      responses:
+        '200':
+          description: Found.
+        '404':
+          description: Not found.
+  /collection:
+    get:
+      operationId: getCollection
+      responses:
+        '200':
+          description: Found.
+        '404':
+          description: Not found.
+  /pair/{a}/{b}:
+    get:
+      operationId: getPair
+      parameters:
+        - {name: a, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: b, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Found.
+        '404':
+          description: Not found.
+components:
+  schemas:
+    ProblemV1:
+      x-fragment-path: schemas/ProblemV1.yaml
+      type: object
+      required: [title]
+      properties:
+        title: {type: string}

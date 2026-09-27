@@ -25,6 +25,6 @@ class InvalidRequestGoldenTest {
         ValidValueFixtures.Fixture f = ValidValueFixtures.reference("user-account", directory);
         assertThat(GOLDEN).as("the golden file; ./gradlew recordInvalidRequestsGolden records it").exists();
         assertThat(InvalidRequestFixtures.golden(f)).isEqualTo(Files.readString(GOLDEN, StandardCharsets.UTF_8));
-        assertThat(f.report().get("invalidRequests").toString()).contains("body-username-pattern");
+        assertThat(f.report().get("contractCases").toString()).contains("body-username-pattern");
     }
 }

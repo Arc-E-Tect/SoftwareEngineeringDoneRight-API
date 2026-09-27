@@ -107,7 +107,9 @@ class KeywordCorpusTest {
 
     @Test
     void anUnsupportedFormatIsAPlainStringAndNoted() {
-        assertThat(keywords.sources().report.notes()).containsExactly("No value is generated for format x-custom at "
+        assertThat(keywords.sources().report.notes().stream()
+                .filter(n -> n.startsWith("No value is generated for format"))).containsExactly(
+                "No value is generated for format x-custom at "
                 + "/components/schemas/FormatsV1/properties/custom; valid values there are plain strings");
     }
 

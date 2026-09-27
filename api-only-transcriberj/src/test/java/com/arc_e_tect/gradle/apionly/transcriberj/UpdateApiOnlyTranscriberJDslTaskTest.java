@@ -131,6 +131,7 @@ class UpdateApiOnlyTranscriberJDslTaskTest {
             .contains("//     // strictRequests = true")
             .contains("OWASP API3:2023, API10:2023")
             .contains("//     // validateFormats = ['email']")
+            .contains("//     // derive = ['success', 'notFound', 'notAcceptable', 'unsupportedMediaType', 'invalidRequest']")
             .contains("//     schemaClasses = 'perSourceSet'")
             .contains("//     // emitter('restdocs') {")
             .contains("//     //     options = [tests: 'true']")

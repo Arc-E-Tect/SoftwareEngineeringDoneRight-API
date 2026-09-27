@@ -82,7 +82,7 @@ class InvalidRequestOracleTest {
 
     static List<JsonNode> cases(ValidValueFixtures.Fixture f) {
         List<JsonNode> out = new ArrayList<>();
-        for (JsonNode entry : f.report().get("invalidRequests")) entry.get("cases").forEach(out::add);
+        for (JsonNode entry : InvalidRequestFixtures.invalidRequests(f.report())) entry.get("cases").forEach(out::add);
         return out;
     }
 

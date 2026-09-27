@@ -31,18 +31,16 @@ class GeneratedReferenceBodiesTest {
     @Test
     void theGeneratedClassesAreTheComponentsTheOperationsTheInlineResponsesAndSupport() {
         assertThat(generated.classNames()).containsExactly(
-                "CompleteUserRegistrationInvalidRequests", "CompleteUserRegistrationOperation", "ContractField",
-                "ContractJson", "ContractManifest", "ContractRequest",
-                "ErrorDetailV1", "GetHealthInvalidRequests", "GetHealthOperation", "GetHealthResponse200",
-                "GetRootInvalidRequests", "GetRootOperation", "GetRootResponse200", "GetUserInvalidRequests",
-                "GetUserOperation", "InitiateUserRegistrationInvalidRequests", "InitiateUserRegistrationOperation",
-                "InternalServerProblemV1", "InvalidRequestCase", "InvalidRequestProblemV1", "ProblemDetailsV1",
-                "RegisteredRequestCannotBeProcessedProblemV1", "RegistrationNotFoundProblemV1",
-                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailInvalidRequests",
-                "ResendVerificationEmailOperation", "UserAccountV1",
-                "UserNotFoundProblemV1", "UserRegistrationRequestV1", "UserRegistrationResendEmailRequestV1",
-                "UserRegistrationResponseV1", "UserV1", "UsernameAlreadyRegisteredProblemV1", "UsernameV1",
-                "VerificationLinkExpiredProblemV1", "VerificationLinkSupersededProblemV1");
+                "CaseKind", "CompleteUserRegistrationContractCases", "CompleteUserRegistrationOperation", "ContractCase",
+                "ContractField", "ContractJson", "ContractManifest", "ContractRequest",
+                "ErrorDetailV1", "GetHealthContractCases", "GetHealthOperation", "GetHealthResponse200",
+                "GetRootContractCases", "GetRootOperation", "GetRootResponse200", "GetUserContractCases",
+                "GetUserOperation", "InitiateUserRegistrationContractCases", "InitiateUserRegistrationOperation", "InternalServerProblemV1",
+                "InvalidRequestProblemV1", "ProblemDetailsV1", "RegisteredRequestCannotBeProcessedProblemV1", "RegistrationNotFoundProblemV1",
+                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailContractCases", "ResendVerificationEmailOperation", "UserAccountV1",
+                "UserNotFoundProblemV1", "UserRegistrationRequestV1", "UserRegistrationResendEmailRequestV1", "UserRegistrationResponseV1",
+                "UserV1", "UsernameAlreadyRegisteredProblemV1", "UsernameV1", "VerificationLinkExpiredProblemV1",
+                "VerificationLinkSupersededProblemV1");
     }
 
     @Test

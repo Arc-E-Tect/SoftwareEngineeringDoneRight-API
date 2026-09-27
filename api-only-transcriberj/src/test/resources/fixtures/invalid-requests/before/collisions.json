@@ -1,0 +1,515 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a-b` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-b-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/a-b",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": "a"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a.b` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-b-required-2",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/a/b",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {},
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": [],
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a-b` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-b-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/a-b",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a.b` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-b-type-2",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/a/b",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": {}
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/a",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": null,
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a-b` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-b-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/a-b",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a.b` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-b-null-2",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/a/b",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": null
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "`a` with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-a-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/a/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": "a",
+                "unexpectedMember": "unexpected"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "a": {
+                "b": "a"
+              },
+              "a-b": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/collisions",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostCollisionsInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1collisions/post",
+      "method": "POST",
+      "pathTemplate": "/collisions"
+    }
+  ]
+}

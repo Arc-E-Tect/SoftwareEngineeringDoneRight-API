@@ -110,7 +110,7 @@
       }
     }
   ],
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "unsupportedParameters": [],
   "version": "1.0.0"
 }

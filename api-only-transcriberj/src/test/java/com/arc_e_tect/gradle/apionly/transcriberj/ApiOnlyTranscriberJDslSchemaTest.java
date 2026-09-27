@@ -49,6 +49,7 @@ class ApiOnlyTranscriberJDslSchemaTest {
                 .contains("// invalidRequestStatus = '400'").contains("Default: '400'")
                 .contains("// strictRequests = true").contains("OWASP API3:2023, API10:2023")
                 .contains("// validateFormats = ['email']")
+                .contains("// derive = ['success', 'notFound', 'notAcceptable', 'unsupportedMediaType', 'invalidRequest']")
                 .contains("// emitterOptions = [restdocs: [tests: 'true']]");
     }
 }

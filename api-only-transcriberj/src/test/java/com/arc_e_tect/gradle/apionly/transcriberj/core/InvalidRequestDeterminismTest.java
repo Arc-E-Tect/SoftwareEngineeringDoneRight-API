@@ -17,11 +17,11 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * T13.15: the invalid-request corpus and the user-account contract give byte-identical
- * sources and reports on every run: twice in one JVM, and under another default locale and
- * time zone.
+ * T13.15 and T19.9: the invalid-request corpus, the contract-case corpus and the user-account
+ * contract give byte-identical sources and reports on every run: twice in one JVM, and under
+ * another default locale and time zone.
  */
-@DisplayName("T13.15 Determinism")
+@DisplayName("T13.15, T19.9 Determinism")
 class InvalidRequestDeterminismTest {
 
     @TempDir
@@ -32,6 +32,9 @@ class InvalidRequestDeterminismTest {
         java.util.List<ValidValueFixtures.Fixture> fixtures = new java.util.ArrayList<>();
         for (InvalidRequestFixtures.Variant v : InvalidRequestFixtures.CORPUS) {
             fixtures.add(InvalidRequestFixtures.corpus(v.name(), into.resolve(v.name())));
+        }
+        for (InvalidRequestFixtures.Variant v : ContractCaseFixtures.CORPUS) {
+            fixtures.add(ContractCaseFixtures.corpus(v.name(), into.resolve("contract-cases-" + v.name())));
         }
         fixtures.add(ValidValueFixtures.reference("user-account", into.resolve("user-account")));
         for (ValidValueFixtures.Fixture f : fixtures) {
@@ -51,7 +54,7 @@ class InvalidRequestDeterminismTest {
     @Test
     void twiceInOneJvmGivesTheSameBytes() {
         Map<String, String> first = generate(directory.resolve("first"));
-        assertThat(first.keySet()).anyMatch(k -> k.endsWith("InvalidRequests.java"));
+        assertThat(first.keySet()).anyMatch(k -> k.endsWith("ContractCases.java"));
         assertThat(generate(directory.resolve("second"))).isEqualTo(first);
     }
 

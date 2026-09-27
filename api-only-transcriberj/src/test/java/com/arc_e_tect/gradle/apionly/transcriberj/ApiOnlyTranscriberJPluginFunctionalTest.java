@@ -72,6 +72,9 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                         invalidRequestStatus = findProperty('invalidStatus') ?: '400'
                         strictRequests = findProperty('lenient') == null
                         validateFormats = (findProperty('formats') ?: '').tokenize(',')
+                        if (findProperty('derive') != null) {
+                            derive = findProperty('derive').tokenize(',')
+                        }
                         if (findProperty('countingOption')) {
                             emitterOptions = [counting: [option: findProperty('countingOption')]]
                         }
@@ -229,6 +232,28 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         assertThat(projectDir.resolve(
                 "build/generated/resources/transcriberj/user-account/counting/counting/options.properties"))
                 .content().isEqualTo("option=on\n");
+    }
+
+    @Test
+    void changingDeriveRegeneratesAndTheConfigurationCacheIsReused() throws Exception {
+        BuildResult first = runner("generateContractSourcesUserAccount").build();
+        assertThat(first.getOutput()).contains("API-Only TranscriberJ: user-account 1.0.0: Contract cases: ");
+        BuildResult again = runner("generateContractSourcesUserAccount").build();
+        assertThat(again.getOutput()).contains("Configuration cache entry reused");
+        assertThat(again.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+
+        BuildResult changed = runner("generateContractSourcesUserAccount", "-Pderive=invalidRequest,success").build();
+        assertThat(changed.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(changed.getOutput()).contains("0 not found").contains("kind switched off");
+        BuildResult reused = runner("generateContractSourcesUserAccount", "-Pderive=invalidRequest,success").build();
+        assertThat(reused.getOutput()).contains("Configuration cache entry reused");
+        assertThat(reused.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+        // The same kinds in another order are the same setting.
+        BuildResult reordered = runner("generateContractSourcesUserAccount", "-Pderive=success,invalidRequest").build();
+        assertThat(reordered.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+
+        BuildResult wrong = runner("generateContractSourcesUserAccount", "-Pderive=success,happyPath").buildAndFail();
+        assertThat(wrong.getOutput()).contains("subscription('user-account') derive names 'happyPath', which is not a kind");
     }
 
     @Test

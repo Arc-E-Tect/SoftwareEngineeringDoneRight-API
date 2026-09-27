@@ -1,0 +1,447 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "representative": true,
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-json-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-merge-patch-json-name-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {},
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-json-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-merge-patch-json-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "representative": false,
+          "request": {
+            "body": [],
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-json-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-merge-patch-json-name-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": {}
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-json-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-merge-patch-json-name-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": null
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` longer than its maxLength of 5",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-json-name-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "aaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "`name` longer than its maxLength of 5",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-merge-patch-json-name-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/name",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "aaaaaa"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-json-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-application-merge-patch-json-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "representative": false,
+          "request": {
+            "body": {
+              "name": "a",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/merge-patch+json",
+            "headers": [],
+            "method": "PATCH",
+            "pathParameters": [],
+            "pathTemplate": "/media",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PatchMediaInvalidRequests",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1media/patch",
+      "method": "PATCH",
+      "pathTemplate": "/media"
+    }
+  ]
+}

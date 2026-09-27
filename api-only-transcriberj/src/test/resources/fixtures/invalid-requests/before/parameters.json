@@ -1,0 +1,36 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "GetItemInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1items~1{id}~1{flag}~1{code}/get",
+      "method": "GET",
+      "pathTemplate": "/items/{id}/{flag}/{code}"
+    },
+    {
+      "cases": [],
+      "class": "PostNoteInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1notes/post",
+      "method": "POST",
+      "pathTemplate": "/notes"
+    },
+    {
+      "cases": [],
+      "class": "PutDocumentInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1documents/put",
+      "method": "PUT",
+      "pathTemplate": "/documents"
+    },
+    {
+      "cases": [],
+      "class": "SearchInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1search/post",
+      "method": "POST",
+      "pathTemplate": "/search"
+    }
+  ]
+}

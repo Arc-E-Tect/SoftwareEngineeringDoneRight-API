@@ -1,0 +1,20 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [],
+      "class": "GetHealthInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1v1~1actuator~1health/get",
+      "method": "GET",
+      "pathTemplate": "/v1/actuator/health"
+    },
+    {
+      "cases": [],
+      "class": "GetRootInvalidRequests",
+      "declaresInvalidRequestStatus": false,
+      "location": "/paths/~1v1/get",
+      "method": "GET",
+      "pathTemplate": "/v1"
+    }
+  ]
+}

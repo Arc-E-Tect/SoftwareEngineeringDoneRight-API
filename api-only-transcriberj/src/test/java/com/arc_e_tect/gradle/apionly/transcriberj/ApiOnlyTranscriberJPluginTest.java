@@ -182,6 +182,7 @@ class ApiOnlyTranscriberJPluginTest {
         parameters.getInvalidRequestStatus().set("422");
         parameters.getStrictRequests().set(false);
         parameters.getValidateFormats().set(List.of("email"));
+        parameters.getDerive().set(com.arc_e_tect.gradle.apionly.transcriberj.spi.CaseKind.settings());
         parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
         parameters.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
         parameters.getReportFragment().set(projectDir.resolve("report/core.json").toFile());
@@ -201,10 +202,11 @@ class ApiOnlyTranscriberJPluginTest {
         assertThat(report).contains("strictRequests is off for contract 'user-account'")
                 .contains("declare a 422 response");
         // It declares a 400 response, but not the 422 asked for; the registration declares both.
-        assertThat(Files.readString(projectDir.resolve("out/a/b/ResendVerificationEmailInvalidRequests.java")))
-                .contains("CASE_COUNT = 0;");
-        assertThat(Files.readString(projectDir.resolve("out/a/b/InitiateUserRegistrationInvalidRequests.java")))
-                .contains("expecting the declared 422 response").doesNotContain("unknown-member");
+        assertThat(Files.readString(projectDir.resolve("out/a/b/ResendVerificationEmailContractCases.java")))
+                .doesNotContain("CaseKind.INVALID_REQUEST");
+        assertThat(Files.readString(projectDir.resolve("out/a/b/InitiateUserRegistrationContractCases.java")))
+                .contains("CaseKind.INVALID_REQUEST").contains("\n                    422, ")
+                .doesNotContain("unknown-member");
         assertThat(Files.readString(projectDir.resolve("report/core.adoc"))).startsWith("= Core\n")
                 .contains("strictRequests is off");
     }
