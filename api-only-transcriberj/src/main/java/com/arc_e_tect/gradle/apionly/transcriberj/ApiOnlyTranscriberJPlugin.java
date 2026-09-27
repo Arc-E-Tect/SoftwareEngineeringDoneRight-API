@@ -127,7 +127,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
     }
 
     /** The subscription's conventions, and the tasks that do not depend on which emitters are loaded. */
-    private static TaskProvider<GenerateContractSourcesTask> configure(Project project,
+    private TaskProvider<GenerateContractSourcesTask> configure(Project project,
                                                                        ApiOnlySubscriberExtension subscriber,
                                                                        TranscriberJSubscription subscription) {
         String contract = subscription.getName();
@@ -155,6 +155,9 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             spec.getIntoJava().convention(build.dir("generated/sources/transcriberj/" + contract + "/" + id));
             spec.getIntoResources().convention(build.dir("generated/resources/transcriberj/" + contract + "/" + id));
             spec.getIntoFiles().convention(build.dir("generated/files/transcriberj/" + contract + "/" + id));
+            // Created as soon as the block is, so that a build script can publish it; the archive
+            // is attached once the emitter is known to write files.
+            component(project, contract, id);
         });
 
         TaskProvider<GenerateContractSourcesTask> generate = project.getTasks().register(
@@ -165,8 +168,8 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                     task.getOutputDirectory().set(subscription.getInto());
                     task.getResourceDirectory().set(subscription.getIntoResources());
                     task.getEndpointIndex().set(subscription.getEndpointIndexFile());
-                    task.getReportFragment().set(fragment(subscription, "core", ".json"));
-                    task.getAsciiDocFragment().set(fragment(subscription, "core", ".adoc"));
+                    task.getReportFragment().set(fragment(project, subscription, "core", ".json"));
+                    task.getAsciiDocFragment().set(fragment(project, subscription, "core", ".adoc"));
                     task.getValidValuesReport().set(project.getLayout().file(
                             subscription.getReportFile().map(ApiOnlyTranscriberJPlugin::validValuesReport)));
                 });
@@ -253,8 +256,14 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                 .named(REPORT_TASK + suffix, ReportContractSourcesTask.class);
         TaskProvider<VerifyContractSourcesTask> verify = project.getTasks()
                 .named(VERIFY_TASK + suffix, VerifyContractSourcesTask.class);
+        // Known before any task runs, as a publication reads an archive's name while the build is
+        // configured: the locked version, or on a first build, before anything is fetched, the
+        // version the subscription asks for.
+        Provider<String> subscribed = project.provider(() -> subscriber.subscription(contract))
+                .flatMap(Subscription::getApiContractVersion).orElse("unspecified");
         Provider<String> version = project.getProviders().fileContents(subscriber.getLockfile()).getAsText()
-                .orElse("").map(text -> LockedContract.version(text, contract));
+                .orElse("").map(text -> LockedContract.version(text, contract))
+                .zip(subscribed, (locked, asked) -> locked.equals("unspecified") ? asked : locked);
 
         Map<String, TaskProvider<GenerateEmitterSourcesTask>> tasks = new LinkedHashMap<>();
         for (EmitterPlan.Placement placement : plan.emitters().values()) {
@@ -276,8 +285,8 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         t.getJavaDirectory().set(spec.getIntoJava());
                         t.getResourceDirectory().set(spec.getIntoResources());
                         t.getFilesDirectory().set(spec.getIntoFiles());
-                        t.getReportFragment().set(fragment(subscription, id, ".json"));
-                        t.getAsciiDocFragment().set(fragment(subscription, id, ".adoc"));
+                        t.getReportFragment().set(fragment(project, subscription, id, ".json"));
+                        t.getAsciiDocFragment().set(fragment(project, subscription, id, ".adoc"));
                         t.getStamp().set(project.getLayout().getBuildDirectory()
                                 .file("generated/transcriberj-stamps/" + contract + "/" + id + ".properties"));
                         if (files) {
@@ -325,6 +334,20 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             z.filePermissions(permissions -> permissions.unix("rw-r--r--"));
             z.dirPermissions(permissions -> permissions.unix("rwxr-xr-x"));
         });
+        zip.configure(z -> z.getOutputs().cacheIf("the archive is reproducible", t -> true));
+        component(project, contract, id).getOutgoing().artifact(zip);
+    }
+
+    /**
+     * The consumable configuration an emitter's archive is published through, and the component
+     * that holds it, created once: {@code transcriberj<Contract><Emitter>Elements} and
+     * {@code transcriberj<Contract><Emitter>}. The archive is attached only to an emitter that
+     * writes files.
+     */
+    private Configuration component(Project project, String contract, String id) {
+        String name = suffix(contract) + suffix(id);
+        Configuration existing = project.getConfigurations().findByName("transcriberj" + name + "Elements");
+        if (existing != null) return existing;
         Configuration elements = project.getConfigurations().create("transcriberj" + name + "Elements", c -> {
             c.setDescription("The " + id + " emitter's files for the " + contract + " contract, as an archive.");
             c.setCanBeConsumed(true);
@@ -334,12 +357,12 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                         project.getObjects().named(Category.class, Category.LIBRARY));
                 attributes.attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, FILES_USAGE));
             });
-            c.getOutgoing().artifact(zip);
         });
         AdhocComponentWithVariants component = components.adhoc("transcriberj" + name);
         component.addVariantsFromConfiguration(elements, details -> {
         });
         project.getComponents().add(component);
+        return elements;
     }
 
     /** Each source set's generated directories and managed dependencies, as the plan places them. */
@@ -430,14 +453,14 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
     }
 
     /** Where a generation task writes its part of the report, beside the report. */
-    private static Provider<RegularFile> fragment(TranscriberJSubscription subscription, String part,
-                                                  String extension) {
-        return subscription.getReportFile().map(report -> {
+    private static Provider<RegularFile> fragment(Project project, TranscriberJSubscription subscription,
+                                                  String part, String extension) {
+        return project.getLayout().file(subscription.getReportFile().map(report -> {
             java.io.File file = report.getAsFile();
             String name = file.getName();
             String base = name.endsWith(".txt") ? name.substring(0, name.length() - 4) : name;
-            return () -> new java.io.File(new java.io.File(file.getParentFile(), base), part + extension);
-        });
+            return new java.io.File(new java.io.File(file.getParentFile(), base), part + extension);
+        }));
     }
 
     /** The TranscriberJ's own version, as its build recorded it. */
