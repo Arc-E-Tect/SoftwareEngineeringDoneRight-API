@@ -1,25 +1,14 @@
 package com.arc_e_tect.gradle.apionly.transcriberj;
 
 import com.arc_e_tect.gradle.apionly.transcriberj.core.Generation;
-import com.arc_e_tect.gradle.apionly.transcriberj.core.GenerationException;
 import com.arc_e_tect.gradle.apionly.transcriberj.core.GenerationReport;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
 import org.gradle.workers.WorkAction;
-import org.gradle.workers.WorkParameters;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -28,110 +17,11 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
-/** The generation itself, in the class loader the emitters were loaded into. */
+/** The core's generation: the schema classes, operations, cases and the endpoint index. */
 public abstract class GenerateContractSourcesAction implements WorkAction<GenerateContractSourcesAction.Parameters> {
 
     /** What the task hands over. */
-    public interface Parameters extends WorkParameters {
-
-        /**
-         * The fetched contract document.
-         *
-         * @return the document
-         */
-        RegularFileProperty getContract();
-
-        /**
-         * The contract's AsyncAPI document, or nothing when it has none.
-         *
-         * @return the document
-         */
-        ConfigurableFileCollection getAsyncContract();
-
-        /**
-         * The locked version.
-         *
-         * @return the version
-         */
-        Property<String> getContractVersion();
-
-        /**
-         * The locked hash.
-         *
-         * @return the hash
-         */
-        Property<String> getContractSha256();
-
-        /**
-         * The contract's name.
-         *
-         * @return the name
-         */
-        Property<String> getContractName();
-
-        /**
-         * The base package.
-         *
-         * @return the package
-         */
-        Property<String> getBasePackage();
-
-        /**
-         * The recursion depth.
-         *
-         * @return the depth
-         */
-        Property<Integer> getRecursionDepth();
-
-        /**
-         * Whether descriptions come from the contract.
-         *
-         * @return the setting
-         */
-        Property<Boolean> getGenerateDocs();
-
-        /**
-         * The description placeholder.
-         *
-         * @return the placeholder
-         */
-        Property<String> getDescriptionPlaceholder();
-
-        /**
-         * The base name of the bundle descriptions resolve through, or absent when the
-         * project supplies none.
-         *
-         * @return the bundle's base name
-         */
-        Property<String> getDescriptionBundle();
-
-        /**
-         * The status that means "the request is invalid".
-         *
-         * @return the status
-         */
-        Property<String> getInvalidRequestStatus();
-
-        /**
-         * Whether an undeclared {@code additionalProperties} forbids unknown members.
-         *
-         * @return the setting
-         */
-        Property<Boolean> getStrictRequests();
-
-        /**
-         * The formats an invalid-request case is derived for.
-         *
-         * @return the format names
-         */
-        ListProperty<String> getValidateFormats();
-
-        /**
-         * The options of each emitter, by emitter id.
-         *
-         * @return the options
-         */
-        MapProperty<String, Map<String, String>> getEmitterOptions();
+    public interface Parameters extends ContractParameters {
 
         /**
          * Where the sources go.
@@ -141,7 +31,7 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         DirectoryProperty getOutputDirectory();
 
         /**
-         * Where a resource an emitter writes goes.
+         * Where the core's resources go.
          *
          * @return the directory
          */
@@ -155,15 +45,21 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
         RegularFileProperty getEndpointIndex();
 
         /**
-         * Where the report goes.
+         * Where the core's part of the report goes, as JSON.
          *
-         * @return the report
+         * @return the fragment
          */
-        RegularFileProperty getReportFile();
+        RegularFileProperty getReportFragment();
 
         /**
-         * Where the machine-readable report of every generated valid value goes; nothing is
-         * written when it is not set.
+         * Where the core's part of the report goes, as AsciiDoc.
+         *
+         * @return the fragment
+         */
+        RegularFileProperty getAsciiDocFragment();
+
+        /**
+         * Where the machine-readable report of every generated valid value goes.
          *
          * @return the report
          */
@@ -174,42 +70,18 @@ public abstract class GenerateContractSourcesAction implements WorkAction<Genera
     public GenerateContractSourcesAction() {
     }
 
-    /** The AsyncAPI document to read with the OpenAPI one, or null when there is none. */
-    private static Path asyncContract(Parameters parameters) {
-        return parameters.getAsyncContract().getFiles().stream().filter(java.io.File::isFile)
-                .findFirst().map(java.io.File::toPath).orElse(null);
-    }
-
     @Override
     public void execute() {
         Parameters p = getParameters();
-        Settings settings = new Settings(p.getContractName().get(), p.getBasePackage().get(),
-                p.getGenerateDocs().get(),
-                p.getDescriptionPlaceholder().get(), p.getRecursionDepth().get(),
-                p.getDescriptionBundle().getOrNull(), p.getInvalidRequestStatus().getOrNull(),
-                p.getStrictRequests().getOrElse(true), p.getValidateFormats().getOrElse(List.of()),
-                p.getEmitterOptions().getOrElse(Map.of()));
-        GenerationReport report;
-        try {
-            report = Generation.run(p.getContract().get().getAsFile().toPath(), asyncContract(p),
-                    p.getContractVersion().get(),
-                    p.getContractSha256().get(), settings, p.getOutputDirectory().get().getAsFile().toPath(),
-                    p.getResourceDirectory().get().getAsFile().toPath(),
-                    emitters(GenerateContractSourcesAction.class.getClassLoader()),
-                    p.getEndpointIndex().get().getAsFile().toPath());
-        } catch (GenerationException e) {
-            throw new GradleException(e.getMessage(), e);
-        }
-        try {
-            Files.writeString(p.getReportFile().get().getAsFile().toPath(),
-                    report.render(settings.contract(), p.getContractVersion().get()), StandardCharsets.UTF_8);
-            if (p.getValidValuesReport().isPresent()) {
-                Files.writeString(p.getValidValuesReport().get().getAsFile().toPath(),
-                        report.renderValidValues(settings.contract(), p.getContractVersion().get()),
-                        StandardCharsets.UTF_8);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        Settings settings = p.settings(Map.of());
+        Generation.Derivation derivation = p.derive(settings);
+        GenerationReport report = Generation.writeCore(derivation, p.getOutputDirectory().get().getAsFile().toPath(),
+                p.getResourceDirectory().get().getAsFile().toPath(), p.getEndpointIndex().get().getAsFile().toPath());
+        ContractParameters.write(p.getReportFragment().get().getAsFile().toPath(), report.fragment());
+        ContractParameters.write(p.getAsciiDocFragment().get().getAsFile().toPath(), report.renderAsciiDoc("Core"));
+        if (p.getValidValuesReport().isPresent()) {
+            ContractParameters.write(p.getValidValuesReport().get().getAsFile().toPath(),
+                    report.renderValidValues(settings.contract(), p.getContractVersion().get()));
         }
     }
 

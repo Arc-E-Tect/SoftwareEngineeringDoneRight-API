@@ -67,6 +67,14 @@ public abstract class VerifyContractSourcesTask extends DefaultTask {
     @Internal
     public abstract DirectoryProperty getSourcesDirectory();
 
+    /**
+     * What each emitter's output was generated from, as its generation task recorded it.
+     *
+     * @return the stamps
+     */
+    @Internal
+    public abstract org.gradle.api.file.ConfigurableFileCollection getEmitterStamps();
+
     /** Compares the generated manifest with the lockfile. */
     @TaskAction
     public void verify() {
@@ -92,6 +100,27 @@ public abstract class VerifyContractSourcesTask extends DefaultTask {
                     + " were generated from version " + version + " (" + sha256 + "), but the lockfile names version "
                     + locked.version() + " (" + locked.sha256() + "). Regenerate them with generateContractSources"
                     + ApiOnlyTranscriberJPlugin.suffix(contract) + ".");
+        }
+        for (java.io.File file : getEmitterStamps().getFiles()) {
+            String emitter = file.getName().replaceFirst("\\.properties$", "");
+            if (!file.isFile()) {
+                throw new GradleException("No output of emitter " + emitter + " has been generated for contract "
+                        + contract + ". Run generateContractSources" + ApiOnlyTranscriberJPlugin.suffix(contract)
+                        + ApiOnlyTranscriberJPlugin.suffix(emitter) + ".");
+            }
+            Stamp stamp;
+            try {
+                stamp = Stamp.parse(Files.readString(file.toPath()));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            if (!locked.version().equals(stamp.version()) || !locked.sha256().equals(stamp.sha256())) {
+                throw new GradleException("The output of emitter " + stamp.emitter() + " for contract " + contract
+                        + " was generated from version " + stamp.version() + " (" + stamp.sha256()
+                        + "), but the lockfile names version " + locked.version() + " (" + locked.sha256()
+                        + "). Regenerate it with generateContractSources" + ApiOnlyTranscriberJPlugin.suffix(contract)
+                        + ApiOnlyTranscriberJPlugin.suffix(stamp.emitter()) + ".");
+            }
         }
     }
 

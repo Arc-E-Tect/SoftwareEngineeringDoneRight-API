@@ -188,7 +188,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         assertThat(projectDir.resolve(
                 "build/generated/transcriberj-index/user-account/contract-endpoints.properties"))
                 .content().contains("GetUserOperation.PATH=/v1/users/{username}");
-        assertThat(projectDir.resolve("build/generated/sources/transcriberj/user-account/com/example/contract/UserV1.java"))
+        assertThat(projectDir.resolve("build/generated/sources/transcriberj/user-account/core/com/example/contract/UserV1.java"))
                 .exists();
 
         BuildResult again = runner("useContract", "check").build();
@@ -212,13 +212,22 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         assertThat(again.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
 
         List<String> previous = new ArrayList<>();
-        for (String setting : List.of("-PinvalidStatus=422", "-Plenient", "-Pformats=email", "-PcountingOption=on")) {
+        for (String setting : List.of("-PinvalidStatus=422", "-Plenient", "-Pformats=email")) {
             previous.add(setting);
             BuildResult changed = runner(withTask(previous)).build();
             assertThat(changed.task(":generateContractSourcesUserAccount").getOutcome()).as(setting)
                     .isEqualTo(TaskOutcome.SUCCESS);
         }
-        assertThat(projectDir.resolve("build/generated/resources/transcriberj/user-account/counting/options.properties"))
+        // An emitter's options are its task's input alone: the core is left up to date.
+        previous.add("-PcountingOption=on");
+        List<String> emitterRun = new ArrayList<>(previous);
+        emitterRun.add("generateContractSourcesUserAccountCounting");
+        BuildResult changed = runner(emitterRun.toArray(String[]::new)).build();
+        assertThat(changed.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
+        assertThat(changed.task(":generateContractSourcesUserAccountCounting").getOutcome())
+                .isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(projectDir.resolve(
+                "build/generated/resources/transcriberj/user-account/counting/counting/options.properties"))
                 .content().isEqualTo("option=on\n");
     }
 
@@ -291,7 +300,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
     void verificationFailsWhenTheTreeWasGeneratedFromAnotherContract() throws Exception {
         runner("generateContractSourcesUserAccount").build();
         Path manifest = projectDir.resolve(
-                "build/generated/sources/transcriberj/user-account/com/example/contract/ContractManifest.java");
+                "build/generated/sources/transcriberj/user-account/core/com/example/contract/ContractManifest.java");
         Files.writeString(manifest, Files.readString(manifest)
                 .replace("CONTRACT_VERSION = \"1.0.0\"", "CONTRACT_VERSION = \"0.9.0\""));
 

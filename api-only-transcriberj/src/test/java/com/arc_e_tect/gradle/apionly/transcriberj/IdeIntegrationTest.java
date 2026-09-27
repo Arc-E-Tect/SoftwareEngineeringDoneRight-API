@@ -59,7 +59,7 @@ class IdeIntegrationTest {
     }
 
     private File generated(String contract) {
-        return projectDir.resolve("build/generated/sources/transcriberj/" + contract).toFile();
+        return projectDir.resolve("build/generated/sources/transcriberj/" + contract + "/core").toFile();
     }
 
     private static List<?> afterSync(Project project) {

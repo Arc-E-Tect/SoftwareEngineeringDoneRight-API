@@ -75,8 +75,18 @@ class ApiOnlyTranscriberJPluginTest {
 
         GenerateContractSourcesTask generate = (GenerateContractSourcesTask)
                 project.getTasks().getByName("generateContractSourcesUserAccount");
-        assertThat(generate.getReportFile().get().getAsFile())
+        ReportContractSourcesTask report = (ReportContractSourcesTask)
+                project.getTasks().getByName("reportContractSourcesUserAccount");
+        assertThat(report.getReportFile().get().getAsFile())
                 .isEqualTo(projectDir.resolve("reports/orders.txt").toFile());
+        assertThat(report.getAsciiDocReport().get().getAsFile())
+                .isEqualTo(projectDir.resolve("reports/orders.adoc").toFile());
+        assertThat(generate.getReportFragment().get().getAsFile())
+                .isEqualTo(projectDir.resolve("reports/orders/core.json").toFile());
+        assertThat(generate.getAsciiDocFragment().get().getAsFile())
+                .isEqualTo(projectDir.resolve("reports/orders/core.adoc").toFile());
+        assertThat(generate.getValidValuesReport().get().getAsFile())
+                .isEqualTo(projectDir.resolve("reports/orders.valid-values.json").toFile());
         assertThat(generate.getEndpointIndex().get().getAsFile())
                 .isEqualTo(projectDir.resolve("index/orders.properties").toFile());
         assertThat(subscription.getEndpointIndex().get().getAsFile())
@@ -101,9 +111,10 @@ class ApiOnlyTranscriberJPluginTest {
         assertThat(subscription.getDescriptionPlaceholder().get())
                 .isEqualTo(TranscriberJSubscription.DEFAULT_DESCRIPTION_PLACEHOLDER);
         assertThat(subscription.getInto().get().getAsFile())
-                .isEqualTo(projectDir.resolve("build/generated/sources/transcriberj/user-account").toFile());
+                .isEqualTo(projectDir.resolve("build/generated/sources/transcriberj/user-account/core").toFile());
         assertThat(subscription.getIntoResources().get().getAsFile())
-                .isEqualTo(projectDir.resolve("build/generated/resources/transcriberj/user-account").toFile());
+                .isEqualTo(projectDir.resolve("build/generated/resources/transcriberj/user-account/core").toFile());
+        assertThat(subscription.getSchemaClasses().get()).isEqualTo("perSourceSet");
 
         GenerateContractSourcesTask generate = (GenerateContractSourcesTask)
                 project.getTasks().getByName("generateContractSourcesUserAccount");
@@ -112,8 +123,8 @@ class ApiOnlyTranscriberJPluginTest {
         assertThat(generate.getGenerateDocs().get()).isFalse();
         assertThat(generate.getContract().get().getAsFile())
                 .isEqualTo(projectDir.resolve("build/api-spec/user-account/openapi.yaml").toFile());
-        assertThat(generate.getReportFile().get().getAsFile())
-                .isEqualTo(projectDir.resolve("build/reports/transcriberj/user-account.txt").toFile());
+        assertThat(generate.getReportFragment().get().getAsFile())
+                .isEqualTo(projectDir.resolve("build/reports/transcriberj/user-account/core.json").toFile());
         assertThat(subscription.getEndpointIndex().get().getAsFile()).isEqualTo(projectDir.resolve(
                 "build/generated/transcriberj-index/user-account/contract-endpoints.properties").toFile());
         assertThat(project.getTasks().getByName("check").getDependsOn()).anySatisfy(d ->
@@ -123,9 +134,9 @@ class ApiOnlyTranscriberJPluginTest {
         SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
         for (String name : List.of("main", "test")) {
             assertThat(sourceSets.getByName(name).getJava().getSrcDirs())
-                    .contains(projectDir.resolve("build/generated/sources/transcriberj/user-account").toFile());
+                    .contains(projectDir.resolve("build/generated/sources/transcriberj/user-account/core").toFile());
             assertThat(sourceSets.getByName(name).getResources().getSrcDirs())
-                    .contains(projectDir.resolve("build/generated/resources/transcriberj/user-account").toFile());
+                    .contains(projectDir.resolve("build/generated/resources/transcriberj/user-account/core").toFile());
         }
     }
 
@@ -143,19 +154,16 @@ class ApiOnlyTranscriberJPluginTest {
         assertThat(subscription.getInvalidRequestStatus().get()).isEqualTo("400");
         assertThat(subscription.getStrictRequests().get()).isTrue();
         assertThat(subscription.getValidateFormats().get()).isEmpty();
-        assertThat(subscription.getEmitterOptions().get()).isEmpty();
+        assertThat(emitterOptions(subscription).get()).isEmpty();
         assertThat(generate.getInvalidRequestStatus().get()).isEqualTo("400");
         assertThat(generate.getStrictRequests().get()).isTrue();
 
         subscription.getInvalidRequestStatus().set("422");
         subscription.getStrictRequests().set(false);
         subscription.getValidateFormats().set(List.of("email", "uuid"));
-        subscription.getEmitterOptions().put("restdocs", java.util.Map.of("tests", "true"));
         assertThat(generate.getInvalidRequestStatus().get()).isEqualTo("422");
         assertThat(generate.getStrictRequests().get()).isFalse();
         assertThat(generate.getValidateFormats().get()).containsExactly("email", "uuid");
-        assertThat(generate.getEmitterOptions().get()).containsExactly(
-                java.util.Map.entry("restdocs", java.util.Map.of("tests", "true")));
     }
 
     @Test
@@ -174,10 +182,10 @@ class ApiOnlyTranscriberJPluginTest {
         parameters.getInvalidRequestStatus().set("422");
         parameters.getStrictRequests().set(false);
         parameters.getValidateFormats().set(List.of("email"));
-        parameters.getEmitterOptions().set(java.util.Map.of());
         parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
         parameters.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
-        parameters.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        parameters.getReportFragment().set(projectDir.resolve("report/core.json").toFile());
+        parameters.getAsciiDocFragment().set(projectDir.resolve("report/core.adoc").toFile());
         parameters.getValidValuesReport().set(projectDir.resolve("report.json").toFile());
         parameters.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
         GenerateContractSourcesAction action = new GenerateContractSourcesAction() {
@@ -189,7 +197,7 @@ class ApiOnlyTranscriberJPluginTest {
 
         action.execute();
 
-        String report = Files.readString(projectDir.resolve("report.txt"));
+        String report = Files.readString(projectDir.resolve("report/core.json"));
         assertThat(report).contains("strictRequests is off for contract 'user-account'")
                 .contains("declare a 422 response");
         // It declares a 400 response, but not the 422 asked for; the registration declares both.
@@ -197,10 +205,8 @@ class ApiOnlyTranscriberJPluginTest {
                 .contains("CASE_COUNT = 0;");
         assertThat(Files.readString(projectDir.resolve("out/a/b/InitiateUserRegistrationInvalidRequests.java")))
                 .contains("expecting the declared 422 response").doesNotContain("unknown-member");
-
-        parameters.getEmitterOptions().set(java.util.Map.of("restdocs", java.util.Map.of("tests", "true")));
-        assertThatThrownBy(action::execute).isInstanceOf(GradleException.class)
-                .hasMessageContaining("emitterOptions names restdocs, but no emitter with that id");
+        assertThat(Files.readString(projectDir.resolve("report/core.adoc"))).startsWith("= Core\n")
+                .contains("strictRequests is off");
     }
 
     private Project managedProject(String ownVersion, boolean strict) throws Exception {
@@ -219,6 +225,12 @@ class ApiOnlyTranscriberJPluginTest {
         extension.subscription("user-account", s -> s.getBasePackage().set("a.b"));
         ((ProjectInternal) project).evaluate();
         return project;
+    }
+
+    @SuppressWarnings("deprecation")
+    private static org.gradle.api.provider.MapProperty<String, Map<String, String>> emitterOptions(
+            TranscriberJSubscription subscription) {
+        return subscription.getEmitterOptions();
     }
 
     private static List<String> resolved(Project project) {
@@ -263,20 +275,20 @@ class ApiOnlyTranscriberJPluginTest {
         task.getRecursionDepth().set(3);
         task.getGenerateDocs().set(true);
         task.getDescriptionPlaceholder().set("P");
-        task.getEmitterClasspath().from(jar.toFile());
         task.getOutputDirectory().set(projectDir.resolve("out").toFile());
         task.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
-        task.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        task.getReportFragment().set(projectDir.resolve("report/core.json").toFile());
+        task.getAsciiDocFragment().set(projectDir.resolve("report/core.adoc").toFile());
+        task.getValidValuesReport().set(projectDir.resolve("report.valid-values.json").toFile());
         task.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
 
         task.generate();
 
-        // The fake runs the action in this class loader, which has no emitter on it; the
-        // functional test covers the isolated class loader.
         assertThat(projectDir.resolve("out/com/example/contract/UserV1.java")).exists();
+        assertThat(projectDir.resolve("out/com/example/contract/counting")).doesNotExist();
         assertThat(Files.readString(projectDir.resolve("out/com/example/contract/ContractManifest.java")))
                 .contains("CONTRACT_SHA256 = \"abc\"");
-        assertThat(Files.readString(projectDir.resolve("report.txt"))).startsWith("API-Only TranscriberJ: user-account");
+        assertThat(Files.readString(projectDir.resolve("report/core.json"))).startsWith("{\"degraded\":");
         assertThat(Files.readString(projectDir.resolve("index.properties"))).contains("GetUserOperation.PATH=");
         assertThat(Files.readString(projectDir.resolve("out/com/example/contract/UsernameV1.java")))
                 .contains("The unique username of the account.");
@@ -303,7 +315,9 @@ class ApiOnlyTranscriberJPluginTest {
         parameters.getDescriptionPlaceholder().set("p");
         parameters.getOutputDirectory().set(projectDir.resolve("out").toFile());
         parameters.getResourceDirectory().set(projectDir.resolve("out-resources").toFile());
-        parameters.getReportFile().set(projectDir.resolve("report.txt").toFile());
+        parameters.getReportFragment().set(projectDir.resolve("report/core.json").toFile());
+        parameters.getAsciiDocFragment().set(projectDir.resolve("report/core.adoc").toFile());
+        parameters.getValidValuesReport().set(projectDir.resolve("report.valid-values.json").toFile());
         parameters.getEndpointIndex().set(projectDir.resolve("index.properties").toFile());
         GenerateContractSourcesAction action = new GenerateContractSourcesAction() {
             @Override
@@ -315,7 +329,8 @@ class ApiOnlyTranscriberJPluginTest {
         assertThatThrownBy(action::execute).isInstanceOf(GradleException.class)
                 .hasMessageContaining("have no x-fragment-path");
 
-        parameters.getReportFile().set(projectDir.resolve("missing/dir/report.txt").toFile());
+        // A fragment that cannot be written, because a directory is in its way.
+        Files.createDirectories(projectDir.resolve("report/core.json"));
         Files.writeString(contract, "openapi: 3.1.0\ninfo: {title: t, version: 1.0.0}\n");
         assertThatThrownBy(action::execute).isInstanceOf(java.io.UncheckedIOException.class);
     }
