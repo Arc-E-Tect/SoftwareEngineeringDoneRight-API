@@ -46,6 +46,8 @@ They cannot catch drift between the descriptor and the contract: if a schema gai
 Generated from the locked contract, the descriptors change when the contract does.
 ====
 
+link:../examples/transcriberj/generated-contract-tests/README.adoc[The generated contract tests example →] shows it all in one small service: the schema classes in every test suite, the generated contract tests run against the real service and against a WireMock double, the fixtures that make them pass, the stubs as an archive and an image, and published documentation from a documentation test suite.
+
 The `J` is for Java.
 
 [#plugin-id]
@@ -333,6 +335,7 @@ apiOnlyTranscriberJ {
 ----
 
 Which options an emitter takes, and whether it writes Java, resources or files with them, is its README's to say; the WireMock example assumes an emitter version that writes files.
+link:../examples/transcriberj/generated-contract-tests/README.adoc#configuration[The generated contract tests example →] uses this configuration, and says why for each part.
 
 [#placement-rules]
 === Where each emitter's output goes
