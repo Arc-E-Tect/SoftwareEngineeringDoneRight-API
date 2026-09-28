@@ -797,8 +797,8 @@ lint:
     openapi: warn       # a request body or response with no example: error, warn (the default) or off
 
 toolchain:
-  redocly: "@redocly/cli@2.52.0"
-  asyncapi: "@asyncapi/cli@6.0.2"
+  redocly: "@redocly/cli@2.55.0"
+  asyncapi: "@asyncapi/cli@6.2.0"
 
 channels:
   file:

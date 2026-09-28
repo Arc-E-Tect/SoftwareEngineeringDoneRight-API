@@ -21,14 +21,14 @@ test("adds a missing kind's slots to an apionly.yaml that already builds the oth
     const doc = YAML.parse(text);
     assert.strictEqual(doc.sources.asyncapi, "asyncapi");
     assert.deepStrictEqual(doc.defaults.asyncapi, { outputName: "asyncapi.yaml" });
-    assert.strictEqual(doc.toolchain.asyncapi, "@asyncapi/cli@6.0.2");
+    assert.strictEqual(doc.toolchain.asyncapi, "@asyncapi/cli@6.2.0");
     assert.deepStrictEqual(doc.targets["example-service"].asyncapi,
         { bundle: "bundles/example-service_asyncapi_structure.yaml" });
 
     // Every openapi value the file already had is untouched.
     assert.strictEqual(doc.sources.openapi, "openapi");
     assert.deepStrictEqual(doc.defaults.openapi, { lint: ".redocly.yaml", outputName: "openapi.yaml" });
-    assert.strictEqual(doc.toolchain.redocly, "@redocly/cli@2.52.0");
+    assert.strictEqual(doc.toolchain.redocly, "@redocly/cli@2.55.0");
     assert.deepStrictEqual(doc.targets["example-service"].openapi,
         { bundle: "bundles/example-service_openapi_structure.yaml" });
 

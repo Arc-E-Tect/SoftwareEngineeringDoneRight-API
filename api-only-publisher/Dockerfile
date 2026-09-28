@@ -84,8 +84,8 @@ LABEL org.opencontainers.image.title="API-Only Publisher" \
       org.opencontainers.image.source="https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API" \
       org.opencontainers.image.url="https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-publisher" \
       org.opencontainers.image.documentation="https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/README.adoc#docker" \
-      com.arc-e-tect.api-only-publisher.toolchain.redocly="@redocly/cli@2.52.0" \
-      com.arc-e-tect.api-only-publisher.toolchain.asyncapi="@asyncapi/cli@6.0.2"
+      com.arc-e-tect.api-only-publisher.toolchain.redocly="@redocly/cli@2.55.0" \
+      com.arc-e-tect.api-only-publisher.toolchain.asyncapi="@asyncapi/cli@6.2.0"
 
 USER 10001:0
 WORKDIR /work
