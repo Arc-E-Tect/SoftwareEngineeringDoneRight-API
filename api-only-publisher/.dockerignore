@@ -1,0 +1,11 @@
+# The image is built from three things and nothing else: the Publisher's npm
+# tarball, the toolchain's lockfile, and the files under docker/ it copies. So the
+# context starts empty and lets those in by name; .git, node_modules, the tests and
+# anything a developer leaves lying around never reach the build.
+*
+!api-only-publisher.tgz
+!docker/entrypoint.sh
+!docker/asyncapi-analytics.json
+!docker/asyncapi-config/production.json
+!docker/toolchain/package.json
+!docker/toolchain/package-lock.json

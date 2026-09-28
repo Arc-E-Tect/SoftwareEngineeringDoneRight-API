@@ -132,4 +132,4 @@ function addMissingConfig(text, v, portfolio) {
     return added.length === 0 ? { text, added } : { text: doc.toString(), added };
 }
 
-module.exports = { addMissingConfig };
+module.exports = { addMissingConfig, TOOLCHAIN_PIN };
