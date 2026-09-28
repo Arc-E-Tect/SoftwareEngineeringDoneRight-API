@@ -7,11 +7,16 @@
 # network, a read-only root filesystem with a tmpfs at /tmp, and the invoking
 # user's UID and GID, against a temporary directory mounted at /work.
 # README.adoc#docker-maintainers describes it.
+#
+# SMOKE_NETWORK names a Docker network to use instead of none. It exists to prove
+# the image makes no outbound connection when it could: run the test on a network
+# whose traffic is captured, and expect none.
 set -eu
 
 IMAGE=${1:?usage: smoke-test.sh <image-reference> [expected-version]}
 EXPECTED_VERSION=${2:-}
 USER_SPEC="$(id -u):$(id -g)"
+NETWORK=${SMOKE_NETWORK:-none}
 # Any image version carries this pin, and no image ever will: a toolchain pin the
 # image cannot run without downloading.
 FOREIGN_PIN="@redocly/cli@0.0.1"
@@ -28,7 +33,7 @@ fail() { printf '   FAILED: %s\n' "$*" >&2; exit 1; }
 sealed() {
     dir=$1
     shift
-    docker run --rm --network none --read-only --tmpfs /tmp --user "$USER_SPEC" \
+    docker run --rm --network "$NETWORK" --read-only --tmpfs /tmp --user "$USER_SPEC" \
         -e SOURCE_DATE_EPOCH=1700000000 -v "$WORK/$dir:/work" "$IMAGE" "$@"
 }
 
@@ -39,7 +44,7 @@ label() {
 mkdir -p "$WORK/lib" "$WORK/sealed" "$WORK/empty"
 
 step "0. The default user is not root"
-uid=$(docker run --rm --network none --entrypoint id "$IMAGE" -u)
+uid=$(docker run --rm --network "$NETWORK" --entrypoint id "$IMAGE" -u)
 [ "$uid" != 0 ] || fail "the image runs as root by default"
 pass "default UID $uid"
 
@@ -144,7 +149,7 @@ grep -q '"channel": "nuget"' "$WORK/lib/build/packages/packages.json" || fail "p
 sealed lib sh -c 'sha256sum -c --quiet build/packages/packages.sha256' || fail "sha256sum -c failed"
 pass "sha256sum -c build/packages/packages.sha256 succeeds"
 
-step "8. A toolchain the image does not carry fails at once, without the network"
+step "8. A toolchain the image does not carry fails at once, without reaching for the network"
 sealed sealed init --yes --openapi . >/dev/null
 sealed sealed sh -c "sed -i 's|redocly: .*|redocly: \"$FOREIGN_PIN\"|' apionly.yaml"
 start=$(date +%s)
@@ -165,7 +170,7 @@ sealed empty sh -c 'api-only-publisher --help' | grep -q '^Usage:' || fail "sh -
 pass "sh -c 'api-only-publisher --help'"
 
 step "10. An arbitrary UID with no passwd entry builds, on a read-only root"
-docker run --rm --network none --read-only --tmpfs /tmp --user 54321:54321 "$IMAGE" sh -c '
+docker run --rm --network "$NETWORK" --read-only --tmpfs /tmp --user 54321:54321 "$IMAGE" sh -c '
     set -e
     mkdir /tmp/lib && cd /tmp/lib
     api-only-publisher init --yes --openapi --asyncapi . >/dev/null
