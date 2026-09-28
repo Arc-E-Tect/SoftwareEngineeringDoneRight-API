@@ -1,0 +1,30 @@
+type: object
+description: What went wrong with a request, as RFC 9457 describes it.
+required:
+  - title
+  - status
+properties:
+  title:
+    type: string
+    description: A short summary of the problem.
+  status:
+    type: integer
+    description: The HTTP status code.
+  detail:
+    type: string
+    description: What went wrong with this request.
+  errors:
+    type: array
+    description: The individual problems, one per field.
+    items:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: The field that was wrong.
+        message:
+          type: string
+          description: What was wrong with it.

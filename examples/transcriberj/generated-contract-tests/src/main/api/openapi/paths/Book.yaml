@@ -1,0 +1,31 @@
+get:
+  operationId: getBook
+  summary: Read one book.
+  parameters:
+    - name: id
+      in: path
+      required: true
+      description: The book's identifier, as the catalogue gave it.
+      schema:
+        $ref: ../components/schemas/BookIdV1.yaml
+  responses:
+    '200':
+      description: The book.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/BookV1.yaml
+    '400':
+      description: The identifier is malformed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+    '404':
+      description: No book has this identifier.
+      content:
+        application/problem+json:
+          schema:
+            $ref: ../components/schemas/ProblemV1.yaml
+    '406':
+      description: The book cannot be given in a media type the request accepts.

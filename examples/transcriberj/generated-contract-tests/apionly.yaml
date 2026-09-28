@@ -1,0 +1,30 @@
+schemaVersion: 1
+
+sources:
+  root: src/main/api
+  openapi: openapi
+
+defaults:
+  openapi:
+    lint: .redocly.yaml
+    outputName: openapi.yaml
+
+build:
+  staging: build/api-only/staging
+  dist: build/api-only/dist
+
+reports:
+  lint: build/api-only/reports/lint
+
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+
+channels:
+  file:
+    directory: build/api-only/publish
+    clean: true
+
+targets:
+  books:
+    openapi:
+      bundle: bundles/books.yaml

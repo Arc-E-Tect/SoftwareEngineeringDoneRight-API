@@ -1,0 +1,19 @@
+type: object
+description: A book to add to the catalogue.
+additionalProperties: false
+required:
+  - isbn
+  - title
+  - pages
+  - format
+properties:
+  isbn:
+    $ref: IsbnV1.yaml
+  title:
+    $ref: TitleV1.yaml
+  subtitle:
+    $ref: SubtitleV1.yaml
+  pages:
+    $ref: PagesV1.yaml
+  format:
+    $ref: BookFormatV1.yaml

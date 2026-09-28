@@ -1,0 +1,3 @@
+type: string
+description: The book's ISBN-13, digits only.
+pattern: '^97[89][0-9]{10}$'

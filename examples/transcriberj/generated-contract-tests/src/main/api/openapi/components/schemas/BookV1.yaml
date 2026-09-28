@@ -1,0 +1,21 @@
+type: object
+description: A book in the catalogue.
+required:
+  - id
+  - isbn
+  - title
+  - pages
+  - format
+properties:
+  id:
+    $ref: BookIdV1.yaml
+  isbn:
+    $ref: IsbnV1.yaml
+  title:
+    $ref: TitleV1.yaml
+  subtitle:
+    $ref: SubtitleV1.yaml
+  pages:
+    $ref: PagesV1.yaml
+  format:
+    $ref: BookFormatV1.yaml

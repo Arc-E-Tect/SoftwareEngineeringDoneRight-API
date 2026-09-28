@@ -1,0 +1,308 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java'
+    id 'jacoco'
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.asciidoctor)
+    alias(libs.plugins.api.only.transcriberj)
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// ---------------------------------------------------------------------------
+// The test suites. `check` runs all four.
+// ---------------------------------------------------------------------------
+
+// Not a suite: what both contract suites share, compiled once. It holds the
+// generated <Operation>ContractTests interfaces and the hand-written 409 beside
+// them; each contract suite implements them for its own target.
+sourceSets {
+    contractTestCommon
+}
+
+testing {
+    suites {
+        // Unit tests of the domain, and component tests of each adapter and of the
+        // service, each scoped to that component with everything else mocked.
+        // May not touch: a Spring Boot context, an HTTP server, a database. So it
+        // cannot see how Spring Boot's JSON mapper turns JSON into a request object.
+        test {
+            useJUnitJupiter()
+            dependencies {
+                implementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+            }
+        }
+
+        // The contract, against the real service: Spring Boot on a random port, real
+        // HTTP, the real database. May touch the database, in fixtures only.
+        contractTest(JvmTestSuite) {
+            useJUnitJupiter()
+            dependencies {
+                implementation sourceSets.contractTestCommon.output
+                implementation 'org.springframework.boot:spring-boot-starter-test'
+                implementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+            }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter test
+                    systemProperty 'spring.datasource.url', databaseUrl('contractTest')
+                    systemProperty 'org.springframework.restdocs.outputDir', snippetsDir.get().asFile.path
+                }
+            }
+        }
+
+        // The same contract tests, against the WireMock double loading the generated
+        // mapping files. May not touch the service: it tests the stubs that are shipped.
+        contractTestWireMock(JvmTestSuite) {
+            useJUnitJupiter()
+            dependencies {
+                implementation sourceSets.contractTestCommon.output
+                implementation libs.wiremock
+                implementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+            }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter contractTest
+                    dependsOn 'unpackBooksStubs'
+                    // The stubs are what these tests test: a changed stub runs them again.
+                    inputs.dir(stubsDir).withPropertyName('stubs')
+                    systemProperty 'books.stubs', stubsDir.get().asFile.path
+                    systemProperty 'org.springframework.restdocs.outputDir', snippetsDir.get().asFile.path
+                }
+            }
+        }
+
+        // The published documentation: meaningful requests and responses, against the
+        // real service, arranged as the contract tests' real fixtures arrange them.
+        // Never a generated case, and never a contract test.
+        documentationTest(JvmTestSuite) {
+            useJUnitJupiter()
+            dependencies {
+                implementation 'org.springframework.boot:spring-boot-starter-test'
+                implementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+            }
+            targets.configureEach {
+                testTask.configure {
+                    shouldRunAfter contractTestWireMock
+                    systemProperty 'spring.datasource.url', databaseUrl('documentationTest')
+                    systemProperty 'org.springframework.restdocs.outputDir', snippetsDir.get().asFile.path
+                }
+            }
+        }
+    }
+}
+
+// Where each suite's snippets go: the contract suites' by-products under their
+// own prefixes, and the documentation suite's under the names index.adoc includes.
+ext.snippetsDir = layout.buildDirectory.dir('generated-snippets')
+
+// Each suite that runs the service has a database file of its own, kept between
+// runs: delete build/database for a fresh one.
+def databaseUrl(String suite) {
+    "jdbc:h2:file:${layout.buildDirectory.dir("database/$suite").get().asFile.path}/books"
+}
+
+// The suites that run the service see it as `test` does: its classes and its dependencies.
+// Not through `implementation project()`: with two emitters, TranscriberJ 0.13.0's two
+// archive configurations have the same attributes, and Gradle then cannot resolve the project.
+['contractTest', 'documentationTest'].each { suite ->
+    dependencies.add("${suite}Implementation", sourceSets.main.output)
+    configurations.named("${suite}Implementation") { extendsFrom configurations.implementation }
+    configurations.named("${suite}RuntimeOnly") { extendsFrom configurations.runtimeOnly }
+}
+
+tasks.named('check') {
+    dependsOn testing.suites.contractTest, testing.suites.contractTestWireMock, testing.suites.documentationTest
+}
+
+dependencies {
+    // The service: hand-written, and it never imports a generated class.
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly 'com.h2database:h2'
+
+    // What the generated contract tests need, in the source set they are generated into.
+    contractTestCommonImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    contractTestCommonImplementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+    contractTestCommonImplementation 'org.junit.jupiter:junit-jupiter-api'
+
+    // The double's suite does not see the service, so it takes Spring Boot's versions itself.
+    contractTestWireMockImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    transcriberjEmitters libs.api.only.transcriberj.restdocs
+    transcriberjEmitters libs.api.only.transcriberj.wiremock
+}
+
+// ---------------------------------------------------------------------------
+// Coverage: the service's own code, from `test` alone. Unit and component tests
+// carry the coverage; the contract suites carry the contract.
+// ---------------------------------------------------------------------------
+
+tasks.named('test') {
+    finalizedBy 'jacocoTestReport'
+}
+
+tasks.named('jacocoTestReport') {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.90
+            }
+        }
+    }
+}
+
+tasks.named('check') { dependsOn 'jacocoTestCoverageVerification' }
+
+// ---------------------------------------------------------------------------
+// The contract. The Publisher builds it into build/, and the Subscriber, which
+// the TranscriberJ applies, fetches it from there.
+// ---------------------------------------------------------------------------
+
+def npm = System.getProperty('os.name').toLowerCase().contains('windows') ? 'npm.cmd' : 'npm'
+
+def installApiOnlyPublisher = tasks.register('installApiOnlyPublisher', Exec) {
+    group = 'api-only'
+    description = 'Installs the API-Only Publisher at the version package-lock.json pins.'
+    inputs.files('package.json', 'package-lock.json').withPropertyName('manifests')
+    outputs.file('node_modules/.package-lock.json').withPropertyName('installation')
+    commandLine npm, 'ci', '--no-audit', '--no-fund'
+}
+
+def buildApiContract = tasks.register('buildApiContract', Exec) {
+    group = 'api-only'
+    description = 'Bundles, stamps and lints the books contract.'
+    dependsOn installApiOnlyPublisher
+    inputs.dir('src/main/api').withPropertyName('specification')
+    inputs.files('apionly.yaml', 'package-lock.json').withPropertyName('configuration')
+    outputs.dir('build/api-only/dist/books').withPropertyName('bundle')
+    commandLine npm, 'run', '--silent', 'apionly', '--', 'build', '--target', 'books'
+}
+
+def publishApiContract = tasks.register('publishApiContract', Exec) {
+    group = 'api-only'
+    description = 'Publishes the books contract to the file channel in build/api-only/publish.'
+    dependsOn buildApiContract
+    inputs.dir('build/api-only/dist/books').withPropertyName('bundle')
+    outputs.dir('build/api-only/publish/books').withPropertyName('archive')
+    commandLine npm, 'run', '--silent', 'apionly', '--', 'publish', '--target', 'books', '--channel', 'file'
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = file('build/api-only/publish').path
+    }
+    subscribe('books')
+}
+
+tasks.named('fetchApiSpecBooks') { dependsOn publishApiContract }
+
+// ---------------------------------------------------------------------------
+// What the TranscriberJ generates from the contract, and where each part goes.
+// ---------------------------------------------------------------------------
+
+apiOnlyTranscriberJ {
+    subscription('books') {
+        basePackage = 'com.example.books.contract'
+        // The REST Docs field tables show the contract's descriptions.
+        generateDocs = true
+
+        // The schema classes -- BookRequestV1, the operations, the contract cases --
+        // in every suite that exercises the API. 'shared' compiles them once, in the
+        // source set transcriberjBooks, which each of these depends on.
+        sourceSets = ['test', 'contractTestCommon', 'contractTest', 'contractTestWireMock', 'documentationTest']
+        schemaClasses = 'shared'
+
+        // REST Docs: the *Docs descriptors, and with `tests` the generated contract
+        // tests. In contractTestCommon, which both contract suites share, and in the
+        // documentation suite, which needs the descriptors. The emitter has one set
+        // of options, so the documentation suite gets the test interfaces too; it
+        // implements none, so none of them runs there.
+        emitter('restdocs') {
+            sourceSets = ['contractTestCommon', 'documentationTest']
+            options = [tests: 'true']
+        }
+
+        // WireMock: mapping files, on no source set, packaged by packageBooksWiremock.
+        // Priority 2 for the generated stubs leaves 1, WireMock's highest, to the
+        // hand-written stubs, such as the 409's.
+        emitter('wiremock') {
+            options = [priority: '2']
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The stubs as a deliverable: the archive, unpacked for the double and for the
+// image. The image needs Docker, so it is not part of `check`.
+// ---------------------------------------------------------------------------
+
+// packageBooksWiremock is registered once the subscription is read, so it is named
+// by string, and its archive by the path the TranscriberJ documents.
+def stubsArchive = layout.buildDirectory.file(
+        "distributions/books-wiremock-${providers.gradleProperty('apiContractVersion').get()}.zip")
+ext.stubsDir = layout.buildDirectory.dir('stubs/books')
+
+// A fresh copy on every run: WireMock deletes the mapping files in its working
+// directory when stubs are removed, so it never gets the archive's only copy.
+tasks.register('unpackBooksStubs', Sync) {
+    group = 'stubs'
+    description = 'Unpacks the books stubs archive for the WireMock double.'
+    dependsOn 'packageBooksWiremock'
+    from(zipTree(stubsArchive))
+    into(stubsDir)
+}
+
+def imageContext = layout.buildDirectory.dir('docker/books-stubs')
+
+def unpackBooksStubsImage = tasks.register('unpackBooksStubsImage', Sync) {
+    group = 'stubs'
+    description = 'Puts the unpacked stubs archive beside the Dockerfile.'
+    dependsOn 'packageBooksWiremock'
+    from(zipTree(stubsArchive))
+    from('src/docker/stubs/Dockerfile')
+    into(imageContext)
+}
+
+tasks.register('booksStubsImage', Exec) {
+    group = 'stubs'
+    description = 'Builds the books stubs image from the archive. Needs Docker.'
+    dependsOn unpackBooksStubsImage
+    workingDir imageContext
+    commandLine 'docker', 'build', '--build-arg', "WIREMOCK_VERSION=${libs.versions.wiremock.get()}",
+            '-t', "example/books-stubs:${providers.gradleProperty('apiContractVersion').get()}", '.'
+}
+
+// ---------------------------------------------------------------------------
+// The published documentation: index.adoc, over the documentation suite's
+// snippets only.
+// ---------------------------------------------------------------------------
+
+tasks.named('asciidoctor') {
+    dependsOn testing.suites.documentationTest
+    sourceDir = file('src/docs/asciidoc')
+    attributes 'snippets': snippetsDir.get().asFile.path
+    // A missing snippet is a broken document, not a warning.
+    failureLevel = 'WARN'
+}
+
+tasks.named('check') { dependsOn 'asciidoctor' }

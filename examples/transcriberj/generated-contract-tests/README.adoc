@@ -1,0 +1,569 @@
+= Example: generated contract tests, fixtures, stubs and documentation
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+A small Spring Boot service, a catalogue of books, and everything a developer needs to adopt what the API-Only TranscriberJ and its emitters generate from its contract:
+
+* the *schema classes*, in every test suite that exercises the API;
+* *generated contract tests* for every case the TranscriberJ derives, run unchanged against the real service and against a WireMock double;
+* the *fixture hooks* that put the database in the state a case needs;
+* a *hand-written contract test* for the one response the generator cannot derive, the `409`;
+* *WireMock stubs*, loaded by the double and packaged as an archive, and a `Dockerfile` to build an image from it;
+* a *documentation test suite* that produces the published API documentation;
+* *unit and component tests*, fast and scoped, and a demonstration of what they cannot catch.
+
+The references are link:../../../api-only-transcriberj/README.adoc[the TranscriberJ's README →], https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-restdocs/README.adoc[the REST Docs emitter's README ↗] and https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-wiremock/README.adoc[the WireMock emitter's README ↗].
+The example builds against their released versions, from the Gradle Plugin Portal and Maven Central, as any other project would.
+
+[WARNING]
+.Generated stateless contract tests are not independent of each other
+====
+Generated contract tests come in two kinds.
+
+*Stateless cases* -- invalid request, not acceptable, unsupported media type -- *violate the principle that tests are independent of each other and idempotent.*
+They are derived from the contract, not from the service, and every case of an operation starts from the same valid request.
+So a case the service wrongly *accepts* leaves state behind -- here, a book with the ISBN every case sends -- and a later case can then get another answer.
+The generator does not fix this, and this example does not work around it.
+
+*Stateful cases* -- success and not found -- *meet* the principle when their fixture hook is correct, because the hook sets exactly the state the case needs.
+
+In practice:
+
+* read the *first* failing stateless test first; a later failure may be its consequence;
+* re-run on a fresh database -- delete `build/database` -- before diagnosing a second failure;
+* a green run is not affected.
+
+<<try-it,Try it §>> shows it happen.
+====
+
+== What is in it
+
+[cols="2,3", options="header"]
+|===
+|File |What it is
+
+|`src/main/api/openapi/`
+|The `books` contract: `POST /books`, `GET /books/{id}` and `GET /books`.
+The Publisher builds and publishes it to its file channel, and the Subscriber, which the TranscriberJ applies, fetches it from there.
+
+|`src/main/java/com/example/books/`
+|The service, written by hand and laid out hexagonally: the domain, the `Catalogue` port and its service, the HTTP adapter in `adapter/web`, and the persistence adapter in `adapter/jdbc`.
+It never imports a generated class.
+
+|`src/test/java/`
+|The `test` suite: unit tests of the domain, and component tests of the service and of each adapter.
+
+|`src/contractTestCommon/java/`
+|The hand-written `409` contract test, `CreateBookConflictContractTests`, which both contract suites implement.
+The generated `<Operation>ContractTests` interfaces are compiled here too.
+
+|`src/contractTest/java/`
+|The contract tests against the real service: one leaf per generated interface, each implementing its operation's fixture.
+
+|`src/contractTestWireMock/java/`
+|The same contract tests against the WireMock double.
+
+|`src/documentationTest/java/`, `src/docs/asciidoc/index.adoc`
+|The documentation tests, and the page they produce.
+
+|`src/docker/stubs/Dockerfile`
+|The image of the stubs, built from the archive.
+|===
+
+=== The service
+
+`POST /books` adds a book, `GET /books/{id}` reads one, and `GET /books` lists the catalogue a page at a time.
+A book has an ISBN-13, a title, an optional subtitle, a number of pages and a format; the ISBN is its natural key.
+
+The HTTP adapter checks every request against the contract *before the port is called*, and answers a violation with `400` and the contract's problem body:
+
+* Bean Validation annotations on the request object and on the parameters say what the contract says: a pattern, a length, a range, an enum, what is required;
+* it refuses an unacceptable `Accept` with `406`, and a body that is not JSON with `415`;
+* it answers `404` only after the identifier is validated;
+* `JsonConfiguration` configures Spring Boot's JSON mapper *explicitly* to refuse unknown members and `null`, and not to coerce scalars, with a comment saying why.
+
+The database is H2, through Spring JDBC, with a real table: a fixture that inserts a row really changes what the service answers.
+`./gradlew check` needs no Docker.
+
+=== The contract
+
+The request body is closed, and has a handful of constraints: a pattern on `isbn`, a length on `title` and `subtitle`, a range on `pages`, an enum on `format`, four required members and one optional one.
+The TranscriberJ derives 38 cases from it, and its report lists:
+
+* no degraded method, no gap and no format recommendation;
+* three constraints no case can cover, each for a reason no contract can avoid:
+** the `id` path parameter's `required`, since a path without it is another route;
+** its `type`, since every parameter travels as a string;
+** the `type` of `format`, since every value that is not a string also breaks the enum;
+* one response no case can cover: the `409`, which depends on state the contract does not describe.
+
+The contract uses no `format` keyword: the `id` is a UUID by its `pattern`.
+A `format` beside a pattern is never checked, so it would be one more uncovered constraint without adding anything a validator enforces.
+
+[#configuration]
+== The configuration
+
+The `apiOnlyTranscriberJ` block in `build.gradle` puts each part of what is generated where it belongs:
+
+[source,groovy]
+----
+apiOnlyTranscriberJ {
+    subscription('books') {
+        basePackage = 'com.example.books.contract'
+        generateDocs = true
+
+        sourceSets = ['test', 'contractTestCommon', 'contractTest', 'contractTestWireMock', 'documentationTest']
+        schemaClasses = 'shared'
+
+        emitter('restdocs') {
+            sourceSets = ['contractTestCommon', 'documentationTest']
+            options = [tests: 'true']
+        }
+
+        emitter('wiremock') {
+            options = [priority: '2']
+        }
+    }
+}
+----
+
+The schema classes::
+`BookRequestV1`, the operations, the contract cases: in every suite that exercises the API.
+The `test` suite uses them to build the inbound adapter's requests; the contract and documentation suites to build theirs.
++
+`schemaClasses = 'shared'` compiles them once, in a source set of their own, `transcriberjBooks`, which each listed suite depends on.
+The other mode, `perSourceSet`, the default, adds the generated directory to each suite, which compiles it again.
+With four suites, that is four compilations of the same classes, and one directory in four IntelliJ modules, which IntelliJ allows in one only.
+
+REST Docs::
+The `*Docs` descriptors, and, with `tests`, the `<Operation>ContractTests` interfaces.
+They go to `contractTestCommon`, which both contract suites depend on, so the interfaces are compiled once and implemented twice, and to `documentationTest`, which needs the descriptors.
++
+An emitter has one set of options, so `documentationTest` gets the test interfaces as well.
+It implements none of them, so none of them runs there.
+
+WireMock::
+Mapping files, on no source set: stubs are not test code.
+`packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.0.zip`.
+`priority: '2'` leaves WireMock's highest priority, `1`, to hand-written stubs, such as the `409`'s.
+
+== The test suites
+
+[cols="1,2,3", options="header"]
+|===
+|Suite |What it tests |How
+
+|`test`
+|*Unit* tests of the domain, and *component* tests of the service and of each adapter, each scoped to that component with everything else mocked.
+|No Spring Boot context, no HTTP server, no database.
+The HTTP adapter's component tests run MockMvc in standalone mode and build their requests with the schema classes.
+Fast and fail-fast.
+
+|`contractTest`
+|The contract, against the *real* service.
+|`@SpringBootTest` on a random port, `WebTestClient.bindToServer()`, and the real database, in `build/database/contractTest`.
+
+|`contractTestWireMock`
+|The *same* contract tests, against the WireMock double.
+|An in-process `WireMockServer` loading the mapping files, unpacked afresh from the archive before every run.
+
+|`documentationTest`
+|The *published documentation*.
+|Spring REST Docs against the real service, with meaningful data, in `build/database/documentationTest`.
+|===
+
+`check` runs all four, and the coverage gate: 90% of the service's instructions, from `test` alone.
+Unit and component tests carry the coverage; the contract tests carry the contract.
+
+There is no system or end-to-end suite.
+A *system* test suite would run the service with its real collaborators -- a real database server, the services it calls -- and an *end-to-end* suite would test the system as a user meets it, through its own front door.
+Each would be a suite of its own, `systemTest` and `endToEndTest`, listed in the subscription's `sourceSets` for the schema classes.
+
+=== Contract tests: generated, and hand-written where they cannot be
+
+The generated interfaces hold one test per case, and two hooks.
+A leaf implements them for its target: it supplies the client, and the fixture.
+
+[source,java]
+----
+class GetBookServiceContractTest extends ServiceContractTest implements GetBookContractTests {
+
+    @Override
+    public void arrangeState(ContractCase contractCase) {
+        String id = contractCase.request().pathParameters().getFirst();
+        switch (contractCase.kind()) {
+            // 200: the book the path names exists.
+            case SUCCESS -> ensureBookExists(id, FIXTURE_ISBN);
+            // 404: the book the path names does not exist, whatever ran before.
+            case NOT_FOUND -> ensureNoBook(id);
+            default -> throw new IllegalArgumentException("No state to arrange for case " + contractCase.id());
+        }
+    }
+}
+----
+
+The fixture sets the state, and the service must then answer as the contract says.
+Anything else is a defect in the service, not in the test.
+A response with the declared status, whose body matches the declared fields, passes whatever its values.
+
+On the real service, `arrangeState` works in the database, and only there:
+
+[cols="1,1,3", options="header"]
+|===
+|Operation |Case |The fixture
+
+|`GET /books/{id}`
+|`200`
+|*Inserts* the book the path names, replacing any book with its identifier or its ISBN, so the service must answer `200`.
+
+|`GET /books/{id}`
+|`404`
+|*Deletes* the book the path names, so the service must answer `404`, whatever ran before.
+
+|`POST /books`
+|`201`
+|*Deletes* any book with the request's ISBN, so the service must answer `201` -- on every run, not just the first.
+
+|`GET /books`
+|`200`
+|*Inserts* a book, so the page holds at least one, whose fields are checked against the contract.
+|===
+
+`arrangeStatelessCase` is not overridden: the service refuses those requests before the port is called, so they need no state.
+
+On the double, `arrangeState` does nothing.
+The published stubs already hold every case, and each matches its own case's request exactly, so none answers another's.
+The contract tests therefore verify the very files the archive ships.
+
+The `409` depends on state the contract does not describe, so no case covers it, and `CreateBookConflictContractTests` is written by hand on the same pattern: a `default` test, a hook -- `arrangeIsbnTaken` -- the request built with `BookRequestV1.body(...)`, and the response checked with `ProblemV1Docs.responseFields()`.
+The real leaf's hook inserts a book with the request's ISBN; the double's registers a hand-written stub at priority `1`, answering with `ProblemV1.body(...)`.
+
+The contract suite runs each class's tests in the order of their names, set in `src/contractTest/resources/junit-platform.properties`, so that a run, and a failure, reproduces.
+A correct service passes in any order.
+
+=== Why unit and component tests cannot replace contract tests
+
+Unit and component tests bypass Spring Boot's JSON mapper by design.
+They are scoped to a unit or a component and mock everything else, which keeps them fast and fail-fast: `BookControllerTest` sends its requests through MockMvc in standalone mode, whose JSON mapper is Spring's default, not the one Spring Boot configures.
+
+So they cannot catch a change in how JSON becomes a request object: an unknown member accepted, a scalar coerced, a `null` let through.
+Only a test that sends real HTTP to the running service can.
+In this example, that is the contract tests; in a full project, the system tests too.
+That is why a comprehensive contract test suite, and a system test suite, are not optional.
+<<try-it,Try it §>> turns the unknown-member rejection off: `test` stays green, and only the contract tests notice.
+
+== Where the published documentation comes from
+
+The published documentation, `build/docs/asciidoc/index.html`, comes from the `documentationTest` suite, and from nowhere else:
+
+* one test per request and response worth showing, with values a reader recognises -- _Design Patterns_, _Refactoring_, a real-looking identifier -- written by hand, never taken from `requiredBody()`, `fullBody()` or a generated case;
+* requests built with the generated `body(...)` and `PATH`, and documented with the generated `requestFields()` and `responseFields()`, so the documentation is still checked against the contract;
+* run against the real service, with the state arranged in the database as the real contract tests arrange it, so every response shown is one the service really gave;
+* an error response of each kind worth showing: a `400` for an ISBN-10 sent as an ISBN-13, and a `404`.
+
+`index.adoc` includes only this suite's snippets, and `asciidoctor` depends on this suite and nothing else.
+A missing snippet fails the build.
+
+The contract tests write snippets too, under `build/generated-snippets/generated-service/` and `generated-stubs/`: `document()` is where Spring REST Docs checks a response against its fields.
+They are never published:
+
+* their values are minimal by design: a book titled `a`, of one page;
+* a double's snippets carry the double: WireMock's `matched-stub-id` and `matched-stub-name` headers, and a problem with `"status":0`;
+* contract tests exist to fail, not to explain.
+
+== The stubs as a deliverable
+
+The mapping files are the stubs the team hands to the developers of the API's consumers, so that they can start before the service exists.
+
+[source,console]
+----
+./gradlew packageBooksWiremock
+----
+
+`build/distributions/books-wiremock-1.0.0.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
+
+`src/docker/stubs/Dockerfile` builds an image of the official WireMock image with the stubs in it, and `booksStubsImage` builds it from the archive.
+It needs Docker, so it is not part of `check`:
+
+[source,console]
+----
+./gradlew booksStubsImage
+docker run --rm -p 8080:8080 example/books-stubs:1.0.0
+----
+
+A consumer calls it as it would call the service:
+
+[source,console]
+----
+$ curl -i -X POST localhost:8080/books -H 'Content-Type: application/json' \
+       -d '{"isbn":"9780201633610","title":"Design Patterns","pages":395,"format":"hardcover"}'
+HTTP/1.1 201 Created
+Matched-Stub-Name: createBook/fallback-valid
+
+{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","isbn":"9780000000000","title":"a","subtitle":"a","pages":1,"format":"hardcover"}
+----
+
+A valid request nobody generated is answered by the operation's valid fallback; each generated case, by its own stub.
+`GET /__admin/requests` shows which stub answered each request.
+
+A team whose implementation is in Go or Python uses the same image as the double for its own contract tests, started by Testcontainers:
+
+[source,python]
+----
+with DockerContainer("example/books-stubs:1.0.0").with_exposed_ports(8080) as stubs:
+    base_url = f"http://{stubs.get_container_host_ip()}:{stubs.get_exposed_port(8080)}"
+----
+
+== Run it
+
+You need Java 21 and Node.js (`^22.14.0`, `^24.10.0` or `>=26.0.0`).
+
+[source,console]
+----
+./gradlew check
+----
+
+The build installs the Publisher, builds and publishes the contract, generates the classes, the contract tests and the stubs, runs the four suites, checks the service's coverage, and renders the documentation.
+
+The databases in `build/database` are kept between runs; delete the directory for a fresh one.
+Gradle skips a suite that is up to date: `--rerun` runs it anyway.
+
+== What to look at
+
+`build/reports/transcriberj/books.txt`, `books.adoc`::
+The TranscriberJ's report: every constraint and the case that covers it, the three that no case can, and the response coverage, whose only uncovered response is the `409`.
+
+`build/reports/transcriberj/books.valid-values.json`::
+The same, machine-readable: every case in `contractCases`, with its request, in canonical order.
+
+`build/generated/sources/transcriberj/books/restdocs/com/example/books/contract/restdocs/`::
+The generated `<Operation>ContractTests` interfaces: one test per case, and the hooks, whose Javadoc shows the suggested `arrangeState`.
+
+`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-1.0.0.zip`::
+The mapping files, one exact stub per case and the fallbacks, and the archive that ships them.
+
+`build/generated-snippets/generated-service/`, `generated-stubs/`::
+The contract tests' by-product snippets, and why they are not published: compare a `generated-stubs` response with a documentation snippet.
+
+`build/docs/asciidoc/index.html`::
+The published documentation.
+
+`build/reports/jacoco/test/html/index.html`::
+The service's coverage, from `test` alone.
+The Jackson configuration and the application class are not covered there: only the contract tests run them.
+
+[#try-it]
+== Try it
+
+Each step says what to change, what to run, what you see, and how to undo it.
+The output shown was copied from a run.
+
+=== 1. Turn unknown-member rejection off
+
+In `JsonConfiguration`, change `.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)` to `.disable(...)`, and run:
+
+[source,console]
+----
+rm -rf build/database && ./gradlew test contractTest --continue
+----
+
+`test` stays green: its component tests never meet Spring Boot's JSON mapper.
+`contractTest` fails on the generated unknown-member case, and only there:
+
+[source,text]
+----
+test: 35 tests, 0 failed
+contractTest: 39 tests, 1 failed
+  CreateBookServiceContractTest > POST /books: the body with a member it does not declare, `unexpectedMember` returns 400
+    java.lang.AssertionError: body-unknown-member (INVALID_REQUEST: the body with a member it does not declare, `unexpectedMember`, at body /unexpectedMember additionalProperties): expected 400, received 201. The implementation accepted a request the contract declares invalid: `additionalProperties` at body /unexpectedMember is not enforced.
+----
+
+Undo: `.enable(...)` again.
+
+=== 2. Remove two constraints, and see one failure cause another
+
+In `BookRequest`, change `title`'s `@Size(min = 1, max = 120)` to `@Size(min = 1)`, remove `@Max(5000)` from `pages`, and run the same command.
+
+[source,text]
+----
+test: 35 tests, 2 failed
+  BookControllerTest > moreThan5000PagesAreRefusedBeforeTheCatalogueIsCalled()
+    java.lang.AssertionError: Response status expected:<400> but was:<201>
+  BookControllerTest > aTitleLongerThan120IsRefusedBeforeTheCatalogueIsCalled()
+    java.lang.AssertionError: Response status expected:<400> but was:<201>
+contractTest: 39 tests, 2 failed
+  CreateBookServiceContractTest > POST /books: `pages` above its maximum of 5000 returns 400
+    java.lang.AssertionError: body-pages-maximum (INVALID_REQUEST: `pages` above its maximum of 5000, at body /pages maximum): expected 400, received 201. The implementation accepted a request the contract declares invalid: `maximum` at body /pages is not enforced.
+  CreateBookServiceContractTest > POST /books: `title` longer than its maxLength of 120 returns 400
+    java.lang.AssertionError: body-title-maxLength (INVALID_REQUEST: `title` longer than its maxLength of 120, at body /title maxLength): expected 400, received 409.
+----
+
+The component tests find both, since the annotations are the adapter's own.
+The contract tests find both too, but differently:
+
+* the first to run, `pages` above its maximum, fails with the `2xx` message: the service accepted it, and *created a book*;
+* the second fails with `409` instead of `400`, and its message points nowhere useful.
+It is not a second cause: every case sends the same ISBN, and the book the first case left behind now holds it.
+That is the leaked state the warning at the top describes.
+
+Put `@Max(5000)` back, and run again on a fresh database: the `title` case's failure changes back to the `2xx` message.
+
+[source,text]
+----
+contractTest: 39 tests, 1 failed
+  CreateBookServiceContractTest > POST /books: `title` longer than its maxLength of 120 returns 400
+    java.lang.AssertionError: body-title-maxLength (INVALID_REQUEST: `title` longer than its maxLength of 120, at body /title maxLength): expected 400, received 201. The implementation accepted a request the contract declares invalid: `maxLength` at body /title is not enforced.
+----
+
+Undo: put `max = 120` back.
+
+=== 3. Leave the database as it is for a `GET` success
+
+In `GetBookServiceContractTest.arrangeState`, replace `ensureBookExists(id, FIXTURE_ISBN)` with `{ }`, and run:
+
+[source,console]
+----
+rm -rf build/database && ./gradlew contractTest --continue
+----
+
+[source,text]
+----
+contractTest: 39 tests, 1 failed
+  GetBookServiceContractTest > GET /books/{id}: a valid request with the required parameters and body members only returns 200
+    java.lang.AssertionError: success-200-required (SUCCESS: a valid request with the required parameters and body members only): expected 200, received 404. The fixture did not create the resource, or the implementation looks for it somewhere else. Check arrangeState for this case.
+----
+
+The fixture is what makes a `200` testable on a real service.
+Run it without deleting `build/database` after a green run, and it passes: the book an earlier run inserted is still there.
+A fixture that does nothing can pass by accident, which is one more reason to try a fixture on a fresh database.
+
+Undo: put `ensureBookExists(id, FIXTURE_ISBN)` back.
+
+=== 4. Look the book up before validating its identifier
+
+In `BookController.getBook`, remove `@Pattern(regexp = ID_PATTERN)` from `id`, and treat an identifier that is not a UUID as one the catalogue cannot find:
+
+[source,java]
+----
+public ResponseEntity<?> getBook(@PathVariable String id) {
+    java.util.Optional<com.example.books.domain.Book> found;
+    try {
+        found = catalogue.find(UUID.fromString(id));
+    } catch (IllegalArgumentException malformed) {
+        found = java.util.Optional.empty();
+    }
+    return found
+            // ... as before
+----
+
+Run `rm -rf build/database && ./gradlew test contractTest --continue`:
+
+[source,text]
+----
+test: 35 tests, 1 failed
+  BookControllerTest > aMalformedIdentifierIsRefusedBeforeTheCatalogueIsCalled()
+    java.lang.AssertionError: Response status expected:<400> but was:<404>
+contractTest: 39 tests, 1 failed
+  GetBookServiceContractTest > GET /books/{id}: `id` not matching its pattern ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ returns 400
+    java.lang.AssertionError: path-id-pattern (INVALID_REQUEST: `id` not matching its pattern ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$, at path id pattern): expected 400, received 404. The implementation looked the resource up before validating the request. The inbound adapter should reject contract violations before the port is called.
+----
+
+Undo: restore `getBook`.
+
+=== 5. Ignore `Accept`
+
+In `BookController`, remove `produces = {...}` from `getBook`'s `@GetMapping`, and run `rm -rf build/database && ./gradlew test contractTest --continue`:
+
+[source,text]
+----
+test: 35 tests, 1 failed
+  BookControllerTest > aBookIsNotGivenInAMediaTypeTheRequestDoesNotAccept()
+    java.lang.AssertionError: Response status expected:<406> but was:<404>
+contractTest: 39 tests, 1 failed
+  GetBookServiceContractTest > GET /books/{id}: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers returns 406
+    java.lang.AssertionError: not-acceptable (NOT_ACCEPTABLE: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers): expected 406, received 404.
+----
+
+The not-acceptable case names a book the fresh database does not hold, so the service, ignoring `Accept`, answers `404`.
+Run `./gradlew contractTest` again, on the same database: the `GET` success fixture has inserted that book in the meantime, and the same case now fails with its own message:
+
+[source,text]
+----
+contractTest: 39 tests, 1 failed
+  GetBookServiceContractTest > GET /books/{id}: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers returns 406
+    java.lang.AssertionError: not-acceptable (NOT_ACCEPTABLE: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers): expected 406, received 200. Content negotiation is not enforced: the implementation ignores Accept.
+----
+
+A stateless case's answer depended on state: the warning at the top again.
+
+Undo: put `produces` back.
+
+=== 6. Delete one mapping file
+
+Unpack the stubs, delete one mapping, and run the double without unpacking them again:
+
+[source,console]
+----
+./gradlew unpackBooksStubs
+rm build/stubs/books/mappings/getBook/not-found.json
+./gradlew contractTestWireMock -x unpackBooksStubs --continue
+----
+
+Exactly that case's test fails; the valid fallback answered in its place:
+
+[source,text]
+----
+contractTestWireMock: 39 tests, 1 failed
+  GetBookStubsContractTest > GET /books/{id}: a valid request naming a resource that does not exist returns 404
+    java.lang.AssertionError: not-found (NOT_FOUND: a valid request naming a resource that does not exist): expected 404, received 200. The fixture did not remove the resource, or the implementation answers for any identifier. Check arrangeState for this case.
+----
+
+Undo: `./gradlew contractTestWireMock` unpacks the archive afresh.
+
+=== 7. Remove a fixture, as a developer finds it right after generating
+
+Delete the `arrangeState` override from `GetBookServiceContractTest`, and run `rm -rf build/database && ./gradlew contractTest --continue`.
+The build still compiles; the operation's two stateful tests fail with `FixtureNotImplementedException`, each saying what it is waiting for, and how to start:
+
+[source,text]
+----
+com.example.books.contract.restdocs.FixtureNotImplementedException: Case success-200-required of GET /books/{id} (SUCCESS, expects 200, variant required, path values [aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa]) needs the implementation under test in a particular state, but arrangeState is not implemented yet.
+Put the service in the state that makes 200 the right answer: the resource exists for a read, an update or a delete, and does not exist for a create.
+Implement arrangeState in the class that implements GetBookContractTests. It starts as:
+
+@Override
+public void arrangeState(ContractCase contractCase) {
+    switch (contractCase.id()) {
+        case "success-200-required" -> {
+            // make sure the resource at /books/{id} with id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" exists
+        }
+        case "not-found" -> {
+            // make sure the resource at /books/{id} with id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab" does not exist
+        }
+        default -> throw new IllegalArgumentException("No state to arrange for case " + contractCase.id());
+    }
+}
+----
+
+Paste the suggestion into the class, and run again.
+It compiles; the not-found test passes, since the fresh database holds no book, and the success test fails with the fixture message of step 3, until its comment is replaced with the code that inserts the book.
+
+Undo: restore the class.
+
+=== 8. Run the contract tests twice on one database
+
+[source,console]
+----
+rm -rf build/database && ./gradlew contractTest && ./gradlew contractTest --rerun
+----
+
+[source,text]
+----
+contractTest: 39 tests, 0 failed
+contractTest: 39 tests, 0 failed
+----
+
+The stateful tests pass both times, and in any order: each fixture sets exactly the state its case needs, whatever an earlier run left behind.

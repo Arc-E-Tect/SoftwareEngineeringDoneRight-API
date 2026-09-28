@@ -1,0 +1,10 @@
+{
+  "name": "transcriberj-generated-contract-tests",
+  "private": true,
+  "scripts": {
+    "apionly": "api-only-publisher"
+  },
+  "devDependencies": {
+    "@arc-e-tect/api-only-publisher": "0.11.0"
+  }
+}
