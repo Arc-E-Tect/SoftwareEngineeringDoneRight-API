@@ -425,7 +425,7 @@ Everything it produces — class names, packages, bodies, field descriptions, en
 Anyone could have written it, for any language, against any organisation's contracts.
 
 Its emitters make the same point one level further in.
-The classes the TranscriberJ generates depend on nothing; an emitter turns them into a dialect — Spring REST Docs descriptors and Microcks conformance tests today, WireMock stubs or another framework's idiom tomorrow — and an emitter is an ordinary library implementing a published interface.
+The classes the TranscriberJ generates depend on nothing; an emitter turns them into a dialect — Spring REST Docs descriptors and contract tests, WireMock stubs and Microcks conformance tests today; another framework's idiom tomorrow — and an emitter is an ordinary library implementing a published interface.
 Adding a dialect does not require touching the generator, and does not require the generator's author to have anticipated it.
 
 This is how an ecosystem forms around an interface.
@@ -622,7 +622,7 @@ The generated classes depend on nothing.
 A body is a `String`; a field description is a small record of a path, a type, whether it is optional, and whether it stands for a subsection.
 
 A dialect is added by an emitter — an ordinary library implementing a published interface, added as a dependency — which turns those into whatever a particular framework wants.
-Spring REST Docs descriptors and snippets, and Microcks conformance tests for a contract's events, today; WireMock stubs, another test framework, or another language on the same principle.
+Spring REST Docs descriptors and contract tests, WireMock stubs, and Microcks conformance tests for a contract's events, today; another test framework, or another language, on the same principle.
 
 That separation is what keeps the core honest.
 The thing being derived is the contract's meaning; how it is spoken is a separate, replaceable concern.
@@ -635,7 +635,7 @@ It does not make the test a proof.
 
 A generated field description says a path, a type and whether the field is optional; a JSON Schema says considerably more.
 Constraints are emitted as constants, not as checks — a body built from arguments that violate `minLength` violates it too.
-Tests for invalid payloads are written by hand, deliberately, because a generator that could produce contract-violating bodies would undermine the guarantee that generated ones conform.
+Tests for invalid requests are derived rather than written: each changes one thing about a valid request, and every body the generator calls valid still conforms.
 
 What that leaves is set out next.
 

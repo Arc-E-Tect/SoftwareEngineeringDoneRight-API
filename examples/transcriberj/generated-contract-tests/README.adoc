@@ -18,6 +18,8 @@ A small Spring Boot service, a catalogue of books, and everything a developer ne
 The references are link:../../../api-only-transcriberj/README.adoc[the TranscriberJ's README →], https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-restdocs/README.adoc[the REST Docs emitter's README ↗] and https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-wiremock/README.adoc[the WireMock emitter's README ↗].
 The example builds against their released versions, from the Gradle Plugin Portal and Maven Central, as any other project would.
 
+It is the worked example of link:../../../docs/guides/generated-contract-tests/overview.adoc[the guide to generated contract tests →], of link:../../../docs/guides/documentation-tests/overview.adoc[the guide to documentation tests →], and of the hand-written `409` in link:../../../docs/guides/hand-written-contract-tests/overview.adoc#how-many[the guide to hand-written contract tests →].
+
 [WARNING]
 .Generated stateless contract tests are not independent of each other
 ====
@@ -265,6 +267,7 @@ The published documentation, `build/docs/asciidoc/index.html`, comes from the `d
 * an error response of each kind worth showing: a `400` for an ISBN-10 sent as an ISBN-13, and a `404`.
 
 `index.adoc` includes only this suite's snippets, and `asciidoctor` depends on this suite and nothing else.
+link:../../../docs/guides/documentation-tests/tutorial.adoc[The documentation tests tutorial →] builds this suite step by step.
 A missing snippet fails the build.
 
 The contract tests write snippets too, under `build/generated-snippets/generated-service/` and `generated-stubs/`: `document()` is where Spring REST Docs checks a response against its fields.
