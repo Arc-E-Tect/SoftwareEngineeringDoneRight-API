@@ -1,0 +1,42 @@
+# Reference pipeline, alternative `package` job: the api-only-publisher image as
+# the job's container, rather than `docker run` from a step. It replaces the
+# `package` job in github-actions.yml; README.adoc#docker-github-actions.
+#
+# GitHub runs every step inside the image, with the workspace mounted at a path it
+# owns as the runner's user, UID 1001; the image's own user could not write there,
+# so the job runs as 1001. The image accepts any UID. A container job has the
+# runner's network: the image still downloads nothing.
+
+  package:
+    runs-on: ubuntu-latest
+    container:
+      # A container job cannot read env; pin the digest here.
+      image: docker.io/arcetect/api-only-publisher@sha256:<digest>
+      options: --user 1001
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Build, lint and package
+        run: |
+          # shellcheck disable=SC2046 # one --target per word, deliberately
+          set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
+          api-only-publisher build "$@"
+          api-only-publisher lint
+          api-only-publisher publish "$@"
+          cat build/packages/packages.sha256
+
+      - name: Hand the files on
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-bundles
+          path: |
+            build/packages/packages.json
+            build/packages/packages.sha256
+            build/publish/
+            build/maven/
+            build/nuget/
+            build/npm/
+          if-no-files-found: error

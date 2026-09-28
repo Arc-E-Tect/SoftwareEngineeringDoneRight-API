@@ -76,3 +76,42 @@ test("the entrypoint runs anything else as given, as a CI runner's shell", () =>
     assert.strictEqual(entrypoint(["sh", "-c", "echo shell $0", "x"]), "shell x");
     assert.strictEqual(entrypoint(["echo", "build"]), "build");
 });
+
+// The end-to-end workflow runs the reference pipelines' steps, not look-alikes: a
+// change to one without the other would leave the documented pipeline unexercised.
+const YAML = require("yaml");
+const REPO = path.join(ROOT, "..");
+const yamlOf = (file) => YAML.parse(fs.readFileSync(file, "utf8"));
+const REFERENCE = yamlOf(path.join(ROOT, "pipelines", "github-actions.yml"));
+const CONTAINER_JOB = yamlOf(path.join(ROOT, "pipelines", "github-actions-container-job.yml"));
+const E2E = yamlOf(path.join(REPO, ".github", "workflows", "api-only-publisher-image-e2e.yml"));
+
+// A job's steps as the pipeline defines them, less the one way the library arrives.
+function steps(job) {
+    return job.steps.filter((step) => !["Checkout", "Receive the library"].includes(step.name));
+}
+
+test("the end-to-end workflow packages exactly as the reference pipeline does", () => {
+    assert.deepStrictEqual(steps(E2E.jobs.package), steps(REFERENCE.jobs.package));
+});
+
+test("the end-to-end workflow's container job packages exactly as the reference one does", () => {
+    assert.deepStrictEqual(steps(E2E.jobs["package-in-container"]).map((s) => s.run || s.with),
+        steps(CONTAINER_JOB.package).map((s) => s.run || s.with).map((v, i) =>
+            // The artifact name differs, so the compare job can fetch both.
+            (i === 1 ? { ...v, name: "api-bundles-container" } : v)));
+    assert.deepStrictEqual(E2E.jobs["package-in-container"].container.options, CONTAINER_JOB.package.container.options);
+});
+
+test("the end-to-end workflow publishes exactly as the reference pipeline does", () => {
+    assert.deepStrictEqual(steps(E2E.jobs.publish), steps(REFERENCE.jobs.publish));
+    const { RELEASE_TAG: e2eTag, ...e2eEnv } = E2E.jobs.publish.env;
+    const { RELEASE_TAG: referenceTag, ...referenceEnv } = REFERENCE.jobs.publish.env;
+    assert.deepStrictEqual(e2eEnv, referenceEnv);
+    assert.ok(e2eTag && referenceTag);
+    assert.deepStrictEqual(E2E.jobs.publish.permissions, REFERENCE.jobs.publish.permissions);
+});
+
+test("the end-to-end workflow runs only when dispatched", () => {
+    assert.deepStrictEqual(Object.keys(E2E.on), ["workflow_dispatch"]);
+});

@@ -1,0 +1,487 @@
+name: API-Only Publisher - Image end to end
+
+# The GitHub Actions reference pipeline, api-only-publisher/pipelines/github-actions.yml,
+# run for real against scratch packages, and then consumed: each package is
+# resolved with its ecosystem's own client, and with the API-Only Subscriber.
+# README.adoc#docker-maintainers describes when to run it.
+#
+# The `package` and `publish` steps are the reference pipeline's, byte for byte
+# (test/docker.test.js checks it); only how the library arrives differs: a
+# scaffold instead of a checkout. The container-job variant packages the same
+# library, and must produce the same bytes.
+#
+# Manual only: it publishes, and it costs minutes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'The api-only-publisher image to run, by digest, e.g. ghcr.io/arc-e-tect/api-only-publisher-scratch@sha256:...'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PUBLISHER_IMAGE: ${{ inputs.image }}
+  TARGETS: apionly-e2e-alpha apionly-e2e-beta
+  # A version per run, so a re-run never collides with an earlier run's packages.
+  # A version file holds a release version, so the run and its attempt make one.
+  BUNDLE_VERSION: 0.${{ github.run_number }}.${{ github.run_attempt }}
+  MAVEN_GROUP: com.arc-e-tect.apionly.e2e
+  NUGET_PREFIX: ArcETect.ApiOnlyE2e
+
+jobs:
+  library:
+    name: Scaffold a library with two targets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scaffold
+        run: |
+          mkdir library && cd library
+          publisher() {
+            docker run --rm --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+              -v "$PWD:/work" "$PUBLISHER_IMAGE" "$@"
+          }
+          publisher init --yes --openapi --asyncapi --target apionly-e2e-alpha . >/dev/null
+          cd specs
+          for kind in openapi asyncapi; do
+            cp "$kind/bundles/apionly-e2e-alpha_${kind}_structure.yaml" "$kind/bundles/apionly-e2e-beta_${kind}_structure.yaml"
+          done
+          cp openapi/bundles/apionly-e2e-alpha.bundle.properties openapi/bundles/apionly-e2e-beta.bundle.properties
+          sed -i "s/^version=.*/version=$BUNDLE_VERSION/" openapi/bundles/*.bundle.properties
+          cd ..
+          cat >> apionly.yaml <<EOF
+            apionly-e2e-beta:
+              openapi:
+                bundle: bundles/apionly-e2e-beta_openapi_structure.yaml
+              asyncapi:
+                bundle: bundles/apionly-e2e-beta_asyncapi_structure.yaml
+
+          channels:
+            file: { directory: build/publish }
+            maven: { groupId: $MAVEN_GROUP, repository: build/maven }
+            nuget: { idPrefix: $NUGET_PREFIX, repository: build/nuget }
+            npm: { scope: "@${{ github.repository_owner }}", publish: false, directory: build/npm }
+          EOF
+          printf 'build/\ndist/\n' > .gitignore
+          git init -q
+          # The origin a checkout would have, which the packages name as their source.
+          git remote add origin "https://github.com/${{ github.repository }}"
+          git add -A
+          git -c user.name=e2e -c user.email=e2e@example.invalid commit -qm "Scaffold for run ${{ github.run_id }}"
+          cat apionly.yaml
+
+      - name: Keep it
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: library
+          path: library/
+          include-hidden-files: true
+
+  package:
+    name: Package with docker run
+    needs: library
+    runs-on: ubuntu-latest
+    steps:
+      - name: Receive the library
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: library
+          path: .
+
+      - name: Build, lint and package with the sealed image
+        run: |
+          # No network, a read-only root, and the runner's own user, so the files
+          # written into the workspace belong to it.
+          publisher() {
+            docker run --rm --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+              -v "$PWD:/work" "$PUBLISHER_IMAGE" "$@"
+          }
+          # shellcheck disable=SC2046 # one --target per word, deliberately
+          set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
+          publisher build "$@"
+          publisher lint
+          publisher publish "$@"
+          cat build/packages/packages.sha256
+
+      - name: Hand the files on
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-bundles
+          path: |
+            build/packages/packages.json
+            build/packages/packages.sha256
+            build/publish/
+            build/maven/
+            build/nuget/
+            build/npm/
+          if-no-files-found: error
+
+  package-in-container:
+    name: Package in a container job
+    needs: library
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.image }}
+      options: --user 1001
+    steps:
+      - name: Receive the library
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: library
+          path: .
+
+      - name: Build, lint and package
+        run: |
+          # shellcheck disable=SC2046 # one --target per word, deliberately
+          set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
+          api-only-publisher build "$@"
+          api-only-publisher lint
+          api-only-publisher publish "$@"
+          cat build/packages/packages.sha256
+
+      - name: Hand the files on
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-bundles-container
+          path: |
+            build/packages/packages.json
+            build/packages/packages.sha256
+            build/publish/
+            build/maven/
+            build/nuget/
+            build/npm/
+          if-no-files-found: error
+
+  compare:
+    name: Both ways give the same bytes
+    needs: [package, package-in-container]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Receive both
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: api-bundles*
+
+      - name: Compare
+        run: |
+          diff api-bundles/packages/packages.sha256 api-bundles-container/packages/packages.sha256
+          diff -r api-bundles api-bundles-container
+          echo "docker run and the container job produced $(wc -l < api-bundles/packages/packages.sha256) identical files"
+
+  publish:
+    name: Publish (${{ matrix.pass }} pass)
+    needs: [package, compare]
+    strategy:
+      # The same job twice, one after the other: the second proves a re-run is
+      # safe, finding every version already published and identical.
+      max-parallel: 1
+      matrix:
+        pass: [first, second]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # the GitHub Release
+      packages: write   # npm, Maven and NuGet on GitHub Packages
+    env:
+      HANDOFF: build/packages/packages.json
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER: ${{ github.repository_owner }}
+      RELEASE_TAG: api-only-publisher-e2e-${{ github.run_number }}-${{ github.run_attempt }}
+    steps:
+      - name: Receive the files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: api-bundles
+          path: build
+
+      - name: Verify them against the hand-off
+        # Exactly the bytes the image produced: every file the hand-off lists,
+        # unchanged. Each step below publishes only files it lists.
+        run: sha256sum -c build/packages/packages.sha256
+
+      - name: Setup Node for GitHub Packages
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Publish to GitHub Packages (npm)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tarball in $(jq -r '.files[] | select(.channel == "npm") | .path' "$HANDOFF"); do
+            name=$(tar -xOzf "$tarball" package/package.json | jq -r .name)
+            version=$(tar -xOzf "$tarball" package/package.json | jq -r .version)
+            local_integrity="sha512-$(openssl dgst -sha512 -binary "$tarball" | base64 -w0)"
+            remote_integrity=$(npm view "$name@$version" dist.integrity 2>/dev/null || true)
+            if [ "$remote_integrity" = "$local_integrity" ]; then
+              echo "$name@$version is already published, identical"
+            elif [ -n "$remote_integrity" ]; then
+              echo "::error::$name@$version is already published with other contents"; exit 1
+            else
+              npm publish "$tarball"
+            fi
+          done
+
+      - name: Publish to GitHub Packages (Maven)
+        run: |
+          # mvn deploy:deploy-file uploads the artifact and its POM exactly as the
+          # image wrote them, and adds the .md5 and .sha1 files and the
+          # maven-metadata.xml a Maven repository needs, which the local layout lacks.
+          url="https://maven.pkg.github.com/${{ github.repository }}"
+          cat > "$RUNNER_TEMP/settings.xml" <<'EOF'
+          <settings><servers><server><id>github</id>
+            <username>${env.GITHUB_ACTOR}</username><password>${env.GITHUB_TOKEN}</password>
+          </server></servers></settings>
+          EOF
+          for pom in $(jq -r '.files[] | select(.channel == "maven") | .path | select(endswith(".pom"))' "$HANDOFF"); do
+            base=${pom%.pom}
+            artifact=$(jq -r --arg base "$base." '.files[] | select(.channel == "maven") | .path
+              | select(startswith($base) and (endswith(".pom") | not))' "$HANDOFF")
+            remote_path=${artifact#build/maven/}
+            status=$(curl -sS -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$remote_path")
+            if [ "$status" = 200 ]; then
+              if cmp -s "$RUNNER_TEMP/remote" "$artifact"; then
+                echo "$remote_path is already published, identical"; continue
+              fi
+              echo "::error::$remote_path is already published with other contents"; exit 1
+            fi
+            mvn --batch-mode --no-transfer-progress --settings "$RUNNER_TEMP/settings.xml" deploy:deploy-file \
+              -Durl="$url" -DrepositoryId=github -DpomFile="$pom" -Dfile="$artifact" \
+              -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json
+          done
+
+      - name: Publish to GitHub Packages (NuGet)
+        run: |
+          source="https://nuget.pkg.github.com/$OWNER/index.json"
+          for nupkg in $(jq -r '.files[] | select(.channel == "nuget") | .path | select(endswith(".nupkg"))' "$HANDOFF"); do
+            file=$(basename "$nupkg")
+            id=$(basename "$(dirname "$(dirname "$nupkg")")")
+            version=$(basename "$(dirname "$nupkg")")
+            status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" \
+              "https://nuget.pkg.github.com/$OWNER/download/$id/$version/$file")
+            if [ "$status" = 200 ]; then
+              if cmp -s "$RUNNER_TEMP/remote" "$nupkg"; then
+                echo "$id $version is already published, identical"; continue
+              fi
+              echo "::error::$id $version is already published with other contents"; exit 1
+            fi
+            dotnet nuget push "$nupkg" --source "$source" --api-key "$GITHUB_TOKEN"
+          done
+
+      - name: Attach the archives to a GitHub Release
+        run: |
+          # The file channel's archives, one per target; each carries its manifest.
+          gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 ||
+            gh release create "$RELEASE_TAG" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+              --title "$RELEASE_TAG" --notes "API description bundles."
+          for archive in $(jq -r '.files[] | select(.channel == "file") | .path | select(endswith(".tgz"))' "$HANDOFF"); do
+            name=$(basename "$archive")
+            remote=$(gh api "repos/${{ github.repository }}/releases/tags/$RELEASE_TAG" \
+              --jq ".assets[] | select(.name == \"$name\") | .digest")
+            if [ "$remote" = "sha256:$(sha256sum "$archive" | cut -d' ' -f1)" ]; then
+              echo "$name is already attached, identical"
+            elif [ -n "$remote" ]; then
+              echo "::error::$name is already attached with other contents"; exit 1
+            else
+              gh release upload "$RELEASE_TAG" "$archive" --repo "${{ github.repository }}"
+            fi
+          done
+
+  consume:
+    name: Resolve every package with its own client
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER: ${{ github.repository_owner }}
+      RELEASE_TAG: api-only-publisher-e2e-${{ github.run_number }}-${{ github.run_attempt }}
+    steps:
+      - name: Receive the hand-off
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: api-bundles
+          path: build
+
+      - name: Setup Node for GitHub Packages
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+          scope: '@${{ github.repository_owner }}'
+
+      - name: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/npm"
+          for target in $TARGETS; do
+            npm pack --pack-destination "$RUNNER_TEMP/npm" "@$OWNER/$target@$BUNDLE_VERSION"
+            cmp "$RUNNER_TEMP/npm/$OWNER-$target-$BUNDLE_VERSION.tgz" "build/npm/$OWNER-$target-$BUNDLE_VERSION.tgz"
+            echo "npm: @$OWNER/$target@$BUNDLE_VERSION is the image's bytes"
+          done
+
+      - name: Maven
+        run: |
+          url="https://maven.pkg.github.com/${{ github.repository }}"
+          cat > "$RUNNER_TEMP/settings.xml" <<'EOF'
+          <settings><servers><server><id>github</id>
+            <username>${env.GITHUB_ACTOR}</username><password>${env.GITHUB_TOKEN}</password>
+          </server></servers></settings>
+          EOF
+          group_path=$(echo "$MAVEN_GROUP" | tr . /)
+          for target in $TARGETS; do
+            mvn --batch-mode --no-transfer-progress --settings "$RUNNER_TEMP/settings.xml" dependency:get \
+              -Dartifact="$MAVEN_GROUP:$target:$BUNDLE_VERSION:tgz" -DremoteRepositories="github::default::$url" -Dtransitive=false
+            cmp "$HOME/.m2/repository/$group_path/$target/$BUNDLE_VERSION/$target-$BUNDLE_VERSION.tgz" \
+              "build/maven/$group_path/$target/$BUNDLE_VERSION/$target-$BUNDLE_VERSION.tgz"
+            # What a Maven repository and Gradle expect beside it, which deploy-file wrote.
+            for file in "$target/maven-metadata.xml" "$target/$BUNDLE_VERSION/$target-$BUNDLE_VERSION.pom.sha1"; do
+              curl -fsS -o /dev/null -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$group_path/$file"
+            done
+            echo "Maven: $MAVEN_GROUP:$target:$BUNDLE_VERSION is the image's bytes, with its metadata"
+          done
+
+      - name: NuGet
+        run: |
+          # A throwaway project, with its source and credentials in a nuget.config
+          # beside it, as dotnet finds one; the runner discards both.
+          consumer="$RUNNER_TEMP/consumer"
+          dotnet new classlib --output "$consumer" >/dev/null
+          echo '<configuration/>' > "$consumer/nuget.config"
+          dotnet nuget add source "https://nuget.pkg.github.com/$OWNER/index.json" --name github \
+            --configfile "$consumer/nuget.config" \
+            --username "$GITHUB_ACTOR" --password "$GITHUB_TOKEN" --store-password-in-clear-text
+          for nupkg in $(jq -r '.files[] | select(.channel == "nuget") | .path | select(endswith(".nupkg"))' build/packages/packages.json); do
+            id=$(basename "$(dirname "$(dirname "$nupkg")")")
+            dotnet add "$consumer" package "$id" --version "$BUNDLE_VERSION"
+            cmp "$HOME/.nuget/packages/$id/$BUNDLE_VERSION/$(basename "$nupkg")" "$nupkg"
+            echo "NuGet: $id $BUNDLE_VERSION is the image's bytes"
+          done
+
+      - name: GitHub Release
+        run: |
+          gh release download "$RELEASE_TAG" --repo "${{ github.repository }}" --dir "$RUNNER_TEMP/release"
+          for target in $TARGETS; do
+            name="$target-$BUNDLE_VERSION.tgz"
+            cmp "$RUNNER_TEMP/release/$name" "build/publish/$target/$BUNDLE_VERSION/$name"
+            # The file channel's layout, for the Subscriber below.
+            mkdir -p "releases/$target/$BUNDLE_VERSION"
+            cp "$RUNNER_TEMP/release/$name" "releases/$target/$BUNDLE_VERSION/"
+            echo "Release: $name is the image's bytes"
+          done
+
+      - name: Setup Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          gradle-version: '9.7.1'
+
+      - name: The API-Only Subscriber
+        env:
+          # Gradle's credentials(PasswordCredentials) reads these for the
+          # repository named githubPackages.
+          ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # One subscription through the maven channel, from GitHub Packages, and one
+          # through the file channel, from the release's archives: the two channels
+          # the Subscriber reads.
+          alpha=${TARGETS%% *}
+          beta=${TARGETS##* }
+          cat > settings.gradle <<'EOF'
+          rootProject.name = 'consumer'
+          EOF
+          cat > build.gradle <<EOF
+          plugins {
+              id 'com.arc-e-tect.api-only-subscriber' version '0.4.0'
+          }
+          repositories {
+              maven {
+                  name = 'githubPackages'
+                  url = 'https://maven.pkg.github.com/${{ github.repository }}'
+                  credentials(PasswordCredentials)
+              }
+          }
+          apiOnlySubscriber {
+              channel {
+                  type = 'maven'
+                  groupId = '$MAVEN_GROUP'
+              }
+              subscribe('$alpha') {
+                  apiContractVersion = '$BUNDLE_VERSION'
+              }
+              subscribeAsClient('$beta') {
+                  apiContractVersion = '$BUNDLE_VERSION'
+                  channel {
+                      type = 'file'
+                      directory = "\$rootDir/releases"
+                  }
+              }
+          }
+          EOF
+          gradle --no-daemon fetchApiSpec
+          cat apionly.lock
+          find build -name '*.yaml' | sort
+
+  cleanup:
+    name: Remove the scratch versions
+    needs: [publish, consume]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: api-only-publisher-e2e-${{ github.run_number }}-${{ github.run_attempt }}
+    steps:
+      - name: Delete the release and its tag
+        run: gh release delete "$RELEASE_TAG" --repo "${{ github.repository }}" --cleanup-tag --yes || true
+
+      - name: Delete the package versions
+        env:
+          # GitHub Packages deletes a user-owned package's versions only for a
+          # token with delete:packages, which GITHUB_TOKEN is not. With this
+          # optional secret set, they are deleted; without it, listed.
+          CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}
+        run: |
+          {
+            echo "## Scratch versions of run ${{ github.run_number }}.${{ github.run_attempt }}"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          nuget_suffix() { echo "$1" | sed -E 's/(^|-)([a-z])/\U\2/g'; }
+          for target in $TARGETS; do
+            for package in "npm/$target" "maven/$MAVEN_GROUP.$target" "nuget/$NUGET_PREFIX.$(nuget_suffix "$target")"; do
+              type=${package%%/*}
+              name=${package#*/}
+              if [ -z "$CLEANUP_TOKEN" ]; then
+                echo "- $type \`$name\` $BUNDLE_VERSION: delete by hand, or set E2E_CLEANUP_TOKEN" >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+              id=$(GH_TOKEN=$CLEANUP_TOKEN gh api "/user/packages/$type/$name/versions" \
+                --jq ".[] | select(.name == \"$BUNDLE_VERSION\") | .id" 2>/dev/null || true)
+              if [ -n "$id" ] && GH_TOKEN=$CLEANUP_TOKEN gh api -X DELETE "/user/packages/$type/$name/versions/$id" 2>/dev/null; then
+                echo "- $type \`$name\` $BUNDLE_VERSION: deleted" >> "$GITHUB_STEP_SUMMARY"
+              elif [ -n "$id" ]; then
+                # The last version of a package can only go with the package.
+                GH_TOKEN=$CLEANUP_TOKEN gh api -X DELETE "/user/packages/$type/$name" &&
+                  echo "- $type \`$name\`: deleted with its last version" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "- $type \`$name\` $BUNDLE_VERSION: not found" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+          done
