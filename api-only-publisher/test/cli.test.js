@@ -887,3 +887,99 @@ test("pack and split write where build.packages and build.split say, and --out s
     await run(["split", "--by", "target", "-C", dir]);
     assert.ok(fs.existsSync(path.join(dir, "out", "parts")));
 });
+
+test("--version on its own prints the Publisher's version", async () => {
+    const written = [];
+    const previousWrite = process.stdout.write;
+    process.stdout.write = (chunk) => { written.push(String(chunk)); return true; };
+    try {
+        assert.strictEqual(await main(["--version"]), 0);
+    } finally {
+        process.stdout.write = previousWrite;
+    }
+    assert.deepStrictEqual(written, [`${require("../package.json").version}\n`]);
+});
+
+test("--version alongside a command is still refused", async () => {
+    await assert.rejects(main(["build", "--version", "1.2.3"]), /--version is no longer accepted/);
+});
+
+// A library pinning a Redocly CLI the installation does not carry, with downloads
+// refused: build and lint must fail before they stage, bundle or run anything.
+function mismatchedLibrary() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-sealed-"));
+    fs.writeFileSync(path.join(dir, "apionly.yaml"), `schemaVersion: 1
+sources:
+  root: specs
+  openapi: openapi
+defaults:
+  openapi:
+    outputName: openapi.yaml
+build:
+  dist: dist
+toolchain:
+  redocly: "@redocly/cli@2.60.0"
+targets:
+  example:
+    openapi:
+      bundle: bundles/example.yaml
+    publish: false
+`);
+    fs.mkdirSync(path.join(dir, "specs", "openapi", "bundles"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "specs", "openapi", "bundles", "example.yaml"), "openapi: 3.1.1\npaths: {}\n");
+    return dir;
+}
+
+async function withSealedToolchain(action) {
+    const { toolchainDir, IMAGE_TOOLS } = require("./toolchain-dir");
+    const { DIR_ENV, DOWNLOAD_ENV } = require("../src/toolchain");
+    const saved = { dir: process.env[DIR_ENV], download: process.env[DOWNLOAD_ENV], path: process.env.PATH };
+    const bin = fs.mkdtempSync(path.join(os.tmpdir(), "aop-no-npx-"));
+    fs.writeFileSync(path.join(bin, "npx"), "#!/bin/sh\necho npx must not run >&2\nexit 99\n");
+    fs.chmodSync(path.join(bin, "npx"), 0o755);
+    process.env[DIR_ENV] = toolchainDir(IMAGE_TOOLS);
+    process.env[DOWNLOAD_ENV] = "never";
+    process.env.PATH = `${bin}:${saved.path}`;
+    try {
+        await action();
+    } finally {
+        for (const [key, value] of [[DIR_ENV, saved.dir], [DOWNLOAD_ENV, saved.download], ["PATH", saved.path]]) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+        }
+    }
+}
+
+test("build refuses a pin the sealed toolchain does not carry before staging anything", async () => {
+    const dir = mismatchedLibrary();
+    await withSealedToolchain(async () => {
+        await assert.rejects(main(["build", "-C", dir, "-q"]), /toolchain\.redocly pins @redocly\/cli@2\.60\.0/);
+    });
+    assert.ok(!fs.existsSync(path.join(dir, "build")), "nothing was staged");
+});
+
+test("lint refuses a pin the sealed toolchain does not carry before linting anything", async () => {
+    const dir = mismatchedLibrary();
+    fs.mkdirSync(path.join(dir, "dist", "example"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "dist", "example", "openapi.yaml"), "openapi: 3.1.1\npaths: {}\n");
+    await withSealedToolchain(async () => {
+        await assert.rejects(main(["lint", "-C", dir, "-q"]), /toolchain\.redocly pins @redocly\/cli@2\.60\.0/);
+    });
+    assert.ok(!fs.existsSync(path.join(dir, "build", "reports")), "no lint report was written");
+});
+
+test("build runs the installed toolchain, not npx, when the pin matches", async () => {
+    const dir = mismatchedLibrary();
+    const configFile = path.join(dir, "apionly.yaml");
+    fs.writeFileSync(configFile, fs.readFileSync(configFile, "utf8").replace("2.60.0", "2.52.0"));
+    await withSealedToolchain(async () => {
+        const { resolve } = require("../src/toolchain");
+        const { command } = resolve("redocly", "@redocly/cli@2.52.0");
+        // The fake bin "bundles" by writing the file --output names, and lints by succeeding.
+        fs.writeFileSync(command, "#!/bin/sh\n[ \"$1\" = lint ] && exit 0\n" +
+            "while [ $# -gt 0 ]; do [ \"$1\" = --output ] && out=$2; shift; done\n" +
+            "printf 'openapi: 3.1.1\\ninfo:\\n  title: T\\n  version: 1.0.0\\npaths: {}\\n' > \"$out\"\n");
+        assert.strictEqual(await main(["build", "-C", dir, "-q"]), 0);
+    });
+    assert.ok(fs.existsSync(path.join(dir, "dist", "example", "openapi.yaml")));
+});

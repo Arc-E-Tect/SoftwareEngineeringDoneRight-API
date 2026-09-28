@@ -14,8 +14,8 @@ const { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps
 const {
     asyncapiOperationsWithoutExamples, openapiOperationsWithoutExamples, asyncapiMessage, openapiMessage,
 } = require("./examples");
-
-class BuildError extends Error {}
+const { BuildError } = require("./build-error");
+const toolchain = require("./toolchain");
 
 function run(command, args, { quiet, reportFile = null } = {}) {
     try {
@@ -94,8 +94,9 @@ function bundle(config, target, kind, outFile, log, { stagingRoot } = {}) {
     }
     fs.mkdirSync(path.dirname(outFile), { recursive: true });
     log(`-- Bundling ${path.basename(source)}`);
-    const tool = kind === "openapi" ? config.tool("redocly") : config.tool("asyncapi");
-    run("npx", ["--yes", tool, "bundle", source, "--output", outFile], { quiet: true });
+    const tool = config.tool(toolchain.TOOL_OF_KIND[kind]);
+    const runner = toolchain.resolve(toolchain.TOOL_OF_KIND[kind], tool);
+    run(runner.command, [...runner.args, "bundle", source, "--output", outFile], { quiet: true });
     if (!fs.existsSync(outFile)) {
         throw new BuildError(`target '${target}': ${tool} produced no output at ${outFile}`);
     }
@@ -199,12 +200,12 @@ function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
 }
 
 function lint(config, kind, file, log, { report = false, reportFile = null } = {}) {
-    const tool = kind === "openapi" ? config.tool("redocly") : config.tool("asyncapi");
+    const runner = toolchain.resolve(toolchain.TOOL_OF_KIND[kind], config.tool(toolchain.TOOL_OF_KIND[kind]));
     const args = kind === "openapi"
-        ? ["--yes", tool, "lint"].concat(config.lintConfig("openapi") ? ["--config", config.lintConfig("openapi")] : []).concat([file])
-        : ["--yes", tool, "validate", file];
+        ? ["lint"].concat(config.lintConfig("openapi") ? ["--config", config.lintConfig("openapi")] : []).concat([file])
+        : ["validate", file];
     log(`-- Validating ${path.basename(file)}`);
-    const output = run("npx", args, { quiet: true, reportFile });
+    const output = run(runner.command, [...runner.args, ...args], { quiet: true, reportFile });
     if (report && output.trim()) log(output.trimEnd());
 }
 
@@ -289,6 +290,11 @@ function prepare(config, { kinds = ["openapi", "asyncapi"], log = () => {} } = {
  * @returns {Array<{target, kind, file, distributed}>}
  */
 function build(config, { targets, versionOf = () => null, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
+    // Every tool this build needs is found before anything is staged, so a toolchain
+    // the installation cannot run fails the build before it has done any work.
+    const needed = kinds.filter((kind) => config.targetsFor(kind).some((t) => !targets || targets.includes(t)));
+    toolchain.requireTools(config, needed);
+
     const results = [];
     for (const kind of kinds) {
         const all = config.targetsFor(kind).filter((t) => !targets || targets.includes(t));
