@@ -50,6 +50,32 @@ link:../examples/transcriberj/generated-contract-tests/README.adoc[The generated
 
 The `J` is for Java.
 
+[WARNING]
+.Generated stateless contract tests are not independent of each other
+====
+Tests must be independent of each other and idempotent: each passes or fails on its own, in any order, however often it runs.
+
+*Stateless cases do not meet that principle* -- invalid request, not acceptable, unsupported media type.
+They are derived from the contract, not from the implementation, and every case of an operation starts from the same valid request.
+An implementation that wrongly accepts one may store what it was sent, and that state stays behind.
+
+*Stateful cases meet it* -- success and not found -- when their `arrangeState` is correct, since it sets exactly the state each case needs, whatever ran before.
+
+So one stateless case wrongly accepted can make later cases, of the same operation or another, answer differently, and differently again on the next run.
+A correct implementation accepts no invalid request, so a green run is trustworthy.
+
+When a run is red:
+
+. read the *first* failing stateless test, and treat every later failure as possibly its consequence;
+. fix what it points at;
+. re-run on fresh state before you diagnose the next failure.
+
+This is a known and accepted limit of generating tests from a contract, not a defect awaiting a fix.
+link:../examples/transcriberj/generated-contract-tests/README.adoc#try-it[The example's Try it →], step 2, shows it happen: a `title` too long is answered `409` instead of `201`, because the case before it, wrongly accepted, created a book with the same ISBN.
+====
+
+link:../docs/guides/generated-contract-tests/overview.adoc[The guide to generated contract tests →] says how to adopt them, link:../docs/guides/hand-written-contract-tests/overview.adoc[the guide to hand-written contract tests →] how to write the ones the generator cannot, and link:../docs/guides/documentation-tests/overview.adoc[the guide to documentation tests →] how to write the published documentation on the generated classes.
+
 [#plugin-id]
 == Plugin ID
 
@@ -300,9 +326,9 @@ Nothing resolves and nothing is generated to resolve with: the classes are the o
 
 Each emitter's output belongs somewhere else:
 
-* the **core** generates the schema classes, the operations and the invalid-request cases, which every test that exercises the API uses: component tests of the inbound adapter, contract tests, system tests, end-to-end tests;
+* the **core** generates the schema classes, the operations and the contract cases, which every test that exercises the API uses: component tests of the inbound adapter, contract tests, system tests, end-to-end tests;
 * the **REST Docs** emitter generates `*Docs` descriptors and contract tests, which belong to contract testing only;
-* the **WireMock** emitter generates stubs to be packaged and handed to the developers of the API's consumers, which belong on no source set at all.
+* the **WireMock** emitter generates stubs to be packaged and handed to the developers of the API's consumers, and to serve as the reference double for contract tests in any language, which belong on no source set at all.
 
 So a subscription configures each emitter in a block of its own:
 
@@ -883,6 +909,31 @@ The same file holds the contract cases and their coverage: `contractCases`, `res
 [#contract-cases]
 === Contract cases
 
+[#testing-principle]
+[WARNING]
+.Generated stateless contract tests are not independent of each other
+====
+Tests must be independent of each other and idempotent: each passes or fails on its own, in any order, however often it runs.
+
+*Stateless cases do not meet that principle* -- invalid request, not acceptable, unsupported media type.
+They are derived from the contract, not from the implementation, and every case of an operation starts from the same valid request.
+An implementation that wrongly accepts one may store what it was sent, and that state stays behind.
+
+*Stateful cases meet it* -- success and not found -- when their `arrangeState` is correct, since it sets exactly the state each case needs, whatever ran before.
+
+So one stateless case wrongly accepted can make later cases, of the same operation or another, answer differently, and differently again on the next run.
+A correct implementation accepts no invalid request, so a green run is trustworthy.
+
+When a run is red:
+
+. read the *first* failing stateless test, and treat every later failure as possibly its consequence;
+. fix what it points at;
+. re-run on fresh state before you diagnose the next failure.
+
+This is a known and accepted limit of generating tests from a contract, not a defect awaiting a fix.
+link:../examples/transcriberj/generated-contract-tests/README.adoc#try-it[The example's Try it →], step 2, shows it happen: a `title` too long is answered `409` instead of `201`, because the case before it, wrongly accepted, created a book with the same ISBN.
+====
+
 A contract promises more than how a bad request is refused.
 For every response it can derive from the contract alone, the tree derives a *contract case*: a request, and the response the contract declares for it.
 Nothing is taken from convention: a case expects a response only because the operation declares that status, exactly.
@@ -1028,7 +1079,8 @@ It is the rule the <<invalid-requests,invalid requests §>> have always followed
 
 *What it does to the cases.*
 
-* An *optional* member of such a format: `fullRequest()` holds it, so no `success-<status>-full` case is derived. The other cases are.
+* An *optional* member of such a format: `fullRequest()` holds it, so no `success-<status>-full` case is derived.
+The other cases are.
 * A *required* member or parameter of such a format: `requiredRequest()` holds it, so no success, not-found, not-acceptable or unsupported-media-type case is derived for the operation, and its invalid requests have no baseline.
 
 *How to see it.*
@@ -1100,20 +1152,7 @@ The case says so in `requiresState`, and what a target's fixture must do before 
 An emitter that renders the cases as tests gives each stateful case a fixture hook.
 Its generated default fails with a clear "fixture not implemented yet", as Cucumber does for a step without a definition, so a freshly generated project compiles and runs, and each stateful test says exactly what it is waiting for.
 
-[IMPORTANT]
-.Which generated tests are independent
-====
-*A generated test that needs no state violates test independence.*
-The not-acceptable, unsupported-media-type and invalid-request cases need nothing from the target, and a correct implementation refuses them without storing anything.
-But a request the implementation _wrongly_ accepts may leave state behind -- a user registered with an over-long name -- and the cases after it then run against a target that is no longer what they assume.
-Such a test is only as independent as the implementation is correct.
-
-*A case that requires state is the opposite.*
-The success and not-found cases say what state they need, and with a correct fixture each is independent and repeatable, whatever ran before it.
-
-This is a consequence of generating tests from a specification rather than from an implementation: the generator cannot know what an implementation stores, or how.
-The `ContractCase` Javadoc says the same, beside each kind.
-====
+What that means for how independent the tests are, and how to read a red run, is in <<testing-principle,the warning at the top of Contract cases §>>; the `ContractCase` Javadoc says the same, beside each kind.
 
 [#response-coverage]
 ==== Response coverage
@@ -1261,10 +1300,14 @@ They are real violations, and a lenient binder lets them through; a setting to d
 * *A `required` case for a path parameter.* A path without the segment is a different route: a test on it tests routing, not validation.
 * *A path value that is empty, or contains `/`, `?` or `#`,* even percent-encoded: it changes which endpoint the request reaches.
 * *A `type` case for a string parameter, and a `null` case for any parameter.* Every parameter travels as a string, and an empty one is not `null`.
-* *Positive boundary cases* -- a value exactly at a bound. They are valid requests, not invalid ones.
-* *Conditional keywords* -- `if`, `then`, `else`, `dependentSchemas` and every other keyword the model does not type. Reported, never guessed at.
-* *A case from a request that cannot be vouched for:* one holding a value of a format no check exists for, such as `duration`. The value might be invalid already, and a case must have one fault.
-* *Malformed JSON,* and anything that needs a fixture on the real implementation. An unsupported media type is a contract case of its own kind: see <<contract-cases,Contract cases §>>.
+* *Positive boundary cases* -- a value exactly at a bound.
+They are valid requests, not invalid ones.
+* *Conditional keywords* -- `if`, `then`, `else`, `dependentSchemas` and every other keyword the model does not type.
+Reported, never guessed at.
+* *A case from a request that cannot be vouched for:* one holding a value of a format no check exists for, such as `duration`.
+The value might be invalid already, and a case must have one fault.
+* *Malformed JSON,* and anything that needs a fixture on the real implementation.
+An unsupported media type is a contract case of its own kind: see <<contract-cases,Contract cases §>>.
 
 [#invalid-request-status]
 ==== The expected response
@@ -1297,7 +1340,8 @@ A generation that is up to date does not run, and prints nothing.
 
 A format is only as exact as the validator that checks it, so format cases are opt-in, per format: `validateFormats = ['email']`.
 
-* A pattern wins over a format. Where both apply and the format's validation is on, the format is ignored, no format case is derived, and a warning says so.
+* A pattern wins over a format.
+Where both apply and the format's validation is on, the format is ignored, no format case is derived, and a warning says so.
 * A well-known format with no pattern beside it is recommended one, whether or not its validation is on: a pattern says exactly what is valid.
 * A format `validateFormats` names that no check exists for is reported, and never guessed at.
 
@@ -1404,16 +1448,22 @@ Three are published from https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRi
 |Emitter |What it generates
 
 |`com.arc-e-tect:api-only-transcriberj-restdocs`
-|Spring REST Docs field descriptors and snippets for every class with a body (`<basePackage>.restdocs`).
+|Spring REST Docs field descriptors for every class with a body, and, with its `tests` option, a contract test for every contract case: `<Operation>ContractTests` in `<basePackage>.restdocs`, with the fixture hooks `arrangeState` and `arrangeStatelessCase`.
 
 |`com.arc-e-tect:api-only-transcriberj-microcks`
 |From the AsyncAPI document, one JUnit 5 conformance test per `send` operation, checking what an application publishes against a Microcks-imported copy of the contract, as `<basePackage>.microcks.AsyncConformanceHarness`. What a generator cannot know -- the broker, where the contract file is, how the application publishes each event -- is left to abstract methods the project implements. It also writes a properties resource, which is what `EmitterContext.writeResource` is for. It needs every message to carry an `examples` array, which the Publisher can enforce with `lint.examples.asyncapi`.
 
 |`com.arc-e-tect:api-only-transcriberj-wiremock`
-|For every invalid-request case, an exact WireMock stub that answers the case as the contract declares, so that the same generated contract tests run against the real implementation and against a WireMock double (`<basePackage>.wiremock.InvalidRequestStubs`).
+|WireMock mapping files: an exact stub for every contract case, of every kind, and fallbacks that answer every other request as the contract would, packaged by `package<Contract>Wiremock` as an archive for the API's consumers. The same generated contract tests pass against them unchanged. With `format: 'java'`, the same stubs as `<basePackage>.wiremock.ContractStubs`.
 |===
 
 Each one's README lists what it needs of the project, and the options it takes.
+
+Each has a purpose of its own, and so a place of its own, which <<emitter-configuration,Configuring each emitter §>> sets: the schema classes wherever the API is exercised, the REST Docs output in contract tests, and the WireMock stubs on no source set, packaged for consumers and serving as the reference double for contract tests in any language.
+
+*Generated contract tests verify; they do not document.*
+They call `document()` because that is where Spring REST Docs checks a response against its fields, and the snippets that writes are a by-product, never published: their values are minimal, and on a double they carry the double's headers.
+Published documentation comes from documentation tests written on purpose, with meaningful data, on the generated schema classes and `*Docs` descriptors: link:../docs/guides/documentation-tests/overview.adoc[the guide to documentation tests →] says how.
 Each runs in a task of its own, `generateContractSources<Contract><Emitter>`, after the core, over the same model, in a class loader built from that configuration, so its dependencies never mix with the build script's.
 
 An emitter is a library that implements `com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`, and names its implementation in `META-INF/services/com.arc_e_tect.gradle.apionly.transcriberj.spi.Emitter`.
@@ -1447,7 +1497,7 @@ public interface Emitter {
 ----
 
 [#emitter-produces]
-==== What an emitter must declare
+=== What an emitter must declare
 
 `produces(options)` says what the emitter writes with the options a project gives it: `Output.JAVA` for sources written with `writeJava`, `Output.RESOURCES` for classpath resources written with `writeResource`, and `Output.FILES` for files that belong on no classpath, written with `writeFile`.
 The plugin places each where it belongs -- Java and resources in the emitter's source sets, files in its files directory and archive -- and checks a project's configuration against it before any task runs: source sets for an emitter that writes neither Java nor resources, or none for one that writes Java, fail the build.
@@ -1466,7 +1516,7 @@ An emitter that does not override `produces` is taken to write Java and resource
 The core derives them before any other emitter runs; the list is empty for an operation without cases.
 
 [#request-schemas]
-==== Request schemas
+=== Request schemas
 
 A stub that answers _any_ valid request, not only the generated ones, needs to know what a valid request is.
 `EmitterContext.requestBodySchema(location, mediaType)` gives the schema of an operation's request body in one of its media types, and `EmitterContext.parameterSchema(location, in, name)` the schema of one of its path, query or header parameters, so that a stub can match a path segment by its `pattern`.
@@ -1481,7 +1531,7 @@ Both are empty where the operation, the media type or the parameter has no schem
 They are given to emitters only, and not written beside the report.
 
 [#response-bodies]
-==== Response bodies
+=== Response bodies
 
 A stub written as a file cannot call a generated class's `requiredBody()` or `fullBody()`, so it needs their text when it is generated.
 `EmitterContext.responseBody(location, status)` gives the body of a response an operation declares, in its first content type -- the one its cases expect first -- as a `spi.ResponseBody`:
@@ -1533,6 +1583,13 @@ After resolution, a version at or above the untested one is warned about: "not t
 The generated tree does not cover every test: a degraded method throws, and the contract cases cover only the responses the contract alone determines -- see <<contract-cases,Contract cases §>>.
 A `409`, a `422` for a semantically invalid request, every other response the <<response-coverage,response coverage §>> lists as not covered, every case left out because its request <<unvouched-values,cannot be vouched for §>>, and whatever a constraint not isolatable leaves untested are written by hand.
 The code a project writes to fill those gaps goes beside the generated classes, and how it does so is a design decision, not an accident.
+
+A hand-written contract test starts where a generated one does: from a valid request, `requiredRequest()` or `fullRequest()`, or a body built with `body(...)` where one value must differ, such as a key the generated cases do not send.
+It changes the one thing its response depends on, arranges the state that response needs in a hook of its own, and checks the response with the generated `*Docs` descriptors.
+link:../docs/guides/hand-written-contract-tests/overview.adoc#how-many[The guide to hand-written contract tests →] shows one, the example's `409`.
+
+A documentation test uses the generated classes too -- `PATH` by name, `body(...)`, `requestFields()` and `responseFields()` -- but not the valid values.
+`requiredBody()`, `fullBody()` and the cases hold the smallest values the contract allows, which prove a contract is kept and tell a reader nothing; a documentation test writes values a reader recognises, and the descriptors still hold them to the contract.
 
 [IMPORTANT]
 .Hand-written test code goes in the generated package
@@ -1588,7 +1645,10 @@ It does not prove that the payload is valid against the schema, and nothing here
 Constraints are constants, not checks.
 Generated bodies are built from the arguments given, and a body built from arguments that violate a constraint violates it too.
 The contract cases, in <<contract-cases,Contract cases §>>, cover the success statuses, `404`, `406`, `415` and one invalid request per constraint on request input; every other invalid or partial body, for the other 4xx responses, is written by hand, starting from a valid one: `requiredBody()`, `requiredRequest()` and the rest, in <<valid-values,Valid values §>>.
+No case is ever generated for a response that depends on behaviour or state the contract does not describe -- `409`, `422`, `429`, `401`, `403`, any `3xx` or `5xx` -- nor for a range such as `4XX`, or `default`: <<response-coverage,Response coverage §>> lists each, with its reason.
 link:../docs/guides/hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] says how to write them, and anything else the generator could not, on top of the generated classes -- and how many to write.
+
+The generated stateless tests are not independent of each other: see <<testing-principle,the warning at the top of Contract cases §>>.
 
 [#development]
 == Development
@@ -1613,7 +1673,8 @@ Its `README.adoc` says what each is for; `./gradlew recordValidValuesGolden` and
 Its `README.adoc` says which test covers which requirement; `./gradlew recordInvalidRequestsGolden` re-records the golden file, which holds the cases of every kind, for a deliberate change only.
 Its `before` directory holds the invalid-request cases as they were before cases of every kind were derived, which they are still compared with.
 
-`src/test/resources/fixtures/contract-cases` holds a corpus of contracts written for the other kinds and for response coverage: one per derivation rule and per reason. Its `README.adoc` says which test covers which requirement.
+`src/test/resources/fixtures/contract-cases` holds a corpus of contracts written for the other kinds and for response coverage: one per derivation rule and per reason.
+Its `README.adoc` says which test covers which requirement.
 
 The build gates on 90% instruction coverage, with no exclusions, and on Javadoc without warnings.
 The plugin's tasks are tested in-process as well as through TestKit, so the coverage agent sees them.
