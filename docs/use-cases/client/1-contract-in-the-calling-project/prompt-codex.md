@@ -71,7 +71,7 @@ These are the versions this prompt was verified with. Use them unless I name new
   reports:
     lint: build/api-only/reports/lint
   toolchain:
-    redocly: "@redocly/cli@2.52.0"
+    redocly: "@redocly/cli@2.55.0"
   channels:
     file:
       directory: build/api-only/publish
