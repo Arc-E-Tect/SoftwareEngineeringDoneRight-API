@@ -4,6 +4,8 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The worked example of the 409 below, beside this documentation.
+:example-dir: ../../../examples/transcriberj/generated-contract-tests
 
 [NOTE]
 .Where the links in this document go
@@ -20,15 +22,16 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 == In short
 
 The API-Only TranscriberJ generates, from a contract, the classes a contract test is built from: an operation's path and status codes, a body's constants and constraints, and the fields a response should have.
-It does not write the tests, and it cannot generate everything: some constructs yield a method that throws, with the reason.
+With its REST Docs emitter, it also generates a contract test for every response the contract can express: link:../generated-contract-tests/overview.adoc[the guide to generated contract tests →] covers those.
+It cannot generate everything: some constructs yield a method that throws, with the reason, and some responses depend on behaviour the contract does not describe.
 
 This guide is about the tests you write on top of those classes, and in particular the two questions a team meets early:
 
 * **"The generator refused to write this method -- now what?"**
 Almost everything else about the class is still there.
 Write the one missing part by hand, from those pieces, in the generated package, and guard it so that it breaks when the contract moves.
-* **"How many invalid-input tests should I write?"**
-One per error shape the contract describes -- not one per way to be wrong.
+* **"Which contract tests do I still write?"**
+Only those for a response that depends on behaviour the contract does not describe -- a `409`, a `422`, a `429`, a `401`, a `403` -- one each; every response the contract can express is generated, and business rules are behaviour tests.
 <<how-many,How many tests, and where §>> says why.
 
 [#where-it-stops]
@@ -111,19 +114,60 @@ link:../../../api-only-transcriberj/README.adoc#your-responsibilities[What the g
 A contract promises a client what it will get back: this status, this content type, these fields.
 A contract test holds the service to that promise.
 One invalid username is enough to see that a 400 comes back as the contract's problem document, with the fields the contract lists.
-A second invalid username tests nothing new about the contract: the answer has the same shape.
+A second invalid username, breaking the same rule, tests nothing new about the contract: the answer has the same shape.
 
 *Which* usernames are rejected, and with which message, is behaviour -- the service's rules, not the contract's shape.
 It belongs in the tests of the service's behaviour, as scenarios: each rule, each way to break it, and what the service does.
 Written as contract tests instead, those scenarios become a long list of near-identical HTTP calls, each re-checking the same response shape, slow to run and brittle when a message is reworded -- and still worse at stating the rules than a scenario is.
 
-So:
+What the contract itself says is different: it is the contract's shape, and the generator derives it.
+So the whole rule is:
 
-* **one contract test per response the contract lists**: 201, 400, 404 and 422 are four tests, whatever number of ways there are to get each;
-* **one behaviour test per rule**, or per scenario, where all the ways to be invalid live -- with the service, not the HTTP contract, as the subject.
+* **Every response the contract can express is generated.**
+Success responses, `404` for a resource, `406`, `415`, and one test per declared constraint for the invalid-request status: each is derived from the contract rather than written, with a fixture hook where it needs state.
+A constraint is part of the contract, so a request that breaks it is a contract case, not a scenario.
+* **A response that depends on behaviour the contract does not describe gets one hand-written contract test.**
+A `409`, a `422`, a `429`, a `401` or a `403` needs state or rules the contract does not state, so the generator reports it as not covered.
+Write one test for each, on the generated tests' pattern: an interface with a default test, a hook each target implements, the request built from the generated classes, and the response checked with the generated `*Docs` descriptors.
+* **Business rules remain behaviour tests.**
+Which inputs the domain refuses, and why, are scenarios against the service, where all the ways to break a rule live.
+The `422`'s one contract test needs one request that breaks one rule; the rule itself, with its edge cases, is behaviour.
+* **A hand-written test that checks what a single fault cannot stays hand-written.**
+A generated case breaks exactly one constraint, and checks the shape of the answer.
+A test that several violations are reported as several details, or that a detail is worded as the contract promises, checks something no generated case does.
 
-A 422 whose trigger is a business rule the schema cannot carry is the clearest case.
-Its contract test needs one request that breaks the rule; the rule itself, with its edge cases, is behaviour.
+Where the generator cannot derive a case -- a request body it cannot write, as in <<where-it-stops,Where the generated tree stops §>> -- the responses it would have covered are hand-written too, one per response, until the contract or the generator changes.
+
+[#worked-example]
+=== A worked example: the `409`
+
+In link:{example-dir}/README.adoc[the generated contract tests example →], `POST /books` declares a `409` for a book whose ISBN is taken.
+The contract does not say what provokes it, so the generation report lists it as not covered:
+
+[source,text]
+----
+  CreateBookContractCases 409: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 409
+----
+
+Its test is an interface beside the generated ones, so that the same test runs against the real service and the double:
+
+[source,java]
+----
+include::{example-dir}/src/contractTestCommon/java/com/example/books/contracttest/CreateBookConflictContractTests.java[tag=leaf]
+----
+
+* *The request* is built with the generated `BookRequestV1.body(...)`.
+Where a hand-written test needs no particular value, `requiredRequest()` or `fullRequest()` is its starting point; this one needs an ISBN no generated case sends, so that on the double its stub never answers theirs.
+* *The hook*, `arrangeIsbnTaken`, arranges the state the `409` needs.
+On the real service it inserts a book with that ISBN; on the double it registers a stub at a priority above the generated ones:
++
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/CreateBookServiceContractTest.java[tag=leaf]
+----
+* *The response* is checked with the generated `ProblemV1Docs.responseFields()`, and the status and content type with `CreateBookOperation.STATUS_409` and `CONTENT_TYPE_409`.
+
+A hand-written test with a correct hook is independent and idempotent, like the generated stateful ones: the hook sets exactly the state the test needs, whatever ran before.
 
 [#adoption]
 == Adoption in broad strokes
@@ -133,8 +177,8 @@ Its contract test needs one request that breaks the rule; the rule itself, with 
 A contract that can be generated is better for every consumer, not just your tests.
 . **Where you cannot, write the missing part by hand**: in the test source set, in the generated package, from the generated constants -- and own what you type, as <<responsibilities,What you own when you write it §>> says.
 . **Guard it**: pin it to the hash of the fragment it was written against, and assert that the method still throws, so you hear when the contract changes and when the generator can take over.
-. **Write one contract test per response**, checking status, content type and fields with the generated descriptors.
-. **Put every other invalid input in behaviour tests**, as scenarios.
+. **Let the generator write every response the contract can express**, and write one contract test by hand for each response that depends on behaviour, checking status, content type and fields with the generated descriptors.
+. **Put every business rule in behaviour tests**, as scenarios.
 
 [#next]
 == Where to go next
@@ -142,4 +186,6 @@ A contract that can be generated is better for every consumer, not just your tes
 * link:tutorial.adoc[The tutorial →] builds this step by step on a refunds service whose request body the generator cannot write.
 * link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant do the same in your own project.
 * https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/tree/main/examples/api-only-transcriberj/hand-written-contract-tests[The worked example ↗] is the tutorial's result, built in CI.
+* link:../generated-contract-tests/overview.adoc[The guide to generated contract tests →] covers every test the generator writes.
+* link:../documentation-tests/overview.adoc[The guide to documentation tests →] writes the published documentation on the same classes; a contract test's snippets, generated or hand-written, are never published.
 * link:../../../api-only-transcriberj/README.adoc#generated-code[The TranscriberJ's README →] lists what each generated class holds.
