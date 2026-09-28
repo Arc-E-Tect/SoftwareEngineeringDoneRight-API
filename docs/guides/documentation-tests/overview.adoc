@@ -1,0 +1,97 @@
+= Guide: documenting an API with Spring REST Docs and the generated classes
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+:example-dir: ../../../examples/transcriberj/generated-contract-tests
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+Published API documentation comes from *documentation tests*: Spring REST Docs tests written on purpose, one per request and response worth showing, with values a reader recognises.
+They are built on the classes the API-Only TranscriberJ generates, so the documentation cannot drift from the contract.
+They are not contract tests, and contract tests are not documentation.
+
+link:tutorial.adoc[The tutorial →] writes them for link:{example-dir}/README.adoc[the generated contract tests example →].
+
+[#on-purpose]
+== Why published documentation is written on purpose
+
+A reader learns an API from examples: a book they recognise, added to a catalogue; the answer when its ISBN is wrong.
+Generated contract tests are no such examples, and their snippets are never published:
+
+* *They are minimal.* A case sends the smallest request the contract allows -- a book titled `a`, of one page -- because it exists to prove a rule, not to explain one.
+* *They exist to fail.* Most of them send a request that is wrong on purpose, one constraint at a time.
+* *On a double, they carry the double.* A snippet written against WireMock holds its `Matched-Stub-Id` and `Matched-Stub-Name` headers, which no real response has, and a body the double built from minimal values.
+
+So documentation is its own suite, and its own decision: which requests to show, with which data, and in which order.
+
+[#generated-classes]
+== Why it still uses the generated classes
+
+Hand-written documentation drifts: a field is renamed in the contract, and the page goes on showing the old one.
+Built on the generated classes, it cannot drift unnoticed:
+
+* the path is `<Operation>Operation.PATH`, by name, so a path the contract no longer has fails to compile;
+* the body is `<Class>.body(...)`, with meaningful arguments, so a member added or removed changes its signature;
+* the fields are the generated `requestFields()` and `responseFields()`, so a snippet whose fields do not match the contract -- a member missing, an undeclared one, a wrong type -- fails the test, and the build.
+
+The generated descriptors carry the contract's own descriptions, with `generateDocs = true`, so the field tables say what the contract says.
+
+The REST Docs emitter generates field descriptors only.
+A path parameter is filled in by name into `PATH`, and described in the page's text.
+
+[#what-not-to-do]
+== What not to do
+
+* *Do not include a snippet a contract test writes*, generated or hand-written, in published documentation.
+Keep contract tests' snippets under prefixes of their own, and include from the documentation suite's directories only.
+* *Do not take values from `requiredBody()`, `fullBody()` or a generated case.*
+They are valid, and they tell a reader nothing; write the values a reader should see.
+* *Do not document against a double.*
+Run the documentation tests against the real service, so that every response shown is one the service really gave.
+
+[#where-it-sits]
+== Where it sits
+
+[cols="1,2,2", options="header"]
+|===
+| |Contract tests |Documentation tests
+
+|Written by
+|The generator, and by hand for what depends on behaviour
+|Hand, on purpose
+
+|Values
+|The smallest valid ones, with one fault where a case needs it
+|Values a reader recognises
+
+|Targets
+|The real service, and the double
+|The real service only
+
+|Snippets
+|A by-product, never published
+|The published documentation
+|===
+
+Both arrange state the same way: in the database, before the request.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] builds the example's documentation suite, step by step.
+* link:../generated-contract-tests/overview.adoc[The guide to generated contract tests →] explains the tests this suite sits beside.
+* link:../../../api-only-transcriberj/README.adoc#emitters[The TranscriberJ's README →] lists what each emitter generates.
