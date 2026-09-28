@@ -54,6 +54,7 @@ class BooksDocumentationTest {
 
     private WebTestClient client;
 
+    // tag::client[]
     @BeforeEach
     void bindClientToTheService(RestDocumentationContextProvider restDocumentation) {
         client = WebTestClient.bindToServer()
@@ -66,7 +67,9 @@ class BooksDocumentationTest {
                                 modifyHeaders().remove("Date").remove("Connection").remove("Transfer-Encoding")))
                 .build();
     }
+    // end::client[]
 
+    // tag::create-book[]
     @Test
     void addingABook() {
         deleteBookWithIsbn(DESIGN_PATTERNS);
@@ -81,7 +84,9 @@ class BooksDocumentationTest {
                 .expectBody()
                 .consumeWith(document("create-book", BookRequestV1Docs.requestFields(), BookV1Docs.responseFields()));
     }
+    // end::create-book[]
 
+    // tag::create-book-invalid[]
     @Test
     void addingABookWithAnIsbn10() {
         client.post().uri(CreateBookOperation.PATH)
@@ -94,7 +99,9 @@ class BooksDocumentationTest {
                 .consumeWith(document("create-book-invalid", BookRequestV1Docs.requestFields(),
                         ProblemV1Docs.responseFields()));
     }
+    // end::create-book-invalid[]
 
+    // tag::get-book[]
     @Test
     void readingABook() {
         ensureBookExists(REFACTORING_ID, REFACTORING, "Refactoring", "Improving the Design of Existing Code", 448,
@@ -107,7 +114,9 @@ class BooksDocumentationTest {
                 .expectBody()
                 .consumeWith(document("get-book", BookV1Docs.responseFields()));
     }
+    // end::get-book[]
 
+    // tag::get-book-not-found[]
     @Test
     void readingABookThatIsNotInTheCatalogue() {
         String unknown = "9b2e4c6a-1d3f-4e5a-8b7c-6d5e4f3a2b1c";
@@ -120,7 +129,9 @@ class BooksDocumentationTest {
                 .expectBody()
                 .consumeWith(document("get-book-not-found", ProblemV1Docs.responseFields()));
     }
+    // end::get-book-not-found[]
 
+    // tag::list-books[]
     @Test
     void listingTheCatalogue() {
         ensureBookExists(REFACTORING_ID, REFACTORING, "Refactoring", "Improving the Design of Existing Code", 448,
@@ -135,7 +146,9 @@ class BooksDocumentationTest {
                 .expectBody()
                 .consumeWith(document("list-books", BookPageV1Docs.responseFields()));
     }
+    // end::list-books[]
 
+    // tag::arrange[]
     private void ensureBookExists(String id, String isbn, String title, String subtitle, int pages, String format) {
         deleteBook(id);
         deleteBookWithIsbn(isbn);
@@ -149,6 +162,7 @@ class BooksDocumentationTest {
                 .param("format", format)
                 .update();
     }
+    // end::arrange[]
 
     private void deleteBook(String id) {
         database.sql("DELETE FROM book WHERE id = :id").param("id", UUID.fromString(id)).update();

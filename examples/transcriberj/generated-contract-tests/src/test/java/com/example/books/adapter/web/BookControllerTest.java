@@ -47,10 +47,12 @@ class BookControllerTest {
     private static final Book BOOK = new Book(ID, "9780201633610", "Design Patterns",
             "Elements of Reusable Object-Oriented Software", 395, BookFormat.HARDCOVER);
 
+    // tag::standalone[]
     private final Catalogue catalogue = mock(Catalogue.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new BookController(catalogue))
             .setControllerAdvice(new ProblemAdvice())
             .build();
+    // end::standalone[]
 
     @BeforeEach
     void theCatalogueAcceptsEveryBook() {

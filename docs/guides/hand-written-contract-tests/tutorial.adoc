@@ -499,6 +499,19 @@ Any change to the request schema fails it, with a message that says what to do.
 [#how-many]
 == Step 6: Decide how many tests, and where they go
 
+Where the generator can derive them, every response the contract can express is a generated contract test: success, `404`, `406`, `415`, and one test per declared constraint.
+Only a response that depends on behaviour the contract does not describe is written by hand, one test each, and business rules are behaviour tests: link:overview.adoc#how-many[How many tests, and where →] states the whole rule.
+
+This refunds service is the case where the generator derives nothing.
+Its request body is a `oneOf` with inline branches, so every constraint on it is inside a degraded construct, and no case is derived; API-Only TranscriberJ 0.13.0 reports, for this contract:
+
+[source,text]
+----
+Contract cases: 0 success, 0 not found, 0 not acceptable, 0 unsupported media type, 0 invalid request; 4 declared response(s) not covered (inside a degraded construct: 2, the invalid-request status, covered by the constraint coverage: 1, depends on behaviour or state the contract does not describe: 1)
+----
+
+So all four responses are written by hand here, one test each, and the reasoning below decides how many.
+
 **A contract test checks the shape of a response, not the behaviour that produced it.**
 
 The contract promises a client a status, a content type and a set of fields for each response it lists.
@@ -594,9 +607,12 @@ class CreateRefundContractTest {
 ----
 
 `ProblemV1Docs.responseFields()` fails when the problem document lacks a field the contract requires, or carries one the contract does not list, so these four tests check the shape of every response, error responses included.
+
+These tests run in a `@WebMvcTest` slice, through MockMvc, without a server.
+The generated contract tests send real HTTP to the running service instead, which is what lets them see JSON binding as a client meets it: link:../generated-contract-tests/overview.adoc#where-they-sit[Where contract tests sit among the other tests →].
 The 422 test needs one request that breaks one rule; it does not test the rule.
 
-The behaviour tests, `src/test/java/com/example/refunds/RefundsTest.java`, test the rules, and are where all the invalid inputs are:
+The behaviour tests, `src/test/java/com/example/refunds/RefundsTest.java`, test the rules, and, since no case can be derived for this contract, are where all the invalid inputs are:
 
 [source,java]
 ----
@@ -663,6 +679,7 @@ class RefundsTest {
 ----
 
 Ten ways to be invalid are ten rows in one behaviour test; they are one contract test.
+Where the generator can derive the cases, the ways that break a declared constraint are generated contract tests instead, one each, and only the business rules stay here.
 
 [#run]
 == Step 7: Run it
@@ -780,7 +797,10 @@ Hand-writing the body is the answer when the contract cannot change: someone els
 
 * The request body the generator could not write, written by hand from the generated pieces, in the generated package of the test source set.
 * Guards that fail when the request schema changes and when the generator can take over.
-* One contract test per response, checking shape with the generated descriptors.
+* One contract test per response, checking shape with the generated descriptors -- written by hand here, because the generator could derive none of them.
 * The rules, and every way to break them, in behaviour tests.
+
+Once the contract names the branches of its `oneOf`, as <<remedy,Step 9 §>> proposes, generate again and read the response coverage: every response it lists as covered becomes a generated test, and its hand-written one goes.
+link:../generated-contract-tests/overview.adoc[The guide to generated contract tests →] takes it from there.
 
 {example-url}[The worked example ↗] has all of it, with its own README.

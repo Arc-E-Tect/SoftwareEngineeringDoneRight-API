@@ -20,6 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
  * -- delete {@code build/database} -- before diagnosing a second failure. A green run is not
  * affected.
  */
+// tag::leaf[]
 class CreateBookServiceContractTest extends ServiceContractTest
         implements CreateBookContractTests, CreateBookConflictContractTests {
 
@@ -50,3 +51,4 @@ class CreateBookServiceContractTest extends ServiceContractTest
         ensureBookExists("00000000-0000-4000-8000-000000000409", isbn);
     }
 }
+// end::leaf[]

@@ -250,6 +250,10 @@ The two messages claim different things on purpose.
 Nothing today reads an OpenAPI example -- the TranscriberJ processes a body without one perfectly well, bodies take arguments and constraints become constants -- so its message never says the bundle cannot be used, only that the generated documentation is weaker without one.
 Overstating that would be the failure mode: a warning that cries wolf gets suppressed, and the AsyncAPI one gets suppressed alongside it.
 
+The valid values the TranscriberJ generates -- `requiredBody()`, `fullBody()` and the requests of its contract cases -- are not examples either.
+They come from the constraints alone, never from `example` or `examples`, and are the smallest values the contract allows: a title `a`, one page.
+They prove a contract is kept, and tell a reader nothing; an example is written for a reader, and belongs in the contract, or in link:../guides/documentation-tests/overview.adoc[documentation tests →].
+
 An AsyncAPI message counts as having an example when its own `examples` array (an array of `{name, summary, payload}`, sibling to `payload`) is not empty -- a payload schema's property-level `examples`, used for documentation, is a different field and does not count.
 An OpenAPI request body or response counts as having one when a media type declares `example` or `examples` directly, or when the schema its `schema` resolves to carries its own top-level `examples` -- a property inside that schema does not count.
 A body or response with no `content` at all, such as a `204`, has nothing to exemplify and is never reported.
@@ -268,10 +272,301 @@ lint:
 
 link:../../api-only-publisher/README.adoc#examples-check[An operation with no example is reported apart from lint →].
 
+[#testable]
+== Writing a contract that can be tested
+
+The API-Only TranscriberJ derives a contract test for every response the contract alone determines, and its WireMock emitter a stub for each.
+What it can derive depends on what the contract declares.
+The rules below say what to declare, and each quotes what the report prints when a contract does not; <<generation-report,The TranscriberJ's generation report §>> explains where.
+None of them stops a build: a contract that breaks one gets fewer tests, and the report says which and why.
+
+The before-and-after examples come from one small contract, generated with API-Only TranscriberJ 0.13.0 before and after each fix.
+
+[#declare-every-response]
+=== Declare every response you want tested
+
+A case is derived only for a status the operation declares *exactly*.
+A range -- `2XX`, `4XX` -- and `default` are too broad to provoke, so they generate nothing.
+
+Before:
+
+[source,yaml]
+----
+responses:
+  '2XX':
+    description: Created.
+  default:
+    description: Anything else.
+----
+
+The report's response coverage:
+
+[source,text]
+----
+  CreateThingContractCases 2XX: uncovered, range status or default -- 2XX is not one status
+  CreateThingContractCases default: uncovered, range status or default -- default is not one status
+----
+
+After:
+
+[source,yaml]
+----
+responses:
+  '201':
+    description: Created.
+  '400':
+    description: The request does not match the contract.
+----
+
+[source,text]
+----
+  CreateThingContractCases 201: covered by success-201-required
+  CreateThingContractCases 400: covered by body-required, body-name-required, body-type, body-name-type, body-name-null, body-name-maxLength
+----
+
+The response coverage lists every declared response, and is the list of what is tested and what is not; a response not declared at all is not in it.
+
+[#declare-invalid-request-response]
+=== Declare the invalid-request response on every operation that takes constrained input
+
+A contract that declares a response for an invalid request makes a promise about every constraint on the operation's input, and each constraint then gets a case.
+An operation that constrains its input and does not declare that response is a *gap*: it gets no invalid-request case at all.
+
+The status is `400` by default.
+A project that answers invalid requests otherwise sets `invalidRequestStatus` on its subscription; the operation must then declare exactly that status.
+Whatever the status, the response a case expects -- its content type and its body's fields -- always comes from the contract.
+
+The report lists every gap:
+
+[source,text]
+----
+Gaps -- these operations constrain their request input but declare no invalid-request status:
+  /paths/~1things/post (CreateThingContractCases): declare a 400 response, so that its 6 constraint(s) on request input can be tested with invalid requests
+----
+
+and every constraint of such an operation as uncovered:
+
+[source,text]
+----
+  CreateThingContractCases body application/json /name maxLength (/components/schemas/OpenThingV1/properties/name): uncovered, operation declares no invalid-request status -- declare a 400 response
+----
+
+Declaring `400`, as in the rule above, covers them all.
+
+[#contract-versus-domain]
+=== Reject what the contract forbids with `400`, and what the domain refuses with `422`
+
+A request the contract forbids -- a member missing, a value too long, a member it does not declare -- is a *contract violation*.
+The service can see it without knowing anything but the contract, so its inbound adapter rejects it before the port is called, with the invalid-request status.
+The TranscriberJ derives a case for each.
+
+A request the contract allows and the domain still refuses -- a book whose ISBN is taken, a refund larger than what is left -- is a *domain violation*.
+Only the domain can see it, and it needs state: the book that already exists.
+So it reaches the domain, is rejected there, and answers with a status of its own, such as `409` or `422`.
+No case is derived, since the contract does not say what provokes it:
+
+[source,text]
+----
+  AddContactContractCases 422: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 422
+----
+
+It is tested by one hand-written contract test, and the rule behind it by behaviour tests: link:../guides/hand-written-contract-tests/overview.adoc#how-many[How many tests, and where →].
+
+Declare the two apart.
+A contract that answers contract violations with `422` makes the adapter's job look like the domain's, and a generated test that expects `400` and receives `422` says so: "A contract violation was treated as a domain violation."
+
+[#declare-404-406-415]
+=== Declare `404`, `406` and `415` where they apply
+
+Each is generated when the operation declares it and the contract leaves room to provoke it:
+
+[cols="1,3", options="header"]
+|===
+|Status |What it requires
+
+|`404`
+|A path parameter with a second valid value, so that one value names a resource that exists and another one that does not.
+
+|`406`
+|Declared response media types that leave room for one that does not match: no `*/*`, no range that covers every candidate.
+
+|`415`
+|A request body, and declared request media types that leave room for one that does not match.
+|===
+
+Before -- a path parameter with one valid value, and a response of any media type:
+
+[source,yaml]
+----
+parameters:
+  - name: kind
+    in: path
+    required: true
+    schema:
+      type: string
+      enum: [widget]
+responses:
+  '200':
+    description: The things.
+    content:
+      '*/*':
+        schema:
+          $ref: ../components/schemas/OpenThingV1.yaml
+  '404':
+    description: No such kind.
+  '406':
+    description: Not acceptable.
+----
+
+[source,text]
+----
+  GetThingsOfKindContractCases 404: uncovered, 404 without a second valid path value -- path parameter kind has no valid value but widget
+  GetThingsOfKindContractCases 406: uncovered, 406 or 415 with no media type left to choose -- the responses' media types [*/*] match every candidate [application/vnd.apionly.not-acceptable, text/vnd.apionly.not-acceptable]
+----
+
+After -- `enum: [widget, gadget]`, and `application/json` instead of `*/*`:
+
+[source,text]
+----
+  GetThingsOfKindContractCases 404: covered by not-found
+  GetThingsOfKindContractCases 406: covered by not-acceptable
+----
+
+A `404` on an operation without a path parameter, and a `415` on one without a request body, are reported too:
+
+[source,text]
+----
+  AddContactContractCases 404: uncovered, 404 without a path parameter -- /contacts names no resource by a path parameter
+  ListContactsContractCases 415: uncovered, 415 without a request body -- the operation declares no request body
+----
+
+Such a `404` depends on something other than a path parameter -- a resource named in the body -- and is hand-written, or not declared.
+
+[#close-request-objects]
+=== Close your request objects
+
+A request object accepts the members it declares, and no others.
+
+* *Strict by default.* With `strictRequests` on, the default, an object that does not declare `additionalProperties` is taken to forbid the members it does not declare, and gets an unknown-member case.
+* *An explicit `additionalProperties: false`* is the contract's own, and always has its case.
+* *To open an object*, declare it: `additionalProperties: true`, an `additionalProperties` schema, or `patternProperties`.
+No unknown-member case is derived for it.
+* *An `allOf` is judged as a whole*: a member one branch declares is known to the object.
+
+The reason is security.
+A service that binds unknown members is open to mass assignment -- https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/[OWASP API3:2023 Broken Object Property Level Authorization ↗] -- and one that passes them on, to https://owasp.org/API-Security/editions/2023/en/0xaa-unsafe-consumption-of-apis/[OWASP API10:2023 Unsafe Consumption of APIs ↗].
+And a lenient JSON binder ignores unknown members by default, so only a test that sends one finds out.
+
+Before -- an object opened on purpose, `additionalProperties: true` -- its operation's `400` is covered by six cases, and none sends an unknown member.
+After -- `additionalProperties: false`, or none at all:
+
+[source,text]
+----
+  AddContactContractCases body application/json additionalProperties (/components/schemas/ContactV1): covered by body-unknown-member
+----
+
+Turning strictness off for a whole subscription, `strictRequests = false`, prints on every generation:
+
+[source,text]
+----
+API-Only TranscriberJ: rules 1.1.0: warning: WARNING: strictRequests is off for contract 'rules'. No request is tested for unknown members, so the service may accept them unnoticed: mass assignment (OWASP API3:2023 Broken Object Property Level Authorization) and unvalidated input passed on (OWASP API10:2023 Unsafe Consumption of APIs). Turn strictRequests back on; where a contract deliberately allows unknown members, declare additionalProperties: true instead.
+----
+
+[#give-formats-a-pattern]
+=== Give well-known formats a `pattern`
+
+What a `format` accepts differs between validators: one takes `a@b` as an email, another does not.
+A `pattern` says exactly what is valid, so the TranscriberJ generates a value from it, vouches for it, and derives a case that breaks it.
+For every well-known format without a pattern, the report says:
+
+[source,text]
+----
+Format recommendations:
+  /components/schemas/ContactV1/properties/email: format email has no pattern; declare one, since what email accepts differs between validators, and a pattern says exactly
+----
+
+The TranscriberJ recommends a pattern, and does not give one: which one is right is the contract's decision.
+Two that were generated with it:
+
+* A lower-case UUID, from link:../../examples/transcriberj/generated-contract-tests/README.adoc[the generated contract tests example →]:
++
+[source,yaml]
+----
+include::../../examples/transcriberj/generated-contract-tests/src/main/api/openapi/components/schemas/BookIdV1.yaml[]
+----
++
+Its valid value is `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, and the not-found case's `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab`.
+It accepts any hexadecimal digits in the version and variant positions, so it is the shape of a UUID, not a check of its version; and it refuses upper case, which RFC 9562 allows on input.
+* An email address, in place of `format: email`:
++
+[source,yaml]
+----
+email:
+  type: string
+  pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+  minLength: 6
+  maxLength: 254
+----
++
+Its valid value is `a@a.aa`; the pattern case sends `%%%%%%`.
+It is text around one `@`, with a dot after it: it accepts much that no mail server delivers to, and refuses a local address such as `user@localhost`.
+
+A pattern is the contract's promise, so it must be one the service keeps: a service that checks more strictly than its pattern rejects a value the contract calls valid, and its success test fails.
+A `format` beside a `pattern` is ignored, and with `validateFormats` naming it, a warning says so.
+
+[#constraints-break-alone]
+=== Write constraints a value can break alone
+
+A case breaks one constraint and nothing else, so that its failure has one cause.
+Where every value that breaks a constraint breaks another one too, there is no case, and the report names the other:
+
+[source,text]
+----
+  InitiateUserRegistrationContractCases body application/json /emailAddress minLength (/components/schemas/UserRegistrationRequestV1/properties/emailAddress): uncovered, not isolatable -- conflicting keyword format: every value found that breaks minLength breaks format too
+----
+
+That is the reference library's `emailAddress`: `format: email` with `minLength: 6`.
+The shortest address a strict validator accepts, `a@b.co`, is six characters long, so every shorter value is not an email either.
+
+Rewritten with the pattern above, `minLength: 6` can be broken alone -- `a@a.a` is five characters and matches the pattern -- and the constraint has its case:
+
+[source,text]
+----
+  AddContactContractCases body application/json /email minLength (/components/schemas/ContactV1/properties/email): covered by body-email-minLength
+----
+
+Some pairs cannot be separated, and need not be: the `type` of an enum is broken by every value that breaks the enum too, and the enum's own case covers it.
+
+[#conditionals-not-covered]
+=== Conditionals are not covered yet
+
+`if`, `then`, `else`, `dependentRequired` and `dependentSchemas` are valid OpenAPI 3.1.
+The TranscriberJ's model does not type them yet, so it never guesses what they allow.
+A schema whose validity depends on one has no valid value -- a valid value could be wrong -- and so gives no case, of any kind, to the operations that send it.
+Nothing is dropped silently; each is reported:
+
+[source,text]
+----
+Undecided constructs -- no generation rule exists for these yet:
+  /components/schemas/ContactV1: UNMODELLED_KEYWORD (dependentRequired)
+  /components/schemas/ContactV1: UNMODELLED_KEYWORD (if)
+  /components/schemas/ContactV1: UNMODELLED_KEYWORD (then)
+----
+
+[source,text]
+----
+  AddContactContractCases body application/json dependentRequired (/components/schemas/ContactV1): uncovered, keyword not modelled -- dependentRequired is not typed by the model
+  AddContactContractCases 201: uncovered, no valid value -- validity depends on dependentRequired, which the model does not type, so no value is generated rather than one guessed at at /components/schemas/ContactV1
+----
+
+Use a conditional where the API needs one, and test the operations it reaches by hand until a release types it; the changelog says when one does.
+
 [#errors]
 == What stops a build
 
 These are errors: the build stops, because what it would produce would be wrong.
+
+None of the rules in <<testable,Writing a contract that can be tested §>> is one: a contract that breaks them builds, generates, and gets fewer contract tests, and the report says which.
 
 [#publisher-errors]
 === From the Publisher
@@ -357,6 +652,9 @@ link:run-book.adoc[The run-book →] covers the rest, which concern configuratio
 `MAX_LENGTH`, `PATTERN` and the other constraint constants are there to build tests from.
 A generated `body(...)` writes the arguments it is given; a body built from arguments that break a constraint breaks it too.
 
+The constants are still constants.
+From the same constraints, the TranscriberJ now also derives the contract cases: a valid request, and one invalid request per constraint, each breaking it alone (link:../../api-only-transcriberj/README.adoc#invalid-requests[Invalid requests →]).
+
 [#fields-are-a-projection]
 === Field descriptions are a projection
 
@@ -371,11 +669,16 @@ A construct no rule represents makes the methods that reach it throw `Unsupporte
 It never fails the build and never skips a class: the class, its constants and every other method are still generated.
 
 [#verification-is-of-the-document]
-=== Contract verification proves the document, not the implementation
+=== Contract verification proves the document; generated contract tests verify the implementation
 
 The Subscriber's lock and the TranscriberJ's `verifyContractSources<Contract>` prove that the document in the build is the one that was published, and that the generated classes were generated from it.
-They prove nothing about the implementation: whether every documented operation is implemented, whether every implemented one is documented, and whether a test verifies that the implementation honours the contract.
+They prove nothing about the implementation.
 
+The generated contract tests are the first thing in the toolchain that verifies the implementation: run against the service, they prove it answers every case as the contract declares, for everything the contract expresses -- the success responses, `404`, `406`, `415`, and every constraint on request input.
+What the contract does not express, they cannot verify: a response that depends on behaviour, such as a `409`, is tested by hand.
+And the generated stateless tests are not independent of each other, so a red run is read from its first failure: link:../../api-only-transcriberj/README.adoc#testing-principle[Generated stateless contract tests are not independent of each other →].
+
+Whether every documented operation is implemented, and every implemented one documented, the tests do not say either.
 That is what the https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Gradle#readme[API-Only Suite ↗] is for: its Shadow, Mirage and Doppelganger API Detectors find the implemented-but-undocumented, the documented-but-unimplemented, and the implemented-but-unverified.
 
 [#breaking-changes]
@@ -414,13 +717,23 @@ What is in a lint report comes from Redocly CLI or AsyncAPI CLI, under the lint 
 [#generation-report]
 === The TranscriberJ's generation report
 
-`generateContractSources<Contract>` writes `build/reports/transcriberj/<contract>.txt` -- or the subscription's `reportFile` -- replacing the previous one.
-This is the one it writes for the reference library's `user-account` contract:
+`reportContractSources<Contract>` writes `build/reports/transcriberj/<contract>.txt` -- or the subscription's `reportFile` -- replacing the previous one, and `<contract>.adoc` beside it, the same report as AsciiDoc.
+This is the one API-Only TranscriberJ 0.13.0 writes for the reference library's `user-account` contract:
 
 [source,text]
 ----
-API-Only TranscriberJ: user-account 1.2.0
-0 degraded method(s), 2 recommendation(s), 2 undecided construct(s), 0 warning(s)
+API-Only TranscriberJ: user-account 1.0.0
+0 degraded method(s), 2 recommendation(s), 2 undecided construct(s), 0 warning(s), 0 method(s) without a valid value, 0 parameter(s) not supported yet
+Invalid requests: 22 case(s) derived, 19 constraint(s) covered, 9 uncovered (changes the route: 2, operation declares no invalid-request status: 5, not isolatable: 1, format validation not switched on: 1), 2 gap(s)
+Contract cases: 6 success, 1 not found, 0 not acceptable, 0 unsupported media type, 22 invalid request; 11 declared response(s) not covered (depends on behaviour or state the contract does not describe: 10, 404 without a path parameter: 1)
+
+Notes:
+  GetRootContractCases: success-200-full is not derived: the full request is the required one, as the operation declares no optional parameter or member
+  GetHealthContractCases: success-200-full is not derived: the full request is the required one, as the operation declares no optional parameter or member
+  GetUserContractCases: success-200-full is not derived: the full request is the required one, as the operation declares no optional parameter or member
+  InitiateUserRegistrationContractCases: success-202-full is not derived: the full request is the required one, as the operation declares no optional parameter or member
+  ResendVerificationEmailContractCases: success-202-full is not derived: the full request is the required one, as the operation declares no optional parameter or member
+  CompleteUserRegistrationContractCases: success-200-full is not derived: the full request is the required one, as the operation declares no optional parameter or member
 
 Recommendations:
   /paths/~1v1/get/responses/200/content/application~1json/schema: an inline schema; define it as a schema component and $ref it, so that its class is named after its fragment rather than after the operation
@@ -429,10 +742,69 @@ Recommendations:
 Undecided constructs -- no generation rule exists for these yet:
   /paths/~1v1/get/responses/200/content/application~1json/schema/properties/dependencies/additionalProperties/properties/versionName: MULTIPLE_TYPES (type: string, null)
   /paths/~1v1/get/responses/200/content/application~1json/schema/properties/dependencies/additionalProperties/properties/versionCode: MULTIPLE_TYPES (type: number, null)
+
+Gaps -- these operations constrain their request input but declare no invalid-request status:
+  /paths/~1v1~1users~1{username}/get (GetUserContractCases): declare a 400 response, so that its 5 constraint(s) on request input can be tested with invalid requests
+  /paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get (CompleteUserRegistrationContractCases): declare a 400 response, so that its 2 constraint(s) on request input can be tested with invalid requests
+
+Format recommendations:
+  /components/schemas/UserRegistrationRequestV1/properties/emailAddress: format email has no pattern; declare one, since what email accepts differs between validators, and a pattern says exactly
+
+Constraint coverage -- every constraint on request input, and the cases that cover it:
+  GetUserContractCases path username required (/paths/~1v1~1users~1{username}/get/parameters/0): uncovered, changes the route -- a path without the parameter is a different route
+  GetUserContractCases path username type (/components/schemas/UsernameV1): uncovered, operation declares no invalid-request status -- declare a 400 response
+  GetUserContractCases path username minLength (/components/schemas/UsernameV1): uncovered, operation declares no invalid-request status -- declare a 400 response
+  GetUserContractCases path username maxLength (/components/schemas/UsernameV1): uncovered, operation declares no invalid-request status -- declare a 400 response
+  GetUserContractCases path username pattern (/components/schemas/UsernameV1): uncovered, operation declares no invalid-request status -- declare a 400 response
+  InitiateUserRegistrationContractCases body required (/paths/~1v1~1users~1registrations/post/requestBody): covered by body-required
+  InitiateUserRegistrationContractCases body application/json type (/components/schemas/UserRegistrationRequestV1): covered by body-type
+  InitiateUserRegistrationContractCases body application/json /username required (/components/schemas/UserRegistrationRequestV1): covered by body-username-required
+  InitiateUserRegistrationContractCases body application/json /emailAddress required (/components/schemas/UserRegistrationRequestV1): covered by body-emailAddress-required
+  InitiateUserRegistrationContractCases body application/json additionalProperties (/components/schemas/UserRegistrationRequestV1): covered by body-unknown-member
+  InitiateUserRegistrationContractCases body application/json /username type (/components/schemas/UsernameV1): covered by body-username-type, body-username-null
+  InitiateUserRegistrationContractCases body application/json /username minLength (/components/schemas/UsernameV1): covered by body-username-minLength
+  InitiateUserRegistrationContractCases body application/json /username maxLength (/components/schemas/UsernameV1): covered by body-username-maxLength
+  InitiateUserRegistrationContractCases body application/json /username pattern (/components/schemas/UsernameV1): covered by body-username-pattern
+  InitiateUserRegistrationContractCases body application/json /emailAddress type (/components/schemas/UserRegistrationRequestV1/properties/emailAddress): covered by body-emailAddress-type, body-emailAddress-null
+  InitiateUserRegistrationContractCases body application/json /emailAddress minLength (/components/schemas/UserRegistrationRequestV1/properties/emailAddress): uncovered, not isolatable -- conflicting keyword format: every value found that breaks minLength breaks format too
+  InitiateUserRegistrationContractCases body application/json /emailAddress maxLength (/components/schemas/UserRegistrationRequestV1/properties/emailAddress): covered by body-emailAddress-maxLength
+  InitiateUserRegistrationContractCases body application/json /emailAddress format (/components/schemas/UserRegistrationRequestV1/properties/emailAddress): uncovered, format validation not switched on -- validateFormats does not name email
+  ResendVerificationEmailContractCases body required (/paths/~1v1~1users~1registrations~1verification-email/post/requestBody): covered by body-required
+  ResendVerificationEmailContractCases body application/json type (/components/schemas/UserRegistrationResendEmailRequestV1): covered by body-type
+  ResendVerificationEmailContractCases body application/json /username required (/components/schemas/UserRegistrationResendEmailRequestV1): covered by body-username-required
+  ResendVerificationEmailContractCases body application/json additionalProperties (/components/schemas/UserRegistrationResendEmailRequestV1): covered by body-unknown-member
+  ResendVerificationEmailContractCases body application/json /username type (/components/schemas/UsernameV1): covered by body-username-type, body-username-null
+  ResendVerificationEmailContractCases body application/json /username minLength (/components/schemas/UsernameV1): covered by body-username-minLength
+  ResendVerificationEmailContractCases body application/json /username maxLength (/components/schemas/UsernameV1): covered by body-username-maxLength
+  ResendVerificationEmailContractCases body application/json /username pattern (/components/schemas/UsernameV1): covered by body-username-pattern
+  CompleteUserRegistrationContractCases path verificationLink required (/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get/parameters/0): uncovered, changes the route -- a path without the parameter is a different route
+  CompleteUserRegistrationContractCases path verificationLink type (/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get/parameters/0/schema): uncovered, operation declares no invalid-request status -- declare a 400 response
+
+Response coverage -- every response each operation declares, and the cases that cover it:
+  GetRootContractCases 200: covered by success-200-required
+  GetRootContractCases 500: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 500
+  GetHealthContractCases 200: covered by success-200-required
+  GetHealthContractCases 500: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 500
+  GetUserContractCases 200: covered by success-200-required
+  GetUserContractCases 404: covered by not-found
+  GetUserContractCases 500: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 500
+  InitiateUserRegistrationContractCases 202: covered by success-202-required
+  InitiateUserRegistrationContractCases 400: covered by body-required, body-emailAddress-required, body-username-required, body-type, body-emailAddress-type, body-username-type, body-emailAddress-null, body-username-null, body-username-minLength, body-emailAddress-maxLength, body-username-maxLength, body-username-pattern, body-unknown-member
+  InitiateUserRegistrationContractCases 409: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 409
+  InitiateUserRegistrationContractCases 422: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 422
+  InitiateUserRegistrationContractCases 500: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 500
+  ResendVerificationEmailContractCases 202: covered by success-202-required
+  ResendVerificationEmailContractCases 400: covered by body-required, body-username-required, body-type, body-username-type, body-username-null, body-username-minLength, body-username-maxLength, body-username-pattern, body-unknown-member
+  ResendVerificationEmailContractCases 404: uncovered, 404 without a path parameter -- /v1/users/registrations/verification-email names no resource by a path parameter
+  ResendVerificationEmailContractCases 500: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 500
+  CompleteUserRegistrationContractCases 200: covered by success-200-required
+  CompleteUserRegistrationContractCases 410: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 410
+  CompleteUserRegistrationContractCases 422: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 422
+  CompleteUserRegistrationContractCases 500: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 500
 ----
 
 Every location is a JSON pointer into the contract's document, `~1` standing for `/`.
-The first two lines are the contract, its version, and the count of each section; a section with nothing in it is left out.
+The first four lines are the contract and its version, the count of each section, the invalid requests, and the contract cases; a section with nothing in it is left out.
 
 [cols="1,2,2", options="header"]
 |===
@@ -443,7 +815,7 @@ The first two lines are the contract, its version, and the count of each section
 |Look now; change the contract, or accept it knowingly.
 
 |*Notes*
-|Information, not a problem: the description bundle the classes resolve through, and how many keys it may carry.
+|Information, not a problem: the description bundle the classes resolve through, and each case not derived with the reason, such as a full request that is the required one.
 |Nothing.
 
 |*Degraded methods -- these throw UnsupportedOperationException*
@@ -455,22 +827,78 @@ The first two lines are the contract, its version, and the count of each section
 |Plan it; nothing breaks meanwhile.
 
 |*Undecided constructs -- no generation rule exists for these yet*
-|The contract uses something the model does not type. It is kept; a construct listed here may also be listed under *Degraded methods*, which says whether anything generated was affected.
+|The contract uses something the model does not type. It is kept; a construct listed here may also be listed under *Degraded methods* or *No valid value could be generated*, which say whether anything generated was affected.
 |Note it. When nothing is degraded, nothing generated is affected; <<use-typed-keywords,prefer typed keywords §>> where you can.
+
+|*No valid value could be generated*
+|A valid-value method that throws, with where and why: constraints nothing satisfies, or a keyword such as <<conditionals-not-covered,a conditional §>> the model does not type.
+|Its operation gets no case; fix the contract, or test it by hand.
+
+|*Gaps*
+|An operation that constrains its input and declares no invalid-request status.
+|<<declare-invalid-request-response,Declare it §>>.
+
+|*Format recommendations*
+|A well-known format with no pattern beside it.
+|<<give-formats-a-pattern,Give it a pattern §>>.
+
+|*Constraint coverage*
+|Every constraint on request input, with the cases that cover it, or the one reason it has none.
+|Read every uncovered one: <<constraints-break-alone,not isolatable §>> and a gap are the contract's to fix.
+
+|*Response coverage*
+|Every declared response, with the cases that cover it, or the one reason it has none.
+|Every covered response is a generated contract test; write the uncovered ones that depend on behaviour by hand, and <<testable,fix the contract §>> for the rest.
 |===
 
 In the report above, the recommendations name the two inline response schemas, and the two undecided constructs sit inside a map's values, which no generated method reaches, so no method is degraded.
+Two operations are gaps, and the `emailAddress` format has no pattern; ten responses depend on behaviour, and one `404` names no resource by a path parameter.
+
+[#machine-readable-report]
+=== The machine-readable report
+
+Beside the text, generation writes `<contract>.valid-values.json`: every valid value, and every contract case with its request, in `contractCases`, with `responseCoverage`, `constraintCoverage`, `gaps` and `formatRecommendations` as the text report lists them.
+One response's coverage, from the same run:
+
+[source,json]
+----
+{
+  "class": "GetRootContractCases",
+  "operation": "/paths/~1v1/get",
+  "status": "500",
+  "uncovered": {
+    "code": "BEHAVIOUR_OR_STATE",
+    "detail": "the contract does not say what provokes 500",
+    "label": "depends on behaviour or state the contract does not describe"
+  }
+}
+----
+
+link:../../api-only-transcriberj/README.adoc#valid-values-report[The machine-readable report →], in the TranscriberJ's README, describes every member.
 
 [#build-log]
 === The build log
 
-Each generation prints one line, and each warning once more:
+Each report prints three lines, and each warning once more:
 
 [source,text]
 ----
-API-Only TranscriberJ: <contract> <version>: <n> degraded method(s), <n> recommendation(s), <n> undecided construct(s), <n> warning(s) -- see <report file>
+API-Only TranscriberJ: <contract> <version>: <n> degraded method(s), <n> recommendation(s), <n> undecided construct(s), <n> warning(s), <n> method(s) without a valid value, <n> parameter(s) not supported yet -- see <report file>
+API-Only TranscriberJ: <contract> <version>: Invalid requests: <n> case(s) derived, <n> constraint(s) covered, <n> uncovered (<reason>: <n>, ...), <n> gap(s)
+API-Only TranscriberJ: <contract> <version>: Contract cases: <n> success, <n> not found, <n> not acceptable, <n> unsupported media type, <n> invalid request; <n> declared response(s) not covered (<reason>: <n>, ...)
 API-Only TranscriberJ: <contract> <version>: warning: <warning>
 ----
+
+For `user-account`:
+
+[source,text]
+----
+API-Only TranscriberJ: user-account 1.0.0: 0 degraded method(s), 2 recommendation(s), 2 undecided construct(s), 0 warning(s), 0 method(s) without a valid value, 0 parameter(s) not supported yet -- see build/reports/transcriberj/user-account.txt
+API-Only TranscriberJ: user-account 1.0.0: Invalid requests: 22 case(s) derived, 19 constraint(s) covered, 9 uncovered (changes the route: 2, operation declares no invalid-request status: 5, not isolatable: 1, format validation not switched on: 1), 2 gap(s)
+API-Only TranscriberJ: user-account 1.0.0: Contract cases: 6 success, 1 not found, 0 not acceptable, 0 unsupported media type, 22 invalid request; 11 declared response(s) not covered (depends on behaviour or state the contract does not describe: 10, 404 without a path parameter: 1)
+----
+
+The report file is printed as an absolute path; it is shortened here.
 
 [#build-warnings]
 === Warnings about the build rather than the library
@@ -534,6 +962,40 @@ This repository's reference API, link:../../reference-api/README.adoc[`reference
 |<<leave-no-fragment-unreferenced,No unreferenced fragment §>>
 |Yes
 |`unreferenced.txt` is empty.
+
+|<<declare-every-response,Every response declared exactly §>>
+|Yes
+|No range and no `default`; every declared response is in the response coverage.
+
+|<<declare-invalid-request-response,Invalid-request response declared §>>
+|No
+|Two gaps: `GET /v1/users/{username}` and `GET /v1/users/registrations/completion/{verificationLink}` constrain their path parameter and declare no `400`, so five constraints have no case for that reason.
+
+|<<contract-versus-domain,`400` for the contract, `422` for the domain §>>
+|Partly
+|`POST /v1/users/registrations` declares both.
+The completion link's operation declares `422` for an expired link, and no `400`, so a malformed link has no declared answer.
+
+|<<declare-404-406-415,`404`, `406` and `415` where they apply §>>
+|Partly
+|`GET /v1/users/{username}` has its `404` case.
+`POST /v1/users/registrations/verification-email` declares a `404` for a username in its body with no pending registration, which no case can provoke; no operation declares `406` or `415`.
+
+|<<close-request-objects,Closed request objects §>>
+|Yes
+|Both request bodies are closed, and each has its unknown-member case.
+
+|<<give-formats-a-pattern,Formats with a pattern §>>
+|No
+|`emailAddress` is `format: email` with no pattern; the report recommends one.
+
+|<<constraints-break-alone,Constraints a value can break alone §>>
+|No
+|`emailAddress`'s `minLength: 6` is not isolatable from its format.
+
+|<<conditionals-not-covered,No conditionals §>>
+|Yes
+|None is used.
 
 |<<give-every-operation-an-example,Every operation has an example §>> -- AsyncAPI
 |Yes

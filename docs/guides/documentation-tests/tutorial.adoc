@@ -1,0 +1,187 @@
+= Tutorial: documenting the books API with Spring REST Docs and the generated classes
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-transcriberj-version: 0.13.0
+:api-only-transcriberj-restdocs-version: 0.4.0
+// The worked example, beside this documentation: every listing below is included from it.
+:example-dir: ../../../examples/transcriberj/generated-contract-tests
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial writes the published documentation of link:{example-dir}/README.adoc[the generated contract tests example →], a catalogue of books, with Spring REST Docs, on the classes API-Only TranscriberJ {api-only-transcriberj-version} and its REST Docs emitter {api-only-transcriberj-restdocs-version} generate.
+Every listing is included from the example, and the output shown is from a run of it.
+
+It continues link:../generated-contract-tests/tutorial.adoc[the generated contract tests tutorial →], whose contract tests write snippets that are never published; link:overview.adoc[the overview →] says why.
+
+[#suite]
+== Step 1: A documentation test suite
+
+The documentation tests are a suite of their own, against the real service, with a database of their own:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=documentation-test-suite]
+----
+
+The subscription lists `documentationTest` among the source sets that get the schema classes, and the REST Docs emitter puts its descriptors there:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=transcriberj]
+----
+
+`generateDocs = true` gives the generated descriptors the contract's descriptions, so the field tables say what the contract says.
+The emitter has one set of options, so `documentationTest` gets the generated contract test interfaces too; it implements none of them, so none of them runs there.
+
+[#first]
+== Step 2: A first documented request and response
+
+The client is bound to the running service, and its snippets are pretty-printed, without the headers the server's transport adds:
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=client]
+----
+
+The first test adds a book a reader recognises:
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=create-book]
+----
+
+It writes `build/generated-snippets/create-book/`, among them this request:
+
+[source,http]
+----
+POST /books HTTP/1.1
+Content-Type: application/json
+Accept: application/json
+Content-Length: 168
+Host: localhost:58397
+
+{
+  "isbn" : "9780201633610",
+  "title" : "Design Patterns",
+  "subtitle" : "Elements of Reusable Object-Oriented Software",
+  "pages" : 395,
+  "format" : "hardcover"
+}
+----
+
+[#descriptors]
+== Step 3: Request fields, response fields and path parameters
+
+The test above already documents its fields with the generated descriptors: `BookRequestV1Docs.requestFields()` and `BookV1Docs.responseFields()`.
+Each is a snippet, and a check: a request or response whose fields do not match the contract -- a member missing, an undeclared one, a wrong type -- fails the test.
+So a contract that gains a required member fails this suite until the documentation shows it.
+
+The path is `CreateBookOperation.PATH`, by name.
+A path parameter is filled into `PATH` the same way, by position:
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=get-book]
+----
+
+The REST Docs emitter generates field descriptors only, not path-parameter descriptors.
+The example describes `+{id}+` in the text of its page instead.
+
+[#error]
+== Step 4: An error response, with a meaningful invalid value
+
+An error worth showing is one a reader might make: an ISBN-10 where the contract asks for an ISBN-13.
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=create-book-invalid]
+----
+
+The service answers:
+
+[source,http]
+----
+HTTP/1.1 400 Bad Request
+content-type: application/problem+json
+Content-Length: 173
+
+{
+  "title" : "The request does not match the contract.",
+  "status" : 400,
+  "errors" : [ {
+    "field" : "isbn",
+    "message" : "must match \"^97[89][0-9]{10}$\""
+  } ]
+}
+----
+
+Not `a` for a title, not `unexpectedMember`: those prove a rule, and are the contract tests' business.
+
+[#state]
+== Step 5: Arrange state as contract tests do
+
+A response is only worth showing if the service really gave it, so each test arranges the state it needs in the database, as the real contract tests' fixtures do:
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=arrange]
+----
+
+Listing the catalogue shows two books, so the test puts two there:
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=list-books]
+----
+
+And a `404` needs a book that is not there:
+
+[source,java]
+----
+include::{example-dir}/src/documentationTest/java/com/example/books/documentation/BooksDocumentationTest.java[tag=get-book-not-found]
+----
+
+[#index]
+== Step 6: The page that includes only these snippets
+
+`src/docs/asciidoc/index.adoc` is the published page.
+It includes each snippet of this suite by its directory -- `+include::{snippets}/create-book/http-request.adoc[]+` -- and nothing from `generated-service/` or `generated-stubs/`, where the contract tests write theirs.
+link:{example-dir}/src/docs/asciidoc/index.adoc[The page's source →] is short enough to read whole.
+
+[#asciidoctor]
+== Step 7: `asciidoctor`, on this suite alone
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=asciidoctor]
+----
+
+`asciidoctor` depends on the documentation suite and nothing else, so a contract test never runs to produce the page.
+`failureLevel = 'WARN'` makes a missing snippet fail the build, instead of leaving a hole in the page.
+
+[source,console]
+----
+./gradlew asciidoctor
+----
+
+The page is `build/docs/asciidoc/index.html`.
+
+[#result]
+== What you have now
+
+* A documentation suite, against the real service, with values a reader recognises.
+* Paths, bodies and field tables from the generated classes, so the page fails the build when it drifts from the contract.
+* A page that includes this suite's snippets only, and never a contract test's.

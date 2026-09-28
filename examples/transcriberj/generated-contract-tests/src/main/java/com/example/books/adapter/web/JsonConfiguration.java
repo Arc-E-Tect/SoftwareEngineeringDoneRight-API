@@ -31,6 +31,7 @@ public class JsonConfiguration {
      *
      * @return the customisation
      */
+    // tag::strict-mapper[]
     @Bean
     JsonMapperBuilderCustomizer strictAsTheContract() {
         return builder -> builder
@@ -48,4 +49,5 @@ public class JsonConfiguration {
                         .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
                         .setCoercion(CoercionInputShape.String, CoercionAction.Fail));
     }
+    // end::strict-mapper[]
 }

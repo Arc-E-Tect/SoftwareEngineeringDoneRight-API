@@ -194,7 +194,7 @@ Every use case, and the migration, has the same four documents, and each stands 
 [#guides]
 == Guides
 
-A guide covers one feature across the tools, rather than one way of adopting them, with the same four documents as a use case.
+A guide covers one feature across the tools, rather than one way of adopting them, with the same four documents as a use case, or an overview and a tutorial where no assistant is needed to adopt it.
 
 [cols="2,3,1", options="header"]
 |===
@@ -207,12 +207,24 @@ link:guides/description-bundles/tutorial.adoc[Tutorial →] +
 link:guides/description-bundles/prompt-claude-code.md[Claude Code prompt →] +
 link:guides/description-bundles/prompt-codex.md[Codex prompt →]
 
+|**Generated contract tests, their fixtures and their stubs**
+|Every response the contract can express is a generated contract test, run unchanged against the service and against WireMock stubs; what each fixture hook does, why the generated stateless tests are not independent of each other, how to read a failure, and what the stubs are for.
+|link:guides/generated-contract-tests/overview.adoc[Overview →] +
+link:guides/generated-contract-tests/tutorial.adoc[Tutorial →] +
+link:guides/generated-contract-tests/prompt-claude-code.md[Claude Code prompt →] +
+link:guides/generated-contract-tests/prompt-codex.md[Codex prompt →]
+
 |**Contract tests the generator cannot write, on top of the classes it does**
-|What to do when a generated method throws, how to write that part by hand from the generated pieces so that it still breaks when the contract moves, and why a contract test needs one example per error response rather than one per invalid input.
+|What to do when a generated method throws, how to write that part by hand from the generated pieces so that it still breaks when the contract moves, and which responses still get a hand-written contract test: one each for those that depend on behaviour the contract does not describe, with business rules left to behaviour tests.
 |link:guides/hand-written-contract-tests/overview.adoc[Overview →] +
 link:guides/hand-written-contract-tests/tutorial.adoc[Tutorial →] +
 link:guides/hand-written-contract-tests/prompt-claude-code.md[Claude Code prompt →] +
 link:guides/hand-written-contract-tests/prompt-codex.md[Codex prompt →]
+
+|**Documenting an API with Spring REST Docs and the generated classes**
+|Published documentation from documentation tests written on purpose, with meaningful values, on the generated paths, bodies and field descriptors, so that it cannot drift from the contract; never from a contract test's snippets.
+|link:guides/documentation-tests/overview.adoc[Overview →] +
+link:guides/documentation-tests/tutorial.adoc[Tutorial →]
 |===
 
 [#examples]

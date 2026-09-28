@@ -17,6 +17,7 @@ import static org.springframework.restdocs.webtestclient.WebTestClientRestDocume
  * {@code build/stubs/books} by {@code unpackBooksStubs} before every run. The contract tests
  * therefore verify the very files a consumer gets.
  */
+// tag::target[]
 @ExtendWith(RestDocumentationExtension.class)
 abstract class StubsContractTest {
 
@@ -51,6 +52,7 @@ abstract class StubsContractTest {
     public WebTestClient client() {
         return client;
     }
+    // end::target[]
 
     /**
      * The double's by-product snippets go under {@code generated-stubs/}, so that they do not
