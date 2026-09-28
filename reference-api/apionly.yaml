@@ -60,8 +60,8 @@ lint:
 # produces change only when something here does. The Publisher is the one in this
 # repository. README.adoc describes how to upgrade them.
 toolchain:
-  redocly: "@redocly/cli@2.52.0"
-  asyncapi: "@asyncapi/cli@6.0.2"
+  redocly: "@redocly/cli@2.55.0"
+  asyncapi: "@asyncapi/cli@6.2.0"
 
 # Where built artifacts are published to.
 #
