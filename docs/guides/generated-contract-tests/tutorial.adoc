@@ -1,0 +1,392 @@
+= Tutorial: generated contract tests, for a catalogue of books
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+// The component versions this document describes; change them here only.
+:api-only-transcriberj-version: 0.13.0
+:api-only-transcriberj-restdocs-version: 0.4.0
+:api-only-transcriberj-wiremock-version: 0.1.0
+:api-only-publisher-version: 0.11.0
+// The worked example, beside this documentation: every listing below is included from it.
+:example-dir: ../../../examples/transcriberj/generated-contract-tests
+:wiremock-readme: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-wiremock/README.adoc
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+This tutorial adopts generated contract tests in a small Spring Boot service, a catalogue of books, step by step.
+Every listing is included from link:{example-dir}/README.adoc[the generated contract tests example →], and every command was run in it, with API-Only TranscriberJ {api-only-transcriberj-version}, its REST Docs emitter {api-only-transcriberj-restdocs-version}, its WireMock emitter {api-only-transcriberj-wiremock-version} and API-Only Publisher {api-only-publisher-version}.
+The example is built in CI.
+
+link:overview.adoc[The overview →] makes the argument this tutorial puts into practice.
+
+[WARNING]
+.Generated stateless contract tests are not independent of each other
+====
+A stateless case the service wrongly accepts leaves state behind, and later cases then answer differently.
+Read the first failing stateless test first, fix it, and re-run on fresh state before you diagnose the next: link:overview.adoc#testing-principle[The testing principle →].
+====
+
+[#before-you-start]
+== Before you start
+
+You need Java 21 and Node.js (`^22.14.0`, `^24.10.0` or `>=26.0.0`) for the Publisher that builds the example's contract.
+To follow along in the example itself:
+
+[source,console]
+----
+git clone https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API.git
+cd SoftwareEngineeringDoneRight-API/examples/transcriberj/generated-contract-tests
+./gradlew check
+----
+
+[#contract]
+== Step 1: The contract, and a clean generation report
+
+The service adds a book, reads one, and lists the catalogue.
+Its contract declares every response it wants tested: `POST /books` declares `201`, `400`, `409` and `415`:
+
+[source,yaml]
+----
+include::{example-dir}/src/main/api/openapi/paths/Books.yaml[tag=create-book]
+----
+
+The request body is closed -- `additionalProperties: false` -- and each member refers to a component that carries its constraints:
+
+[source,yaml]
+----
+include::{example-dir}/src/main/api/openapi/components/schemas/BookRequestV1.yaml[]
+----
+
+Generation writes its report to `build/reports/transcriberj/books.txt`.
+Its first lines, from a run of the example:
+
+[source,text]
+----
+API-Only TranscriberJ: books 1.0.0
+0 degraded method(s), 0 recommendation(s), 0 undecided construct(s), 0 warning(s), 0 method(s) without a valid value, 0 parameter(s) not supported yet
+Invalid requests: 30 case(s) derived, 26 constraint(s) covered, 3 uncovered (not isolatable: 1, changes the route: 1, not expressible in a parameter: 1), 0 gap(s)
+Contract cases: 5 success, 1 not found, 1 not acceptable, 1 unsupported media type, 30 invalid request; 1 declared response(s) not covered (depends on behaviour or state the contract does not describe: 1)
+----
+
+Nothing is degraded, nothing is recommended, and there is no gap: every operation that constrains its input declares `400`.
+Three constraints have no case, each for a reason no contract can avoid: a path parameter's `required` changes the route, its `type` cannot be broken since every parameter travels as a string, and every value that breaks the `type` of the `format` enum breaks the enum too.
+
+Its response coverage lists 38 cases, and one response with none:
+
+[source,text]
+----
+  CreateBookContractCases 409: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 409
+----
+
+That `409` is the one contract test you write by hand, in <<hand-written,Step 7 §>>.
+
+[#configure]
+== Step 2: Configure the three emitters
+
+Add both emitters, and what the generated tests need in the source set they are generated into:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=emitter-dependencies]
+----
+
+The contract tests run against two targets, so a source set that is not a suite holds what both share:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=contract-test-common]
+----
+
+Then configure each emitter for its purpose:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=transcriberj]
+----
+
+* The schema classes go to every suite that exercises the API, compiled once in `transcriberjBooks`.
+* The REST Docs output goes to `contractTestCommon`, where both contract suites find the interfaces, and to `documentationTest`, which needs the descriptors.
+* The WireMock stubs go on no source set; `packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.0.zip`, and `priority: '2'` leaves WireMock's highest priority to hand-written stubs.
+
+The two contract suites differ only in their target:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=contract-test-suites]
+----
+
+[#interfaces]
+== Step 3: The shared interfaces, and one leaf per target
+
+For each operation, the REST Docs emitter generates `<Operation>ContractTests` in `com.example.books.contract.restdocs`: `CreateBookContractTests`, `GetBookContractTests` and `ListBooksContractTests`.
+This is the start of `GetBookContractTests`, as generated:
+
+[source,java]
+----
+public interface GetBookContractTests {
+
+    WebTestClient client();
+
+    default void arrangeState(ContractCase contractCase) {
+        throw new FixtureNotImplementedException(contractCase, "GetBookContractTests", "@Override\npublic void arrangeState(ContractCase contractCase) {\n    switch (contractCase.id()) { ...");
+    }
+
+    default void arrangeStatelessCase(ContractCase contractCase) {
+    }
+
+    default String generatedDocumentationPrefix() {
+        return ContractTestSupport.DEFAULT_PREFIX;
+    }
+
+    @Test
+    @DisplayName("GET /books/{id}: a valid request with the required parameters and body members only returns 200")
+    default void success200Required_returns200() {
+        ContractCase contractCase = GetBookContractCases.CASES.get(0);
+        arrangeState(contractCase);
+        ContractTestSupport.clientFor(client(), contractCase).get()
+                .uri(GetBookOperation.PATH, ContractTestSupport.pathValues(contractCase))
+                // ... the case's headers, then the status, the content type, and document()
+    }
+    // ... notFound_returns404, notAcceptable_returns406, pathIdPattern_returns400
+}
+----
+
+The Javadoc is left out, and the elided parts are marked `...`; the file is `build/generated/sources/transcriberj/books/restdocs/com/example/books/contract/restdocs/GetBookContractTests.java`.
+
+Each target has a base class that supplies `client()`.
+The real one starts the service and binds the client to it:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/ServiceContractTest.java[tag=target]
+----
+
+The double starts WireMock over the unpacked archive:
+
+[source,java]
+----
+include::{example-dir}/src/contractTestWireMock/java/com/example/books/contracttest/stubs/StubsContractTest.java[tag=target]
+----
+
+A leaf per operation and target then implements the interface: six classes, three per target.
+
+[#arrange-state]
+== Step 4: The real target's `arrangeState`, one kind at a time
+
+`arrangeState` runs before every success and not-found case.
+On the real service, it works in the database, and only there, through three helpers:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/ServiceContractTest.java[tag=fixtures]
+----
+
+*Success, for a read.* The book the path names must exist, so the fixture inserts it:
+
+*Not found.* The book the path names must not exist, whatever ran before, so the fixture deletes it:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/GetBookServiceContractTest.java[tag=leaf]
+----
+
+*Success, for a create.* No book may have the request's ISBN yet, on every run, so the fixture deletes it:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/CreateBookServiceContractTest.java[tag=leaf]
+----
+
+*Success, for a list.* An empty page is a `200` too, but its items could not be checked against the fields the contract declares, so the fixture inserts one book:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/ListBooksServiceContractTest.java[tag=leaf]
+----
+
+A leaf without `arrangeState` still compiles.
+Its stateful tests fail with `FixtureNotImplementedException`, which says what the case needs and how to start:
+
+include::{example-dir}/README.adoc[tag=try-it-7]
+
+Paste the suggestion in, and replace each comment with the code that creates the state it names.
+
+[#run-double]
+== Step 5: Run on the double, from the mapping files
+
+[source,console]
+----
+./gradlew contractTestWireMock
+----
+
+`unpackBooksStubs` unpacks the archive afresh into `build/stubs/books`, and the double loads it.
+Its `arrangeState` does nothing, since every case already has its exact stub:
+
+[source,java]
+----
+include::{example-dir}/src/contractTestWireMock/java/com/example/books/contracttest/stubs/GetBookStubsContractTest.java[tag=leaf]
+----
+
+All 39 tests pass: the 38 generated ones, and the hand-written `409`.
+Every test passing here proves the stubs a consumer gets answer every case as the contract declares.
+
+Delete one mapping file, and exactly its test fails, answered by the valid fallback in its place:
+
+[source,console]
+----
+./gradlew unpackBooksStubs
+rm build/stubs/books/mappings/getBook/not-found.json
+./gradlew contractTestWireMock -x unpackBooksStubs --continue
+----
+
+include::{example-dir}/README.adoc[tag=try-it-6]
+
+[#run-service]
+== Step 6: Run on the real service
+
+[source,console]
+----
+./gradlew contractTest
+----
+
+All 39 tests pass.
+Run them twice on the same database, and they pass both times: each fixture sets exactly the state its case needs, whatever an earlier run left behind.
+
+[source,console]
+----
+rm -rf build/database && ./gradlew contractTest && ./gradlew contractTest --rerun
+----
+
+include::{example-dir}/README.adoc[tag=try-it-8]
+
+The databases in `build/database` are kept between runs; delete the directory for fresh state.
+
+[#hand-written]
+== Step 7: The hand-written `409`
+
+The contract declares `409` without saying what provokes it, so no case covers it.
+It is written by hand, on the pattern of the generated interfaces, in `contractTestCommon`, so that both targets implement it:
+
+[source,java]
+----
+include::{example-dir}/src/contractTestCommon/java/com/example/books/contracttest/CreateBookConflictContractTests.java[tag=leaf]
+----
+
+The request is built with the generated `BookRequestV1.body(...)` rather than from `requiredRequest()`, because it needs an ISBN no generated case sends: on the double, its stub must not answer theirs.
+The response is checked with the generated `ProblemV1Docs.responseFields()`.
+
+The real leaf's hook inserts a book with that ISBN, with the same helper the success fixtures use; the double's registers a hand-written stub at priority `1`:
+
+[source,java]
+----
+include::{example-dir}/src/contractTestWireMock/java/com/example/books/contracttest/stubs/CreateBookStubsContractTest.java[tag=leaf]
+----
+
+link:../hand-written-contract-tests/overview.adoc#how-many[How many tests, and where →] says which responses get such a test.
+
+[#try-it]
+== Step 8: What the tests find
+
+Each change below breaks the service in one way; the output is from a run of the example, and each change is undone before the next.
+
+*Unknown members accepted.*
+In `JsonConfiguration`, `disable` `FAIL_ON_UNKNOWN_PROPERTIES`, and run `rm -rf build/database && ./gradlew test contractTest --continue`:
+
+include::{example-dir}/README.adoc[tag=try-it-1]
+
+Undo it, and the unknown-member case passes again.
+
+*Two constraints removed.*
+In `BookRequest`, drop `title`'s maximum length and `pages`' maximum, and run the same command:
+
+include::{example-dir}/README.adoc[tag=try-it-2]
+
+Read the first stateless failure first: `pages` above its maximum was accepted, and created a book.
+The `title` case's `409` is its consequence, not a second cause.
+Put `@Max(5000)` back, and run again on a fresh database:
+
+include::{example-dir}/README.adoc[tag=try-it-2b]
+
+Put `max = 120` back, and the suite is green.
+
+*A fixture that does nothing.*
+In `GetBookServiceContractTest.arrangeState`, replace `ensureBookExists(id, FIXTURE_ISBN)` with `{ }`, and run `rm -rf build/database && ./gradlew contractTest --continue`:
+
+include::{example-dir}/README.adoc[tag=try-it-3]
+
+Put it back.
+
+*The resource looked up before the request is validated.*
+Remove the `@Pattern` from `BookController.getBook`'s `id`, and treat a malformed identifier as one the catalogue cannot find:
+
+include::{example-dir}/README.adoc[tag=try-it-4]
+
+Restore `getBook`.
+
+*`Accept` ignored.*
+Remove `produces` from `getBook`'s mapping, and run `rm -rf build/database && ./gradlew test contractTest --continue`, then `./gradlew contractTest` on the same database:
+
+include::{example-dir}/README.adoc[tag=try-it-5]
+
+include::{example-dir}/README.adoc[tag=try-it-5b]
+
+The same case answers `404`, then `200`: a stateless case whose answer depends on state.
+Put `produces` back.
+
+link:{example-dir}/README.adoc#try-it[Try it →], in the example's README, gives every change in full.
+
+[#stubs]
+== Step 9: Package the stubs, and run the image
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=stubs]
+----
+
+`booksStubsImage` builds an image of the official WireMock image with the stubs in it, from this `Dockerfile`:
+
+[source,dockerfile]
+----
+include::{example-dir}/src/docker/stubs/Dockerfile[]
+----
+
+It needs Docker, so it is not part of `check`:
+
+include::{example-dir}/README.adoc[tag=stubs-image]
+
+A consumer calls it as it would call the service:
+
+include::{example-dir}/README.adoc[tag=stubs-curl]
+
+A request no case generated is answered by a fallback, and `Matched-Stub-Name` says which.
+A malformed identifier gets the invalid fallback:
+
+[source,console]
+----
+$ curl -i localhost:8080/books/not-a-uuid -H 'Accept: application/json, application/problem+json'
+HTTP/1.1 400 Bad Request
+Matched-Stub-Name: getBook/fallback-invalid
+
+{"title":"a","status":0,"detail":"a","errors":[{"field":"a","message":"a"}]}
+----
+
+Hand the archive, or the image, to your consumers; link:{wiremock-readme}#packaging[Packaging and distribution ↗] says how to publish it.
+
+[#next]
+== Step 10: Document the API
+
+The contract tests have written snippets under `build/generated-snippets/generated-service/` and `generated-stubs/`.
+They are a by-product, and are never published: their values are minimal, and the double's carry WireMock's headers.
+
+The published documentation comes from documentation tests written on purpose, on the same generated classes: link:../documentation-tests/tutorial.adoc[the documentation tests tutorial →] continues from here, on the same example.

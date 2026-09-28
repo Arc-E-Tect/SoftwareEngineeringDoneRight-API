@@ -1,0 +1,417 @@
+= Guide: generated contract tests, their fixtures and their stubs
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+// The worked example, beside this documentation: every listing below is included from it.
+:example-dir: ../../../examples/transcriberj/generated-contract-tests
+:restdocs-readme: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-restdocs/README.adoc
+:wiremock-readme: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-wiremock/README.adoc
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+From a contract, the API-Only TranscriberJ derives a *contract case* for every response the contract alone determines: a request, and the response the contract declares for it.
+Its REST Docs emitter renders every case as a contract test, and its WireMock emitter as a stub.
+
+So you no longer write a contract test for a success response, for a `404`, a `406` or a `415`, or for any declared constraint of a request.
+You write the fixture each test needs, run the same tests against your service and against a double, and fix what they find.
+
+A green run proves that the service answers every generated case as the contract declares: the status, the content type, and a body with the fields the contract describes.
+
+It does not prove two things:
+
+* *Nothing a generated test writes is documentation.*
+The tests call `document()` to check a response, and the snippets that writes are never published: <<document,`document()` in contract tests §>>.
+* *A response that depends on behaviour the contract does not describe is never generated.*
+A `409`, a `422`, a `429`, a `401` or a `403` stays a hand-written contract test: <<hand-written,What stays hand-written §>>.
+
+This guide builds on link:{example-dir}/README.adoc[the generated contract tests example →], a catalogue of books whose contract has three operations.
+
+[#case-kinds]
+== The case kinds
+
+[cols="1,2,1,1", options="header"]
+|===
+|Kind |What it sends |Expects |Needs state
+
+|Success
+|A valid request: the required one, the full one, and the one without an optional body where there is one
+|Each exact `2xx` the operation declares
+|Yes
+
+|Not found
+|The valid request, naming a resource by other valid path values
+|`404`
+|Yes
+
+|Not acceptable
+|The valid request, with an `Accept` no declared response offers
+|`406`
+|No
+
+|Unsupported media type
+|The valid body, with a `Content-Type` the request body does not accept
+|`415`
+|No
+
+|Invalid request
+|The smallest valid request with exactly one constraint broken, one case per constraint
+|The invalid-request status, `400` by default
+|No
+|===
+
+A case is derived only for a status the operation declares exactly.
+link:../../../api-only-transcriberj/README.adoc#contract-cases[Contract cases →], in the TranscriberJ's README, says how each is derived.
+
+[#response-coverage]
+=== Response coverage
+
+The generation report, `build/reports/transcriberj/<contract>.txt`, lists every response every operation declares, with the cases that cover it or the one reason it has none.
+For the example's contract:
+
+[source,text]
+----
+Response coverage -- every response each operation declares, and the cases that cover it:
+  CreateBookContractCases 201: covered by success-201-required, success-201-full
+  CreateBookContractCases 400: covered by body-required, body-format-required, body-isbn-required, body-pages-required, body-title-required, body-type, body-isbn-type, body-pages-type, body-subtitle-type, body-title-type, body-isbn-null, body-pages-null, body-subtitle-null, body-title-null, body-format-enum, body-subtitle-minLength, body-title-minLength, body-subtitle-maxLength, body-title-maxLength, body-isbn-pattern, body-pages-minimum, body-pages-maximum, body-unknown-member
+  CreateBookContractCases 409: uncovered, depends on behaviour or state the contract does not describe -- the contract does not say what provokes 409
+  CreateBookContractCases 415: covered by unsupported-media-type
+  ListBooksContractCases 200: covered by success-200-required, success-200-full
+  ListBooksContractCases 400: covered by query-page-type, query-size-type, query-page-minimum, query-size-minimum, query-page-maximum, query-size-maximum
+  GetBookContractCases 200: covered by success-200-required
+  GetBookContractCases 400: covered by path-id-pattern
+  GetBookContractCases 404: covered by not-found
+  GetBookContractCases 406: covered by not-acceptable
+----
+
+Read it as your list of contract tests.
+Every covered response is a generated test; every uncovered one is either a response you write a test for by hand, or a change the contract needs.
+
+An uncovered response has one of a closed list of reasons, in link:../../../api-only-transcriberj/README.adoc#response-coverage[Response coverage →].
+The ones that point at the contract -- a range such as `4XX`, a `404` without a path parameter, an operation that does not declare the invalid-request status -- are rules for the contract's author, in link:../../reference/authoring-a-specification-library.adoc#declare-every-response[Authoring a specification library →].
+The one that points at you is _depends on behaviour or state the contract does not describe_: here, the `409`.
+
+[#configuring]
+== Configuring the emitters
+
+Each part of what is generated has a purpose of its own, so each goes somewhere else:
+
+* the *schema classes* -- the bodies, the operations, the valid values, the contract cases -- go wherever the API is exercised: component tests of the inbound adapter, contract tests, documentation tests, system tests;
+* the *REST Docs* emitter's output -- the `*Docs` descriptors and, with `tests`, the contract tests -- goes to contract tests, and the descriptors to documentation tests too;
+* the *WireMock* emitter's stubs go on no source set: they are packaged for the API's consumers, and serve as the reference double for contract tests in any language.
+
+A subscription configures each emitter in an `emitter(...)` block of its own:
+
+[source,groovy]
+----
+include::{example-dir}/build.gradle[tag=transcriberj]
+----
+
+The schema classes reach several source sets in one of two ways:
+
+[cols="1,2,2", options="header"]
+|===
+| |`perSourceSet`, the default |`shared`
+
+|How
+|The generated directory is added to every listed source set, and each compiles it.
+|One source set, `transcriberj<Contract>`, compiles them once, and every listed source set depends on it.
+
+|For
+|No wiring between source sets.
+|One compilation, and one identity per class.
+
+|Against
+|One compilation per source set, and a directory IntelliJ puts in one module only.
+|One more source set, and one more module in the IDE.
+|===
+
+The example lists five source sets, so it shares them.
+link:../../../api-only-transcriberj/README.adoc#emitter-configuration[Configuring each emitter →] is the reference for every setting.
+
+[#pure-contract-tests]
+== Pure contract tests: one test, two targets
+
+The REST Docs emitter generates, for every operation with a case, an interface, `<Operation>ContractTests`, with one test per case.
+The tests hold every value; what they do not hold is *which* implementation they test, and *what state* it is in.
+A class implements the interface for each target, and supplies both:
+
+* `client()`, a `WebTestClient` bound to the target and configured for Spring REST Docs;
+* `arrangeState(ContractCase)`, called before every success and not-found case;
+* `arrangeStatelessCase(ContractCase)`, called before every other case.
+
+[cols="1,2,2", options="header"]
+|===
+|Hook |Default |What a target does with it
+
+|`arrangeState`
+|Throws `FixtureNotImplementedException`, which fails the test with the case, what it needs, and a suggested implementation to paste in.
+|The real service: puts it in the state the case needs.
+The double: nothing, since every case already has a stub.
+
+|`arrangeStatelessCase`
+|Does nothing.
+|The real service: nothing, since it refuses the request before any state is consulted.
+A double registering stubs from Java: registers the case's stub.
+|===
+
+A project compiles and runs straight after generation: every stateless test runs as it will for good, and every stateful one fails, saying what it waits for, until its target implements `arrangeState`.
+
+[#real-target]
+=== The real target
+
+The example's real target starts the service on a random port, over its real database, and sends real HTTP:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/ServiceContractTest.java[tag=target]
+----
+
+Each leaf implements `arrangeState` for its operation, in the database and only there:
+
+[source,java]
+----
+include::{example-dir}/src/contractTest/java/com/example/books/contracttest/service/GetBookServiceContractTest.java[tag=leaf]
+----
+
+For `200`, it *inserts* the book the path names; for `404`, it *deletes* it, whatever ran before.
+For the `POST`, it deletes any book with the request's ISBN, so that `201` is the right answer on every run, not just the first.
+The service must then answer as the contract says: anything else is a defect in the service, not in the test.
+
+[#double-target]
+=== The double
+
+The double loads the mapping files the archive ships, and its hooks do nothing:
+
+[source,java]
+----
+include::{example-dir}/src/contractTestWireMock/java/com/example/books/contracttest/stubs/GetBookStubsContractTest.java[tag=leaf]
+----
+
+Every exact stub matches its own case's request and no other, so every test is answered by its own case's stub, and the contract tests verify the very files a consumer gets.
+
+With the WireMock emitter's `format: 'java'`, there are no files: each hook registers its case's stub instead, with `ContractStubs.mappingFor(contractCase)`.
+link:{wiremock-readme}#double-in-contract-tests[The double in contract tests ↗] shows both.
+
+[#testing-principle]
+== The testing principle, and where generated tests break it
+
+[WARNING]
+.Generated stateless contract tests are not independent of each other
+====
+Tests must be independent of each other and idempotent: each passes or fails on its own, in any order, however often it runs.
+
+*Stateless cases do not meet that principle* -- invalid request, not acceptable, unsupported media type.
+They are derived from the contract, not from the implementation, and every case of an operation starts from the same valid request.
+An implementation that wrongly accepts one may store what it was sent, and that state stays behind.
+
+*Stateful cases meet it* -- success and not found -- when their `arrangeState` is correct, since it sets exactly the state each case needs, whatever ran before.
+
+So one stateless case wrongly accepted can make later cases, of the same operation or another, answer differently, and differently again on the next run.
+A correct implementation accepts no invalid request, so a green run is trustworthy.
+
+When a run is red:
+
+. read the *first* failing stateless test, and treat every later failure as possibly its consequence;
+. fix what it points at;
+. re-run on fresh state before you diagnose the next failure.
+
+This is a known and accepted limit of generating tests from a contract, not a defect awaiting a fix.
+====
+
+*Why stateless cases cannot be independent.*
+A stateless case needs nothing from the service: a correct one refuses it before the port is called, and stores nothing.
+The generator cannot know what a *wrong* one stores, or how to undo it, because it derives the cases from the contract, not from the implementation.
+And every invalid-request case of an operation is the same valid request with one fault, so what one of them leaves behind is exactly what the next one runs into.
+
+*Why stateful cases can be.*
+A success or not-found case says what state it needs.
+A fixture that sets exactly that state -- inserts the book, deletes the book -- makes the case pass in any order, any number of times.
+The example runs its contract tests twice on one database, and in random orders, and they pass every time.
+
+*What it looks like.*
+In the example, remove the `title` length limit and the `pages` maximum from the service, and run the contract tests on a fresh database:
+
+include::{example-dir}/README.adoc[tag=try-it-2]
+
+The first case to run, `pages` above its maximum, fails with the message for a request wrongly accepted: the service created a book.
+The second fails with `409` instead of `400`, and its message points nowhere useful.
+It is not a second cause: every case sends the same ISBN, and the book the first case left behind now holds it.
+Put the maximum back, re-run on a fresh database, and the `title` case fails with its own message:
+
+include::{example-dir}/README.adoc[tag=try-it-2b]
+
+That is the procedure in the warning: the first failure, a fix, a fresh run, the next failure.
+
+A stateless case can depend on state in one more way: when the service ignores what the case tests and answers from its data instead.
+The example's Try it, step 5, has a not-acceptable case answer `404` on a fresh database and `200` on the next run, once a success fixture has inserted the book it names.
+link:{example-dir}/README.adoc#try-it[Try it →] has every step.
+
+[#where-they-sit]
+== Where contract tests sit among the other tests
+
+*Unit and component tests* are scoped: each tests a unit, or one component, and mocks everything else.
+That is why they are fast, and fail fast.
+It is also why they bypass whatever lies outside their scope, and Spring Boot's JSON mapper lies outside the scope of every one of them.
+The example's component tests of the HTTP adapter run the controller in MockMvc's standalone mode, whose JSON mapper is Spring's default, not the one Spring Boot configures:
+
+[source,java]
+----
+include::{example-dir}/src/test/java/com/example/books/adapter/web/BookControllerTest.java[tag=standalone]
+----
+
+*Contract tests* send real HTTP to the running service, so they are the first tests that see JSON binding as a client meets it.
+The example configures its mapper to be as strict as the contract:
+
+[source,java]
+----
+include::{example-dir}/src/main/java/com/example/books/adapter/web/JsonConfiguration.java[tag=strict-mapper]
+----
+
+Turn its first setting from `enable` to `disable`, so that the service ignores a member it does not know, and run both suites:
+
+include::{example-dir}/README.adoc[tag=try-it-1]
+
+The component tests stay green.
+Only the generated unknown-member case notices -- and an unknown member accepted unnoticed is how mass assignment starts.
+
+*System tests* see the service with its real collaborators: a real database server, the services it calls.
+*End-to-end tests* see the system as a user meets it.
+
+So scoped unit and component tests are safe *because* a comprehensive contract test suite and a system test suite exist beside them.
+Without those, nothing tests what JSON binding does, and a change in it -- a dependency upgrade, a default flipped -- ships unnoticed.
+
+[#document]
+== `document()` in contract tests
+
+Every generated test calls `document()`, because that is where Spring REST Docs checks a response against its fields: `responseFields()` fails the test on a missing required member, an undeclared member of a closed body, or a wrong type.
+
+No generated test calls `requestFields()`.
+An invalid request is invalid by design, and a request-fields snippet would fail on the missing or unknown member it holds on purpose; a valid request needs no documentation from a contract test.
+
+Calling `document()` writes snippets, under the prefix `generatedDocumentationPrefix()` returns, and those snippets are *never* published:
+
+* their values are minimal by design -- a book titled `a`, of one page;
+* a double's snippets carry the double: WireMock's `Matched-Stub-Id` and `Matched-Stub-Name` headers, which no real response has;
+* contract tests exist to fail, not to explain.
+
+The example gives each target a prefix of its own -- `generated-service`, `generated-stubs` -- so that neither overwrites the other, and its published page includes neither.
+Published documentation comes from documentation tests written on purpose: link:../documentation-tests/overview.adoc[the guide to documentation tests →].
+
+[#reading-a-failure]
+== Reading a failure
+
+*Read the first failing stateless test first*, as <<testing-principle,the warning §>> says.
+
+A test that receives another status fails with a message that names the case and where to look.
+It starts `<id> (<kind>: <description>): expected <status>, received <status>.` -- for an invalid request, `<id> (INVALID_REQUEST: <description>, at <location> <keyword>): ...` -- and goes on:
+
+[cols="1,1,3,2", options="header"]
+|===
+|Kind |Received |Message |Where to look
+
+|Success |`400` |The implementation rejects a request the contract declares valid. Compare its validation with the contract: an anchored or stricter pattern, a stricter length or bound, a member it requires that the contract makes optional, or an optional member of the full request it does not know.
+|The inbound adapter's validation.
+|Success |`404` |The fixture did not create the resource, or the implementation looks for it somewhere else. Check arrangeState for this case.
+|`arrangeState`, then the persistence adapter.
+|Success |`409` |State left behind: the fixture did not remove what this request creates. Check arrangeState for this case.
+|`arrangeState` for a create.
+|Success |another `2xx` |The implementation answers with a status the contract does not declare for this case, or the fixture set up the state for another declared status. Check arrangeState for this case.
+|`arrangeState`, and the controller's status.
+|Success |`5xx` |The implementation failed on a request the contract declares valid.
+|The service's log.
+|Not found |`2xx` |The fixture did not remove the resource, or the implementation answers for any identifier. Check arrangeState for this case.
+|`arrangeState`, then the lookup.
+|Not found |`400` |The implementation rejects an identifier the contract declares valid.
+|The identifier's validation.
+|Not acceptable |`2xx` |Content negotiation is not enforced: the implementation ignores Accept.
+|The controller's `produces`.
+|Unsupported media type |`2xx` |The implementation accepts a Content-Type the contract does not declare for this request.
+|The controller's `consumes`.
+|Unsupported media type |`400` |The implementation parsed the body before checking its media type.
+|The order of the adapter's checks.
+|Invalid request |`2xx` |The implementation accepted a request the contract declares invalid: `<keyword>` at `<location>` is not enforced.
+|The request object's constraints, or the JSON mapper for `additionalProperties`, `type` and `null`.
+|Invalid request |`404` |The implementation looked the resource up before validating the request. The inbound adapter should reject contract violations before the port is called.
+|The adapter: validate before calling the port.
+|Invalid request |`422`, where `400` is expected |A contract violation was treated as a domain violation. It should be rejected by the adapter, not the domain.
+|The adapter: the domain never sees a contract violation.
+|Invalid request |`5xx` |The implementation failed instead of rejecting the request.
+|The adapter's error handling.
+|Any |anything else |Nothing more.
+|The first failing stateless test, if this one is not it.
+|===
+
+A response whose content type is not compatible with one the case declares fails naming the case, too; and `document()` fails on a body whose fields do not match the contract's.
+
+A stateful test that has no fixture yet fails with `FixtureNotImplementedException`, its case, and a suggested `arrangeState` to start from.
+The example's link:{example-dir}/README.adoc#try-it[Try it →], step 7, shows one.
+
+[#stubs]
+== The stubs
+
+The WireMock emitter's stubs have two purposes.
+
+* *An early, specification-compliant draft of the API, for its consumers.*
+The team that implements the API hands them over, or publishes them, so that consumers can start before the implementation exists.
+They answer as the contract says: the declared status, the declared content type, a body the contract allows.
+* *The reference double for contract tests, in any language.*
+The generated contract tests pass against them unchanged, and a team whose implementation is in Go or Python runs its own contract tests against the same archive, or an image built from it.
+
+For every case there is an *exact stub*, which matches only that case's request.
+For every other request, each operation has *fallbacks*, of lower priority, tried in this order: `406` for an unacceptable `Accept`, `415` for an unsupported `Content-Type`, the first declared `2xx` for a request its matchers call valid, and the invalid-request status for anything else on the operation's path.
+
+A fallback enforces exactly what WireMock's matchers can:
+
+* the body, by its JSON Schema, exactly -- except `format`, which only `uuid`, `date`, `date-time` and `email` are checked for, by their shape where `validateFormats` names them;
+* a parameter by a regular expression derived from its schema, which enforces `required`, `type`, `enum`, `const`, `pattern`, `minLength` and `maxLength`, and never `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`, `minItems`, `maxItems` or `uniqueItems`.
+
+So a fallback is looser than the contract for parameters: a parameter only a bound rules out reaches the valid fallback, and gets the `2xx`.
+A stub answers by no state: an operation that answers `200` or `201` to the same request gets the first one only.
+
+link:{wiremock-readme}#packaging[Packaging and distribution ↗], in the WireMock emitter's README, says how to package, publish and run them; the example's link:{example-dir}/README.adoc[The stubs as a deliverable →] does it.
+
+[#hand-written]
+== What stays hand-written
+
+A response that depends on behaviour the contract does not describe is never generated: `409`, `422`, `429`, `401`, `403`, any `3xx` or `5xx`.
+Each gets one hand-written contract test, on the same pattern: a default test in an interface, a hook each target implements, the request built from the generated classes, and the response checked with the generated `*Docs` descriptors.
+The example's `409` is one.
+
+Which inputs the domain refuses, and why, is behaviour, and stays in behaviour tests.
+link:../hand-written-contract-tests/overview.adoc#how-many[How many tests, and where →], in the guide to hand-written contract tests, states the whole rule.
+
+[#adoption]
+== Adoption in broad strokes
+
+. *Read the generation report.* Its response coverage is your list of contract tests; fix the contract where a response is uncovered for a reason the contract causes.
+. *Configure the emitters* for their purposes: schema classes wherever the API is exercised, REST Docs in the contract tests, WireMock on no source set.
+. *Implement each interface twice*: once for your service, once for the double.
+. *Run on the double first.* Every test passes there, or the stubs are wrong.
+. *Implement `arrangeState` on your service*, one kind at a time, from the suggestion each failure prints.
+. *Run on your service*, and treat every failure as a finding: read the first stateless failure first, fix, re-run on fresh state.
+. *Write the responses the contract cannot generate by hand*, on the same pattern.
+. *Publish the stubs* for your consumers.
+. *Write the documentation tests* that produce your published documentation.
+
+[#next]
+== Where to go next
+
+* link:tutorial.adoc[The tutorial →] does all of this, step by step, on the example.
+* link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant adopt generated contract tests in your own project.
+* link:../documentation-tests/overview.adoc[The guide to documentation tests →] writes the published documentation on the same generated classes.
+* link:../hand-written-contract-tests/overview.adoc[The guide to hand-written contract tests →] writes the tests the generator cannot.
+* link:{restdocs-readme}[The REST Docs emitter's README ↗] and link:{wiremock-readme}[the WireMock emitter's README ↗] are the reference for what each generates.
