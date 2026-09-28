@@ -39,6 +39,23 @@ function run(command, args, { quiet, reportFile = null } = {}) {
 }
 
 /**
+ * Copy a directory tree, symlinks as symlinks.
+ *
+ * Not fs.cpSync: its native implementation fails with EACCES on Docker Desktop's
+ * bind mounts, which is where the Publisher's image stages a mounted library.
+ */
+function copyTree(from, to) {
+    fs.mkdirSync(to, { recursive: true });
+    for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+        const source = path.join(from, entry.name);
+        const dest = path.join(to, entry.name);
+        if (entry.isDirectory()) copyTree(source, dest);
+        else if (entry.isSymbolicLink()) fs.symlinkSync(fs.readlinkSync(source), dest);
+        else fs.copyFileSync(source, dest);
+    }
+}
+
+/**
  * Copy the whole source root to the staging directory for one specification
  * type.
  *
@@ -52,8 +69,7 @@ function stage(config, kind, log) {
     const to = config.stagingRoot(kind);
     log(`-- Staging ${path.relative(config.root, from)} -> ${path.relative(config.root, to)}`);
     fs.rmSync(to, { recursive: true, force: true });
-    fs.mkdirSync(to, { recursive: true });
-    fs.cpSync(from, to, { recursive: true });
+    copyTree(from, to);
     return to;
 }
 
@@ -122,7 +138,7 @@ function bundleWithFragmentPaths(config, target, kind, outFile, log) {
 
     const pass = (name, only) => {
         const root = path.join(scratch, name);
-        fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
+        copyTree(config.stagingRoot(kind), root);
         try {
             stampFiles(root, { only });
         } catch (error) {
@@ -171,7 +187,7 @@ function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
     const scratch = config.fragmentPathStaging(target);
     fs.rmSync(scratch, { recursive: true, force: true });
     const root = path.join(scratch, "stamp");
-    fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
+    copyTree(config.stagingRoot(kind), root);
 
     const bundleRoot = path.relative(root, config.bundleRootPath(target, kind, root)).split(path.sep).join("/");
     try {
@@ -355,5 +371,5 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
 }
 
 module.exports = {
-    build, prepare, stage, substituteTree, bundle, bundleWithFragmentPaths, lint, checkExamples, distribute, BuildError,
+    build, prepare, stage, copyTree, substituteTree, bundle, bundleWithFragmentPaths, lint, checkExamples, distribute, BuildError,
 };

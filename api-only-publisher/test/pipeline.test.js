@@ -340,3 +340,56 @@ test("the github-release channel requires a repository", () => {
     assert.throws(() => publish("/tmp/x.tgz", { target: "a", version: "1.0.0" }, "github-release", {}),
         /requires a repository/);
 });
+
+test("copyTree copies a nested tree, symlinks as symlinks, without fs.cpSync", () => {
+    // Node's native cpSync fails with EACCES on Docker Desktop's bind mounts, where
+    // the Publisher's image stages a mounted library; a plain recursion does not.
+    const { copyTree } = require("../src/pipeline");
+    const from = fs.mkdtempSync(path.join(os.tmpdir(), "aop-copy-from-"));
+    fs.mkdirSync(path.join(from, "a", "b", "c"), { recursive: true });
+    fs.writeFileSync(path.join(from, "top.yaml"), "top\n");
+    fs.writeFileSync(path.join(from, "a", "b", "c", "deep.yaml"), "deep\n");
+    fs.mkdirSync(path.join(from, "empty"));
+    fs.symlinkSync("top.yaml", path.join(from, "link.yaml"));
+    const to = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "aop-copy-to-")), "staged");
+
+    const cpSync = fs.cpSync;
+    fs.cpSync = () => { throw Object.assign(new Error("EACCES"), { code: "EACCES" }); };
+    try {
+        copyTree(from, to);
+    } finally {
+        fs.cpSync = cpSync;
+    }
+
+    assert.strictEqual(fs.readFileSync(path.join(to, "top.yaml"), "utf8"), "top\n");
+    assert.strictEqual(fs.readFileSync(path.join(to, "a", "b", "c", "deep.yaml"), "utf8"), "deep\n");
+    assert.ok(fs.statSync(path.join(to, "empty")).isDirectory());
+    assert.strictEqual(fs.readlinkSync(path.join(to, "link.yaml")), "top.yaml");
+});
+
+test("prepare stages without fs.cpSync", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "aop-stage-"));
+    fs.writeFileSync(path.join(root, "apionly.yaml"), `schemaVersion: 1
+sources:
+  root: specs
+  openapi: openapi
+toolchain:
+  redocly: "@redocly/cli@2.52.0"
+targets:
+  example:
+    openapi:
+      bundle: bundles/example.yaml
+`);
+    fs.mkdirSync(path.join(root, "specs", "openapi", "bundles"), { recursive: true });
+    fs.writeFileSync(path.join(root, "specs", "openapi", "bundles", "example.yaml"), "openapi: 3.1.1\npaths: {}\n");
+    const config = load(path.join(root, "apionly.yaml"));
+
+    const cpSync = fs.cpSync;
+    fs.cpSync = () => { throw Object.assign(new Error("EACCES"), { code: "EACCES" }); };
+    try {
+        prepare(config);
+    } finally {
+        fs.cpSync = cpSync;
+    }
+    assert.ok(fs.existsSync(path.join(config.stagingRoot("openapi"), "openapi", "bundles", "example.yaml")));
+});
