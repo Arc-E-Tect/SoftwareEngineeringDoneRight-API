@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
  * The contract tests of {@code POST /books}, against the double: the generated ones, and the
  * hand-written 409.
  */
+// tag::leaf[]
 class CreateBookStubsContractTest extends StubsContractTest
         implements CreateBookContractTests, CreateBookConflictContractTests {
 
@@ -48,3 +49,4 @@ class CreateBookStubsContractTest extends StubsContractTest
                                 CreateBookOperation.STATUS_409))));
     }
 }
+// end::leaf[]

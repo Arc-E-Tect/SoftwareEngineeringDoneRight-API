@@ -22,12 +22,14 @@ repositories {
 // The test suites. `check` runs all four.
 // ---------------------------------------------------------------------------
 
+// tag::contract-test-common[]
 // Not a suite: what both contract suites share, compiled once. It holds the
 // generated <Operation>ContractTests interfaces and the hand-written 409 beside
 // them; each contract suite implements them for its own target.
 sourceSets {
     contractTestCommon
 }
+// end::contract-test-common[]
 
 testing {
     suites {
@@ -42,6 +44,7 @@ testing {
             }
         }
 
+        // tag::contract-test-suites[]
         // The contract, against the real service: Spring Boot on a random port, real
         // HTTP, the real database. May touch the database, in fixtures only.
         contractTest(JvmTestSuite) {
@@ -80,7 +83,9 @@ testing {
                 }
             }
         }
+        // end::contract-test-suites[]
 
+        // tag::documentation-test-suite[]
         // The published documentation: meaningful requests and responses, against the
         // real service, arranged as the contract tests' real fixtures arrange them.
         // Never a generated case, and never a contract test.
@@ -98,6 +103,7 @@ testing {
                 }
             }
         }
+        // end::documentation-test-suite[]
     }
 }
 
@@ -132,6 +138,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     runtimeOnly 'com.h2database:h2'
 
+    // tag::emitter-dependencies[]
     // What the generated contract tests need, in the source set they are generated into.
     contractTestCommonImplementation platform(SpringBootPlugin.BOM_COORDINATES)
     contractTestCommonImplementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
@@ -142,6 +149,7 @@ dependencies {
 
     transcriberjEmitters libs.api.only.transcriberj.restdocs
     transcriberjEmitters libs.api.only.transcriberj.wiremock
+    // end::emitter-dependencies[]
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +228,7 @@ tasks.named('fetchApiSpecBooks') { dependsOn publishApiContract }
 // What the TranscriberJ generates from the contract, and where each part goes.
 // ---------------------------------------------------------------------------
 
+// tag::transcriberj[]
 apiOnlyTranscriberJ {
     subscription('books') {
         basePackage = 'com.example.books.contract'
@@ -250,12 +259,14 @@ apiOnlyTranscriberJ {
         }
     }
 }
+// end::transcriberj[]
 
 // ---------------------------------------------------------------------------
 // The stubs as a deliverable: the archive, unpacked for the double and for the
 // image. The image needs Docker, so it is not part of `check`.
 // ---------------------------------------------------------------------------
 
+// tag::stubs[]
 // packageBooksWiremock is registered once the subscription is read, so it is named
 // by string, and its archive by the path the TranscriberJ documents.
 def stubsArchive = layout.buildDirectory.file(
@@ -291,12 +302,14 @@ tasks.register('booksStubsImage', Exec) {
     commandLine 'docker', 'build', '--build-arg', "WIREMOCK_VERSION=${libs.versions.wiremock.get()}",
             '-t', "example/books-stubs:${providers.gradleProperty('apiContractVersion').get()}", '.'
 }
+// end::stubs[]
 
 // ---------------------------------------------------------------------------
 // The published documentation: index.adoc, over the documentation suite's
 // snippets only.
 // ---------------------------------------------------------------------------
 
+// tag::asciidoctor[]
 tasks.named('asciidoctor') {
     dependsOn testing.suites.documentationTest
     sourceDir = file('src/docs/asciidoc')
@@ -304,5 +317,6 @@ tasks.named('asciidoctor') {
     // A missing snippet is a broken document, not a warning.
     failureLevel = 'WARN'
 }
+// end::asciidoctor[]
 
 tasks.named('check') { dependsOn 'asciidoctor' }

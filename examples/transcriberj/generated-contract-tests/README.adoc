@@ -288,14 +288,17 @@ The mapping files are the stubs the team hands to the developers of the API's co
 `src/docker/stubs/Dockerfile` builds an image of the official WireMock image with the stubs in it, and `booksStubsImage` builds it from the archive.
 It needs Docker, so it is not part of `check`:
 
+// tag::stubs-image[]
 [source,console]
 ----
 ./gradlew booksStubsImage
 docker run --rm -p 8080:8080 example/books-stubs:1.0.0
 ----
+// end::stubs-image[]
 
 A consumer calls it as it would call the service:
 
+// tag::stubs-curl[]
 [source,console]
 ----
 $ curl -i -X POST localhost:8080/books -H 'Content-Type: application/json' \
@@ -305,6 +308,7 @@ Matched-Stub-Name: createBook/fallback-valid
 
 {"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","isbn":"9780000000000","title":"a","subtitle":"a","pages":1,"format":"hardcover"}
 ----
+// end::stubs-curl[]
 
 A valid request nobody generated is answered by the operation's valid fallback; each generated case, by its own stub.
 `GET /__admin/requests` shows which stub answered each request.
@@ -373,6 +377,7 @@ rm -rf build/database && ./gradlew test contractTest --continue
 `test` stays green: its component tests never meet Spring Boot's JSON mapper.
 `contractTest` fails on the generated unknown-member case, and only there:
 
+// tag::try-it-1[]
 [source,text]
 ----
 test: 35 tests, 0 failed
@@ -380,6 +385,7 @@ contractTest: 39 tests, 1 failed
   CreateBookServiceContractTest > POST /books: the body with a member it does not declare, `unexpectedMember` returns 400
     java.lang.AssertionError: body-unknown-member (INVALID_REQUEST: the body with a member it does not declare, `unexpectedMember`, at body /unexpectedMember additionalProperties): expected 400, received 201. The implementation accepted a request the contract declares invalid: `additionalProperties` at body /unexpectedMember is not enforced.
 ----
+// end::try-it-1[]
 
 Undo: `.enable(...)` again.
 
@@ -387,6 +393,7 @@ Undo: `.enable(...)` again.
 
 In `BookRequest`, change `title`'s `@Size(min = 1, max = 120)` to `@Size(min = 1)`, remove `@Max(5000)` from `pages`, and run the same command.
 
+// tag::try-it-2[]
 [source,text]
 ----
 test: 35 tests, 2 failed
@@ -400,6 +407,7 @@ contractTest: 39 tests, 2 failed
   CreateBookServiceContractTest > POST /books: `title` longer than its maxLength of 120 returns 400
     java.lang.AssertionError: body-title-maxLength (INVALID_REQUEST: `title` longer than its maxLength of 120, at body /title maxLength): expected 400, received 409.
 ----
+// end::try-it-2[]
 
 The component tests find both, since the annotations are the adapter's own.
 The contract tests find both too, but differently:
@@ -411,12 +419,14 @@ That is the leaked state the warning at the top describes.
 
 Put `@Max(5000)` back, and run again on a fresh database: the `title` case's failure changes back to the `2xx` message.
 
+// tag::try-it-2b[]
 [source,text]
 ----
 contractTest: 39 tests, 1 failed
   CreateBookServiceContractTest > POST /books: `title` longer than its maxLength of 120 returns 400
     java.lang.AssertionError: body-title-maxLength (INVALID_REQUEST: `title` longer than its maxLength of 120, at body /title maxLength): expected 400, received 201. The implementation accepted a request the contract declares invalid: `maxLength` at body /title is not enforced.
 ----
+// end::try-it-2b[]
 
 Undo: put `max = 120` back.
 
@@ -429,12 +439,14 @@ In `GetBookServiceContractTest.arrangeState`, replace `ensureBookExists(id, FIXT
 rm -rf build/database && ./gradlew contractTest --continue
 ----
 
+// tag::try-it-3[]
 [source,text]
 ----
 contractTest: 39 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: a valid request with the required parameters and body members only returns 200
     java.lang.AssertionError: success-200-required (SUCCESS: a valid request with the required parameters and body members only): expected 200, received 404. The fixture did not create the resource, or the implementation looks for it somewhere else. Check arrangeState for this case.
 ----
+// end::try-it-3[]
 
 The fixture is what makes a `200` testable on a real service.
 Run it without deleting `build/database` after a green run, and it passes: the book an earlier run inserted is still there.
@@ -461,6 +473,7 @@ public ResponseEntity<?> getBook(@PathVariable String id) {
 
 Run `rm -rf build/database && ./gradlew test contractTest --continue`:
 
+// tag::try-it-4[]
 [source,text]
 ----
 test: 35 tests, 1 failed
@@ -470,6 +483,7 @@ contractTest: 39 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: `id` not matching its pattern ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ returns 400
     java.lang.AssertionError: path-id-pattern (INVALID_REQUEST: `id` not matching its pattern ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$, at path id pattern): expected 400, received 404. The implementation looked the resource up before validating the request. The inbound adapter should reject contract violations before the port is called.
 ----
+// end::try-it-4[]
 
 Undo: restore `getBook`.
 
@@ -477,6 +491,7 @@ Undo: restore `getBook`.
 
 In `BookController`, remove `produces = {...}` from `getBook`'s `@GetMapping`, and run `rm -rf build/database && ./gradlew test contractTest --continue`:
 
+// tag::try-it-5[]
 [source,text]
 ----
 test: 35 tests, 1 failed
@@ -486,16 +501,19 @@ contractTest: 39 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers returns 406
     java.lang.AssertionError: not-acceptable (NOT_ACCEPTABLE: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers): expected 406, received 404.
 ----
+// end::try-it-5[]
 
 The not-acceptable case names a book the fresh database does not hold, so the service, ignoring `Accept`, answers `404`.
 Run `./gradlew contractTest` again, on the same database: the `GET` success fixture has inserted that book in the meantime, and the same case now fails with its own message:
 
+// tag::try-it-5b[]
 [source,text]
 ----
 contractTest: 39 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers returns 406
     java.lang.AssertionError: not-acceptable (NOT_ACCEPTABLE: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers): expected 406, received 200. Content negotiation is not enforced: the implementation ignores Accept.
 ----
+// end::try-it-5b[]
 
 A stateless case's answer depended on state: the warning at the top again.
 
@@ -514,12 +532,14 @@ rm build/stubs/books/mappings/getBook/not-found.json
 
 Exactly that case's test fails; the valid fallback answered in its place:
 
+// tag::try-it-6[]
 [source,text]
 ----
 contractTestWireMock: 39 tests, 1 failed
   GetBookStubsContractTest > GET /books/{id}: a valid request naming a resource that does not exist returns 404
     java.lang.AssertionError: not-found (NOT_FOUND: a valid request naming a resource that does not exist): expected 404, received 200. The fixture did not remove the resource, or the implementation answers for any identifier. Check arrangeState for this case.
 ----
+// end::try-it-6[]
 
 Undo: `./gradlew contractTestWireMock` unpacks the archive afresh.
 
@@ -528,6 +548,7 @@ Undo: `./gradlew contractTestWireMock` unpacks the archive afresh.
 Delete the `arrangeState` override from `GetBookServiceContractTest`, and run `rm -rf build/database && ./gradlew contractTest --continue`.
 The build still compiles; the operation's two stateful tests fail with `FixtureNotImplementedException`, each saying what it is waiting for, and how to start:
 
+// tag::try-it-7[]
 [source,text]
 ----
 com.example.books.contract.restdocs.FixtureNotImplementedException: Case success-200-required of GET /books/{id} (SUCCESS, expects 200, variant required, path values [aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa]) needs the implementation under test in a particular state, but arrangeState is not implemented yet.
@@ -547,6 +568,7 @@ public void arrangeState(ContractCase contractCase) {
     }
 }
 ----
+// end::try-it-7[]
 
 Paste the suggestion into the class, and run again.
 It compiles; the not-found test passes, since the fresh database holds no book, and the success test fails with the fixture message of step 3, until its comment is replaced with the code that inserts the book.
@@ -560,10 +582,12 @@ Undo: restore the class.
 rm -rf build/database && ./gradlew contractTest && ./gradlew contractTest --rerun
 ----
 
+// tag::try-it-8[]
 [source,text]
 ----
 contractTest: 39 tests, 0 failed
 contractTest: 39 tests, 0 failed
 ----
+// end::try-it-8[]
 
 The stateful tests pass both times, and in any order: each fixture sets exactly the state its case needs, whatever an earlier run left behind.

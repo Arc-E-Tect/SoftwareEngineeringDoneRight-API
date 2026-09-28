@@ -1,3 +1,4 @@
+# tag::create-book[]
 post:
   operationId: createBook
   summary: Add a book to the catalogue.
@@ -35,6 +36,7 @@ post:
         application/problem+json:
           schema:
             $ref: ../components/schemas/ProblemV1.yaml
+# end::create-book[]
 get:
   operationId: listBooks
   summary: List the catalogue, a page at a time.

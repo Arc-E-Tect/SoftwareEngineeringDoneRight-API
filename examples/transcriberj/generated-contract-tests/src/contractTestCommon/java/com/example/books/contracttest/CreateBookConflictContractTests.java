@@ -19,6 +19,7 @@ import static org.springframework.restdocs.webtestclient.WebTestClientRestDocume
  * {@code CreateBookContractTests}: a default test, a hook the target implements, the request
  * built from the generated classes, and the response checked with the generated descriptors.
  */
+// tag::leaf[]
 public interface CreateBookConflictContractTests {
 
     /**
@@ -73,3 +74,4 @@ public interface CreateBookConflictContractTests {
                         + "/isbn-taken", ProblemV1Docs.responseFields()));
     }
 }
+// end::leaf[]

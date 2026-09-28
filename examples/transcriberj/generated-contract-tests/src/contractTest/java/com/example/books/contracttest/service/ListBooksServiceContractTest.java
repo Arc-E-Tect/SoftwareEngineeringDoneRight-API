@@ -13,6 +13,7 @@ import com.example.books.contract.restdocs.ListBooksContractTests;
  * each other and idempotent: a case the service wrongly accepts may leave state behind for the
  * cases after it. See {@link GetBookServiceContractTest}.
  */
+// tag::leaf[]
 class ListBooksServiceContractTest extends ServiceContractTest implements ListBooksContractTests {
 
     /**
@@ -37,3 +38,4 @@ class ListBooksServiceContractTest extends ServiceContractTest implements ListBo
         }
     }
 }
+// end::leaf[]

@@ -6,6 +6,7 @@ import com.example.books.contract.restdocs.GetBookContractTests;
 /**
  * The generated contract tests of {@code GET /books/{id}}, against the double.
  */
+// tag::leaf[]
 class GetBookStubsContractTest extends StubsContractTest implements GetBookContractTests {
 
     /**
@@ -18,3 +19,4 @@ class GetBookStubsContractTest extends StubsContractTest implements GetBookContr
     public void arrangeState(ContractCase contractCase) {
     }
 }
+// end::leaf[]

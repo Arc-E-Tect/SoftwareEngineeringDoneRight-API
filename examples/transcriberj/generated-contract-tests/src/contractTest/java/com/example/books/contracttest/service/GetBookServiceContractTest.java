@@ -18,6 +18,7 @@ import com.example.books.contract.restdocs.GetBookContractTests;
  * a fresh database -- delete {@code build/database} -- before diagnosing a second failure. A
  * green run is not affected.
  */
+// tag::leaf[]
 class GetBookServiceContractTest extends ServiceContractTest implements GetBookContractTests {
 
     /**
@@ -43,3 +44,4 @@ class GetBookServiceContractTest extends ServiceContractTest implements GetBookC
         }
     }
 }
+// end::leaf[]

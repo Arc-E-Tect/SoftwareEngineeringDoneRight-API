@@ -20,6 +20,7 @@ import static org.springframework.restdocs.webtestclient.WebTestClientRestDocume
  * <p>The fixtures below reach into the database, and nothing else does: a contract test
  * arranges state, then asks the service.
  */
+// tag::target[]
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ExtendWith(RestDocumentationExtension.class)
 abstract class ServiceContractTest {
@@ -48,6 +49,7 @@ abstract class ServiceContractTest {
     public WebTestClient client() {
         return client;
     }
+    // end::target[]
 
     /**
      * The real target's by-product snippets go under {@code generated-service/}, so that the
@@ -59,6 +61,7 @@ abstract class ServiceContractTest {
         return "generated-service";
     }
 
+    // tag::fixtures[]
     /**
      * Makes sure a book with this identifier and this ISBN exists: an upsert, replacing any
      * book with either.
@@ -92,4 +95,5 @@ abstract class ServiceContractTest {
     void ensureNoBookWithIsbn(String isbn) {
         database.sql("DELETE FROM book WHERE isbn = :isbn").param("isbn", isbn).update();
     }
+    // end::fixtures[]
 }
