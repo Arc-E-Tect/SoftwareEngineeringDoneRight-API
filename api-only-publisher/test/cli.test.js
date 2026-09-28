@@ -983,3 +983,50 @@ test("build runs the installed toolchain, not npx, when the pin matches", async 
     });
     assert.ok(fs.existsSync(path.join(dir, "dist", "example", "openapi.yaml")));
 });
+
+test("publish to every local channel writes a hand-off listing every file it produced", async () => {
+    const { HANDOFF_JSON, HANDOFF_SHA256 } = require("../src/handoff");
+    const dir = library({
+        ...SHIPPING,
+        "apionly.yaml": SHIPPING["apionly.yaml"].replace("channels:\n  file:\n    directory: build/publish\n",
+            "channels:\n  file:\n    directory: build/publish\n" +
+            "  maven:\n    groupId: com.example.api\n    repository: build/maven\n" +
+            "  nuget:\n    idPrefix: Example\n    repository: build/nuget\n" +
+            "  npm:\n    scope: \"@example\"\n    publish: false\n    directory: build/npm\n"),
+    });
+    prepare(loadFrom(dir));
+    shipped(dir, "alpha", "openapi", "1.0.0");
+    shipped(dir, "gamma", "asyncapi", "1.0.0");
+
+    await run(["publish", "--target", "alpha", "--target", "gamma", "-C", dir]);
+
+    const listed = JSON.parse(fs.readFileSync(path.join(dir, "build", "packages", HANDOFF_JSON), "utf8"));
+    const summary = listed.files.map((f) => `${f.channel} ${f.target} ${f.version} ${f.path}`);
+    assert.deepStrictEqual(summary, [
+        "maven alpha 1.0.0 build/maven/com/example/api/alpha/1.0.0/alpha-1.0.0-manifest.json",
+        "maven alpha 1.0.0 build/maven/com/example/api/alpha/1.0.0/alpha-1.0.0.pom",
+        "maven alpha 1.0.0 build/maven/com/example/api/alpha/1.0.0/alpha-1.0.0.tgz",
+        "maven gamma 1.0.0 build/maven/com/example/api/gamma/1.0.0/gamma-1.0.0-manifest.json",
+        "maven gamma 1.0.0 build/maven/com/example/api/gamma/1.0.0/gamma-1.0.0.pom",
+        "maven gamma 1.0.0 build/maven/com/example/api/gamma/1.0.0/gamma-1.0.0.tgz",
+        "npm alpha 1.0.0 build/npm/example-alpha-1.0.0.tgz",
+        "npm gamma 1.0.0 build/npm/example-gamma-1.0.0.tgz",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/example.alpha.1.0.0.nupkg",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/example.alpha.1.0.0.nupkg.sha512",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/example.alpha.nuspec",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/manifest.json",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/example.gamma.1.0.0.nupkg",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/example.gamma.1.0.0.nupkg.sha512",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/example.gamma.nuspec",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/manifest.json",
+        "file alpha 1.0.0 build/publish/alpha/1.0.0/alpha-1.0.0.tgz",
+        "file alpha 1.0.0 build/publish/alpha/1.0.0/manifest.json",
+        "file gamma 1.0.0 build/publish/gamma/1.0.0/gamma-1.0.0.tgz",
+        "file gamma 1.0.0 build/publish/gamma/1.0.0/manifest.json",
+    ]);
+    for (const f of listed.files) {
+        const bytes = fs.readFileSync(path.join(dir, f.path));
+        assert.strictEqual(f.sha256, require("node:crypto").createHash("sha256").update(bytes).digest("hex"), f.path);
+    }
+    assert.strictEqual(fs.readFileSync(path.join(dir, "build", "packages", HANDOFF_SHA256), "utf8").split("\n").length, 21);
+});

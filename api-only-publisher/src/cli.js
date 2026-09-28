@@ -21,6 +21,7 @@ const { VersionError: PolicyError, describe } = require("./version-policy");
 const { versionOf, BundleVersionError } = require("./bundle-version");
 const { unreferenced } = require("./unreferenced");
 const { requireTools } = require("./toolchain");
+const { writeHandoff } = require("./handoff");
 
 const USAGE = `api-only-publisher -- build and distribute API description documents
 
@@ -454,6 +455,7 @@ async function main(argv, io = {}) {
             const versions = versionsOf(config, shipped, options.preRelease);
             const closures = forTargets(config, undefined, shipped);
             let published = 0;
+            const handoff = [];
             for (const target of Object.keys(config.targets)) {
                 if (targets && !targets.includes(target)) continue;
                 if (!config.isPublished(target)) continue;
@@ -466,11 +468,17 @@ async function main(argv, io = {}) {
                 });
                 for (const name of names) {
                     // A remote channel returns a promise; a local one does not.
-                    await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
+                    const result = await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
+                    for (const file of result.files || []) {
+                        handoff.push({ file, target, version: manifest.version, channel: name });
+                    }
                     published += 1;
                 }
             }
+            // What a later step publishes byte for byte; README.adoc#handoff.
+            const { sha256: listing } = writeHandoff(config.root, outDir, handoff);
             log(`\nPublished ${published} artifact(s).`);
+            log(`Listed ${handoff.length} file(s) in ${path.relative(config.root, listing)}.`);
             return 0;
         }
         case "split": {

@@ -160,12 +160,13 @@ function publishLocal(archive, manifest, options, id, log) {
 
     const file = path.join(dir, `${lowerId}.${lowerVersion}.nupkg`);
     fs.writeFileSync(file, bytes);
-    fs.writeFileSync(`${file}.sha512`, crypto.createHash("sha512").update(bytes).digest("base64"));
-    fs.writeFileSync(path.join(dir, `${lowerId}.nuspec`), spec);
-    fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+    const written = [file, `${file}.sha512`, path.join(dir, `${lowerId}.nuspec`), path.join(dir, "manifest.json")];
+    fs.writeFileSync(written[1], crypto.createHash("sha512").update(bytes).digest("base64"));
+    fs.writeFileSync(written[2], spec);
+    fs.writeFileSync(written[3], JSON.stringify(manifest, null, 2) + "\n");
 
     log(`-- Published NuGet ${id} ${manifest.version} to ${feed}`);
-    return { location: file, id, version: manifest.version, prerelease: isPrerelease(manifest.version) };
+    return { location: file, id, version: manifest.version, prerelease: isPrerelease(manifest.version), files: written };
 }
 
 /** The resources a feed's service index lists. */
