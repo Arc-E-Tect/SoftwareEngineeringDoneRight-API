@@ -1,3 +1,20 @@
+# [0.12.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.11.0...api-only-publisher-v0.12.0) (2026-09-29)
+
+
+### ✅ Tests
+
+* **api-only-transcriberj:** test against a reference API kept in this repository ([#51](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/51)) ([3a0918e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3a0918edd5fdf202489ed3781574f9bdb14603dc)), closes [#51](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/51) [#50](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/50) [#50](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/50)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** a sealed, vettable Docker image ([#60](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/60)) ([a39048f](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a39048fa492610e635cf1ea24d7d209ae2757cbb)), closes [#60](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/60)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.11.0 [skip ci] ([709a8b3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/709a8b3d91034f5e15a6eb1fd4f73ea2c1df429b))
+
 # [0.11.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.10.0...api-only-publisher-v0.11.0) (2026-09-25)
 
 
