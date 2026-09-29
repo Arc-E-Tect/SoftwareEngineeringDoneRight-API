@@ -60,3 +60,4 @@ jobs:
     secrets:
       E2E_CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}
 # rerun after docs
+# run with the signature retry
