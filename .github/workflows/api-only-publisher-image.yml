@@ -450,10 +450,19 @@ jobs:
           # the same keyless identity; a copy of GHCR's signature would depend on
           # both registries storing signatures alike.
           cosign sign --yes "$DOCKERHUB_IMAGE@$DIGEST"
+          # Docker Hub lists a new referrer, the signature, a little after it is
+          # pushed, so a verification straight away can find none: retry for a while.
           for image in "$GHCR_IMAGE" "$DOCKERHUB_IMAGE"; do
-            cosign verify --certificate-identity "$SIGNER" --certificate-oidc-issuer "$OIDC_ISSUER" \
-              "$image@$DIGEST" > /dev/null
-            echo "verified $image@$DIGEST"
+            for attempt in 1 2 3 4 5 6; do
+              if cosign verify --certificate-identity "$SIGNER" --certificate-oidc-issuer "$OIDC_ISSUER" \
+                "$image@$DIGEST" > /dev/null; then
+                echo "verified $image@$DIGEST"
+                continue 2
+              fi
+              sleep $((attempt * 10))
+            done
+            echo "::error::the signature of $image@$DIGEST does not verify"
+            exit 1
           done
 
   Description:
