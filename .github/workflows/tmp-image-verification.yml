@@ -37,7 +37,7 @@ jobs:
       contents: write
       packages: write
       id-token: write
-    uses: ./.github/workflows/tmp-bisect.yml
+    uses: ./.github/workflows/api-only-publisher-image.yml
     with:
       version: 0.0.0-dryrun.${{ github.run_number }}
       release_tag: ${{ needs.scratch-release.outputs.tag }}
@@ -47,7 +47,15 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
-# bisect 1
-# bisect Promote,Description,Release-Assets,Summary
-# bisect Description,Release-Assets,Summary
-# bisect Release-Assets,Summary
+
+  e2e:
+    name: End to end
+    needs: dry-run
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/api-only-publisher-image-e2e.yml
+    with:
+      image: ghcr.io/arc-e-tect/api-only-publisher-scratch@${{ needs.dry-run.outputs.digest }}
+    secrets:
+      E2E_CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}
