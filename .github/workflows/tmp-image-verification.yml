@@ -47,15 +47,3 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
-
-  e2e:
-    name: End to end
-    needs: dry-run
-    permissions:
-      contents: write
-      packages: write
-    uses: ./.github/workflows/api-only-publisher-image-e2e.yml
-    with:
-      image: ghcr.io/arc-e-tect/api-only-publisher-scratch@${{ needs.dry-run.outputs.digest }}
-    secrets:
-      E2E_CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}
