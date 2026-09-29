@@ -26,3 +26,4 @@ jobs:
 # rerun after docs
 # run with the signature retry
 # e2e only, on dry run 9's image
+# e2e rerun: follow redirects
