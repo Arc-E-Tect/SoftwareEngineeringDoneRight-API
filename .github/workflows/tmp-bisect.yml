@@ -462,3 +462,32 @@ jobs:
               "$image@$DIGEST" > /dev/null
             echo "verified $image@$DIGEST"
           done
+
+  Description:
+    name: Update the Docker Hub description
+    needs: [ Plan, Promote ]
+    # An older version's re-publish leaves the description of the newest alone; the
+    # dry run, which moves no floating tag, describes its scratch repository.
+    if: ${{ needs.Plan.outputs.floating != '' || inputs.from_source }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the overview
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: api-only-publisher/docker
+          persist-credentials: false
+
+      - name: Update the description
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          # Read, Write, Delete: the scope Docker Hub requires to change a
+          # description. Only this job holds it.
+          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+          repository: ${{ env.DOCKERHUB_IMAGE }}
+          short-description: 'A sealed, vettable API-Only Publisher for CI: builds and
+            packages API bundles, offline.'
+          readme-filepath: api-only-publisher/docker/DOCKERHUB.md

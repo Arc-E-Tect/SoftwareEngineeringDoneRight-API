@@ -50,3 +50,4 @@ jobs:
 # bisect 1
 # bisect Promote,Description,Release-Assets,Summary
 # bisect Description,Release-Assets,Summary
+# bisect Release-Assets,Summary
