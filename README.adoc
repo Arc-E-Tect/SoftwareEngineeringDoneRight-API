@@ -30,7 +30,7 @@ Tooling for treating an API description as a published artifact rather than a fi
 |link:api-only-publisher/README.adoc[API-Only Publisher →]
 |A Node.js command-line tool.
 Builds one self-contained, linted document per contract from a library of reusable fragments, stamps it with that contract's own version, and publishes it: to a directory, a Maven repository, npm, or a GitHub release.
-Published as https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-e-tect/api-only-publisher` ↗].
+Published as https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-e-tect/api-only-publisher` ↗], and as a sealed, signed Docker image for vetted CI pipelines, https://hub.docker.com/r/arcetect/api-only-publisher[`arcetect/api-only-publisher` ↗], also at `ghcr.io/arc-e-tect/api-only-publisher`: link:api-only-publisher/README.adoc#docker[The Docker image →].
 
 |link:api-only-subscriber/README.adoc[API-Only Subscriber →]
 |A Gradle plugin.
@@ -197,7 +197,12 @@ Needs a role that can bypass the `commit-push-main` ruleset, since a release pus
 
 |`GRADLE_PUBLISH_KEY` / `GRADLE_PUBLISH_SECRET`
 |Publishing the Subscriber and the TranscriberJ to the Gradle Plugin Portal.
+
+|`DOCKERHUB_TOKEN` / `DOCKERHUB_DESCRIPTION_TOKEN`
+|Pushing the Publisher's Docker image to Docker Hub, and updating its description there; with the variables `DOCKERHUB_NAMESPACE` and `DOCKERHUB_USERNAME`.
+Each token's scope is in link:api-only-publisher/README.adoc#docker-secrets[the Publisher's maintainer section →].
 |===
 
 The Publisher needs no npm credential: it publishes through npm https://docs.npmjs.com/trusted-publishers[trusted publishing ↗], exchanging a short-lived OIDC token for publish rights, and attaches a provenance attestation tying each tarball to the commit and workflow run that produced it.
+Its Docker image is pushed to GHCR with the job's `GITHUB_TOKEN`, and signed keyless with the job's OIDC token.
 Nothing long-lived is stored.
