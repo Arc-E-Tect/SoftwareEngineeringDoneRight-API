@@ -1505,11 +1505,13 @@ The repository's Actions policy allows only GitHub-owned actions, verified creat
 `peter-evans/dockerhub-description`, which updates the description, is on that list; a workflow using an action that is not fails to start, with no message saying why.
 
 [#docker-visibility]
-==== The one-time GHCR visibility switch
+==== GHCR visibility
 
-A package a workflow creates on GHCR starts private, and its visibility can be changed only by hand.
-After the first release that pushes the image, open the package's settings, https://github.com/users/Arc-E-Tect/packages/container/api-only-publisher/settings[api-only-publisher ↗], choose *Change visibility* under *Danger Zone*, and make it *Public*.
-Until then the smoke test's anonymous pull fails, with a message naming this step; re-run the failed jobs afterwards.
+GitHub documents that a package starts private and does not inherit its repository's visibility, which can be changed only by hand.
+In practice, the scratch package the dry run pushed, linked to this public repository through the image's `source` annotation, was public from its first push.
+
+So the first release may need nothing; the smoke test finds out, since it pulls the image anonymously.
+If that pull fails, its message names this step: open the package's settings, https://github.com/users/Arc-E-Tect/packages/container/api-only-publisher/settings[api-only-publisher ↗], choose *Change visibility* under *Danger Zone*, make it *Public*, and re-run the failed jobs.
 
 [#docker-republish]
 ==== Re-publishing
