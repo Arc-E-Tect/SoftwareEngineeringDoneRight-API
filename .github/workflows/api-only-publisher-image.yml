@@ -319,7 +319,7 @@ jobs:
         run: |
           # No login: pulling as nobody proves the package is public.
           if ! docker pull --platform '${{ matrix.platform }}' "$IMAGE"; then
-            echo "::error title=GHCR package not public::An anonymous pull of $IMAGE failed. A package a workflow creates on GHCR starts private, and its visibility can only be changed by hand: open https://github.com/orgs/${{ github.repository_owner }}/packages/container/package/${GHCR_IMAGE##*/}/settings, choose Change visibility under Danger Zone, and make it Public. Then re-run the failed jobs. README.adoc#docker-maintainers."
+            echo "::error title=GHCR package not public::An anonymous pull of $IMAGE failed. A package a workflow creates on GHCR starts private, and its visibility can only be changed by hand: open the package settings, https://github.com/users/${{ github.repository_owner }}/packages/container/${GHCR_IMAGE##*/}/settings (or /orgs/ for an organisation), choose Change visibility under Danger Zone, and make it Public. Then re-run the failed jobs. README.adoc#docker-maintainers."
             exit 1
           fi
 
