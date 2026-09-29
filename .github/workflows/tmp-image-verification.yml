@@ -50,3 +50,4 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
 # V8 reuse run
+# V8 rerun with explicit conditions
