@@ -59,3 +59,4 @@ jobs:
       image: ghcr.io/arc-e-tect/api-only-publisher-scratch@${{ needs.dry-run.outputs.digest }}
     secrets:
       E2E_CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}
+# rerun after docs
