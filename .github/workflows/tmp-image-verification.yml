@@ -49,3 +49,4 @@ jobs:
       DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
 # bisect 1
 # bisect Promote,Description,Release-Assets,Summary
+# bisect Description,Release-Assets,Summary
