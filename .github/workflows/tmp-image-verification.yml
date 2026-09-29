@@ -12,52 +12,17 @@ on:
 permissions: {}
 
 jobs:
-  scratch-release:
-    name: Scratch pre-release for the image assets
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      tag: ${{ steps.release.outputs.tag }}
-    steps:
-      - name: Create
-        id: release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: api-only-publisher-image-dryrun-${{ github.run_number }}
-        run: |
-          gh release create "$TAG" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
-            --prerelease --title "$TAG" --notes "Scratch release of the image dry run; deleted after review."
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-  dry-run:
-    name: Dry run
-    needs: scratch-release
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-    uses: ./.github/workflows/api-only-publisher-image.yml
-    with:
-      version: 0.0.0-dryrun.${{ github.run_number }}
-      release_tag: ${{ needs.scratch-release.outputs.tag }}
-      ghcr_image: ghcr.io/arc-e-tect/api-only-publisher-scratch
-      dockerhub_image: arcetect/api-only-publisher-scratch
-      from_source: true
-    secrets:
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-      DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
-
   e2e:
     name: End to end
-    needs: dry-run
     permissions:
       contents: write
       packages: write
     uses: ./.github/workflows/api-only-publisher-image-e2e.yml
     with:
-      image: ghcr.io/arc-e-tect/api-only-publisher-scratch@${{ needs.dry-run.outputs.digest }}
+      # The image dry run 9 built, smoke-tested, scanned and promoted.
+      image: ghcr.io/arc-e-tect/api-only-publisher-scratch@sha256:828f708cda9ab3cca44cb9b9374c46f031127d0ddb1bc0615cf4f31951f4c332
     secrets:
       E2E_CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}
 # rerun after docs
 # run with the signature retry
+# e2e only, on dry run 9's image
