@@ -255,7 +255,7 @@ jobs:
             artifact=$(jq -r --arg base "$base." '.files[] | select(.channel == "maven") | .path
               | select(startswith($base) and (endswith(".pom") | not))' "$HANDOFF")
             remote_path=${artifact#build/maven/}
-            status=$(curl -sS -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$remote_path")
+            status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$remote_path")
             if [ "$status" = 200 ]; then
               if cmp -s "$RUNNER_TEMP/remote" "$artifact"; then
                 echo "$remote_path is already published, identical"; continue
@@ -359,7 +359,7 @@ jobs:
               "build/maven/$group_path/$target/$BUNDLE_VERSION/$target-$BUNDLE_VERSION.tgz"
             # What a Maven repository and Gradle expect beside it, which deploy-file wrote.
             for file in "$target/maven-metadata.xml" "$target/$BUNDLE_VERSION/$target-$BUNDLE_VERSION.pom.sha1"; do
-              curl -fsS -o /dev/null -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$group_path/$file"
+              curl -fsSL -o /dev/null -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$group_path/$file"
             done
             echo "Maven: $MAVEN_GROUP:$target:$BUNDLE_VERSION is the image's bytes, with its metadata"
           done

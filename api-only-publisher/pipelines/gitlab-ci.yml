@@ -114,7 +114,7 @@ publish:maven:
         base=${pom%.pom}
         artifact=$(listed build/maven '' | grep "^$base\." | grep -v '\.pom$')
         remote=${artifact#build/maven/}
-        status=$(curl -sS -o remote -w '%{http_code}' --header "Job-Token: $CI_JOB_TOKEN" "$PACKAGES/maven/$remote")
+        status=$(curl -sS -L -o remote -w '%{http_code}' --header "Job-Token: $CI_JOB_TOKEN" "$PACKAGES/maven/$remote")
         if [ "$status" = 200 ]; then
           if cmp -s remote "$artifact"; then echo "$remote is already published, identical"; continue; fi
           echo "$remote is already published with other contents"; exit 1
@@ -161,7 +161,7 @@ publish:generic:
         target=$(basename "$(dirname "$(dirname "$archive")")")
         version=$(basename "$(dirname "$archive")")
         url="$PACKAGES/generic/$target/$version/$(basename "$archive")"
-        status=$(curl -sS -o remote -w '%{http_code}' --header "JOB-TOKEN: $CI_JOB_TOKEN" "$url")
+        status=$(curl -sS -L -o remote -w '%{http_code}' --header "JOB-TOKEN: $CI_JOB_TOKEN" "$url")
         if [ "$status" = 200 ]; then
           if cmp -s remote "$archive"; then echo "$url is already published, identical"; continue; fi
           echo "$url is already published with other contents"; exit 1
