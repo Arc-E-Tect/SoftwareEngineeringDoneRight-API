@@ -47,6 +47,10 @@ on:
         required: true
       DOCKERHUB_DESCRIPTION_TOKEN:
         required: true
+    outputs:
+      digest:
+        description: 'The multi-platform image digest GHCR and Docker Hub serve'
+        value: ${{ jobs.Manifest.outputs.digest }}
   workflow_dispatch:
     inputs:
       version:
