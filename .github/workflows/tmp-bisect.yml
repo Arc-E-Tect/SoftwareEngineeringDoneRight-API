@@ -298,3 +298,85 @@ jobs:
       - name: Sign
         if: ${{ needs.Plan.outputs.build == 'true' }}
         run: cosign sign --yes "$GHCR_IMAGE@${{ steps.digest.outputs.digest }}"
+
+  Smoke-Test:
+    name: Smoke test ${{ matrix.platform }}
+    needs: Manifest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    env:
+      IMAGE: ${{ inputs.ghcr_image }}@${{ needs.Manifest.outputs.digest }}
+    steps:
+      - name: Checkout the smoke test
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: api-only-publisher/docker
+          persist-credentials: false
+
+      - name: Pull anonymously by digest
+        run: |
+          # No login: pulling as nobody proves the package is public.
+          if ! docker pull --platform '${{ matrix.platform }}' "$IMAGE"; then
+            echo "::error title=GHCR package not public::An anonymous pull of $IMAGE failed. A package a workflow creates on GHCR starts private, and its visibility can only be changed by hand: open https://github.com/orgs/${{ github.repository_owner }}/packages/container/package/${GHCR_IMAGE##*/}/settings, choose Change visibility under Danger Zone, and make it Public. Then re-run the failed jobs. README.adoc#docker-maintainers."
+            exit 1
+          fi
+
+      - name: Smoke test
+        run: api-only-publisher/docker/smoke-test.sh "$IMAGE" "$VERSION"
+
+  Scan:
+    name: Scan
+    needs: Manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE: ${{ inputs.ghcr_image }}@${{ needs.Manifest.outputs.digest }}
+    steps:
+      - name: Checkout the accepted findings
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: api-only-publisher/.trivyignore.yaml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Report every finding
+        run: |
+          # The full report, every severity, for every platform, attached to the release.
+          mkdir -p reports
+          for platform in linux/amd64 linux/arm64; do
+            name="api-only-publisher-image-$VERSION-$(echo "$platform" | tr / -)"
+            for format in json table; do
+              docker run --rm -v "$PWD/reports:/reports" -v "$RUNNER_TEMP/trivy:/root/.cache" "$TRIVY" image --quiet --scanners vuln \
+                --platform "$platform" --format "$format" \
+                --output "/reports/$name.trivy.$([ "$format" = json ] && echo json || echo txt)" "$IMAGE"
+            done
+          done
+          ls -l reports
+
+      - name: Upload the reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-scan
+          path: reports/
+
+      - name: Gate on fixable critical findings
+        run: |
+          # Blocks the promotion to Docker Hub on a CRITICAL finding that has a fix,
+          # less those .trivyignore.yaml accepts, each with its reason and expiry.
+          # Findings with no fix, in any Debian base, are reported but never block.
+          for platform in linux/amd64 linux/arm64; do
+            docker run --rm -v "$PWD/api-only-publisher:/cfg:ro" -v "$RUNNER_TEMP/trivy:/root/.cache" "$TRIVY" image --quiet --scanners vuln \
+              --platform "$platform" --severity CRITICAL --ignore-unfixed \
+              --ignorefile /cfg/.trivyignore.yaml --exit-code 1 "$IMAGE"
+          done
