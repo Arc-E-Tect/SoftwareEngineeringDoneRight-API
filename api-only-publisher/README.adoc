@@ -10,6 +10,7 @@
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
+image:https://img.shields.io/docker/v/arcetect/api-only-publisher?sort=semver&label=Docker%20Hub[Docker Hub,link=https://hub.docker.com/r/arcetect/api-only-publisher]
 image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDoneRight-API?filter=api-only-publisher-v*[GitHub release,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/releases?q=api-only-publisher]
 image:https://img.shields.io/badge/Node-22.14%2B-339933?logo=node.js[Node 22.14+,link=https://nodejs.org]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
@@ -62,6 +63,8 @@ To set it up for your situation, start at link:../docs/README.adoc[the documenta
 
 Nothing else.
 The bundlers, https://redocly.com/docs/cli/[Redocly CLI ↗] and https://www.asyncapi.com/tools/cli[AsyncAPI CLI ↗], are fetched by `npx` at the versions `apionly.yaml` pins, so they need no installation, and the only runtime dependency is `yaml`.
+
+Or Docker instead of Node.js: the image holds the Publisher and its bundlers, and downloads nothing when it runs, as <<docker>> describes.
 
 [#installation]
 == Installation
@@ -131,6 +134,22 @@ A published contract should change only when its fragments or its version change
 The bundlers are a separate matter.
 However the Publisher itself is started, it fetches them with `npx`, at the versions `toolchain` in `apionly.yaml` pins.
 
+[#as-a-docker-image]
+=== As a Docker image
+
+The fit for a CI pipeline that may run only vetted, mirrored artefacts.
+
+[source,console,subs="attributes+"]
+----
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" arcetect/api-only-publisher:{api-only-publisher-version} build
+----
+
+* One artefact, with one digest, holds the Publisher *and* its bundlers, so a pipeline pins, verifies, scans and mirrors everything it runs at once.
+* It downloads nothing when it runs, so `apionly.yaml` must pin the bundler versions the image carries.
+* The pin is the image's digest, in each pipeline that runs it; nothing in the library records it.
+
+<<docker>> describes it in full.
+
 [#commands]
 == Commands
 
@@ -176,6 +195,7 @@ A target whose closure is untouched needs no new version, however much else in t
 `--target` and `--channel` may be repeated.
 `-C <dir>` runs as if started in `<dir>`; without it the configuration is found by walking up from the current directory.
 `-q` or `--quiet` reports only errors, which is what a script that reads the output wants.
+`--version`, on its own, prints the Publisher's version.
 `--pre-release <ids>` appends pre-release identifiers to each target's version, as <<versions,Versions §>> describes.
 
 [source,console]
@@ -651,6 +671,28 @@ What happens when the destination already has the version:
 A NuGet feed that cannot return the package it has, so there is nothing to compare, fails as a different one would.
 |===
 
+[#handoff]
+=== The hand-off: what a `publish` run wrote
+
+Every `publish` run lists each file its channels wrote locally, with its SHA-256, in two files in the packages directory -- `build.packages`, `build/packages` by default, or `--out`:
+
+[cols="1,3", options="header"]
+|===
+| File | Content
+
+| `packages.json`
+| `schemaVersion`, and `files`: for each file, its `path`, `sha256`, `target`, `version` and `channel`.
+
+| `packages.sha256`
+| The same files in the format `sha256sum -c` checks.
+|===
+
+Paths are relative to the library root, with forward slashes, so `sha256sum -c build/packages/packages.sha256` checks them from there.
+A run replaces both files.
+A channel in a remote mode writes nothing locally, so it adds nothing.
+
+The hand-off is for a later step that publishes those files itself -- the second of <<docker-two-steps,the image's two steps §>> -- so that it ships exactly the bytes the Publisher produced, and nothing else.
+
 [#channel-text]
 === What a package says about itself
 
@@ -797,8 +839,8 @@ lint:
     openapi: warn       # a request body or response with no example: error, warn (the default) or off
 
 toolchain:
-  redocly: "@redocly/cli@2.52.0"
-  asyncapi: "@asyncapi/cli@6.0.2"
+  redocly: "@redocly/cli@2.55.0"
+  asyncapi: "@asyncapi/cli@6.2.0"
 
 channels:
   file:
@@ -862,6 +904,24 @@ A bundle root moved into or out of `bundles/` needs its relative `$ref`s adjuste
 `toolchain` pins the bundler versions.
 Unpinned, the documents this tool produces could change because an upstream release happened, with nothing in the library having changed.
 An upgrade should be a deliberate commit that moves the pin, reviewed with whatever it changes in the published documents.
+
+Two environment variables decide where a pinned bundler comes from.
+Neither is set outside the Docker image, which is then exactly the `npx` behaviour above.
+
+[cols="1,3", options="header"]
+|===
+| Variable | Effect
+
+| `API_ONLY_PUBLISHER_TOOLCHAIN_DIR`
+| A directory holding installed bundlers, as `npm install --prefix <dir>` leaves it.
+A bundler installed there at exactly the pinned version runs from there, without `npx`.
+
+| `API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD`
+| `allow`, the default, fetches any other pin with `npx`.
+`never` refuses to: `build` and `lint` fail before doing anything, naming the versions the directory holds.
+|===
+
+The Docker image sets both, with `never`, <<docker-toolchain>>.
 
 [#behaviour]
 == Behaviour worth knowing about
@@ -1045,6 +1105,440 @@ Bump each such target's MINOR version in the upgrade's commit, or set `fragmentP
 A producer has no business knowing the directory layout of the projects that consume it.
 The `distribution` block copies built documents into such a layout, so that a library can adopt this tool before its consumers adopt the API-Only Subscriber.
 Once they subscribe, each consuming project declares where its own copy lands, and the block goes away.
+
+[#docker]
+== The Docker image
+
+The Publisher is also a Docker image, for CI pipelines that may run only what has been vetted and mirrored into the organisation's own registry.
+
+[cols="1,3"]
+|===
+| Docker Hub | `docker.io/arcetect/api-only-publisher`
+| GHCR       | `ghcr.io/arc-e-tect/api-only-publisher`
+| Platforms  | `linux/amd64` and `linux/arm64`, as one multi-platform image
+|===
+
+Vetting the npm package does not vet what it runs: it fetches Redocly CLI and AsyncAPI CLI with `npx` when it runs.
+The image is one artefact, with one digest, holding one Publisher version *and* its toolchain, and it is *sealed*: it downloads nothing, and contacts nothing, when it runs.
+It can be pulled by digest, its signature verified, its SBOM and provenance read, scanned, and mirrored, and then a pipeline knows exactly what it runs.
+
+Both registries serve the same image, with the same digest: Docker Hub gets a copy of what GHCR was given, never a rebuild.
+
+link:../docs/guides/publishing-from-ci/overview.adoc[Publishing from CI with the image →] is the guide, with prompts that set up the pipeline in your own repository.
+
+[#docker-two-steps]
+=== Two steps: package in the image, publish with the platform's tools
+
+. *In the image*, the Publisher builds, lints and packages bundles into files, with the local modes of its channels: `file`, `maven` and `nuget` to a directory, and `npm` with `publish: false`.
+It needs no network and no credential.
+. *In the pipeline*, a following job publishes those files to the organisation's registry with that platform's own tools and credentials: `npm publish`, `mvn deploy:deploy-file`, `dotnet nuget push`, a release upload.
+
+Every `publish` run writes a hand-off, <<handoff,The hand-off §>>, listing each file it wrote with its SHA-256.
+The publishing job checks the files against it, and publishes exactly those bytes: the bytes in the registry are the bytes the vetted tool produced.
+
+Credentials never enter the image.
+
+[IMPORTANT]
+.What the image does not do yet
+====
+The image does not publish to a remote registry itself.
+The channels' remote modes -- `maven` or `nuget` to a URL, `npm` with publishing, `github-release` -- may work from inside it, but they are neither tested nor supported there.
+Publish in a second step, as <<docker-pipelines>> shows.
+====
+
+[#docker-tags]
+=== Tags, and why to pin by digest
+
+[cols="1,3", options="header"]
+|===
+| Tag | Points at
+
+| `{api-only-publisher-version}`
+| That version, and nothing else, for good.
+Once pushed, an exact-version tag never points at another digest: a re-publish of a version reuses the image it already has, and never rebuilds it.
+
+| `0.11`, `0`, `latest`
+| The highest released version.
+They move with each new highest release, never for a re-publish of an older version, and never for a pre-release.
+
+| `1.0.0-rc.1`, …
+| A pre-release gets only its exact tag.
+|===
+
+Pin by digest, as `arcetect/api-only-publisher@sha256:<digest>`.
+A digest names the bytes a vetting team approved, in any registry the image is mirrored to; a tag is only a name, and a mirror may be configured to let it move.
+
+Find a version's digest with:
+
+[source,console,subs="attributes+"]
+----
+docker buildx imagetools inspect arcetect/api-only-publisher:{api-only-publisher-version} --format '{{ .Manifest.Digest }}'
+----
+
+The GitHub Release of each version lists it too, with both references.
+
+[#docker-vetting]
+=== For a vetting team
+
+[#docker-contents]
+==== What is inside
+
+[cols="1,3", options="header"]
+|===
+| Part | Detail
+
+| Base
+| `node:24-trixie-slim`, the official Node.js 24 image on Debian 13, pinned by digest.
+
+| Added packages
+| `git` and `ca-certificates`; `tar` and `npm` come with the base.
+
+| The Publisher
+| The npm package `@arc-e-tect/api-only-publisher` at the image's version: the release workflow installs the tarball npm serves for that version.
+
+| The toolchain
+| Redocly CLI and AsyncAPI CLI, at the versions `init` pins, installed from a lockfile into `/opt/api-only-publisher/toolchain`.
+
+| User
+| UID `10001`, GID `0`: not root.
+Any other UID works too, <<docker-user>>.
+|===
+
+The labels say so without running anything:
+
+[source,console,subs="attributes+"]
+----
+docker pull arcetect/api-only-publisher:{api-only-publisher-version}
+docker image inspect arcetect/api-only-publisher:{api-only-publisher-version} --format '{{ json .Config.Labels }}'
+----
+
+Besides the OCI annotations -- `source`, `revision`, `version`, `created`, `licenses` and the rest -- two labels name the toolchain:
+
+[cols="2,1", options="header"]
+|===
+| Label | Example
+| `com.arc-e-tect.api-only-publisher.toolchain.redocly`  | `@redocly/cli@2.55.0`
+| `com.arc-e-tect.api-only-publisher.toolchain.asyncapi` | `@asyncapi/cli@6.2.0`
+|===
+
+[#docker-sbom]
+==== SBOM and provenance
+
+Each image carries an SPDX SBOM and SLSA provenance as attestations, per platform.
+The SBOM lists every package in the image: the Debian packages, and the npm packages of the Publisher and the toolchain with their whole dependency trees.
+The provenance names this repository, the release workflow and the commit.
+
+[source,console,subs="attributes+"]
+----
+docker buildx imagetools inspect arcetect/api-only-publisher:{api-only-publisher-version} --format '{{ json .SBOM }}'
+docker buildx imagetools inspect arcetect/api-only-publisher:{api-only-publisher-version} --format '{{ json .Provenance }}'
+----
+
+The GitHub Release of each version has both platforms' SBOMs attached, as `api-only-publisher-image-<version>-linux-<arch>.spdx.json`.
+
+[#docker-signature]
+==== Verifying the signature
+
+Each image is signed with https://docs.sigstore.dev/[Sigstore cosign ↗], keyless: the signing certificate is issued to the release workflow's GitHub OIDC identity, so no signing key exists to be stolen.
+Verify against exactly that identity:
+
+[source,console,subs="attributes+"]
+----
+cosign verify \
+  --certificate-identity https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/.github/workflows/api-only-publisher-image.yml@refs/heads/main \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  arcetect/api-only-publisher@sha256:<digest>
+----
+
+The same command, with `ghcr.io/arc-e-tect/api-only-publisher`, verifies GHCR's copy.
+The identity is the image workflow, at `main`, which the release workflow calls.
+
+[#docker-scanning]
+==== Scanning
+
+Each release is scanned with https://trivy.dev/[Trivy ↗], every platform, every severity, and the reports are attached to its GitHub Release as `api-only-publisher-image-<version>-linux-<arch>.trivy.json` and `.txt`.
+
+A *CRITICAL* finding that has a fix blocks the release from reaching Docker Hub.
+The exceptions are listed in link:.trivyignore.yaml[`.trivyignore.yaml` →], each with its reason, the path it applies to, and the date it expires.
+Findings without a fix, which every Debian base has, are reported and do not block.
+
+Scan it yourself as your policy requires, for example:
+
+[source,console]
+----
+trivy image --ignorefile .trivyignore.yaml arcetect/api-only-publisher@sha256:<digest>
+----
+
+[#docker-mirroring]
+==== Mirroring into an internal registry
+
+Copy the image with everything attached to it -- both platforms, their SBOM and provenance attestations, and the signature -- with https://oras.land/[the ORAS CLI ↗]:
+
+[source,console,subs="attributes+"]
+----
+oras cp -r \
+  docker.io/arcetect/api-only-publisher@sha256:<digest> \
+  registry.example.com/mirror/arcetect/api-only-publisher:{api-only-publisher-version}
+----
+
+`-r` copies the image's referrers too, which is where cosign stores the signature: an OCI referrer, a Sigstore bundle, not a `sha256-<digest>.sig` tag.
+`skopeo copy --all` and `crane copy` keep the platforms and the attestations, but not a referrer, so a copy made with them has no signature to verify.
+The mirror must support the OCI 1.1 referrers API, as Docker Hub, GHCR and the CNCF Distribution registry, version 3, do; check your registry's documentation for its own.
+
+The digest does not change in the copy.
+Verify the mirror's copy as the original, with the mirror's name:
+
+[source,console]
+----
+cosign verify \
+  --certificate-identity https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/.github/workflows/api-only-publisher-image.yml@refs/heads/main \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  registry.example.com/mirror/arcetect/api-only-publisher@sha256:<digest>
+----
+
+Pipelines then pin the same digest, with the mirror's name.
+
+[#docker-pipelines]
+=== For a pipeline author
+
+[#docker-run]
+==== Every command, as `docker run`
+
+Run from the library's root, which is mounted at `/work`, the image's working directory:
+
+[source,console,subs="attributes+"]
+----
+docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD:/work" \
+  arcetect/api-only-publisher@sha256:<digest> init --yes --openapi --asyncapi .
+docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD:/work" \
+  arcetect/api-only-publisher@sha256:<digest> build
+docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD:/work" \
+  arcetect/api-only-publisher@sha256:<digest> publish --target orders --target payments
+----
+
+The image's arguments are the Publisher's: every command in <<commands>> works this way, and so do `--help` and `--version`.
+Anything else runs as given, `sh -c '…'` included.
+
+`--network none` is not needed, and costs nothing: nothing in the image uses the network.
+
+[#docker-user]
+==== The user, file ownership and git
+
+`--user "$(id -u):$(id -g)"` runs the Publisher as you, so the files it writes into `/work` are yours.
+Any UID works, with or without an entry in the image's `/etc/passwd`: `HOME` is `/tmp`, which any user can write.
+
+`git` trusts a mounted repository whoever owns it; without that, git would refuse a repository owned by another user as "dubious ownership".
+The library does not have to be a git repository, but `pack` and `publish` read the commit time and the `origin` remote from it when it is.
+
+[#docker-read-only]
+==== A read-only root filesystem
+
+The image runs with `--read-only`, as hardened platforms enforce, given a writable `/tmp`:
+
+[source,console]
+----
+docker run --rm --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" -v "$PWD:/work" \
+  arcetect/api-only-publisher@sha256:<digest> build
+----
+
+[#docker-toolchain]
+==== The toolchain rule, and the opt-in
+
+The image runs its own toolchain, and only that: `apionly.yaml` must pin the versions the image carries, the ones its `com.arc-e-tect.api-only-publisher.toolchain.*` labels name, and `init` writes.
+A library pinning another version fails at once, before anything is built and without reaching for the network:
+
+----
+Error: apionly.yaml's toolchain.redocly pins @redocly/cli@2.51.0, and API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=never forbids downloading it.
+This installation carries @asyncapi/cli@6.2.0 and @redocly/cli@2.55.0.
+Set toolchain.redocly to "@redocly/cli@2.55.0" in apionly.yaml, or use the api-only-publisher image whose com.arc-e-tect.api-only-publisher.toolchain.redocly label is @redocly/cli@2.51.0.
+To allow the download instead, run with API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=allow.
+----
+
+Align `toolchain` in `apionly.yaml`, or use the image version that carries the pinned toolchain.
+
+`API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=allow` lets the Publisher fetch a pin the image does not carry with `npx`, as it does outside Docker.
+It is off in the image, and exists for someone who knowingly accepts a download; the image is then no longer sealed.
+With a read-only root, `/tmp` must allow what `npx` fetches to run:
+
+[source,console]
+----
+docker run --rm --read-only --tmpfs /tmp:exec -e API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=allow \
+  --user "$(id -u):$(id -g)" -v "$PWD:/work" arcetect/api-only-publisher@sha256:<digest> build
+----
+
+<<pinning-the-bundlers>> describes the variables.
+
+[#docker-network]
+==== Nothing phones home
+
+The image makes no outbound connection: it sets, in its environment, what switches off each tool's own:
+
+[cols="1,2", options="header"]
+|===
+| Tool | Switched off with
+| npm           | `NPM_CONFIG_UPDATE_NOTIFIER=false`, `NPM_CONFIG_FUND=false`, `NPM_CONFIG_AUDIT=false`
+| Redocly CLI   | `REDOCLY_TELEMETRY=off`, `REDOCLY_SUPPRESS_UPDATE_NOTICE=true`
+| AsyncAPI CLI  | `ASYNCAPI_METRICS_CONFIG_PATH`, naming a file with analytics disabled, and `ASYNCAPI_SKIP_NEW_VERSION_CHECK=true`
+|===
+
+This is tested, not assumed: the whole smoke test was run on a network whose every packet was captured, and the image sent none.
+
+[#docker-ci-job]
+==== As a CI job image
+
+The image is also a job image, for platforms that run a job's own shell commands inside it.
+Its entrypoint runs the Publisher when the first argument is one of its commands or a flag, and anything else as given, so a platform that starts the image with a shell needs no entrypoint override.
+
+GitHub Actions replaces the entrypoint of a `container:` job, and runs its steps as the image's user by default, which cannot write the workspace GitHub mounts; run the job as the runner's user, UID 1001:
+
+[source,yaml]
+----
+include::pipelines/github-actions-container-job.yml[]
+----
+
+A GitLab CI job uses it as it stands:
+
+[source,yaml]
+----
+package:
+  image: docker.io/arcetect/api-only-publisher@sha256:<digest>
+  script:
+    - api-only-publisher build
+----
+
+[#docker-github-actions]
+==== Reference pipeline: GitHub Actions
+
+Two jobs: `package` runs the image and hands the files on, `publish` checks them against the hand-off and publishes them to npm, Maven and NuGet on GitHub Packages, and to a GitHub Release, with the job's `GITHUB_TOKEN`.
+Copy it into `.github/workflows/`, then set the digest, the targets and the trigger.
+The container-job variant above replaces its `package` job.
+
+It is exercised end to end, both variants, by a workflow in this repository that publishes to scratch packages and resolves each one with its ecosystem's own client and with the API-Only Subscriber.
+
+[source,yaml]
+----
+include::pipelines/github-actions.yml[]
+----
+
+What the two steps lose, and how the pipeline makes up for it:
+
+* *Idempotence.* A channel's remote mode leaves a version the registry has alone when it is identical, and refuses it when it differs; `npm publish` or `dotnet nuget push` of an existing version fails instead.
+Each publishing step checks for the version first, compares the bytes, and publishes only what is missing, so a re-run is safe and a real conflict still fails.
+* *Maven checksums and metadata.* The local Maven layout holds the artifact, its POM and its manifest, and no `.md5`, `.sha1` or `maven-metadata.xml`.
+`mvn deploy:deploy-file` writes those when it uploads, so the repository ends up as a remote `maven` channel would leave it, and Gradle resolves it.
+
+[#docker-gitlab]
+==== Reference pipeline: GitLab CI
+
+[WARNING]
+====
+*Not exercised.*
+This pipeline is validated against GitLab's published CI schema only; no GitLab pipeline has run it yet.
+====
+
+The same two steps: `package` runs in the image, and one `publish:*` job per registry publishes to the project's package registry with `CI_JOB_TOKEN`: npm, Maven and NuGet, and the archives to the generic package registry.
+
+[source,yaml]
+----
+include::pipelines/gitlab-ci.yml[]
+----
+
+[#docker-mirror-in-pipelines]
+==== Using a mirrored image
+
+Replace the image reference with the mirror's, keeping the digest: `registry.example.com/mirror/arcetect/api-only-publisher@sha256:<digest>`.
+Both reference pipelines name the image in one place: `PUBLISHER_IMAGE`, and the container job's `image`.
+
+[#docker-maintainers]
+=== For maintainers
+
+[#docker-release]
+==== How an image is released
+
+The release workflow calls link:../.github/workflows/api-only-publisher-image.yml[`api-only-publisher-image.yml` →] after the npm upload:
+
+. *Plan.* The tag rules, link:docker/image-tags.js[`docker/image-tags.js` →]: whether GHCR already has the version, and which floating tags move.
+. *Build*, each platform on a native runner, from the tarball npm serves for the version, pushed to GHCR by digest with its SBOM and provenance.
+. *Tag and sign on GHCR*: the multi-platform image, its exact-version tag, and a keyless signature.
+. *Smoke test* on both platforms, from an anonymous pull by digest, which proves the package is public: link:docker/smoke-test.sh[`docker/smoke-test.sh` →].
+. *Scan*, reported in full, blocking on a fixable critical finding.
+. *Promote*: the same digest copied to Docker Hub, its floating tags moved on both registries, the digest checked on Docker Hub, and signed and verified there.
+. *Describe*: the Docker Hub short description and overview, from link:docker/DOCKERHUB.md[`docker/DOCKERHUB.md` →].
+. *Release assets*: the SBOMs and scan reports attached to the GitHub Release, and the image listed in its notes.
+
+A failure in any of these never undoes the npm release; the workflow summary shows it.
+A branch that changes what the image is built from builds it for `linux/amd64` and smoke-tests it, without pushing.
+
+[#docker-secrets]
+==== Secrets and variables
+
+[cols="1,1,3", options="header"]
+|===
+| Name | Kind | Scope and use
+
+| `GITHUB_TOKEN`
+| Automatic
+| `packages: write` to push to GHCR, `contents: write` to attach release assets, `id-token: write` for cosign's keyless signature. No stored secret.
+
+| `DOCKERHUB_NAMESPACE`
+| Variable
+| The Docker Hub namespace, `arcetect`: the image is `<namespace>/api-only-publisher`. A variable, so the image can move to an organisation without editing a workflow.
+
+| `DOCKERHUB_USERNAME`
+| Variable
+| The Docker Hub account the tokens belong to.
+
+| `DOCKERHUB_TOKEN`
+| Secret
+| A Docker Hub personal access token with *Read & Write* scope: pushes the image and its tags.
+
+| `DOCKERHUB_DESCRIPTION_TOKEN`
+| Secret
+| A Docker Hub personal access token with *Read, Write, Delete* scope, the scope Docker Hub requires to change a repository's description. Only the description job holds it.
+
+| `E2E_CLEANUP_TOKEN`
+| Secret, optional
+| A classic GitHub personal access token with `read:packages` and `delete:packages`, with which the end-to-end workflow deletes its scratch package versions. Without it, it lists them for deletion by hand.
+|===
+
+The repository's Actions policy allows only GitHub-owned actions, verified creators and listed ones, and requires every action pinned by SHA.
+`peter-evans/dockerhub-description`, which updates the description, is on that list; a workflow using an action that is not fails to start, with no message saying why.
+
+[#docker-visibility]
+==== GHCR visibility
+
+GitHub documents that a package starts private and does not inherit its repository's visibility, which can be changed only by hand.
+In practice, the scratch package the dry run pushed, linked to this public repository through the image's `source` annotation, was public from its first push.
+
+So the first release may need nothing; the smoke test finds out, since it pulls the image anonymously.
+If that pull fails, its message names this step: open the package's settings, https://github.com/users/Arc-E-Tect/packages/container/api-only-publisher/settings[api-only-publisher ↗], choose *Change visibility* under *Danger Zone*, make it *Public*, and re-run the failed jobs.
+
+[#docker-republish]
+==== Re-publishing
+
+Run the release workflow by hand with `republish_version` set to a released version, when its npm upload or its image failed.
+A version npm already has is not uploaded again.
+If GHCR has the image, it is reused, not rebuilt, and Docker Hub is given that same digest, or left alone if it has it; an exact-version tag is never pointed at another digest.
+The floating tags move only if the version is the highest released.
+
+[#docker-verifying]
+==== Running the smoke test and the end-to-end workflow
+
+The smoke test runs an image exactly as the release does, with nothing but Docker:
+
+[source,console]
+----
+cd api-only-publisher
+docker/build-context.sh 0.0.0-local
+docker build -t api-only-publisher:local --build-arg VERSION=0.0.0-local .
+docker/smoke-test.sh api-only-publisher:local 0.0.0-local
+----
+
+It runs every step with no network, a read-only root and your own user: the version, the help, the toolchain labels against what is installed and against `init`'s pins, a library with two targets built, linted and packaged to every local channel in one run, ownership, byte-identical packaging twice, the hand-off, a foreign toolchain pin failing at once, the shell mode, and a build as an arbitrary UID.
+
+link:../.github/workflows/api-only-publisher-image-e2e.yml[`api-only-publisher-image-e2e.yml` →] runs the GitHub Actions reference pipeline for real, by hand only.
+Give it an image by digest; it publishes version `0.<run>.<attempt>` of two scratch targets, `apionly-e2e-alpha` and `apionly-e2e-beta`, to npm, Maven and NuGet on GitHub Packages and to a scratch release, publishes again to prove a re-run is safe, resolves each package with its own client and with the Subscriber, and removes what it published.
+The image workflow, dispatched by hand, is the release's dry run: its defaults are the scratch names `ghcr.io/arc-e-tect/api-only-publisher-scratch` and `arcetect/api-only-publisher-scratch`, and it builds from the branch's source.
 
 [#adapting]
 == Adapting it to another project

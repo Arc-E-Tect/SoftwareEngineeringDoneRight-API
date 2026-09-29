@@ -25,3 +25,6 @@ bin/
 
 # Git worktrees kept inside the checkout
 /worktrees/
+
+# The npm tarball the Docker image is built from; docker/build-context.sh writes it.
+/api-only-publisher/api-only-publisher.tgz

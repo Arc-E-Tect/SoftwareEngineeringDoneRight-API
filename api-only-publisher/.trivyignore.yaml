@@ -1,0 +1,19 @@
+# Findings the image's vulnerability gate accepts, each with the reason and a date
+# after which it blocks again. The gate fails a release on a CRITICAL finding that
+# has a fix (trivy image --severity CRITICAL --ignore-unfixed); the full report,
+# every severity, is attached to each GitHub Release. README.adoc#docker-scanning.
+#
+# Each entry is scoped to the paths it was reviewed for: the same finding anywhere
+# else in the image still blocks.
+vulnerabilities:
+  - id: CVE-2024-21534
+    paths:
+      - "opt/api-only-publisher/toolchain/node_modules/parserapiv1/node_modules/jsonpath-plus/package.json"
+      - "opt/api-only-publisher/toolchain/node_modules/parserapiv2/node_modules/jsonpath-plus/package.json"
+    statement: >-
+      jsonpath-plus 7.2.0 is a dependency of @asyncapi/generator's legacy parsers,
+      which AsyncAPI CLI uses for `asyncapi generate` only. The Publisher runs
+      `asyncapi bundle` and `asyncapi validate`, which load jsonpath-plus 10.4.0:
+      both succeed with parserapiv1 and parserapiv2 deleted from the image.
+      Reviewed 2026-09-29 against @asyncapi/cli 6.2.0.
+    expired_at: 2027-03-31

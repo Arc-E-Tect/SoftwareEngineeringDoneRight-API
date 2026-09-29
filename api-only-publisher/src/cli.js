@@ -20,6 +20,8 @@ const { publish, ChannelError } = require("./channels");
 const { VersionError: PolicyError, describe } = require("./version-policy");
 const { versionOf, BundleVersionError } = require("./bundle-version");
 const { unreferenced } = require("./unreferenced");
+const { requireTools } = require("./toolchain");
+const { writeHandoff } = require("./handoff");
 
 const USAGE = `api-only-publisher -- build and distribute API description documents
 
@@ -67,6 +69,7 @@ Options:
   -C <dir>          Run as if started in <dir>.
   -q, --quiet       Only report errors.
   -h, --help        Show this help.
+  --version         On its own: print the Publisher's version.
 
 What gets built, and where each document goes, is declared in apionly.yaml.
 A published target's version is read from its version file:
@@ -97,6 +100,11 @@ function parseArgs(argv) {
             case "--target": options.targets.push(next()); break;
             case "--pre-release": options.preRelease = next(); break;
             case "--version":
+                // Alone, it asks for the Publisher's own version, as any tool's does.
+                if (argv.length === 1) {
+                    options.version = true;
+                    break;
+                }
                 throw new ConfigError(
                     "--version is no longer accepted: each published target's version is read from its version " +
                     "file, <target>.bundle.properties beside its bundle root. Pass --pre-release <ids> to cut a " +
@@ -283,6 +291,10 @@ async function main(argv, io = {}) {
     const { options, positional } = parseArgs(argv);
     const command = positional[0];
 
+    if (options.version) {
+        process.stdout.write(`${require("../package.json").version}\n`);
+        return 0;
+    }
     if (options.help || !command) {
         process.stdout.write(USAGE);
         return 0;
@@ -334,6 +346,8 @@ async function main(argv, io = {}) {
             // in dist/. Every selected document is linted even when one fails, so
             // one run reports every failure rather than only the first.
             const { lint } = require("./pipeline");
+            requireTools(config, ["openapi", "asyncapi"].filter((kind) =>
+                config.targetsFor(kind).some((target) => !targets || targets.includes(target))));
             const failures = [];
             let linted = 0;
             for (const kind of ["openapi", "asyncapi"]) {
@@ -441,6 +455,7 @@ async function main(argv, io = {}) {
             const versions = versionsOf(config, shipped, options.preRelease);
             const closures = forTargets(config, undefined, shipped);
             let published = 0;
+            const handoff = [];
             for (const target of Object.keys(config.targets)) {
                 if (targets && !targets.includes(target)) continue;
                 if (!config.isPublished(target)) continue;
@@ -453,11 +468,17 @@ async function main(argv, io = {}) {
                 });
                 for (const name of names) {
                     // A remote channel returns a promise; a local one does not.
-                    await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
+                    const result = await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
+                    for (const file of result.files || []) {
+                        handoff.push({ file, target, version: manifest.version, channel: name });
+                    }
                     published += 1;
                 }
             }
+            // What a later step publishes byte for byte; README.adoc#handoff.
+            const { sha256: listing } = writeHandoff(config.root, outDir, handoff);
             log(`\nPublished ${published} artifact(s).`);
+            log(`Listed ${handoff.length} file(s) in ${path.relative(config.root, listing)}.`);
             return 0;
         }
         case "split": {

@@ -1,0 +1,577 @@
+name: API-Only Publisher - Image
+
+# The sealed Docker image of one released Publisher version: built on native
+# runners, pushed to GHCR by digest, smoke-tested and scanned from there, and only
+# then copied - the same digest, never a rebuild - to Docker Hub.
+# api-only-publisher/README.adoc#docker-maintainers describes it.
+#
+# The release workflow calls it after the npm upload, so the image is built from
+# the very tarball npm serves. Dispatched by hand, it is the dry run: the defaults
+# are scratch names, and the image is built from the branch's source.
+#
+# The exact-version tag is written once (docker/image-tags.js): a version GHCR
+# already has is reused, not rebuilt, and Docker Hub gets that digest or nothing.
+#
+# Every job signs, pushes or verifies with keyless credentials where it can:
+# GITHUB_TOKEN for GHCR and the release, the job's OIDC token for cosign. Docker
+# Hub has no such exchange, so its two tokens are secrets.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'The released version, e.g. 1.4.2'
+        type: string
+        required: true
+      release_tag:
+        description: 'The GitHub Release to attach the SBOM and scan report to, and to list the image in; empty for none'
+        type: string
+        required: false
+        default: ''
+      ghcr_image:
+        type: string
+        required: false
+        default: 'ghcr.io/arc-e-tect/api-only-publisher'
+      dockerhub_image:
+        description: 'Empty for <DOCKERHUB_NAMESPACE>/api-only-publisher'
+        type: string
+        required: false
+        default: ''
+      from_source:
+        description: 'Build the tarball from the checked-out source instead of fetching the released one from npm'
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      DOCKERHUB_TOKEN:
+        required: true
+      DOCKERHUB_DESCRIPTION_TOKEN:
+        required: true
+    outputs:
+      digest:
+        description: 'The multi-platform image digest GHCR and Docker Hub serve'
+        value: ${{ jobs.Manifest.outputs.digest }}
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'A pre-release version for the dry run, e.g. 0.0.0-dryrun.1'
+        type: string
+        required: true
+      ghcr_image:
+        type: string
+        required: true
+        default: 'ghcr.io/arc-e-tect/api-only-publisher-scratch'
+      dockerhub_image:
+        type: string
+        required: true
+        default: 'arcetect/api-only-publisher-scratch'
+      from_source:
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  VERSION: ${{ inputs.version }}
+  GHCR_IMAGE: ${{ inputs.ghcr_image }}
+  DOCKERHUB_IMAGE: ${{ inputs.dockerhub_image != '' && inputs.dockerhub_image || format('{0}/api-only-publisher', vars.DOCKERHUB_NAMESPACE) }}
+  # A released version is built from its tag; a dry run from the dispatched ref.
+  SOURCE_REF: ${{ inputs.from_source && github.ref || format('api-only-publisher-v{0}', inputs.version) }}
+  # The signer cosign verify expects: this file, at the ref it ran from.
+  SIGNER: https://github.com/${{ github.repository }}/.github/workflows/api-only-publisher-image.yml@${{ github.ref }}
+  OIDC_ISSUER: https://token.actions.githubusercontent.com
+  # aquasec/trivy:0.74.0
+  TRIVY: aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+
+jobs:
+  Plan:
+    name: Plan the image tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
+      digest: ${{ steps.plan.outputs.digest }}
+      floating: ${{ steps.plan.outputs.floating }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide what to build and which tags move
+        id: plan
+        run: |
+          # Every released version, from the release tags; the floating tags move
+          # only for the highest of them.
+          released=$(git tag --list 'api-only-publisher-v*' | sed 's/^api-only-publisher-v//')
+          existing=$(docker buildx imagetools inspect "$GHCR_IMAGE:$VERSION" --format '{{ json .Manifest.Digest }}' 2>/dev/null | tr -d '"' || true)
+          node api-only-publisher/docker/image-tags.js plan --version "$VERSION" --released "$released" \
+            --ghcr-digest "$existing" | tee -a "$GITHUB_OUTPUT"
+          if [ -n "$existing" ]; then
+            echo "::notice title=Image reused::$GHCR_IMAGE:$VERSION already exists as $existing; it is reused, not rebuilt."
+          fi
+
+  Build:
+    name: Build ${{ matrix.platform }}
+    needs: Plan
+    if: ${{ needs.Plan.outputs.build == 'true' }}
+    strategy:
+      matrix:
+        include:
+          # Native runners, not QEMU: each platform builds on its own architecture.
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Fetch the Publisher's npm tarball
+        if: ${{ !inputs.from_source }}
+        working-directory: api-only-publisher
+        run: |
+          # The tarball npm serves for this version, verified against the registry's
+          # integrity by npm pack, so the image contains exactly the npm package.
+          # A version published a moment ago can take a while to reach the CDN.
+          for attempt in 1 2 3 4 5 6; do
+            if tarball=$(npm pack --silent "@arc-e-tect/api-only-publisher@$VERSION"); then
+              mv "$tarball" api-only-publisher.tgz
+              exit 0
+            fi
+            sleep $((attempt * 20))
+          done
+          echo "::error::@arc-e-tect/api-only-publisher@$VERSION is not on npm"
+          exit 1
+
+      - name: Pack the Publisher from source
+        if: ${{ inputs.from_source }}
+        run: api-only-publisher/docker/build-context.sh "$VERSION"
+
+      - name: Describe the build
+        id: meta
+        run: |
+          # The commit's time, not the clock's, so a rebuild of the commit stamps
+          # the same creation time and layer timestamps.
+          epoch=$(git log -1 --format=%ct)
+          {
+            echo "revision=$(git rev-parse HEAD)"
+            echo "epoch=$epoch"
+            echo "created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)"
+            echo "artifact=digest-$(echo '${{ matrix.platform }}' | tr / -)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.meta.outputs.epoch }}
+        with:
+          context: api-only-publisher
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            REVISION=${{ steps.meta.outputs.revision }}
+            CREATED=${{ steps.meta.outputs.created }}
+          # SLSA provenance, with the build's full detail, and an SBOM of every
+          # package in the image, npm and Debian alike, attached as attestations.
+          provenance: mode=max
+          sbom: true
+          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Keep the digest
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          echo '${{ steps.build.outputs.digest }}' > "$RUNNER_TEMP/digests/${{ steps.meta.outputs.artifact }}"
+
+      - name: Upload the digest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.meta.outputs.artifact }}
+          path: ${{ runner.temp }}/digests/*
+          retention-days: 1
+
+  Manifest:
+    name: Tag and sign on GHCR
+    needs: [Plan, Build]
+    # A version GHCR already has skips Build, and is neither re-tagged nor re-signed.
+    if: ${{ !cancelled() && needs.Plan.result == 'success' && (needs.Build.result == 'success' || needs.Plan.outputs.build == 'false') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # cosign keyless: Fulcio certifies this job's OIDC identity, so no key is stored.
+      id-token: write
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+    steps:
+      - name: Download the digests
+        if: ${{ needs.Plan.outputs.build == 'true' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: digest-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create the multi-platform image and its exact-version tag
+        if: ${{ needs.Plan.outputs.build == 'true' }}
+        run: |
+          sources=$(for f in "$RUNNER_TEMP"/digests/*; do printf '%s@%s ' "$GHCR_IMAGE" "$(cat "$f")"; done)
+          # The index carries the source annotation too, which is what links a
+          # multi-platform package to this repository on GHCR.
+          # shellcheck disable=SC2086
+          docker buildx imagetools create --tag "$GHCR_IMAGE:$VERSION" \
+            --annotation "index:org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --annotation "index:org.opencontainers.image.description=A sealed, vettable API-Only Publisher for CI pipelines." \
+            --annotation "index:org.opencontainers.image.licenses=MIT" \
+            --annotation "index:org.opencontainers.image.version=$VERSION" \
+            $sources
+
+      - name: Read the digest
+        id: digest
+        run: |
+          digest='${{ needs.Plan.outputs.digest }}'
+          if [ -z "$digest" ]; then
+            digest=$(docker buildx imagetools inspect "$GHCR_IMAGE:$VERSION" --format '{{ json .Manifest.Digest }}' | tr -d '"')
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          docker buildx imagetools inspect "$GHCR_IMAGE@$digest"
+
+      - name: Install cosign
+        if: ${{ needs.Plan.outputs.build == 'true' }}
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+
+      - name: Sign
+        if: ${{ needs.Plan.outputs.build == 'true' }}
+        run: cosign sign --yes "$GHCR_IMAGE@${{ steps.digest.outputs.digest }}"
+
+  Smoke-Test:
+    name: Smoke test ${{ matrix.platform }}
+    needs: Manifest
+    # Build is skipped when GHCR already has the version, and a skipped job skips
+    # every job after it unless that job says otherwise; each one from here on
+    # therefore names the results it depends on.
+    if: ${{ !cancelled() && needs.Manifest.result == 'success' }}
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    env:
+      IMAGE: ${{ inputs.ghcr_image }}@${{ needs.Manifest.outputs.digest }}
+    steps:
+      - name: Checkout the smoke test
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: api-only-publisher/docker
+          persist-credentials: false
+
+      - name: Pull anonymously by digest
+        run: |
+          # No login: pulling as nobody proves the package is public.
+          if ! docker pull --platform '${{ matrix.platform }}' "$IMAGE"; then
+            echo "::error title=GHCR package not public::An anonymous pull of $IMAGE failed. A package a workflow creates on GHCR starts private, and its visibility can only be changed by hand: open the package settings, https://github.com/users/${{ github.repository_owner }}/packages/container/${GHCR_IMAGE##*/}/settings (or /orgs/ for an organisation), choose Change visibility under Danger Zone, and make it Public. Then re-run the failed jobs. README.adoc#docker-maintainers."
+            exit 1
+          fi
+
+      - name: Smoke test
+        run: api-only-publisher/docker/smoke-test.sh "$IMAGE" "$VERSION"
+
+  Scan:
+    name: Scan
+    needs: Manifest
+    if: ${{ !cancelled() && needs.Manifest.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      IMAGE: ${{ inputs.ghcr_image }}@${{ needs.Manifest.outputs.digest }}
+    steps:
+      - name: Checkout the accepted findings
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: api-only-publisher/.trivyignore.yaml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Report every finding
+        run: |
+          # The full report, every severity, for every platform, attached to the release.
+          mkdir -p reports
+          for platform in linux/amd64 linux/arm64; do
+            name="api-only-publisher-image-$VERSION-$(echo "$platform" | tr / -)"
+            for format in json table; do
+              docker run --rm -v "$PWD/reports:/reports" -v "$RUNNER_TEMP/trivy:/root/.cache" "$TRIVY" image --quiet --scanners vuln \
+                --platform "$platform" --format "$format" \
+                --output "/reports/$name.trivy.$([ "$format" = json ] && echo json || echo txt)" "$IMAGE"
+            done
+          done
+          ls -l reports
+
+      - name: Upload the reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-scan
+          path: reports/
+
+      - name: Gate on fixable critical findings
+        run: |
+          # Blocks the promotion to Docker Hub on a CRITICAL finding that has a fix,
+          # less those .trivyignore.yaml accepts, each with its reason and expiry.
+          # Findings with no fix, in any Debian base, are reported but never block.
+          for platform in linux/amd64 linux/arm64; do
+            docker run --rm -v "$PWD/api-only-publisher:/cfg:ro" -v "$RUNNER_TEMP/trivy:/root/.cache" "$TRIVY" image --quiet --scanners vuln \
+              --platform "$platform" --severity CRITICAL --ignore-unfixed \
+              --ignorefile /cfg/.trivyignore.yaml --exit-code 1 "$IMAGE"
+          done
+
+  Promote:
+    name: Promote to Docker Hub
+    needs: [Plan, Manifest, Smoke-Test, Scan]
+    if: ${{ !cancelled() && needs.Smoke-Test.result == 'success' && needs.Scan.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      DIGEST: ${{ needs.Manifest.outputs.digest }}
+      FLOATING: ${{ needs.Plan.outputs.floating }}
+    steps:
+      - name: Checkout the tag rules
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: |
+            api-only-publisher/docker
+            api-only-publisher/src
+          persist-credentials: false
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Copy the exact-version tag, never re-pointing it
+        run: |
+          existing=$(docker buildx imagetools inspect "$DOCKERHUB_IMAGE:$VERSION" --format '{{ json .Manifest.Digest }}' 2>/dev/null | tr -d '"' || true)
+          action=$(node api-only-publisher/docker/image-tags.js promotion --version "$VERSION" \
+            --source-digest "$DIGEST" --existing-digest "$existing" | sed 's/^action=//')
+          if [ "$action" = copy ]; then
+            # A registry-to-registry copy of the index, its platforms and their
+            # attestations: the same digest, never a rebuild.
+            docker buildx imagetools create --tag "$DOCKERHUB_IMAGE:$VERSION" "$GHCR_IMAGE@$DIGEST"
+          else
+            echo "::notice::$DOCKERHUB_IMAGE:$VERSION already is $DIGEST"
+          fi
+
+      - name: Move the floating tags
+        if: ${{ env.FLOATING != '' }}
+        run: |
+          for tag in $FLOATING; do
+            docker buildx imagetools create --tag "$GHCR_IMAGE:$tag" "$GHCR_IMAGE@$DIGEST"
+            docker buildx imagetools create --tag "$DOCKERHUB_IMAGE:$tag" "$GHCR_IMAGE@$DIGEST"
+          done
+
+      - name: Assert Docker Hub serves the same digest
+        run: |
+          served=$(docker buildx imagetools inspect "$DOCKERHUB_IMAGE:$VERSION" --format '{{ json .Manifest.Digest }}' | tr -d '"')
+          [ "$served" = "$DIGEST" ] || { echo "::error::Docker Hub serves $served for $VERSION, GHCR $DIGEST"; exit 1; }
+          docker pull --quiet "$DOCKERHUB_IMAGE@$DIGEST"
+          echo "Docker Hub and GHCR both serve $DIGEST"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+
+      - name: Sign the Docker Hub copy, and verify both
+        run: |
+          # The same digest, signed again where Docker Hub keeps signatures, with
+          # the same keyless identity; a copy of GHCR's signature would depend on
+          # both registries storing signatures alike.
+          cosign sign --yes "$DOCKERHUB_IMAGE@$DIGEST"
+          # Docker Hub lists a new referrer, the signature, a little after it is
+          # pushed, so a verification straight away can find none: retry for a while.
+          for image in "$GHCR_IMAGE" "$DOCKERHUB_IMAGE"; do
+            for attempt in 1 2 3 4 5 6; do
+              if cosign verify --certificate-identity "$SIGNER" --certificate-oidc-issuer "$OIDC_ISSUER" \
+                "$image@$DIGEST" > /dev/null; then
+                echo "verified $image@$DIGEST"
+                continue 2
+              fi
+              sleep $((attempt * 10))
+            done
+            echo "::error::the signature of $image@$DIGEST does not verify"
+            exit 1
+          done
+
+  Description:
+    name: Update the Docker Hub description
+    needs: [Plan, Promote]
+    # An older version's re-publish leaves the description of the newest alone; the
+    # dry run, which moves no floating tag, describes its scratch repository.
+    if: ${{ !cancelled() && needs.Promote.result == 'success' && (needs.Plan.outputs.floating != '' || inputs.from_source) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the overview
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          sparse-checkout: api-only-publisher/docker
+          persist-credentials: false
+
+      - name: Update the description
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          # Read, Write, Delete: the scope Docker Hub requires to change a
+          # description. Only this job holds it.
+          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+          repository: ${{ env.DOCKERHUB_IMAGE }}
+          short-description: 'A sealed, vettable API-Only Publisher for CI: builds and packages API bundles, offline.'
+          readme-filepath: api-only-publisher/docker/DOCKERHUB.md
+
+  Release-Assets:
+    name: Attach the SBOM and scan report
+    needs: [Manifest, Promote]
+    if: ${{ !cancelled() && needs.Promote.result == 'success' && inputs.release_tag != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      DIGEST: ${{ needs.Manifest.outputs.digest }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Download the scan reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-scan
+          path: assets
+
+      - name: Extract the SBOMs
+        run: |
+          for platform in linux/amd64 linux/arm64; do
+            docker buildx imagetools inspect "$GHCR_IMAGE@$DIGEST" \
+              --format "{{ json (index .SBOM \"$platform\").SPDX }}" \
+              > "assets/api-only-publisher-image-$VERSION-$(echo "$platform" | tr / -).spdx.json"
+          done
+          ls -l assets
+
+      - name: Attach them, and list the image in the release notes
+        run: |
+          gh release upload "$TAG" assets/* --clobber --repo "${{ github.repository }}"
+          notes=$(gh release view "$TAG" --json body --jq .body --repo "${{ github.repository }}")
+          case "$notes" in *"## Docker image"*) exit 0 ;; esac
+          # shellcheck disable=SC2016 # the backticks are Markdown
+          {
+            printf '%s\n\n## Docker image\n\n' "$notes"
+            printf -- '- `%s@%s`\n- `%s@%s`\n\n' "$GHCR_IMAGE" "$DIGEST" "docker.io/$DOCKERHUB_IMAGE" "$DIGEST"
+            printf 'Verify the signature:\n\n```sh\ncosign verify \\\n  --certificate-identity %s \\\n  --certificate-oidc-issuer %s \\\n  %s@%s\n```\n' \
+              "$SIGNER" "$OIDC_ISSUER" "$GHCR_IMAGE" "$DIGEST"
+          } > notes.md
+          gh release edit "$TAG" --notes-file notes.md --repo "${{ github.repository }}"
+
+  Summary:
+    name: Image summary
+    needs: [Plan, Build, Manifest, Smoke-Test, Scan, Promote, Description, Release-Assets]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize
+        env:
+          DIGEST: ${{ needs.Manifest.outputs.digest }}
+        run: |
+          {
+            echo "## api-only-publisher image $VERSION"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Plan | ${{ needs.Plan.result }} |"
+            echo "| Build | ${{ needs.Build.result }} |"
+            echo "| Tag and sign on GHCR | ${{ needs.Manifest.result }} |"
+            echo "| Smoke test | ${{ needs.Smoke-Test.result }} |"
+            echo "| Scan | ${{ needs.Scan.result }} |"
+            echo "| Promote to Docker Hub | ${{ needs.Promote.result }} |"
+            echo "| Docker Hub description | ${{ needs.Description.result }} |"
+            echo "| Release assets | ${{ needs.Release-Assets.result }} |"
+            echo
+            if [ -n "$DIGEST" ]; then
+              echo "- \`$GHCR_IMAGE@$DIGEST\`"
+              [ '${{ needs.Promote.result }}' = success ] && echo "- \`docker.io/$DOCKERHUB_IMAGE@$DIGEST\`"
+              echo "- Floating tags moved: \`${{ needs.Plan.outputs.floating || 'none' }}\`"
+              echo
+              echo '```sh'
+              echo "cosign verify --certificate-identity $SIGNER \\"
+              echo "  --certificate-oidc-issuer $OIDC_ISSUER $GHCR_IMAGE@$DIGEST"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -22,4 +22,5 @@ module.exports = {
     ...require("./changed"),
     ...require("./split"),
     ...require("./channels"),
+    ...require("./handoff"),
 };

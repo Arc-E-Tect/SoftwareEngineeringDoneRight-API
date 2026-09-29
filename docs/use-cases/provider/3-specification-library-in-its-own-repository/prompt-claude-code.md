@@ -68,7 +68,7 @@ These are the versions this prompt was verified with. Use them unless I name new
   - `defaults.placeholders.strict`.
   - `build.staging`, `build.dist`, `reports.lint`.
   - `lint.unreferenced`: `error` (the default), `warn` or `off`.
-  - `toolchain.redocly: "@redocly/cli@2.52.0"`, `toolchain.asyncapi: "@asyncapi/cli@6.0.2"`.
+  - `toolchain.redocly: "@redocly/cli@2.55.0"`, `toolchain.asyncapi: "@asyncapi/cli@6.2.0"`.
   - `channels.maven`: `groupId` (required); `repository`, where a directory path writes a Maven repository layout to disk and an `http(s)` URL uploads with an HTTP `PUT` per file, sending `Authorization: Bearer <token>` with the token read from the environment variable `tokenEnv` names (default `MAVEN_TOKEN`); optionally `artifactId` and `extension` (default `tgz`).
   - `channels.file`: `directory`, `clean`.
   - `channels.npm` and `channels.github-release` exist too, for consumers without a JVM.

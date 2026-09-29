@@ -72,7 +72,7 @@ These are the versions this prompt was verified with. Use them unless I name new
   - `build.staging`, `build.dist`: working and output directories.
   - `reports.lint`: where lint reports go.
   - `lint.unreferenced`: `error` (the default), `warn` or `off`.
-  - `toolchain.redocly: "@redocly/cli@2.52.0"`, `toolchain.asyncapi: "@asyncapi/cli@6.0.2"`.
+  - `toolchain.redocly: "@redocly/cli@2.55.0"`, `toolchain.asyncapi: "@asyncapi/cli@6.2.0"`.
   - `channels.file.directory`, `channels.file.clean`.
   - `targets.<name>.openapi.bundle`, `targets.<name>.asyncapi.bundle`, `targets.<name>.publish`, `targets.<name>.versionFile`.
 - **The version file.** Each published target's version is in `<target>.bundle.properties`, beside its first bundle root, as `version=1.0.0`.
@@ -198,7 +198,7 @@ Then present the plan and wait for my approval.
      lint: build/api-only/reports/lint
 
    toolchain:
-     redocly: "@redocly/cli@2.52.0"
+     redocly: "@redocly/cli@2.55.0"
 
    channels:
      file:

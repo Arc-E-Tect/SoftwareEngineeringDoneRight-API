@@ -15,7 +15,7 @@
 const fs = require("fs");
 const path = require("path");
 const YAML = require("yaml");
-const { addMissingConfig } = require("./init-config");
+const { addMissingConfig, TOOLCHAIN_PIN } = require("./init-config");
 
 /** Every value the scaffold is written from, as it is when nobody chooses otherwise. */
 const DEFAULTS = Object.freeze({
@@ -66,8 +66,8 @@ function config(v) {
         "",
         "toolchain:",
     );
-    if (openapi) lines.push('  redocly: "@redocly/cli@2.52.0"');
-    if (asyncapi) lines.push('  asyncapi: "@asyncapi/cli@6.0.2"');
+    if (openapi) lines.push(`  redocly: "${TOOLCHAIN_PIN.openapi}"`);
+    if (asyncapi) lines.push(`  asyncapi: "${TOOLCHAIN_PIN.asyncapi}"`);
     lines.push("", "targets:", `  ${v.target}:`);
     if (openapi) lines.push("    openapi:", `      bundle: bundles/${v.target}_openapi_structure.yaml`);
     if (asyncapi) lines.push("    asyncapi:", `      bundle: bundles/${v.target}_asyncapi_structure.yaml`);

@@ -24,10 +24,11 @@ on:
       - '!api-only-publisher/README.adoc'
       - 'release/**'
       - '.github/workflows/api-only-publisher-release.yml'
+      - '.github/workflows/api-only-publisher-image.yml'
   workflow_dispatch:
     inputs:
       republish_version:
-        description: 'Already-released version to publish to npm, e.g. 0.0.1. Use this when a release completed (tag and GitHub Release exist) but the npm upload failed - Calculate-Version would otherwise find nothing new and skip Publish. Only use it for the HIGHEST released version: npm publish claims the latest dist-tag unconditionally, and moving it back is not possible from here (an OIDC token authorises one publish, so npm dist-tag has no credential). Leave empty for a normal release run.'
+        description: 'Already-released version to publish again, e.g. 0.0.1. Use this when a release completed (tag and GitHub Release exist) but the npm upload or the Docker image failed - Calculate-Version would otherwise find nothing new and skip both. A version npm already has is not uploaded again; the image is then built only if GHCR lacks it, and its exact-version tag is never re-pointed. Only use it for the HIGHEST released version when npm still needs the upload: npm publish claims the latest dist-tag unconditionally, and moving it back is not possible from here (an OIDC token authorises one publish, so npm dist-tag has no credential). Leave empty for a normal release run.'
         required: false
         type: string
         default: ''
@@ -175,7 +176,16 @@ jobs:
           sed -i -E "s/^:api-only-publisher-version: .*/:api-only-publisher-version: $VERSION/" api-only-publisher/README.adoc
 
       - name: Publish to npm
+        env:
+          REPUBLISH: ${{ inputs.republish_version }}
         run: |
+          # A re-publish that only the image needs: npm refuses a version it has,
+          # so a version already there is left alone, and the image jobs follow.
+          if [ -n "$REPUBLISH" ] && npm view "@arc-e-tect/api-only-publisher@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice title=Already on npm::@arc-e-tect/api-only-publisher@$VERSION is on npm; not uploaded again."
+            exit 0
+          fi
+
           # No NPM_TOKEN: authentication is the OIDC exchange this job's
           # id-token permission enables. --provenance attaches a signed
           # attestation tying the tarball to this commit and this workflow run.
@@ -198,6 +208,24 @@ jobs:
             echo
             echo "A newly published version can take a minute to appear through the CDN."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  Image:
+    name: Docker image
+    # After npm, so the image is built from the tarball npm serves. Its failure
+    # never undoes the npm release, and shows in the summary.
+    needs: [Calculate-Version, Publish]
+    if: ${{ always() && needs.Publish.result == 'success' }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/api-only-publisher-image.yml
+    with:
+      version: ${{ inputs.republish_version != '' && inputs.republish_version || needs.Calculate-Version.outputs.next_version }}
+      release_tag: api-only-publisher-v${{ inputs.republish_version != '' && inputs.republish_version || needs.Calculate-Version.outputs.next_version }}
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
 
   Update-README:
     name: Update README version
@@ -249,10 +277,16 @@ jobs:
 
   Workflow-Summary:
     name: Workflow Summary
-    needs: [Build, Publish, Update-README, Release-Package, Determine-Release-Type]
+    needs: [Build, Publish, Image, Update-README, Release-Package, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Report the Docker image
+        if: ${{ needs.Image.result != 'success' && needs.Publish.result == 'success' }}
+        run: |
+          echo "::warning title=Docker image::The npm release succeeded, but the Docker image jobs ended '${{ needs.Image.result }}'. Re-run them with republish_version."
+          echo "- Docker image: **${{ needs.Image.result }}** (npm release unaffected)" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Output release completion
         run: |
           echo "API-Only Publisher ${{ needs.Determine-Release-Type.outputs.release_type }} release workflow completed"

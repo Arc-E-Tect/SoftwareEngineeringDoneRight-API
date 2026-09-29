@@ -1,0 +1,9 @@
+{
+  "name": "api-only-publisher-image-toolchain",
+  "private": true,
+  "description": "The toolchain the api-only-publisher Docker image carries. Keep in step with TOOLCHAIN_PIN in src/init-config.js; test/docker.test.js checks it.",
+  "dependencies": {
+    "@asyncapi/cli": "6.2.0",
+    "@redocly/cli": "2.55.0"
+  }
+}

@@ -14,8 +14,8 @@ const { stampFiles, componentPaths, strayPaths, fragmentStamps, unresolvedStamps
 const {
     asyncapiOperationsWithoutExamples, openapiOperationsWithoutExamples, asyncapiMessage, openapiMessage,
 } = require("./examples");
-
-class BuildError extends Error {}
+const { BuildError } = require("./build-error");
+const toolchain = require("./toolchain");
 
 function run(command, args, { quiet, reportFile = null } = {}) {
     try {
@@ -39,6 +39,23 @@ function run(command, args, { quiet, reportFile = null } = {}) {
 }
 
 /**
+ * Copy a directory tree, symlinks as symlinks.
+ *
+ * Not fs.cpSync: its native implementation fails with EACCES on Docker Desktop's
+ * bind mounts, which is where the Publisher's image stages a mounted library.
+ */
+function copyTree(from, to) {
+    fs.mkdirSync(to, { recursive: true });
+    for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+        const source = path.join(from, entry.name);
+        const dest = path.join(to, entry.name);
+        if (entry.isDirectory()) copyTree(source, dest);
+        else if (entry.isSymbolicLink()) fs.symlinkSync(fs.readlinkSync(source), dest);
+        else fs.copyFileSync(source, dest);
+    }
+}
+
+/**
  * Copy the whole source root to the staging directory for one specification
  * type.
  *
@@ -52,8 +69,7 @@ function stage(config, kind, log) {
     const to = config.stagingRoot(kind);
     log(`-- Staging ${path.relative(config.root, from)} -> ${path.relative(config.root, to)}`);
     fs.rmSync(to, { recursive: true, force: true });
-    fs.mkdirSync(to, { recursive: true });
-    fs.cpSync(from, to, { recursive: true });
+    copyTree(from, to);
     return to;
 }
 
@@ -94,8 +110,9 @@ function bundle(config, target, kind, outFile, log, { stagingRoot } = {}) {
     }
     fs.mkdirSync(path.dirname(outFile), { recursive: true });
     log(`-- Bundling ${path.basename(source)}`);
-    const tool = kind === "openapi" ? config.tool("redocly") : config.tool("asyncapi");
-    run("npx", ["--yes", tool, "bundle", source, "--output", outFile], { quiet: true });
+    const tool = config.tool(toolchain.TOOL_OF_KIND[kind]);
+    const runner = toolchain.resolve(toolchain.TOOL_OF_KIND[kind], tool);
+    run(runner.command, [...runner.args, "bundle", source, "--output", outFile], { quiet: true });
     if (!fs.existsSync(outFile)) {
         throw new BuildError(`target '${target}': ${tool} produced no output at ${outFile}`);
     }
@@ -121,7 +138,7 @@ function bundleWithFragmentPaths(config, target, kind, outFile, log) {
 
     const pass = (name, only) => {
         const root = path.join(scratch, name);
-        fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
+        copyTree(config.stagingRoot(kind), root);
         try {
             stampFiles(root, { only });
         } catch (error) {
@@ -170,7 +187,7 @@ function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
     const scratch = config.fragmentPathStaging(target);
     fs.rmSync(scratch, { recursive: true, force: true });
     const root = path.join(scratch, "stamp");
-    fs.cpSync(config.stagingRoot(kind), root, { recursive: true });
+    copyTree(config.stagingRoot(kind), root);
 
     const bundleRoot = path.relative(root, config.bundleRootPath(target, kind, root)).split(path.sep).join("/");
     try {
@@ -199,12 +216,12 @@ function bundleInlinedWithFragmentPaths(config, target, kind, outFile, log) {
 }
 
 function lint(config, kind, file, log, { report = false, reportFile = null } = {}) {
-    const tool = kind === "openapi" ? config.tool("redocly") : config.tool("asyncapi");
+    const runner = toolchain.resolve(toolchain.TOOL_OF_KIND[kind], config.tool(toolchain.TOOL_OF_KIND[kind]));
     const args = kind === "openapi"
-        ? ["--yes", tool, "lint"].concat(config.lintConfig("openapi") ? ["--config", config.lintConfig("openapi")] : []).concat([file])
-        : ["--yes", tool, "validate", file];
+        ? ["lint"].concat(config.lintConfig("openapi") ? ["--config", config.lintConfig("openapi")] : []).concat([file])
+        : ["validate", file];
     log(`-- Validating ${path.basename(file)}`);
-    const output = run("npx", args, { quiet: true, reportFile });
+    const output = run(runner.command, [...runner.args, ...args], { quiet: true, reportFile });
     if (report && output.trim()) log(output.trimEnd());
 }
 
@@ -289,6 +306,11 @@ function prepare(config, { kinds = ["openapi", "asyncapi"], log = () => {} } = {
  * @returns {Array<{target, kind, file, distributed}>}
  */
 function build(config, { targets, versionOf = () => null, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
+    // Every tool this build needs is found before anything is staged, so a toolchain
+    // the installation cannot run fails the build before it has done any work.
+    const needed = kinds.filter((kind) => config.targetsFor(kind).some((t) => !targets || targets.includes(t)));
+    toolchain.requireTools(config, needed);
+
     const results = [];
     for (const kind of kinds) {
         const all = config.targetsFor(kind).filter((t) => !targets || targets.includes(t));
@@ -349,5 +371,5 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
 }
 
 module.exports = {
-    build, prepare, stage, substituteTree, bundle, bundleWithFragmentPaths, lint, checkExamples, distribute, BuildError,
+    build, prepare, stage, copyTree, substituteTree, bundle, bundleWithFragmentPaths, lint, checkExamples, distribute, BuildError,
 };

@@ -1,0 +1,108 @@
+= Guide: publishing API bundles from CI with the sealed Publisher image
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+The API-Only Publisher is also a Docker image: one Publisher version and the bundlers it runs, sealed, so it downloads nothing when it runs.
+A pipeline packages its bundles in the image, and publishes the files it produced in a second job, with the platform's own tools and credentials.
+
+This guide is about when to choose the image, and what the two steps give you.
+link:../../../api-only-publisher/README.adoc#docker[The Publisher's reference →] describes the image in full, with both reference pipelines, and the prompts beside this guide set the pipeline up in your own repository:
+
+* link:prompt-claude-code.md[the Claude Code prompt →];
+* link:prompt-codex.md[the Codex prompt →].
+
+[#why-sealed]
+== Why a sealed image
+
+Most organisations let a CI pipeline run only what has been vetted: scanned, approved, and stored in the organisation's own registry, which the pipeline then uses instead of the internet.
+
+The npm package is hard to vet that way.
+Vetting it does not vet what it runs: it fetches Redocly CLI and AsyncAPI CLI with `npx` when it runs, and calls `git`, `tar` and `npm`.
+
+The image closes that gap.
+It is one artefact, with one digest, holding the Publisher *and* its toolchain, and it neither downloads nor contacts anything when it runs.
+A vetting team can:
+
+. pull it by digest;
+. verify its signature against the release workflow's identity;
+. read its SBOM, which lists every package in it, and its provenance, which names the repository, workflow and commit that built it;
+. scan it, with the release's own scan report as a start;
+. mirror it into the organisation's registry, digest unchanged.
+
+A pipeline that pins that digest then runs exactly what was vetted.
+link:../../../api-only-publisher/README.adoc#docker-vetting[For a vetting team →] has the commands.
+
+[#two-steps]
+== Two steps
+
+. *Package, in the image.*
+The Publisher builds, lints and packages each target into files, with its channels' local modes: an archive, a Maven layout, a `.nupkg`, an npm tarball.
+It needs no network and no credential, so the image never holds one.
+. *Publish, in the pipeline.*
+A following job publishes those files with the registry's own tools: `npm publish`, `mvn deploy:deploy-file`, `dotnet nuget push`, a release upload, authenticated as the platform authenticates any job.
+
+The first step writes a hand-off, `build/packages/packages.sha256`, listing every file it produced with its SHA-256.
+The second checks the files against it before publishing, and publishes only what it lists, so the bytes in the registry are the bytes the vetted tool produced.
+
+The second step has two jobs the Publisher's remote channels would otherwise do: it checks whether a version is already published, so a re-run is safe and a real conflict still fails, and it lets `mvn deploy:deploy-file` write the checksums and metadata a Maven repository expects.
+Both reference pipelines do both.
+
+The image does not yet publish to remote registries itself; that is a later step, once this one is in use.
+
+[#when]
+== The image or the npm package
+
+[cols="1,2,2", options="header"]
+|===
+| | The image | The npm package
+
+| Fits
+| A pipeline that may run only vetted, mirrored artefacts; a runner without Node.js.
+| A developer's machine, and a pipeline that may fetch from npm.
+
+| Toolchain
+| Inside the image; `apionly.yaml` must pin the versions it carries.
+| Fetched with `npx` at the versions `apionly.yaml` pins.
+
+| Network when it runs
+| None.
+| npm, for the toolchain.
+
+| Publishing
+| In a second step, with the platform's tools.
+| By the Publisher's channels, directly.
+
+| Pinned by
+| The image digest, in each pipeline.
+| `package.json` and `package-lock.json`, in the library.
+|===
+
+Both run the same Publisher, and a library can use both: the npm package on developers' machines, the image in CI.
+Keep the toolchain pins in `apionly.yaml` at the image's versions, which `init` writes.
+
+[#pipelines]
+== The reference pipelines
+
+* link:../../../api-only-publisher/pipelines/github-actions.yml[GitHub Actions →], to npm, Maven and NuGet on GitHub Packages, and a GitHub Release, with `GITHUB_TOKEN`.
+It is exercised end to end, publishing and then resolving every package with its own client.
+* link:../../../api-only-publisher/pipelines/gitlab-ci.yml[GitLab CI →], to the project's npm, Maven, NuGet and generic package registries, with `CI_JOB_TOKEN`.
+*It is not exercised yet*: it is validated against GitLab's CI schema only.
+
+link:../../../api-only-publisher/README.adoc#docker-pipelines[For a pipeline author →] explains them, and how to run the image as a CI job image or from an organisation's mirror.

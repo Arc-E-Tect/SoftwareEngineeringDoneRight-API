@@ -200,6 +200,12 @@ A guide covers one feature across the tools, rather than one way of adopting the
 |===
 |Guide |What it does |Documents
 
+|**Publishing API bundles from CI with the sealed Publisher image**
+|A pipeline packages its bundles in the Publisher's Docker image, which downloads nothing and holds no credential, and publishes the files in a second job with the platform's own tools; why a vetting team can approve the image, and when to choose it over the npm package.
+|link:guides/publishing-from-ci/overview.adoc[Overview →] +
+link:guides/publishing-from-ci/prompt-claude-code.md[Claude Code prompt →] +
+link:guides/publishing-from-ci/prompt-codex.md[Codex prompt →]
+
 |**Descriptions a project owns, in one language or several**
 |The classes the API-Only TranscriberJ generates take their descriptions from a `ResourceBundle` the project writes, falling back to the contract's text, so one generated tree documents a contract in as many languages as the bundle has files.
 |link:guides/description-bundles/overview.adoc[Overview →] +

@@ -22,7 +22,7 @@ build:
   dist: dist
 
 toolchain:
-  redocly: "@redocly/cli@2.52.0"
+  redocly: "@redocly/cli@2.55.0"
 
 targets:
   example-service:

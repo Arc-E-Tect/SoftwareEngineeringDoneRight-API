@@ -887,3 +887,146 @@ test("pack and split write where build.packages and build.split say, and --out s
     await run(["split", "--by", "target", "-C", dir]);
     assert.ok(fs.existsSync(path.join(dir, "out", "parts")));
 });
+
+test("--version on its own prints the Publisher's version", async () => {
+    const written = [];
+    const previousWrite = process.stdout.write;
+    process.stdout.write = (chunk) => { written.push(String(chunk)); return true; };
+    try {
+        assert.strictEqual(await main(["--version"]), 0);
+    } finally {
+        process.stdout.write = previousWrite;
+    }
+    assert.deepStrictEqual(written, [`${require("../package.json").version}\n`]);
+});
+
+test("--version alongside a command is still refused", async () => {
+    await assert.rejects(main(["build", "--version", "1.2.3"]), /--version is no longer accepted/);
+});
+
+// A library pinning a Redocly CLI the installation does not carry, with downloads
+// refused: build and lint must fail before they stage, bundle or run anything.
+function mismatchedLibrary() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-cli-sealed-"));
+    fs.writeFileSync(path.join(dir, "apionly.yaml"), `schemaVersion: 1
+sources:
+  root: specs
+  openapi: openapi
+defaults:
+  openapi:
+    outputName: openapi.yaml
+build:
+  dist: dist
+toolchain:
+  redocly: "@redocly/cli@2.60.0"
+targets:
+  example:
+    openapi:
+      bundle: bundles/example.yaml
+    publish: false
+`);
+    fs.mkdirSync(path.join(dir, "specs", "openapi", "bundles"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "specs", "openapi", "bundles", "example.yaml"), "openapi: 3.1.1\npaths: {}\n");
+    return dir;
+}
+
+async function withSealedToolchain(action) {
+    const { toolchainDir, IMAGE_TOOLS } = require("./toolchain-dir");
+    const { DIR_ENV, DOWNLOAD_ENV } = require("../src/toolchain");
+    const saved = { dir: process.env[DIR_ENV], download: process.env[DOWNLOAD_ENV], path: process.env.PATH };
+    const bin = fs.mkdtempSync(path.join(os.tmpdir(), "aop-no-npx-"));
+    fs.writeFileSync(path.join(bin, "npx"), "#!/bin/sh\necho npx must not run >&2\nexit 99\n");
+    fs.chmodSync(path.join(bin, "npx"), 0o755);
+    process.env[DIR_ENV] = toolchainDir(IMAGE_TOOLS);
+    process.env[DOWNLOAD_ENV] = "never";
+    process.env.PATH = `${bin}:${saved.path}`;
+    try {
+        await action();
+    } finally {
+        for (const [key, value] of [[DIR_ENV, saved.dir], [DOWNLOAD_ENV, saved.download], ["PATH", saved.path]]) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+        }
+    }
+}
+
+test("build refuses a pin the sealed toolchain does not carry before staging anything", async () => {
+    const dir = mismatchedLibrary();
+    await withSealedToolchain(async () => {
+        await assert.rejects(main(["build", "-C", dir, "-q"]), /toolchain\.redocly pins @redocly\/cli@2\.60\.0/);
+    });
+    assert.ok(!fs.existsSync(path.join(dir, "build")), "nothing was staged");
+});
+
+test("lint refuses a pin the sealed toolchain does not carry before linting anything", async () => {
+    const dir = mismatchedLibrary();
+    fs.mkdirSync(path.join(dir, "dist", "example"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "dist", "example", "openapi.yaml"), "openapi: 3.1.1\npaths: {}\n");
+    await withSealedToolchain(async () => {
+        await assert.rejects(main(["lint", "-C", dir, "-q"]), /toolchain\.redocly pins @redocly\/cli@2\.60\.0/);
+    });
+    assert.ok(!fs.existsSync(path.join(dir, "build", "reports")), "no lint report was written");
+});
+
+test("build runs the installed toolchain, not npx, when the pin matches", async () => {
+    const dir = mismatchedLibrary();
+    const configFile = path.join(dir, "apionly.yaml");
+    fs.writeFileSync(configFile, fs.readFileSync(configFile, "utf8").replace("2.60.0", "2.52.0"));
+    await withSealedToolchain(async () => {
+        const { resolve } = require("../src/toolchain");
+        const { command } = resolve("redocly", "@redocly/cli@2.52.0");
+        // The fake bin "bundles" by writing the file --output names, and lints by succeeding.
+        fs.writeFileSync(command, "#!/bin/sh\n[ \"$1\" = lint ] && exit 0\n" +
+            "while [ $# -gt 0 ]; do [ \"$1\" = --output ] && out=$2; shift; done\n" +
+            "printf 'openapi: 3.1.1\\ninfo:\\n  title: T\\n  version: 1.0.0\\npaths: {}\\n' > \"$out\"\n");
+        assert.strictEqual(await main(["build", "-C", dir, "-q"]), 0);
+    });
+    assert.ok(fs.existsSync(path.join(dir, "dist", "example", "openapi.yaml")));
+});
+
+test("publish to every local channel writes a hand-off listing every file it produced", async () => {
+    const { HANDOFF_JSON, HANDOFF_SHA256 } = require("../src/handoff");
+    const dir = library({
+        ...SHIPPING,
+        "apionly.yaml": SHIPPING["apionly.yaml"].replace("channels:\n  file:\n    directory: build/publish\n",
+            "channels:\n  file:\n    directory: build/publish\n" +
+            "  maven:\n    groupId: com.example.api\n    repository: build/maven\n" +
+            "  nuget:\n    idPrefix: Example\n    repository: build/nuget\n" +
+            "  npm:\n    scope: \"@example\"\n    publish: false\n    directory: build/npm\n"),
+    });
+    prepare(loadFrom(dir));
+    shipped(dir, "alpha", "openapi", "1.0.0");
+    shipped(dir, "gamma", "asyncapi", "1.0.0");
+
+    await run(["publish", "--target", "alpha", "--target", "gamma", "-C", dir]);
+
+    const listed = JSON.parse(fs.readFileSync(path.join(dir, "build", "packages", HANDOFF_JSON), "utf8"));
+    const summary = listed.files.map((f) => `${f.channel} ${f.target} ${f.version} ${f.path}`);
+    assert.deepStrictEqual(summary, [
+        "maven alpha 1.0.0 build/maven/com/example/api/alpha/1.0.0/alpha-1.0.0-manifest.json",
+        "maven alpha 1.0.0 build/maven/com/example/api/alpha/1.0.0/alpha-1.0.0.pom",
+        "maven alpha 1.0.0 build/maven/com/example/api/alpha/1.0.0/alpha-1.0.0.tgz",
+        "maven gamma 1.0.0 build/maven/com/example/api/gamma/1.0.0/gamma-1.0.0-manifest.json",
+        "maven gamma 1.0.0 build/maven/com/example/api/gamma/1.0.0/gamma-1.0.0.pom",
+        "maven gamma 1.0.0 build/maven/com/example/api/gamma/1.0.0/gamma-1.0.0.tgz",
+        "npm alpha 1.0.0 build/npm/example-alpha-1.0.0.tgz",
+        "npm gamma 1.0.0 build/npm/example-gamma-1.0.0.tgz",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/example.alpha.1.0.0.nupkg",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/example.alpha.1.0.0.nupkg.sha512",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/example.alpha.nuspec",
+        "nuget alpha 1.0.0 build/nuget/example.alpha/1.0.0/manifest.json",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/example.gamma.1.0.0.nupkg",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/example.gamma.1.0.0.nupkg.sha512",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/example.gamma.nuspec",
+        "nuget gamma 1.0.0 build/nuget/example.gamma/1.0.0/manifest.json",
+        "file alpha 1.0.0 build/publish/alpha/1.0.0/alpha-1.0.0.tgz",
+        "file alpha 1.0.0 build/publish/alpha/1.0.0/manifest.json",
+        "file gamma 1.0.0 build/publish/gamma/1.0.0/gamma-1.0.0.tgz",
+        "file gamma 1.0.0 build/publish/gamma/1.0.0/manifest.json",
+    ]);
+    for (const f of listed.files) {
+        const bytes = fs.readFileSync(path.join(dir, f.path));
+        assert.strictEqual(f.sha256, require("node:crypto").createHash("sha256").update(bytes).digest("hex"), f.path);
+    }
+    assert.strictEqual(fs.readFileSync(path.join(dir, "build", "packages", HANDOFF_SHA256), "utf8").split("\n").length, 21);
+});

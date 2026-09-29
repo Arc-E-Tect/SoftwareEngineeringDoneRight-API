@@ -1,0 +1,192 @@
+# Reference pipeline: publish API description bundles in two steps on GitHub Actions.
+# README.adoc#docker-github-actions explains it; copy it to .github/workflows/.
+#
+# 1. `package` runs the sealed api-only-publisher image, pinned by digest, with no
+#    network: it builds, lints and packages the targets into files, with the local
+#    channel modes apionly.yaml configures, and hands them on as an artifact.
+# 2. `publish` checks the files against the hand-off the image wrote, and publishes
+#    exactly those bytes with the registries' own tools and the job's GITHUB_TOKEN:
+#    npm, Maven and NuGet on GitHub Packages, and the archives to a GitHub Release.
+#
+# apionly.yaml needs these local channel modes (names are examples; the npm scope
+# must be this repository's owner, lower-cased, as GitHub Packages requires):
+#
+#   channels:
+#     file:  { directory: build/publish }
+#     maven: { groupId: com.example.api, repository: build/maven }
+#     nuget: { idPrefix: Example.Contracts, repository: build/nuget }
+#     npm:   { scope: "@your-org", publish: false, directory: build/npm }
+#
+# A re-run is safe: a version a registry already has is left alone when its bytes
+# are identical, and fails the job when they are not.
+
+name: Publish API bundles
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  # The image, pinned by digest: https://hub.docker.com/r/arcetect/api-only-publisher/tags
+  # From your organisation's mirror instead, for example:
+  #   PUBLISHER_IMAGE: registry.example.com/mirror/arcetect/api-only-publisher@sha256:<digest>
+  PUBLISHER_IMAGE: docker.io/arcetect/api-only-publisher@sha256:<digest>
+  # The targets to package, as apionly.yaml names them.
+  TARGETS: orders payments
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Build, lint and package with the sealed image
+        run: |
+          # No network, a read-only root, and the runner's own user, so the files
+          # written into the workspace belong to it.
+          publisher() {
+            docker run --rm --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+              -v "$PWD:/work" "$PUBLISHER_IMAGE" "$@"
+          }
+          # shellcheck disable=SC2046 # one --target per word, deliberately
+          set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
+          publisher build "$@"
+          publisher lint
+          publisher publish "$@"
+          cat build/packages/packages.sha256
+
+      - name: Hand the files on
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-bundles
+          path: |
+            build/packages/packages.json
+            build/packages/packages.sha256
+            build/publish/
+            build/maven/
+            build/nuget/
+            build/npm/
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # the GitHub Release
+      packages: write   # npm, Maven and NuGet on GitHub Packages
+    env:
+      HANDOFF: build/packages/packages.json
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER: ${{ github.repository_owner }}
+      # The release the archives go to: the pushed tag, or a new one per manual run.
+      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('bundles-{0}', github.run_number) }}
+    steps:
+      - name: Receive the files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: api-bundles
+          path: build
+
+      - name: Verify them against the hand-off
+        # Exactly the bytes the image produced: every file the hand-off lists,
+        # unchanged. Each step below publishes only files it lists.
+        run: sha256sum -c build/packages/packages.sha256
+
+      - name: Setup Node for GitHub Packages
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          # The job's default npm registry, for every package; no `scope`, which
+          # would have to be the owner lower-cased, as npm scopes are.
+          registry-url: https://npm.pkg.github.com
+
+      - name: Publish to GitHub Packages (npm)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for tarball in $(jq -r '.files[] | select(.channel == "npm") | .path' "$HANDOFF"); do
+            name=$(tar -xOzf "$tarball" package/package.json | jq -r .name)
+            version=$(tar -xOzf "$tarball" package/package.json | jq -r .version)
+            local_integrity="sha512-$(openssl dgst -sha512 -binary "$tarball" | base64 -w0)"
+            remote_integrity=$(npm view "$name@$version" dist.integrity 2>/dev/null || true)
+            if [ "$remote_integrity" = "$local_integrity" ]; then
+              echo "$name@$version is already published, identical"
+            elif [ -n "$remote_integrity" ]; then
+              echo "::error::$name@$version is already published with other contents"; exit 1
+            else
+              npm publish "$tarball"
+            fi
+          done
+
+      - name: Publish to GitHub Packages (Maven)
+        run: |
+          # mvn deploy:deploy-file uploads the artifact and its POM exactly as the
+          # image wrote them, and adds the .md5 and .sha1 files and the
+          # maven-metadata.xml a Maven repository needs, which the local layout lacks.
+          url="https://maven.pkg.github.com/${{ github.repository }}"
+          cat > "$RUNNER_TEMP/settings.xml" <<'EOF'
+          <settings><servers><server><id>github</id>
+            <username>${env.GITHUB_ACTOR}</username><password>${env.GITHUB_TOKEN}</password>
+          </server></servers></settings>
+          EOF
+          for pom in $(jq -r '.files[] | select(.channel == "maven") | .path | select(endswith(".pom"))' "$HANDOFF"); do
+            base=${pom%.pom}
+            artifact=$(jq -r --arg base "$base." '.files[] | select(.channel == "maven") | .path
+              | select(startswith($base) and (endswith(".pom") | not))' "$HANDOFF")
+            remote_path=${artifact#build/maven/}
+            status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$remote_path")
+            if [ "$status" = 200 ]; then
+              if cmp -s "$RUNNER_TEMP/remote" "$artifact"; then
+                echo "$remote_path is already published, identical"; continue
+              fi
+              echo "::error::$remote_path is already published with other contents"; exit 1
+            fi
+            mvn --batch-mode --no-transfer-progress --settings "$RUNNER_TEMP/settings.xml" deploy:deploy-file \
+              -Durl="$url" -DrepositoryId=github -DpomFile="$pom" -Dfile="$artifact" \
+              -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json
+          done
+
+      - name: Publish to GitHub Packages (NuGet)
+        run: |
+          source="https://nuget.pkg.github.com/$OWNER/index.json"
+          for nupkg in $(jq -r '.files[] | select(.channel == "nuget") | .path | select(endswith(".nupkg"))' "$HANDOFF"); do
+            file=$(basename "$nupkg")
+            id=$(basename "$(dirname "$(dirname "$nupkg")")")
+            version=$(basename "$(dirname "$nupkg")")
+            status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" \
+              "https://nuget.pkg.github.com/$OWNER/download/$id/$version/$file")
+            if [ "$status" = 200 ]; then
+              if cmp -s "$RUNNER_TEMP/remote" "$nupkg"; then
+                echo "$id $version is already published, identical"; continue
+              fi
+              echo "::error::$id $version is already published with other contents"; exit 1
+            fi
+            dotnet nuget push "$nupkg" --source "$source" --api-key "$GITHUB_TOKEN"
+          done
+
+      - name: Attach the archives to a GitHub Release
+        run: |
+          # The file channel's archives, one per target; each carries its manifest.
+          gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 ||
+            gh release create "$RELEASE_TAG" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+              --title "$RELEASE_TAG" --notes "API description bundles."
+          for archive in $(jq -r '.files[] | select(.channel == "file") | .path | select(endswith(".tgz"))' "$HANDOFF"); do
+            name=$(basename "$archive")
+            remote=$(gh api "repos/${{ github.repository }}/releases/tags/$RELEASE_TAG" \
+              --jq ".assets[] | select(.name == \"$name\") | .digest")
+            if [ "$remote" = "sha256:$(sha256sum "$archive" | cut -d' ' -f1)" ]; then
+              echo "$name is already attached, identical"
+            elif [ -n "$remote" ]; then
+              echo "::error::$name is already attached with other contents"; exit 1
+            else
+              gh release upload "$RELEASE_TAG" "$archive" --repo "${{ github.repository }}"
+            fi
+          done

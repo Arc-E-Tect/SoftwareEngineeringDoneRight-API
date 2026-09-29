@@ -49,7 +49,7 @@ function publishFile(archive, manifest, options, log) {
     fs.writeFileSync(path.join(targetDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
     log(`-- Published ${manifest.target} ${manifest.version} to ${archiveDest}`);
-    return { location: archiveDest };
+    return { location: archiveDest, files: [archiveDest, path.join(targetDir, "manifest.json")] };
 }
 
 function pom(groupId, artifactId, version, packaging, description = `API description documents for ${artifactId}.`) {
@@ -104,14 +104,20 @@ function publishMaven(archive, manifest, options, log) {
     const base = `${artifactId}-${version}`;
     const artifactDest = path.join(dir, `${base}.${extension}`);
     fs.copyFileSync(archive, artifactDest);
-    fs.writeFileSync(path.join(dir, `${base}.pom`), pom(groupId, artifactId, version, extension, pomDescription(options, manifest)));
+    const pomDest = path.join(dir, `${base}.pom`);
+    fs.writeFileSync(pomDest, pom(groupId, artifactId, version, extension, pomDescription(options, manifest)));
 
     // The manifest travels beside the artifact as well as inside it, so a
     // consumer can read provenance without unpacking anything.
-    fs.writeFileSync(path.join(dir, `${base}-manifest.json`), JSON.stringify(manifest, null, 2) + "\n");
+    const manifestDest = path.join(dir, `${base}-manifest.json`);
+    fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2) + "\n");
 
     log(`-- Published ${groupId}:${artifactId}:${version} to ${repository}`);
-    return { location: artifactDest, coordinates: `${groupId}:${artifactId}:${version}@${extension}` };
+    return {
+        location: artifactDest,
+        coordinates: `${groupId}:${artifactId}:${version}@${extension}`,
+        files: [artifactDest, pomDest, manifestDest],
+    };
 }
 
 /**
@@ -161,7 +167,7 @@ function publishNpm(archive, manifest, options, log) {
                 { cwd: workDir, encoding: "utf8" }).trim().split("\n").pop();
             const location = path.join(outDir, packed);
             log(`-- Packed npm ${name}@${version} (${distTag}) to ${location}`);
-            return { location, distTag, name };
+            return { location, distTag, name, files: [location] };
         }
 
         // Idempotent: a version the registry already has is left alone when it is the

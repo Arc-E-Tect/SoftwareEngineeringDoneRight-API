@@ -1,0 +1,170 @@
+# Reference pipeline: publish API description bundles in two steps on GitLab CI.
+# README.adoc#docker-gitlab explains it; copy it to .gitlab-ci.yml.
+#
+# NOT EXERCISED. This file is validated against GitLab's CI schema only; no
+# GitLab pipeline has run it yet. The GitHub Actions reference pipeline beside it
+# is exercised end to end. Report what you find:
+# https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues
+#
+# 1. `package` runs in the sealed api-only-publisher image, pinned by digest: it
+#    builds, lints and packages the targets into files, with the local channel
+#    modes apionly.yaml configures, and keeps them as artifacts. The image's
+#    entrypoint runs the shell GitLab passes it, so no `entrypoint` override is needed.
+# 2. The `publish:*` jobs check the files against the hand-off the image wrote, and
+#    publish exactly those bytes to this project's package registry with each
+#    registry's own client and CI_JOB_TOKEN.
+#
+# apionly.yaml needs these local channel modes (names are examples):
+#
+#   channels:
+#     file:  { directory: build/publish }
+#     maven: { groupId: com.example.api, repository: build/maven }
+#     nuget: { idPrefix: Example.Contracts, repository: build/nuget }
+#     npm:   { scope: "@your-group", publish: false, directory: build/npm }
+#
+# A re-run is safe: a version the registry already has is left alone when its
+# bytes are identical, and fails the job when they are not.
+
+variables:
+  # The image, pinned by digest: https://hub.docker.com/r/arcetect/api-only-publisher/tags
+  # From your organisation's mirror instead, for example:
+  #   PUBLISHER_IMAGE: registry.example.com/mirror/arcetect/api-only-publisher@sha256:<digest>
+  PUBLISHER_IMAGE: docker.io/arcetect/api-only-publisher@sha256:<digest>
+  # The targets to package, as apionly.yaml names them.
+  TARGETS: orders payments
+  PACKAGES: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages
+
+stages:
+  - package
+  - publish
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+
+package:
+  stage: package
+  image: $PUBLISHER_IMAGE
+  script:
+    - set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
+    - api-only-publisher build "$@"
+    - api-only-publisher lint
+    - api-only-publisher publish "$@"
+    - cat build/packages/packages.sha256
+  artifacts:
+    paths:
+      - build/packages/packages.json
+      - build/packages/packages.sha256
+      - build/publish/
+      - build/maven/
+      - build/nuget/
+      - build/npm/
+    expire_in: 1 week
+
+# Every publishing job starts here: exactly the bytes the image produced. `listed`
+# prints the files the hand-off lists under one channel's directory.
+.publish:
+  stage: publish
+  needs: [package]
+  before_script:
+    - sha256sum -c build/packages/packages.sha256
+    - listed() { awk '{ print $2 }' build/packages/packages.sha256 | grep "^$1/.*$2\$"; }
+
+publish:npm:
+  extends: .publish
+  image: node:24-slim
+  script:
+    # A project-level .npmrc naming the token by reference: npm reads CI_JOB_TOKEN
+    # from the environment, so the file holds no credential.
+    - |
+      cat > .npmrc <<EOF
+      registry=${PACKAGES}/npm/
+      //${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}
+      EOF
+    - |
+      for tarball in $(listed build/npm .tgz); do
+        name=$(tar -xOzf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).name')
+        version=$(tar -xOzf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).version')
+        local_integrity="sha512-$(node -p "require('crypto').createHash('sha512').update(require('fs').readFileSync('$tarball')).digest('base64')")"
+        remote_integrity=$(npm view "$name@$version" dist.integrity 2>/dev/null || true)
+        if [ "$remote_integrity" = "$local_integrity" ]; then
+          echo "$name@$version is already published, identical"
+        elif [ -n "$remote_integrity" ]; then
+          echo "$name@$version is already published with other contents"; exit 1
+        else
+          npm publish "$tarball"
+        fi
+      done
+
+publish:maven:
+  extends: .publish
+  image: maven:3-eclipse-temurin-21
+  script:
+    # deploy:deploy-file uploads the artifact and POM exactly as the image wrote
+    # them, and adds the checksums and maven-metadata.xml the local layout lacks.
+    # The Job-Token header names CI_JOB_TOKEN by reference.
+    - |
+      cat > settings.xml <<'EOF'
+      <settings><servers><server><id>gitlab</id><configuration><httpHeaders><property>
+        <name>Job-Token</name><value>${env.CI_JOB_TOKEN}</value>
+      </property></httpHeaders></configuration></server></servers></settings>
+      EOF
+    - |
+      for pom in $(listed build/maven .pom); do
+        base=${pom%.pom}
+        artifact=$(listed build/maven '' | grep "^$base\." | grep -v '\.pom$')
+        remote=${artifact#build/maven/}
+        status=$(curl -sS -L -o remote -w '%{http_code}' --header "Job-Token: $CI_JOB_TOKEN" "$PACKAGES/maven/$remote")
+        if [ "$status" = 200 ]; then
+          if cmp -s remote "$artifact"; then echo "$remote is already published, identical"; continue; fi
+          echo "$remote is already published with other contents"; exit 1
+        fi
+        mvn --batch-mode --no-transfer-progress --settings settings.xml deploy:deploy-file \
+          -Durl="$PACKAGES/maven" -DrepositoryId=gitlab -DpomFile="$pom" -Dfile="$artifact" \
+          -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json
+      done
+
+publish:nuget:
+  extends: .publish
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  script:
+    # The source's credentials go into a NuGet.Config in the job's temporary
+    # directory, which the job discards; nothing is written to the repository.
+    - export NUGET_CONFIG="$CI_BUILDS_DIR/nuget-$CI_JOB_ID.config"
+    - echo '<configuration/>' > "$NUGET_CONFIG"
+    - dotnet nuget add source "$PACKAGES/nuget/index.json" --name gitlab --configfile "$NUGET_CONFIG"
+        --username gitlab-ci-token --password "$CI_JOB_TOKEN" --store-password-in-clear-text
+    - |
+      for nupkg in $(listed build/nuget .nupkg); do
+        file=$(basename "$nupkg")
+        id=$(basename "$(dirname "$(dirname "$nupkg")")")
+        version=$(basename "$(dirname "$nupkg")")
+        status=$(curl -sS -L -o remote -w '%{http_code}' --user "gitlab-ci-token:$CI_JOB_TOKEN" \
+          "$PACKAGES/nuget/download/$id/$version/$file")
+        if [ "$status" = 200 ]; then
+          if cmp -s remote "$nupkg"; then echo "$id $version is already published, identical"; continue; fi
+          echo "$id $version is already published with other contents"; exit 1
+        fi
+        dotnet nuget push "$nupkg" --source gitlab --configfile "$NUGET_CONFIG"
+      done
+    - rm -f "$NUGET_CONFIG"
+
+publish:generic:
+  extends: .publish
+  image: alpine:3
+  script:
+    # The file channel's archives, one per target, to the generic package registry
+    # as <target>/<version>/<archive>: GitLab's counterpart of release assets.
+    - apk add --no-cache curl
+    - |
+      for archive in $(listed build/publish .tgz); do
+        target=$(basename "$(dirname "$(dirname "$archive")")")
+        version=$(basename "$(dirname "$archive")")
+        url="$PACKAGES/generic/$target/$version/$(basename "$archive")"
+        status=$(curl -sS -L -o remote -w '%{http_code}' --header "JOB-TOKEN: $CI_JOB_TOKEN" "$url")
+        if [ "$status" = 200 ]; then
+          if cmp -s remote "$archive"; then echo "$url is already published, identical"; continue; fi
+          echo "$url is already published with other contents"; exit 1
+        fi
+        curl --fail -sS --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$archive" "$url"
+      done
