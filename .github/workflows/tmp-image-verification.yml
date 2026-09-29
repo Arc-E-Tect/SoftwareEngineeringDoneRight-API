@@ -1,0 +1,61 @@
+name: TEMPORARY - image verification
+
+# TEMPORARY: reverted before merge. Runs, before the workflows exist on main where
+# they could be dispatched, the dry run of the release's image jobs against the
+# scratch names (V7) and the end-to-end reference pipeline (V6).
+
+on:
+  push:
+    branches: [feat/api-only-publisher-docker-image]
+    paths: ['.github/workflows/tmp-image-verification.yml']
+
+permissions: {}
+
+jobs:
+  scratch-release:
+    name: Scratch pre-release for the image assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - name: Create
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: api-only-publisher-image-dryrun-${{ github.run_number }}
+        run: |
+          gh release create "$TAG" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --prerelease --title "$TAG" --notes "Scratch release of the image dry run; deleted after review."
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  dry-run:
+    name: Dry run
+    needs: scratch-release
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/api-only-publisher-image.yml
+    with:
+      version: 0.0.0-dryrun.${{ github.run_number }}
+      release_tag: ${{ needs.scratch-release.outputs.tag }}
+      ghcr_image: ghcr.io/arc-e-tect/api-only-publisher-scratch
+      dockerhub_image: arcetect/api-only-publisher-scratch
+      from_source: true
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_DESCRIPTION_TOKEN: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+
+  e2e:
+    name: End to end
+    needs: dry-run
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/api-only-publisher-image-e2e.yml
+    with:
+      image: ghcr.io/arc-e-tect/api-only-publisher-scratch@${{ needs.dry-run.outputs.digest }}
+    secrets:
+      E2E_CLEANUP_TOKEN: ${{ secrets.E2E_CLEANUP_TOKEN }}

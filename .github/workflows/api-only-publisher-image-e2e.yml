@@ -19,6 +19,15 @@ on:
         description: 'The api-only-publisher image to run, by digest, e.g. ghcr.io/arc-e-tect/api-only-publisher-scratch@sha256:...'
         type: string
         required: true
+  # TEMPORARY: reverted before merge, with tmp-image-verification.yml.
+  workflow_call:
+    inputs:
+      image:
+        type: string
+        required: true
+    secrets:
+      E2E_CLEANUP_TOKEN:
+        required: false
 
 permissions:
   contents: read
