@@ -230,7 +230,7 @@ jobs:
     name: Tag and sign on GHCR
     needs: [Plan, Build]
     # A version GHCR already has skips Build, and is neither re-tagged nor re-signed.
-    if: ${{ always() && needs.Plan.result == 'success' && (needs.Build.result == 'success' || needs.Plan.outputs.build == 'false') }}
+    if: ${{ !cancelled() && needs.Plan.result == 'success' && (needs.Build.result == 'success' || needs.Plan.outputs.build == 'false') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -295,6 +295,10 @@ jobs:
   Smoke-Test:
     name: Smoke test ${{ matrix.platform }}
     needs: Manifest
+    # Build is skipped when GHCR already has the version, and a skipped job skips
+    # every job after it unless that job says otherwise; each one from here on
+    # therefore names the results it depends on.
+    if: ${{ !cancelled() && needs.Manifest.result == 'success' }}
     strategy:
       matrix:
         include:
@@ -329,6 +333,7 @@ jobs:
   Scan:
     name: Scan
     needs: Manifest
+    if: ${{ !cancelled() && needs.Manifest.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -377,6 +382,7 @@ jobs:
   Promote:
     name: Promote to Docker Hub
     needs: [Plan, Manifest, Smoke-Test, Scan]
+    if: ${{ !cancelled() && needs.Smoke-Test.result == 'success' && needs.Scan.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -470,7 +476,7 @@ jobs:
     needs: [Plan, Promote]
     # An older version's re-publish leaves the description of the newest alone; the
     # dry run, which moves no floating tag, describes its scratch repository.
-    if: ${{ needs.Plan.outputs.floating != '' || inputs.from_source }}
+    if: ${{ !cancelled() && needs.Promote.result == 'success' && (needs.Plan.outputs.floating != '' || inputs.from_source) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -496,7 +502,7 @@ jobs:
   Release-Assets:
     name: Attach the SBOM and scan report
     needs: [Manifest, Promote]
-    if: ${{ inputs.release_tag != '' }}
+    if: ${{ !cancelled() && needs.Promote.result == 'success' && inputs.release_tag != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
