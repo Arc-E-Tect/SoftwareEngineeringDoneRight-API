@@ -5,6 +5,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.core.ModalEmitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.core.SecondModalEmitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.core.TestEmitter;
 import org.gradle.testkit.runner.BuildResult;
+import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -186,6 +187,125 @@ class EmitterConfigurationFunctionalTest {
         assertThat(result.task(":contractTestClasses").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(result.task(":assertFileEmitterVariants").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(result.getOutput()).doesNotContain("Consumable configurations with identical capabilities");
+    }
+
+    @Test
+    @DisplayName("T18.3 File artifacts are selected by their identity attributes")
+    void fileArtifactConsumersResolveTheRequestedArchiveAndNormalProjectDependencies() throws Exception {
+        EmitterBuild.emittersJar(projectDir.resolve("emitters.jar"),
+                TestEmitter.class, ModalEmitter.class, SecondModalEmitter.class);
+        new EmitterBuild(projectDir).publish("1.0.0");
+        Files.writeString(projectDir.resolve("settings.gradle"), """
+                rootProject.name = 'file-artifact-consumer'
+                include 'producer', 'consumer'
+                """);
+        Path producer = Files.createDirectories(projectDir.resolve("producer"));
+        Files.writeString(producer.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'com.arc-e-tect.api-only-transcriberj'
+                }
+
+                group = 'com.example'
+                version = '1.0.0'
+
+                repositories {
+                    mavenCentral()
+                }
+
+                dependencies {
+                    transcriberjEmitters files('../emitters.jar')
+                }
+
+                apiOnlySubscriber {
+                    channel {
+                        type = 'file'
+                        directory = file('../channel').path
+                    }
+                    subscribe('user-account') {
+                        apiContractVersion = '1.0.0'
+                    }
+                }
+
+                apiOnlyTranscriberJ {
+                    subscription('user-account') {
+                        basePackage = 'com.example.contract'
+                        emitter('modal') {
+                            options = [mode: 'files']
+                        }
+                        emitter('second-modal') {
+                            options = [mode: 'files']
+                        }
+                    }
+                }
+                """);
+        Path consumer = Files.createDirectories(projectDir.resolve("consumer"));
+        Files.writeString(consumer.resolve("build.gradle"), """
+                import org.gradle.api.attributes.Attribute
+                import org.gradle.api.attributes.Usage
+
+                plugins {
+                    id 'java'
+                }
+
+                def filesArtifact = Attribute.of('com.arc-e-tect.api-only.transcriberj.files-artifact', String)
+
+                configurations {
+                    modalStubs {
+                        canBeConsumed = false
+                        canBeResolved = true
+                        attributes {
+                            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, 'apionly-files'))
+                            attribute(filesArtifact, 'user-account:modal')
+                        }
+                    }
+                    secondModalStubs {
+                        canBeConsumed = false
+                        canBeResolved = true
+                        attributes {
+                            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, 'apionly-files'))
+                            attribute(filesArtifact, 'user-account:second-modal')
+                        }
+                    }
+                }
+
+                dependencies {
+                    implementation project(':producer')
+                    modalStubs project(':producer')
+                    secondModalStubs project(':producer')
+                }
+
+                tasks.register('verifyFileArtifacts') {
+                    dependsOn 'compileJava'
+                    dependsOn configurations.modalStubs, configurations.secondModalStubs
+                    doLast {
+                        assert configurations.modalStubs.singleFile.name == 'user-account-modal-1.0.0.zip'
+                        assert configurations.secondModalStubs.singleFile.name == 'user-account-second-modal-1.0.0.zip'
+                        assert zipTree(configurations.modalStubs.singleFile)
+                                .matching { include 'apionly-provenance.json' }.singleFile.text.contains('"emitter":"modal"')
+                        assert zipTree(configurations.secondModalStubs.singleFile)
+                                .matching { include 'apionly-provenance.json' }.singleFile.text.contains('"emitter":"second-modal"')
+                    }
+                }
+                tasks.register('copyFileArtifacts', Copy) {
+                    from(configurations.modalStubs, configurations.secondModalStubs)
+                    into layout.buildDirectory.dir('artifacts')
+                }
+                """);
+
+        BuildResult first = GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+                .withArguments(":consumer:verifyFileArtifacts", "--stacktrace")
+                .forwardOutput().build();
+        BuildResult second = GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+                .withArguments(":consumer:copyFileArtifacts", "--configuration-cache", "--stacktrace")
+                .forwardOutput().build();
+        BuildResult reused = GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+                .withArguments(":consumer:copyFileArtifacts", "--configuration-cache", "--stacktrace")
+                .forwardOutput().build();
+
+        assertThat(first.task(":consumer:verifyFileArtifacts").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(second.task(":consumer:copyFileArtifacts").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(reused.getOutput()).contains("Reusing configuration cache.");
     }
 
     @ParameterizedTest(name = "{0}")

@@ -201,7 +201,8 @@ class EmitterTasksInProcessTest {
         assertThat(project.getConfigurations().getByName("transcriberjUserAccountModalElements").isCanBeConsumed())
                 .isTrue();
         assertThat(project.getConfigurations().getByName("transcriberjUserAccountModalElements").getAttributes()
-                .getAttribute(ApiOnlyTranscriberJPlugin.FILES_ARTIFACT_ATTRIBUTE)).isEqualTo("user-account:modal");
+                .getAttribute(ApiOnlyTranscriberJPlugin.FILES_ARTIFACT_ATTRIBUTE))
+                .isEqualTo(ApiOnlyTranscriberJPlugin.filesArtifactIdentity("user-account", "modal"));
         assertThat(project.getConfigurations().getByName("transcriberjUserAccountModalElements").getOutgoing()
                 .getArtifacts()).hasSize(1);
         assertThat(ApiOnlyTranscriberJPlugin.transcriberJVersion()).isNotBlank();

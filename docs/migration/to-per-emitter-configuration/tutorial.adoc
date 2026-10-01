@@ -133,6 +133,15 @@ grep -rn "generated/sources/transcriberj\|generated/resources/transcriberj\|gene
 Replace every hard-coded directory with the property that holds it, as above.
 A task that depended on `generateContractSourcesOrders` to get the REST Docs tests depends on `generateContractSourcesOrdersRestdocs` instead.
 
+The REST Docs output in this example is Java source-set output, so no separate
+artifact selection is necessary.
+An emitter that writes files instead, such as WireMock mappings, produces an
+archive outside every source set.
+Consume it through an explicit `apionly-files` configuration selected by
+`<contract>:<emitterId>`; use the copyable
+link:../../../api-only-transcriberj/README.adoc#emitter-file-publication[Emitter-file publication configuration →]
+rather than `implementation project(...)`.
+
 [#step-4]
 == Step 4: build, and check
 
