@@ -1,3 +1,21 @@
+## [0.13.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.13.0...api-only-transcriberj-v0.13.1) (2026-10-01)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** publish only file emitter variants ([ddea0bc](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ddea0bcee64fd8cdf03e1067d9a13f59c8bfe3b1))
+
+
+### 📝 Documentation
+
+* **examples:** add a generated contract tests example for the API-Only TranscriberJ ([#57](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/57)) ([36df56c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/36df56cb19075611290937d524ddd3c7f1808047)), closes [#57](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/57)
+* guides to generated contract tests and documentation tests, the testing principle, and the authoring rules ([#59](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/59)) ([b70896c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b70896c539aa347ee6f9443b76516eeb3e4a85fc)), closes [#59](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/59) [#anchor](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/anchor) [#57](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/57)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.13.0 [skip ci] ([4af7c0d](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/4af7c0de37a4cada6d2f9ea2d8daa07ba681f406))
+
 # [0.13.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.12.0...api-only-transcriberj-v0.13.0) (2026-09-27)
 
 
