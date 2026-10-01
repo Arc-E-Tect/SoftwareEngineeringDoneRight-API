@@ -11,9 +11,11 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ExternalModuleDependency;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
+import org.gradle.api.attributes.Attribute;
 import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.component.AdhocComponentWithVariants;
+import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.component.SoftwareComponentFactory;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.plugins.JavaPlugin;
@@ -70,6 +72,10 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
 
     /** The usage an archive of an emitter's files is published with. */
     public static final String FILES_USAGE = "apionly-files";
+
+    /** Identifies the contract and emitter represented by an {@value #FILES_USAGE} variant. */
+    public static final Attribute<String> FILES_ARTIFACT_ATTRIBUTE =
+            Attribute.of("com.arc-e-tect.api-only.transcriberj.files-artifact", String.class);
 
     /**
      * What the generated code itself needs: the marker annotation every generated class
@@ -156,8 +162,6 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             spec.getIntoJava().convention(build.dir("generated/sources/transcriberj/" + contract + "/" + id));
             spec.getIntoResources().convention(build.dir("generated/resources/transcriberj/" + contract + "/" + id));
             spec.getIntoFiles().convention(build.dir("generated/files/transcriberj/" + contract + "/" + id));
-            // Created as soon as the block is, so that a build script can publish it; the archive
-            // is attached once the emitter is known to write files.
             component(project, contract, id);
         });
 
@@ -347,16 +351,28 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             z.dirPermissions(permissions -> permissions.unix("rwxr-xr-x"));
         });
         zip.configure(z -> z.getOutputs().cacheIf("the archive is reproducible", t -> true));
-        component(project, contract, id).getOutgoing().artifact(zip);
+        Configuration elements = elements(project, contract, id);
+        elements.getOutgoing().artifact(zip);
     }
 
     /**
-     * The consumable configuration an emitter's archive is published through, and the component
-     * that holds it, created once: {@code transcriberj<Contract><Emitter>Elements} and
-     * {@code transcriberj<Contract><Emitter>}. The archive is attached only to an emitter that
-     * writes files.
+     * The component a build may name in its publication configuration. It carries no variant until
+     * {@link #elements(Project, String, String)} confirms the emitter writes files.
      */
-    private Configuration component(Project project, String contract, String id) {
+    private AdhocComponentWithVariants component(Project project, String contract, String id) {
+        String name = suffix(contract) + suffix(id);
+        SoftwareComponent existing = project.getComponents().findByName("transcriberj" + name);
+        if (existing != null) return (AdhocComponentWithVariants) existing;
+        AdhocComponentWithVariants component = components.adhoc("transcriberj" + name);
+        project.getComponents().add(component);
+        return component;
+    }
+
+    /**
+     * The consumable configuration an emitter's file archive is published through, created only
+     * after the emitter plan declares {@link Output#FILES}.
+     */
+    private Configuration elements(Project project, String contract, String id) {
         String name = suffix(contract) + suffix(id);
         Configuration existing = project.getConfigurations().findByName("transcriberj" + name + "Elements");
         if (existing != null) return existing;
@@ -367,13 +383,12 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             c.attributes(attributes -> {
                 attributes.attribute(Category.CATEGORY_ATTRIBUTE,
                         project.getObjects().named(Category.class, Category.LIBRARY));
-                attributes.attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, FILES_USAGE));
+                attributes.attribute(Usage.USAGE_ATTRIBUTE,                 project.getObjects().named(Usage.class, FILES_USAGE));
+                attributes.attribute(FILES_ARTIFACT_ATTRIBUTE, contract + ":" + id);
             });
         });
-        AdhocComponentWithVariants component = components.adhoc("transcriberj" + name);
-        component.addVariantsFromConfiguration(elements, details -> {
+        component(project, contract, id).addVariantsFromConfiguration(elements, details -> {
         });
-        project.getComponents().add(component);
         return elements;
     }
 

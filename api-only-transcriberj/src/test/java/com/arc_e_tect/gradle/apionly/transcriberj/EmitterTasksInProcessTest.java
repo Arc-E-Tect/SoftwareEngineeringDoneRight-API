@@ -197,8 +197,11 @@ class EmitterTasksInProcessTest {
                 "generateContractSourcesUserAccountModal", "packageUserAccountModal", "reportContractSourcesUserAccount");
         assertThat(project.getTasks().findByName("packageUserAccountCounting")).isNull();
         assertThat(project.getComponents().getNames()).contains("transcriberjUserAccountModal");
+        assertThat(project.getConfigurations().findByName("transcriberjUserAccountCountingElements")).isNull();
         assertThat(project.getConfigurations().getByName("transcriberjUserAccountModalElements").isCanBeConsumed())
                 .isTrue();
+        assertThat(project.getConfigurations().getByName("transcriberjUserAccountModalElements").getAttributes()
+                .getAttribute(ApiOnlyTranscriberJPlugin.FILES_ARTIFACT_ATTRIBUTE)).isEqualTo("user-account:modal");
         assertThat(project.getConfigurations().getByName("transcriberjUserAccountModalElements").getOutgoing()
                 .getArtifacts()).hasSize(1);
         assertThat(ApiOnlyTranscriberJPlugin.transcriberJVersion()).isNotBlank();

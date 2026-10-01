@@ -1,6 +1,9 @@
 package com.arc_e_tect.gradle.apionly.transcriberj;
 
 import com.arc_e_tect.gradle.apionly.subscriber.Lockfile;
+import com.arc_e_tect.gradle.apionly.transcriberj.core.ModalEmitter;
+import com.arc_e_tect.gradle.apionly.transcriberj.core.SecondModalEmitter;
+import com.arc_e_tect.gradle.apionly.transcriberj.core.TestEmitter;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,6 +117,75 @@ class EmitterConfigurationFunctionalTest {
         assertThat(build.file("build/classes/java/test/com/example/contract/counting")).doesNotExist();
         assertThat(build.file("build/classes/java/contractTest/com/example/contract/counting/UserV1Count.class"))
                 .exists();
+    }
+
+    @Test
+    @DisplayName("T18.2 Non-file emitters do not publish conflicting variants")
+    void nonFileEmittersDoNotBlockNormalProjectDependencyResolution() throws Exception {
+        build.write("""
+                sourceSets = ['contractTest']
+                emitter('counting') {
+                    sourceSets = ['contractTest']
+                }
+                emitter('modal') {
+                    sourceSets = ['contractTest']
+                    options = [mode: 'java,resources']
+                }
+                """, """
+                dependencies {
+                    contractTestImplementation project()
+                }
+                tasks.register('assertNoFileEmitterVariants') {
+                    doLast {
+                        assert configurations.findByName('transcriberjUserAccountCountingElements') == null
+                        assert configurations.findByName('transcriberjUserAccountModalElements') == null
+                    }
+                }
+                """);
+        build.source("contractTest", "UsesGeneratedSources.java", """
+                public class UsesGeneratedSources {
+                    int count = com.example.contract.counting.UserV1Count.count();
+                    String version = com.example.contract.modal.Modal.VERSION;
+                }
+                """);
+
+        BuildResult result = build.runner("contractTestClasses", "assertNoFileEmitterVariants").build();
+
+        assertThat(result.task(":contractTestClasses").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(result.task(":assertNoFileEmitterVariants").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(result.getOutput()).doesNotContain("Consumable configurations with identical capabilities");
+    }
+
+    @Test
+    @DisplayName("T18.3 File emitters publish distinct variants")
+    void fileEmittersDoNotBlockNormalProjectDependencyResolution() throws Exception {
+        build = new EmitterBuild(projectDir, TestEmitter.class, ModalEmitter.class, SecondModalEmitter.class);
+        build.write("""
+                sourceSets = ['contractTest']
+                emitter('modal') {
+                    options = [mode: 'files']
+                }
+                emitter('second-modal') {
+                    options = [mode: 'files']
+                }
+                """, """
+                dependencies {
+                    contractTestImplementation project()
+                }
+                tasks.register('assertFileEmitterVariants') {
+                    doLast {
+                        def artifact = com.arc_e_tect.gradle.apionly.transcriberj.ApiOnlyTranscriberJPlugin.FILES_ARTIFACT_ATTRIBUTE
+                        assert configurations.transcriberjUserAccountModalElements.attributes.getAttribute(artifact) == 'user-account:modal'
+                        assert configurations.transcriberjUserAccountSecondModalElements.attributes.getAttribute(artifact) == 'user-account:second-modal'
+                    }
+                }
+                """);
+
+        BuildResult result = build.runner("contractTestClasses", "assertFileEmitterVariants").build();
+
+        assertThat(result.task(":contractTestClasses").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(result.task(":assertFileEmitterVariants").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(result.getOutput()).doesNotContain("Consumable configurations with identical capabilities");
     }
 
     @ParameterizedTest(name = "{0}")
@@ -309,7 +381,11 @@ class EmitterConfigurationFunctionalTest {
                 }
                 """);
 
-        build.runner("packageUserAccountModal", "publish").build();
+        BuildResult result = build.runner("packageUserAccountModal", "publish").build();
+
+        assertThat(result.getOutput()).doesNotContain("Consumable configurations with identical capabilities");
+        assertThat(build.file("build/distributions/user-account-modal-1.0.0.zip")).exists();
+        assertThat(build.file("build/generated/files/transcriberj/user-account/modal/mappings/modal.json")).exists();
 
         Path zip = build.file("build/distributions/user-account-modal-1.0.0.zip");
         byte[] once = Files.readAllBytes(zip);

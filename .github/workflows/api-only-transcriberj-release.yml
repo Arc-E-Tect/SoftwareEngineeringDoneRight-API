@@ -68,6 +68,7 @@ jobs:
       - name: Update version in Gradle property file
         run: |
           sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" ${{ env.GRADLE_PROPERTIES_FILE }}
+          grep -Fx "version = ${{ env.VERSION }}" ${{ env.GRADLE_PROPERTIES_FILE }}
 
       - name: Build and test API-Only TranscriberJ Plugin
         run: |
@@ -133,6 +134,7 @@ jobs:
       - name: Update version in Gradle property file
         run: |
           sed -i "s/${{ env.GRADLE_VERSION_REGEX }}/version = ${{ env.VERSION }}/g" ${{ env.GRADLE_PROPERTIES_FILE }}
+          grep -Fx "version = ${{ env.VERSION }}" ${{ env.GRADLE_PROPERTIES_FILE }}
 
       - name: Publish to Gradle Plugin Portal
         run: |
@@ -173,6 +175,8 @@ jobs:
       - name: Update version in api-only-transcriberj README
         run: |
           sed -i -E "s/^:api-only-transcriberj-version: .*/:api-only-transcriberj-version: ${{ env.VERSION }}/" api-only-transcriberj/README.adoc
+          grep -Fx ":api-only-transcriberj-version: ${{ env.VERSION }}" api-only-transcriberj/README.adoc
+          git rev-parse --verify "refs/tags/api-only-transcriberj-v${{ env.VERSION }}"
 
       - name: Upload updated api-only-transcriberj README
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

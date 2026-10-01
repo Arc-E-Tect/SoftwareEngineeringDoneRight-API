@@ -456,7 +456,10 @@ publishing {
 ----
 
 A consumer resolves it as `'<group>:orders-wiremock-stubs:<version>@zip'`.
-The component and configuration exist for every emitter a subscription names; only an emitter that writes files has an archive in them.
+Only an emitter whose resolved output includes `FILES` receives a consumable `transcriberj<Contract><Emitter>Elements` configuration, an `apionly-files` variant, and an archive.
+Emitters that produce Java sources and/or resources put that output in their configured source sets; they have no file variant or empty archive.
+The component remains available to configure a Maven publication, but it has no outgoing file variant unless the emitter produces files.
+When a project has multiple file-producing emitters, their variants are distinguished by the `com.arc-e-tect.api-only.transcriberj.files-artifact` attribute, whose value is `<contract>:<emitterId>`.
 
 [#reports]
 === One report, as text and as AsciiDoc
