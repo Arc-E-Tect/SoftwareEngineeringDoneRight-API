@@ -15,6 +15,12 @@ public enum Output {
     /**
      * Files that belong on no classpath -- mapping files, an archive's contents -- written with
      * {@link EmitterContext#writeFile(String, byte[])}, and packaged rather than compiled.
+     *
+     * <p>This declares the one currently supported external product: the TranscriberJ owns the
+     * reproducible ZIP, its provenance, and its {@code apionly-files} variant. An emitter must
+     * not create Gradle components or configurations. A publication descriptor is warranted only
+     * when an emitter needs a product this one archive cannot express, such as multiple archives,
+     * a classifier, a non-ZIP artifact, extra published metadata, or a consumable JVM variant.</p>
      */
     FILES
 }

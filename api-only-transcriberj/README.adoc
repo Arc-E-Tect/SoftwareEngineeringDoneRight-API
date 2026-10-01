@@ -1580,6 +1580,37 @@ An emitter that does not override `produces` is taken to write Java and resource
 `EmitterContext.contractCases(location)` gives that class's cases themselves, of every kind, in the order `CASES` lists them, each an `spi.ContractCase` holding what the generated record holds, and its `index` in `CASES`: an emitter that renders cases -- as tests, as stubs -- shapes its code by them, and takes their values from `CASES` at run time, so that the generated code states no value twice.
 The core derives them before any other emitter runs; the list is empty for an operation without cases.
 
+[#emitter-publication-decision]
+=== Publication decision
+
+`Output.FILES` remains the complete publication declaration in 0.14.0.
+It states one immutable fact: this emitter produces files outside a classpath.
+The TranscriberJ resolves that fact into exactly one supported product for the
+`(contract, emitter)` pair: a reproducible ZIP with provenance, a
+`Usage = apionly-files` outgoing variant, and the documented
+`com.arc-e-tect.api-only.transcriberj.files-artifact` identity attribute.
+The emitter never creates a Gradle task, component, configuration, capability,
+or variant.
+
+This is sufficient for the current emitters:
+
+* REST Docs declares Java output;
+* Microcks uses the compatible Java/resources default; and
+* WireMock switches between Java output and one file archive according to its
+  `format` option.
+
+No current emitter needs multiple archives, a classifier, a non-ZIP artifact,
+metadata published separately from the archive, or a consumable JVM product.
+Adding a publication descriptor now would duplicate `Output.FILES` without
+adding a product choice, expand the public SPI needlessly, and risk making
+emitters responsible for Gradle wiring the plugin must own.
+
+Revisit this decision only when a real emitter requires one of those products.
+At that point, add the smallest immutable descriptor to the resolved emitter
+plan, retain `Output` for placement, provide a default adapter for existing
+emitters, and keep archive, variant, component, and consumer selection wiring
+inside the TranscriberJ.
+
 [#request-schemas]
 === Request schemas
 
