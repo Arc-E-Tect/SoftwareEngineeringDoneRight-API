@@ -430,8 +430,8 @@ It would not under the Java module system, where a package belongs to one module
 
 Emitter output is compiled in the emitter's own source sets in both modes.
 
-[#archives]
-=== Archives of files
+[#emitter-file-publication]
+=== Emitter-file publication
 
 An emitter that writes files gets `package<Contract><Emitter>`, a `Zip` of its files directory and an `apionly-provenance.json`: the contract's name, version and document hash, as the lockfile records them, the TranscriberJ's version, and the emitter's id, version and options.
 It is written to `build/distributions/<contract>-<emitterId>-<contractVersion>.zip`, and is reproducible: fixed file order, no timestamps, and fixed permissions, whatever the machine, its time zone or its umask.
@@ -459,7 +459,69 @@ A consumer resolves it as `'<group>:orders-wiremock-stubs:<version>@zip'`.
 Only an emitter whose resolved output includes `FILES` receives a consumable `transcriberj<Contract><Emitter>Elements` configuration, an `apionly-files` variant, and an archive.
 Emitters that produce Java sources and/or resources put that output in their configured source sets; they have no file variant or empty archive.
 The component remains available to configure a Maven publication, but it has no outgoing file variant unless the emitter produces files.
-When a project has multiple file-producing emitters, their variants are distinguished by the `com.arc-e-tect.api-only.transcriberj.files-artifact` attribute, whose value is `<contract>:<emitterId>`.
+
+==== Selecting an emitter-file artifact from another project
+
+An `apionly-files` variant is identified by the typed `String` attribute
+`com.arc-e-tect.api-only.transcriberj.files-artifact`.
+Its value is `<contract>:<emitterId>`: for example, the `wiremock` files of the
+`orders` contract are `orders:wiremock`.
+The usage and identity must both be requested when a producer exposes more than
+one file archive.
+
+This is the stable consumer contract from 0.14.0.
+It deliberately uses an attribute rather than a distinct capability: Gradle can
+publish the documented `from components.transcriberj...` Maven component only
+when its variant retains the producer's normal Maven capability.
+The attribute keeps that publication compatible while making project dependency
+selection unambiguous.
+
+For example, a consumer selects and unpacks the WireMock archive from an
+`orders` project as follows:
+
+[source,groovy]
+----
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Usage
+
+def emitterFile = Attribute.of(
+        'com.arc-e-tect.api-only.transcriberj.files-artifact', String)
+
+configurations {
+    ordersWiremockFiles {
+        canBeConsumed = false
+        canBeResolved = true
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, 'apionly-files'))
+            attribute(emitterFile, 'orders:wiremock')
+        }
+    }
+}
+
+dependencies {
+    ordersWiremockFiles project(':orders')
+}
+
+tasks.register('unpackOrdersWiremock', Copy) {
+    from(configurations.ordersWiremockFiles)
+    into layout.buildDirectory.dir('wiremock')
+}
+----
+
+The `Copy` task carries the selected archive's build dependency, so it generates
+and unpacks `orders-wiremock-<contractVersion>.zip` when necessary.
+An ordinary `implementation project(':orders')` dependency is separate from
+this explicit file-artifact selection and continues to resolve the producer's
+normal JVM variant.
+
+==== Compatibility
+
+Before 0.14.0 the plugin did not document a file-artifact consumer API.
+The `FILES` archive names, contents, provenance, Maven publication component,
+and the existing `com.arc-e-tect.api-only.transcriberj.files-artifact`
+attribute/value format remain unchanged.
+Consumers that previously depended on an `apionly-files` variant should add the
+usage and identity attributes above to make their selection explicit and stable.
 
 [#reports]
 === One report, as text and as AsciiDoc
@@ -490,7 +552,7 @@ Every generation task runs it when it finishes.
 
 |`package<Contract><Emitter>`
 |For an emitter that writes files: packages them, with their provenance, as `build/distributions/<contract>-<emitterId>-<contractVersion>.zip`.
-See <<archives,Archives of files §>>.
+See <<emitter-file-publication,Emitter-file publication §>>.
 
 |`verifyContractSources<Contract>`
 |Fails when the core's output, or any emitter's, was generated from another version or document than the lockfile names, naming the emitter.

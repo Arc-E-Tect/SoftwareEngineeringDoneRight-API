@@ -111,6 +111,11 @@ The subscription's `reportFile` is unchanged, and `reportContractSources<Contrac
 Compiling a source set runs every task whose output it compiles; to run one emitter on its own, run `generateContractSources<Contract><Emitter>`.
 * **A project dependency** such as `implementation project(':contract')`.
 Compile and test a representative consumer after migration, particularly when the subscription names multiple emitters. Java and resource emitters belong to source sets and do not publish `apionly-files` variants; only file-producing emitters publish those variants.
+* **An explicitly consumed file artifact**, such as a WireMock mapping archive.
+This is not source-set output and is not selected by `implementation project(...)`.
+Select it through a resolvable configuration that requests `Usage = apionly-files` and the
+`com.arc-e-tect.api-only.transcriberj.files-artifact` value `<contract>:<emitterId>`.
+The <<next,TranscriberJ README §>> has copyable consumer configuration.
 
 [#next]
 == Where to go next
@@ -118,3 +123,4 @@ Compile and test a representative consumer after migration, particularly when th
 * link:tutorial.adoc[The tutorial →] migrates a build with the REST Docs emitter, step by step, with the build file before and after each step.
 * link:prompt-claude-code.md[The Claude Code prompt →] and link:prompt-codex.md[the Codex prompt →] have an AI coding assistant do it in your own repository, stopping for your review.
 * link:../../../api-only-transcriberj/README.adoc#emitter-configuration[Configuring emitters →], in the TranscriberJ's README, covers what the new block can do beyond the migration: an emitter's own source sets, files that go on no classpath and the archive they are packaged in, and sharing the schema classes between source sets.
+* link:../../../api-only-transcriberj/README.adoc#emitter-file-publication[Emitter-file publication →], in the TranscriberJ's README, documents the separate, explicit consumer configuration for an emitter archive.

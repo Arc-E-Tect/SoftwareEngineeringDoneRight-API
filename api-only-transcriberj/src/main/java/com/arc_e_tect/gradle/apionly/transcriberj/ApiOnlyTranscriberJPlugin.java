@@ -78,6 +78,17 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
             Attribute.of("com.arc-e-tect.api-only.transcriberj.files-artifact", String.class);
 
     /**
+     * The value of {@link #FILES_ARTIFACT_ATTRIBUTE} for a file archive.
+     *
+     * @param contract the subscribed contract name
+     * @param emitter the emitter id
+     * @return the archive's stable contract/emitter identity
+     */
+    public static String filesArtifactIdentity(String contract, String emitter) {
+        return contract + ":" + emitter;
+    }
+
+    /**
      * What the generated code itself needs: the marker annotation every generated class
      * carries, so that a project measuring coverage does not measure code nobody wrote.
      * Managed like an emitter's dependency -- preferred, never forced -- so a project
@@ -384,7 +395,7 @@ public class ApiOnlyTranscriberJPlugin implements Plugin<Project> {
                 attributes.attribute(Category.CATEGORY_ATTRIBUTE,
                         project.getObjects().named(Category.class, Category.LIBRARY));
                 attributes.attribute(Usage.USAGE_ATTRIBUTE,                 project.getObjects().named(Usage.class, FILES_USAGE));
-                attributes.attribute(FILES_ARTIFACT_ATTRIBUTE, contract + ":" + id);
+                attributes.attribute(FILES_ARTIFACT_ATTRIBUTE, filesArtifactIdentity(contract, id));
             });
         });
         component(project, contract, id).addVariantsFromConfiguration(elements, details -> {
