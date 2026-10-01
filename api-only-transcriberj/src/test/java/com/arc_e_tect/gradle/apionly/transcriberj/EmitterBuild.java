@@ -31,9 +31,20 @@ final class EmitterBuild {
             "user-account/openapi.yaml");
 
     final Path dir;
+    private final List<Class<? extends Emitter>> emitters;
 
     EmitterBuild(Path dir) {
+        this(dir, List.of(TestEmitter.class, ModalEmitter.class));
+    }
+
+    @SafeVarargs
+    EmitterBuild(Path dir, Class<? extends Emitter>... emitters) {
+        this(dir, List.of(emitters));
+    }
+
+    private EmitterBuild(Path dir, List<Class<? extends Emitter>> emitters) {
         this.dir = dir;
+        this.emitters = List.copyOf(emitters);
     }
 
     /** The whole build: settings, contract, emitters, sources and a build script around the subscription's body. */
@@ -45,7 +56,7 @@ final class EmitterBuild {
         Files.writeString(dir.resolve("settings.gradle"), "rootProject.name = 'consumer'\n");
         if (!Files.exists(dir.resolve("channel"))) publish("1.0.0");
         if (!Files.exists(dir.resolve("emitters.jar"))) {
-            emittersJar(dir.resolve("emitters.jar"), TestEmitter.class, ModalEmitter.class);
+            emittersJar(dir.resolve("emitters.jar"), emitters.toArray(Class[]::new));
         }
         Files.writeString(dir.resolve("build.gradle"), """
                 plugins {

@@ -24,8 +24,8 @@ Two ways of configuring emitters that worked before still work, and are warned a
 **1.0.0 removes both.**
 A build that still relies on either then stops running that emitter, or fails.
 
-Migrating takes one pull request, and usually changes nothing but the `apiOnlyTranscriberJ` block.
-When the build is warning-free, it is ready for 1.0.0.
+Migrating usually changes the `apiOnlyTranscriberJ` block, but a warning-free migration alone is not sufficient evidence that the build is ready for 1.0.0.
+Also check generated paths and task dependencies, and validate a representative consumer build when the project uses `project()` dependencies.
 
 [#what-changed]
 == What changed in 0.11.0
@@ -90,8 +90,9 @@ The ids are in the second warning, and in each emitter's README.
 Setting both for one emitter fails the build, so move each emitter's options in one edit.
 . **Check the paths and tasks the build names**, as <<paths,below §>> says.
 . **Build, and read the log.** No deprecation warning is left, and the generated sources are the same as before; only their directories moved.
+. **Validate representative consumers.** Where a JVM suite or another project has an `implementation project(...)` dependency, compile and test it too. This proves normal project-variant resolution still selects the intended output.
 
-Nothing else is required.
+Do not declare the migration complete until these checks pass.
 What you may do next, now that each emitter has a block of its own, is in <<next,Where to go next §>>.
 
 [#paths]
@@ -108,6 +109,8 @@ The core's directory no longer holds any emitter's output: give the tool the emi
 The subscription's `reportFile` is unchanged, and `reportContractSources<Contract>` writes it.
 * **Running only the core task** no longer regenerates the emitters' output.
 Compiling a source set runs every task whose output it compiles; to run one emitter on its own, run `generateContractSources<Contract><Emitter>`.
+* **A project dependency** such as `implementation project(':contract')`.
+Compile and test a representative consumer after migration, particularly when the subscription names multiple emitters. Java and resource emitters belong to source sets and do not publish `apionly-files` variants; only file-producing emitters publish those variants.
 
 [#next]
 == Where to go next

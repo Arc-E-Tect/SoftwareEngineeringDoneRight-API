@@ -144,8 +144,9 @@ A task that depended on `generateContractSourcesOrders` to get the REST Docs tes
 * The log has no `deprecated` and no `not configured with emitter(` warning.
 * The same classes compile in the same source sets as before, from their new directories.
 * `build/reports/transcriberj/orders.txt` is the report you had, and `orders.adoc` beside it is the same report in AsciiDoc.
+* A representative JVM suite that declares `implementation project(...)` against this project compiles and tests successfully. This verifies normal project-variant resolution when the subscription names both REST Docs and Microcks.
 
-The build is ready for 1.0.0.
+After these checks pass, the build is ready for 1.0.0.
 
 [#after]
 == What you can do now
