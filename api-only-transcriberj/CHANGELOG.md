@@ -1,3 +1,15 @@
+# [0.14.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.13.1...api-only-transcriberj-v0.14.0) (2026-10-01)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** define file artifact consumer API ([7159719](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/71597190e0d8a40f4f8cc5e2f5ce85fcf00c9c17))
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.13.1 [skip ci] ([8f5c7cc](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/8f5c7cca3b583de97cbdb2287faa5849025bb552))
+
 ## [0.13.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.13.0...api-only-transcriberj-v0.13.1) (2026-10-01)
 
 
