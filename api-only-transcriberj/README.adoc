@@ -1585,7 +1585,7 @@ The core derives them before any other emitter runs; the list is empty for an op
 [#emitter-publication-decision]
 === Publication decision
 
-`Output.FILES` remains the complete publication declaration in 0.14.0.
+Since 0.14.0, `Output.FILES` is the complete publication declaration.
 It states one immutable fact: this emitter produces files outside a classpath.
 The TranscriberJ resolves that fact into exactly one supported product for the
 `(contract, emitter)` pair: a reproducible ZIP with provenance, a
