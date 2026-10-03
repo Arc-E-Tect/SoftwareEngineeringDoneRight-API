@@ -1,3 +1,17 @@
+## [0.14.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.14.0...api-only-transcriberj-v0.14.1) (2026-10-03)
+
+
+### 📝 Documentation
+
+* **api-only-transcriberj:** describe the Microcks emitter's readiness check, and drop the broker probe ([#64](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/64)) ([2b784a5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2b784a5661ab29e260df206f2acdd640105fdd45)), closes [#64](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/64) [Arc-E-Tect/SoftwareEngineeringDoneRight-Library#113](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/issues/113)
+* **api-only-transcriberj:** point Kafka projects to the Microcks emitter's advice on the first operation's test ([#63](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/63)) ([67a872b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/67a872be36efd31a3ff6529a6bad82125293d8c2)), closes [#63](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/63) [Arc-E-Tect/SoftwareEngineeringDoneRight-Library#111](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/issues/111)
+* **api-only-transcriberj:** record why Output.FILES stays the emitter publication declaration ([#65](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/65)) ([50db453](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/50db4530e1273cdee2e043ca5d42ef5c653391d2)), closes [#65](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/65)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.14.0 [skip ci] ([cd525e9](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/cd525e9dff84a7af6b260cad8085a7402ac88728))
+
 # [0.14.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.13.1...api-only-transcriberj-v0.14.0) (2026-10-01)
 
 
