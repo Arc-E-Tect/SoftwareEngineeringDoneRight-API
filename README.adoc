@@ -135,6 +135,51 @@ It is not released; its built contracts are committed, and its CI fails when the
 
 To change either tool, read link:docs/reference/how-publisher-and-subscriber-work-together.adoc#extending[Where a change belongs →] first.
 
+[#dependency-updates]
+=== Dependency updates
+
+Every project's dependencies are updated by a dependency updater, which commits them as `maintenance` and releases a patch, except one: the Publisher's toolchain, which is part of the Publisher and changes in a release of its own.
+
+[cols="2,3,2", options="header"]
+|===
+| Project | Dependencies | Changed by
+
+| link:api-only-publisher/package.json[`api-only-publisher/` →]
+| `yaml`, and semantic-release and its plugins
+| A dependency updater
+
+| link:api-only-publisher/docker/toolchain/package.json[`api-only-publisher/docker/toolchain/` →]
+| Redocly CLI and AsyncAPI CLI, the bundlers the Publisher pins and its Docker image installs
+| link:api-only-publisher/scripts/toolchain-update.sh[`api-only-publisher/scripts/toolchain-update.sh` →], link:api-only-publisher/README.adoc#toolchain-update[Moving the Publisher's own pins →].
+Its manifest says `"x-updater": "report-only"`: a dependency updater only reports a newer version and what `npm audit` finds.
+
+| link:api-only-subscriber/[`api-only-subscriber/` →]
+| Gradle wrapper and version catalog; npm: semantic-release and its plugins
+| A dependency updater
+
+| link:api-only-transcriberj/[`api-only-transcriberj/` →]
+| Gradle wrapper and version catalog; npm: semantic-release and its plugins
+| A dependency updater
+
+| link:examples/transcriberj/generated-contract-tests/[`examples/transcriberj/generated-contract-tests/` →]
+| Gradle wrapper and version catalog; npm: the released Publisher
+| A dependency updater
+
+| link:sedr_utils/nvd-cache-primer/[`sedr_utils/nvd-cache-primer/` →]
+| Gradle wrapper and version catalog
+| A dependency updater
+
+| link:reference-api/package.json[`reference-api/` →]
+| None: it runs the Publisher in this repository
+| Nothing to update
+
+| link:.github/workflows/[`.github/workflows/` →]
+| GitHub Actions, pinned by commit SHA
+| A dependency updater
+|===
+
+Whatever updates the dependencies has to run each npm project's `npm test` once all of them are updated, and push nothing when one fails: a project's tests may read another project's files, as the Publisher's read its toolchain's manifest.
+
 [#quality-gates]
 == Quality gates
 

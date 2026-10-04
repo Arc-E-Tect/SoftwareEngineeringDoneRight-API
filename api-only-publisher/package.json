@@ -36,7 +36,8 @@
   },
   "scripts": {
     "test": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=80 test/*.test.js",
-    "test:quick": "node --test test/*.test.js"
+    "test:quick": "node --test test/*.test.js",
+    "toolchain:update": "node scripts/toolchain-update.js"
   },
   "dependencies": {
     "yaml": "2.9.1"
