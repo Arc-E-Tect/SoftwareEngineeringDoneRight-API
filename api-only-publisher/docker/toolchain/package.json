@@ -4,16 +4,6 @@
   "description": "The toolchain the api-only-publisher Docker image carries. Keep in step with TOOLCHAIN_PIN in src/init-config.js; test/docker.test.js checks it.",
   "dependencies": {
     "@asyncapi/cli": "6.2.0",
-    "@redocly/cli": "2.57.0"
-  },
-  "allowScripts": {
-    "@asyncapi/cli@6.2.0": true,
-    "@hyperjump/json-pointer@0.9.8": true,
-    "@hyperjump/json-schema@0.23.5": true,
-    "@hyperjump/json-schema-core@0.28.5": true,
-    "@hyperjump/pact@0.2.5": true,
-    "@scarf/scarf@1.4.0": true,
-    "fsevents@2.3.3": true,
-    "yarn@1.22.22": true
+    "@redocly/cli": "2.55.0"
   }
 }
