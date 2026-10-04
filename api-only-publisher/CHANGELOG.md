@@ -1,3 +1,16 @@
+## [0.12.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.12.0...api-only-publisher-v0.12.1) (2026-10-04)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** pin the reference pipeline's setup-node to v7.0.0, as the end-to-end workflow does ([#72](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/72)) ([b2fb0b7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b2fb0b7c938ae3674b108703b325dc7df04ab76e)), closes [#72](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/72) [#67](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/67)
+
+
+### 🔧 Misc
+
+* dependency updates for API projects ([#67](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/67)) ([98f5c92](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/98f5c9265c34a415ed02fbfc9529dcf228a18edd)), closes [#67](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/67)
+* **api-only-publisher:** update README version to 0.12.0 [skip ci] ([322b174](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/322b1744410959d06420991e0af726dd32026d5b))
+
 # [0.12.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.11.0...api-only-publisher-v0.12.0) (2026-09-29)
 
 
