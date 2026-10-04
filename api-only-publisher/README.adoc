@@ -1589,6 +1589,8 @@ docker/smoke-test.sh api-only-publisher:local 0.0.0-local
 It runs every step with no network, a read-only root and your own user: the version, the help, the toolchain labels against what is installed and against `init`'s pins, a library with two targets built, linted and packaged to every local channel in one run, ownership, byte-identical packaging twice, the hand-off, a foreign toolchain pin failing at once, the shell mode, and a build as an arbitrary UID.
 
 link:../.github/workflows/api-only-publisher-image-e2e.yml[`api-only-publisher-image-e2e.yml` →] runs the GitHub Actions reference pipeline for real, by hand only.
+link:test/docker.test.js[`test/docker.test.js` →] holds it to what the link:pipelines/[reference pipelines →] do, the same actions, commands, inputs and environment, but not to the versions they pin.
+The reference pipelines are examples, maintained on their own, and the end-to-end workflow is maintained with this repository's other workflows, so a new version of an action in one never fails the Publisher's build while the other has not moved.
 Give it an image by digest; it publishes version `0.<run>.<attempt>` of two scratch targets, `apionly-e2e-alpha` and `apionly-e2e-beta`, to npm, Maven and NuGet on GitHub Packages and to a scratch release, publishes again to prove a re-run is safe, resolves each package with its own client and with the Subscriber, and removes what it published.
 The image workflow, dispatched by hand, is the release's dry run: its defaults are the scratch names `ghcr.io/arc-e-tect/api-only-publisher-scratch` and `arcetect/api-only-publisher-scratch`, and it builds from the branch's source.
 

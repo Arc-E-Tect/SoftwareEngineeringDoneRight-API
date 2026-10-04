@@ -89,8 +89,12 @@ test("the entrypoint runs anything else as given, as a CI runner's shell", () =>
     assert.strictEqual(entrypoint(["echo", "build"]), "build");
 });
 
-// The end-to-end workflow runs the reference pipelines' steps, not look-alikes: a
-// change to one without the other would leave the documented pipeline unexercised.
+// The end-to-end workflow does what the reference pipelines do, not something like it: a
+// change to what one does without the other would leave the documented pipeline
+// unexercised. How each is pinned is its own: the reference pipelines are examples,
+// maintained on their own, and the end-to-end workflow is maintained with this
+// repository's other workflows, so a new version of an action in one never fails the
+// Publisher's build because the other has not moved yet.
 const YAML = require("yaml");
 const REPO = path.join(ROOT, "..");
 const yamlOf = (file) => YAML.parse(fs.readFileSync(file, "utf8"));
@@ -98,16 +102,31 @@ const REFERENCE = yamlOf(path.join(ROOT, "pipelines", "github-actions.yml"));
 const CONTAINER_JOB = yamlOf(path.join(ROOT, "pipelines", "github-actions-container-job.yml"));
 const E2E = yamlOf(path.join(REPO, ".github", "workflows", "api-only-publisher-image-e2e.yml"));
 
-// A job's steps as the pipeline defines them, less the one way the library arrives.
-function steps(job) {
-    return job.steps.filter((step) => !["Checkout", "Receive the library"].includes(step.name));
+// What a step does: the action it runs, whichever version is pinned, or its command, with
+// its inputs, environment and condition. Its name and id only label it.
+function behaviour({ name, id, uses, ...rest }) {
+    return uses ? { uses: uses.split("@")[0], ...rest } : rest;
 }
 
-test("the end-to-end workflow packages exactly as the reference pipeline does", () => {
+// What a job's steps do, less the one way the library arrives.
+function steps(job) {
+    return job.steps.filter((step) => !["Checkout", "Receive the library"].includes(step.name)).map(behaviour);
+}
+
+test("a step does the same whichever version of its action is pinned, and not with another action or input", () => {
+    const step = { name: "Upload", uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", with: { path: "dist" } };
+    assert.deepStrictEqual(behaviour(step), behaviour({ ...step, name: "Keep the bundles", uses: "actions/upload-artifact@v8" }));
+    assert.deepStrictEqual(behaviour(step), { uses: "actions/upload-artifact", with: { path: "dist" } });
+    assert.notDeepStrictEqual(behaviour(step), behaviour({ ...step, uses: "actions/cache@v5" }));
+    assert.notDeepStrictEqual(behaviour(step), behaviour({ ...step, with: { path: "build" } }));
+    assert.deepStrictEqual(behaviour({ name: "Pack", run: "npm pack" }), { run: "npm pack" });
+});
+
+test("the end-to-end workflow packages as the reference pipeline does", () => {
     assert.deepStrictEqual(steps(E2E.jobs.package), steps(REFERENCE.jobs.package));
 });
 
-test("the end-to-end workflow's container job packages exactly as the reference one does", () => {
+test("the end-to-end workflow's container job packages as the reference one does", () => {
     assert.deepStrictEqual(steps(E2E.jobs["package-in-container"]).map((s) => s.run || s.with),
         steps(CONTAINER_JOB.package).map((s) => s.run || s.with).map((v, i) =>
             // The artifact name differs, so the compare job can fetch both.
@@ -115,7 +134,7 @@ test("the end-to-end workflow's container job packages exactly as the reference 
     assert.deepStrictEqual(E2E.jobs["package-in-container"].container.options, CONTAINER_JOB.package.container.options);
 });
 
-test("the end-to-end workflow publishes exactly as the reference pipeline does", () => {
+test("the end-to-end workflow publishes as the reference pipeline does", () => {
     assert.deepStrictEqual(steps(E2E.jobs.publish), steps(REFERENCE.jobs.publish));
     const { RELEASE_TAG: e2eTag, ...e2eEnv } = E2E.jobs.publish.env;
     const { RELEASE_TAG: referenceTag, ...referenceEnv } = REFERENCE.jobs.publish.env;
