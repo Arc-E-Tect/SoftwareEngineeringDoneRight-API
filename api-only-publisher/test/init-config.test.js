@@ -28,7 +28,7 @@ test("adds a missing kind's slots to an apionly.yaml that already builds the oth
     // Every openapi value the file already had is untouched.
     assert.strictEqual(doc.sources.openapi, "openapi");
     assert.deepStrictEqual(doc.defaults.openapi, { lint: ".redocly.yaml", outputName: "openapi.yaml" });
-    assert.strictEqual(doc.toolchain.redocly, "@redocly/cli@2.55.0");
+    assert.strictEqual(doc.toolchain.redocly, "@redocly/cli@2.57.0");
     assert.deepStrictEqual(doc.targets["example-service"].openapi,
         { bundle: "bundles/example-service_openapi_structure.yaml" });
 

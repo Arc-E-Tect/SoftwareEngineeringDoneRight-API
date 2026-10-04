@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-publisher-version: 0.12.0
+:api-only-publisher-version: 0.12.1
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
@@ -839,7 +839,7 @@ lint:
     openapi: warn       # a request body or response with no example: error, warn (the default) or off
 
 toolchain:
-  redocly: "@redocly/cli@2.55.0"
+  redocly: "@redocly/cli@2.57.0"
   asyncapi: "@asyncapi/cli@6.2.0"
 
 channels:
@@ -922,6 +922,56 @@ A bundler installed there at exactly the pinned version runs from there, without
 |===
 
 The Docker image sets both, with `never`, <<docker-toolchain>>.
+
+[#toolchain-update]
+=== Moving the Publisher's own pins
+
+This section is for the Publisher's maintainers; a library moves its own pins in its `apionly.yaml`.
+
+The Publisher pins one version of each bundler, `TOOLCHAIN_PIN` in link:src/init-config.js[`src/init-config.js` →], and those pins are part of the Publisher, not dependencies of it.
+`init` writes them into every new `apionly.yaml`, the Publisher fetches exactly those versions with `npx`, and the Docker image installs them and runs no other, <<docker-toolchain,the toolchain rule §>>.
+A library that pins the old version fails with a new image, so moving a pin is a feature release of its own.
+Each version is quoted in `TOOLCHAIN_PIN`, in link:docker/toolchain/package.json[`docker/toolchain/package.json` →] and its lockfile, which the image installs, in the image's labels in link:Dockerfile[`Dockerfile` →], in this README and in the tests, and link:scripts/toolchain-update.js[`scripts/toolchain-update.js` →] changes them all, run through its wrapper:
+
+[source,console]
+----
+api-only-publisher/scripts/toolchain-update.sh --redocly <version> [--asyncapi <version>]
+api-only-publisher/scripts/toolchain-update.sh --asyncapi <version> --breaking "<what a library must change>"
+api-only-publisher/scripts/toolchain-update.sh --audit-fix
+----
+
+link:scripts/toolchain-update.sh[`scripts/toolchain-update.sh` →] runs the script from any directory.
+From `api-only-publisher/`, `npm run toolchain:update -- <options>` does the same; npm needs the `--`, or it takes the options for itself.
+`--help`, or no arguments at all, explains every option.
+
+From a clean working tree, it:
+
+. creates a branch from `origin/main`, named for what it changes, such as `toolchain/redocly-<version>` or `toolchain/audit-fix-<date>`;
+. changes the manifest and regenerates its lockfile, applying `npm audit fix` to it given `--audit-fix`;
+. compares the packages that have an install script with the manifest's `allowScripts`, and when they differ, names them and stops, changing nothing, until it is run again with `--approve-scripts`, which records the new list;
+. replaces the old pin in every tracked file except the changelog, the lockfiles and link:.trivyignore.yaml[`.trivyignore.yaml` →];
+. runs `npm test`, then builds the image and smoke-tests it as the build workflow does;
+. commits the change as `feat(api-only-publisher): ship ...`, or, given `--breaking`, as `feat(api-only-publisher)!: ship ...` with the given text as its `BREAKING CHANGE` footer, or, for `npm audit fix` alone, as `fix(api-only-publisher): apply npm audit fixes to the image's toolchain`, since what the image installs changes;
+. pushes the branch and opens a pull request titled as the commit, so a squash merge releases what the commit says.
+
+The commit and the pull request list what a library must change, what `npm audit fix` changed in the lockfile, `npm audit`'s findings before and after, the install scripts approved, and every review in `.trivyignore.yaml` to redo.
+
+The image never runs an install script (`npm ci --ignore-scripts`), and the smoke test proves the toolchain works without them.
+Approving them still records that each one was reviewed, wherever the toolchain is installed.
+
+A failure after the approval stops before the commit and leaves the branch to inspect.
+`--skip-smoke` leaves the image to the build workflow, on a machine without Docker, and `--no-push` stops after the commit.
+A new major version of a tool is a feature unless `--breaking` says otherwise, and the script warns about it.
+
+`.trivyignore.yaml` records the version each accepted finding was reviewed against.
+When that version changes, the review is redone rather than rewritten, and the commit names it.
+
+[#toolchain-dependency-updates]
+==== What a dependency updater changes
+
+`"x-updater": "report-only"` in `docker/toolchain/package.json` asks a dependency updater to report a newer version of a tool, and what `npm audit` finds, rather than install anything there: installing one is the change above.
+Everything in the Publisher's own link:package.json[`package.json` →] is an ordinary dependency, left to a dependency updater: `yaml`, and semantic-release and its plugins, with which the Publisher is released.
+link:../README.adoc#dependency-updates[The repository's dependency updates →] list every project, and which of the two changes it.
 
 [#behaviour]
 == Behaviour worth knowing about
@@ -1217,7 +1267,7 @@ Besides the OCI annotations -- `source`, `revision`, `version`, `created`, `lice
 [cols="2,1", options="header"]
 |===
 | Label | Example
-| `com.arc-e-tect.api-only-publisher.toolchain.redocly`  | `@redocly/cli@2.55.0`
+| `com.arc-e-tect.api-only-publisher.toolchain.redocly`  | `@redocly/cli@2.57.0`
 | `com.arc-e-tect.api-only-publisher.toolchain.asyncapi` | `@asyncapi/cli@6.2.0`
 |===
 
@@ -1349,8 +1399,8 @@ A library pinning another version fails at once, before anything is built and wi
 
 ----
 Error: apionly.yaml's toolchain.redocly pins @redocly/cli@2.51.0, and API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=never forbids downloading it.
-This installation carries @asyncapi/cli@6.2.0 and @redocly/cli@2.55.0.
-Set toolchain.redocly to "@redocly/cli@2.55.0" in apionly.yaml, or use the api-only-publisher image whose com.arc-e-tect.api-only-publisher.toolchain.redocly label is @redocly/cli@2.51.0.
+This installation carries @asyncapi/cli@6.2.0 and @redocly/cli@2.57.0.
+Set toolchain.redocly to "@redocly/cli@2.57.0" in apionly.yaml, or use the api-only-publisher image whose com.arc-e-tect.api-only-publisher.toolchain.redocly label is @redocly/cli@2.51.0.
 To allow the download instead, run with API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=allow.
 ----
 
@@ -1468,6 +1518,8 @@ The release workflow calls link:../.github/workflows/api-only-publisher-image.ym
 
 A failure in any of these never undoes the npm release; the workflow summary shows it.
 A branch that changes what the image is built from builds it for `linux/amd64` and smoke-tests it, without pushing.
+
+The image's toolchain moves with the Publisher's own pins, <<toolchain-update,Moving the Publisher's own pins §>>.
 
 [#docker-secrets]
 ==== Secrets and variables
