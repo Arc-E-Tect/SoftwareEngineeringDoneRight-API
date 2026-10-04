@@ -1,3 +1,20 @@
+# [0.13.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.12.1...api-only-publisher-v0.13.0) (2026-10-04)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** ship @redocly/cli 2.57.0 in the image and as init's default ([#70](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/70)) ([7a31b8c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/7a31b8ce651c0317c960bd9dce9fbcbec8abf629)), closes [#70](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/70)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.12.1 [skip ci] ([397f9b8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/397f9b831f7893b34c0c1984c52ceeaf0a897d1e))
+
+
+### 🔨 Build System
+
+* **api-only-publisher:** move the Publisher's toolchain pins with npm run toolchain:update ([#69](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/69)) ([af61402](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/af61402c15cbbb28be8602a71343af3db5817538)), closes [#69](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/69)
+
 ## [0.12.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.12.0...api-only-publisher-v0.12.1) (2026-10-04)
 
 
