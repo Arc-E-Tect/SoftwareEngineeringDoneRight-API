@@ -839,7 +839,7 @@ lint:
     openapi: warn       # a request body or response with no example: error, warn (the default) or off
 
 toolchain:
-  redocly: "@redocly/cli@2.55.0"
+  redocly: "@redocly/cli@2.57.0"
   asyncapi: "@asyncapi/cli@6.2.0"
 
 channels:
@@ -1267,7 +1267,7 @@ Besides the OCI annotations -- `source`, `revision`, `version`, `created`, `lice
 [cols="2,1", options="header"]
 |===
 | Label | Example
-| `com.arc-e-tect.api-only-publisher.toolchain.redocly`  | `@redocly/cli@2.55.0`
+| `com.arc-e-tect.api-only-publisher.toolchain.redocly`  | `@redocly/cli@2.57.0`
 | `com.arc-e-tect.api-only-publisher.toolchain.asyncapi` | `@asyncapi/cli@6.2.0`
 |===
 
@@ -1399,8 +1399,8 @@ A library pinning another version fails at once, before anything is built and wi
 
 ----
 Error: apionly.yaml's toolchain.redocly pins @redocly/cli@2.51.0, and API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=never forbids downloading it.
-This installation carries @asyncapi/cli@6.2.0 and @redocly/cli@2.55.0.
-Set toolchain.redocly to "@redocly/cli@2.55.0" in apionly.yaml, or use the api-only-publisher image whose com.arc-e-tect.api-only-publisher.toolchain.redocly label is @redocly/cli@2.51.0.
+This installation carries @asyncapi/cli@6.2.0 and @redocly/cli@2.57.0.
+Set toolchain.redocly to "@redocly/cli@2.57.0" in apionly.yaml, or use the api-only-publisher image whose com.arc-e-tect.api-only-publisher.toolchain.redocly label is @redocly/cli@2.51.0.
 To allow the download instead, run with API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=allow.
 ----
 
