@@ -28,6 +28,18 @@ test("the image installs exactly the toolchain init pins, from a lockfile that a
     }
 });
 
+test("the toolchain asks a dependency updater to report a newer version, not install it", () => {
+    // Installing one is a feature release of the Publisher: npm run toolchain:update.
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "docker", "toolchain", "package.json"), "utf8"));
+    assert.strictEqual(manifest["x-updater"], "report-only");
+});
+
+test("the Publisher's own dependencies, its release tooling included, are left to a dependency updater", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+    assert.strictEqual(manifest["x-updater"], undefined);
+    assert.ok(manifest.devDependencies["semantic-release"]);
+});
+
 test("the image's toolchain labels name the pins init writes", () => {
     for (const [kind, key] of Object.entries(TOOL_OF_KIND)) {
         assert.ok(DOCKERFILE.includes(`${LABEL_PREFIX}${key}="${TOOLCHAIN_PIN[kind]}"`), `${LABEL_PREFIX}${key}`);

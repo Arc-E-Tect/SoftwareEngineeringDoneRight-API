@@ -12,8 +12,8 @@ owasp-dependency-check = "13.0.0"
 junit-jupiter = "6.1.3"
 junit-platform = "6.1.3"
 assertj         = "3.27.7"
-dsl-updater-core = "1.0.0"
-plugin-publish  = "2.1.1"
+dsl-updater-core = "1.0.1"
+plugin-publish = "2.2.1"
 
 [libraries]
 
@@ -22,3 +22,4 @@ junit-platform-launcher      = { module = "org.junit.platform:junit-platform-lau
 
 assertj-core                 = { module = "org.assertj:assertj-core",                         version.ref = "assertj" }
 dsl-updater-core             = { module = "com.arc-e-tect:dsl-updater-core",                  version.ref = "dsl-updater-core" }
+
