@@ -17,7 +17,7 @@ const YAML = require("yaml");
 
 /** Where a kind's tool is pinned in `toolchain`; the two kinds do not share a key name. */
 const TOOLCHAIN_KEY = { openapi: "redocly", asyncapi: "asyncapi" };
-const TOOLCHAIN_PIN = { openapi: "@redocly/cli@2.55.0", asyncapi: "@asyncapi/cli@6.2.0" };
+const TOOLCHAIN_PIN = { openapi: "@redocly/cli@2.57.0", asyncapi: "@asyncapi/cli@6.2.0" };
 
 /**
  * The slots scaffold(v) would fill for one kind, in the order config(v) declares them,
