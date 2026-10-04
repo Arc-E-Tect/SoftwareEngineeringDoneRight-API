@@ -182,6 +182,10 @@ The TranscriberJ's emitter interface is part of the plugin, so one release publi
 
 Each is seeded with a `-v0.0.0` tag, and `release/first-release-patch-analyzer.js` forces the first real release to be a patch, so a new component starts at `0.0.1` rather than semantic-release's default `1.0.0`.
 
+Before `1.0.0`, the same analyzer releases a breaking change as a minor version, not a major one: a `0.x` component is still in development, and the READMEs of the link:api-only-publisher/README.adoc[Publisher →], the link:api-only-subscriber/README.adoc[Subscriber →] and the link:api-only-transcriberj/README.adoc[TranscriberJ →] each say any release may break compatibility.
+From `1.0.0` on, a breaking change releases a major version.
+No commit takes a component to `1.0.0`: reaching it is a decision.
+
 A commit that changes only a component's `README.adoc` releases nothing: it documents the component without changing what is published, and the next release carries it.
 Run that component's release workflow manually when a README has to reach the registry sooner.
 
