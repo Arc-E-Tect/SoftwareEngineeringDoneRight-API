@@ -204,19 +204,44 @@ jobs:
       - name: Install
         run: npm ci --prefix api-only-publisher
 
+      # Only the runtime dependencies gate the job: they are what installing the
+      # package pulls in. The devDependencies are the semantic-release toolchain,
+      # which runs in this repository's release workflow and never ships.
       - name: Audit dependencies
         id: audit
-        run: npm audit --audit-level=moderate --prefix api-only-publisher
+        run: npm audit --omit=dev --audit-level=moderate --prefix api-only-publisher
+
+      # The release toolchain is reported, not enforced. Some of its advisories sit
+      # in the npm CLI that @semantic-release/npm bundles, which no lockfile change
+      # can reach, so a fix has to wait for an upstream release.
+      - name: Audit release toolchain
+        if: ${{ !cancelled() }}
+        run: |
+          report="$RUNNER_TEMP/npm-audit-toolchain.txt"
+          if npm audit --audit-level=moderate --prefix api-only-publisher > "$report" 2>&1; then
+            exit 0
+          fi
+          echo "::warning title=Release toolchain advisories::The api-only-publisher devDependencies have advisories at moderate severity or above. They do not ship; see the job summary."
+          {
+            echo "## api-only-publisher release toolchain advisories"
+            echo
+            echo "These are in the devDependencies, which do not ship, so they do not fail the job."
+            echo "Upgrade the toolchain once upstream releases a fix."
+            echo
+            echo '```'
+            cat "$report"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report
-        if: failure()
+        if: ${{ failure() && steps.audit.outcome == 'failure' }}
         run: |
           {
             echo "## api-only-publisher dependency audit failed"
             echo
-            echo "A dependency has a known advisory at moderate severity or above."
+            echo "A runtime dependency has a known advisory at moderate severity or above."
             echo
-            echo "Run \`npm audit --prefix api-only-publisher\` to see it. Pin any fix:"
+            echo "Run \`npm audit --omit=dev --prefix api-only-publisher\` to see it. Pin any fix:"
             echo "this package's output has to be reproducible, so dependency versions"
             echo "are exact rather than ranges."
           } >> "$GITHUB_STEP_SUMMARY"

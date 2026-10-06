@@ -205,7 +205,7 @@ Every component gates its own build on coverage, and every gate was checked by m
 |none
 
 |Dependencies
-|`npm audit`, failing at moderate and above
+|`npm audit` of the runtime dependencies, failing at moderate and above; the release toolchain's findings are reported, not enforced
 |OWASP dependency-check, as the Gradle plugins run it
 |OWASP dependency-check, as the Gradle plugins run it
 |===
