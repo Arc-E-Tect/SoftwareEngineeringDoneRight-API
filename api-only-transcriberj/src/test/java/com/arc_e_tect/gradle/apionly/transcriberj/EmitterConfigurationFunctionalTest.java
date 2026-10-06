@@ -450,12 +450,16 @@ class EmitterConfigurationFunctionalTest {
     @DisplayName("T18.8 Both modes, one outcome")
     void bothModesGenerateTheSameSourcesAndPassTheSameTests() throws Exception {
         build.write(THREE_PURPOSES);
-        build.runner("useTest", "useContractTest", "-Pmode=perSourceSet").build();
+        BuildResult separate = build.runner("useTest", "useContractTest", "-Pmode=perSourceSet").build();
         Map<String, String> perSourceSet = files(build.file("build/generated/sources/transcriberj/user-account"));
 
         BuildResult shared = build.runner("useTest", "useContractTest", "-Pmode=shared").build();
 
         assertThat(shared.getOutput()).contains("TEST VERSION 1.0.0", "CONTRACTTEST VERSION 1.0.0");
+        // Only perSourceSet puts the schema classes' directory in test and the other suites at once.
+        assertThat(separate.getOutput()).contains("IntelliJ IDEA will not resolve the schema classes (test, "
+                + "contractTest, systemTest) outside the main or test module").contains(EmitterPlan.IDE_TEST_SOURCE_SET);
+        assertThat(shared.getOutput()).doesNotContain("IntelliJ IDEA will not resolve");
         assertThat(files(build.file("build/generated/sources/transcriberj/user-account"))).isEqualTo(perSourceSet);
     }
 
