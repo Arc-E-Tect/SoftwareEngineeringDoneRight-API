@@ -9,7 +9,7 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 [versions]
 
 asciidoctor = "4.0.5"
-api-only-transcriberj = "0.14.3"
+api-only-transcriberj = "0.14.4"
 api-only-transcriberj-restdocs = "0.4.2"
 api-only-transcriberj-wiremock = "0.1.1"
 spring-boot = "4.1.1"
