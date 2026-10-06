@@ -7,7 +7,7 @@ owasp-dependency-check      = { id = "org.owasp.dependencycheck",     version.re
 
 [versions]
 
-dsl-updater-core = "1.0.1"
+dsl-updater-core = "1.0.2"
 
 owasp-dependency-check = "13.0.0"
 plugin-publish = "2.2.1"
@@ -18,7 +18,7 @@ assertj         = "3.27.7"
 jackson = "2.22.3"
 snakeyaml-engine = "3.2"
 api-only-subscriber = "0.4.1"
-sedr-library = "1.0.0"
+sedr-library = "1.0.1"
 gradle-idea-ext = "1.4.1"
 json-schema-validator = "3.0.8"
 joni = "2.2.7"
