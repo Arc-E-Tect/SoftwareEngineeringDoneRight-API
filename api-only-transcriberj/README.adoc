@@ -422,6 +422,7 @@ The schema classes reach several source sets in one of two ways, and which suits
 
 |Against
 |The same classes are compiled once per source set, which costs build time, and a class exists more than once if two such source sets ever share a classpath.
+With `test` among the listed source sets, IntelliJ resolves the classes in `test` only: see <<ide-test-source-set,IntelliJ and the `test` source set §>>.
 |One more source set, with dependency wiring, and one more module in the IDE.
 |===
 
@@ -613,6 +614,46 @@ Applying idea-ext, as in the `plugins` block above, is what makes that automatic
 Sync generates; it does not run `verifyContractSources<Contract>`, because a lockfile that has moved on should fail a build rather than a project import.
 * **Eclipse** needs no extra plugin: `eclipse` is part of Gradle, and Buildship runs its synchronisation tasks.
 * **The endpoint index** is a properties file read by other Gradle tasks, not source, so it is not offered to the IDE as a source directory.
+
+[#ide-test-source-set]
+=== IntelliJ and the `test` source set
+
+[WARNING]
+.With `perSourceSet`, listing `test` beside other source sets hides the classes from those others in IntelliJ
+====
+IntelliJ imports each source set as a module of its own.
+When the same directory is in `test` and in other source sets, its Gradle import keeps that directory in the `test` module only, and removes it from every other module; it does the same for `main`.
+This is how IntelliJ's import works, whichever plugin added the directory, and it cannot be configured.
+
+With `schemaClasses = 'perSourceSet'`, the default, the core's directory is added to each listed source set.
+So when `sourceSets` lists `test` and, say, `testContract` and `testSystem`, IntelliJ sees the generated classes in the `test` module only.
+In `testContract` and `testSystem` every reference to them is red, and neither code completion nor navigation reaches them.
+
+The Gradle build is not affected: every source set still compiles the classes, and every test still runs.
+====
+
+Either of these avoids it:
+
+* **Leave `test` out of `sourceSets`.**
+This is the better choice in most builds.
+Unit tests that compile against the generated classes need the contract to be fetched and the classes generated before they can run, which slows down the tests a build runs most often.
+A unit test that needs an endpoint's path declares it itself.
+* **Use `schemaClasses = 'shared'`**, described in <<schema-classes,Schema classes, per source set or shared §>>.
+The generated classes are then in one source set of their own, and every listed source set, `test` included, depends on its output.
+IntelliJ imports that dependency as a dependency between modules, so every module resolves the classes.
+link:../examples/transcriberj/generated-contract-tests/README.adoc#configuration[The generated contract tests example's configuration →] lists `test` among its source sets this way.
+
+An emitter's Java and resources are added to each of the emitter's source sets in both modes, so `shared` does not help there.
+An emitter whose `sourceSets` lists `test` beside another source set -- or that has no `sourceSets` of its own and so takes the subscription's -- names its `sourceSets` without `test`.
+
+The plugin warns when a build is configured this way, once per subscription, naming the schema classes or each emitter whose directory IntelliJ will hide, and the fix for each:
+
+[source,text]
+----
+apiOnlyTranscriberJ: subscription('orders'): IntelliJ IDEA will not resolve the schema classes (test, contractTest, systemTest) outside the main or test module. [...] To fix it, leave 'test' out of the subscription's sourceSets, or set schemaClasses = 'shared'. See [...]
+----
+
+In IntelliJ, the imported model shows the same thing: in Project Structure, the generated directory is a source folder of the `test` module and of no other.
 
 [#generated-code]
 == What is generated

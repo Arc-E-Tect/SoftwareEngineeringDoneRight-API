@@ -133,6 +133,53 @@ class EmitterPlanTest {
     }
 
     @Test
+    void schemaClassesInTestAndAnotherSourceSetAreWarnedAboutForIntelliJ() {
+        List<String> withTest = List.of("test", "testContract", "testSystem");
+        EmitterPlan plan = EmitterPlan.of("orders", "perSourceSet", withTest, Map.of(),
+                Map.of("modal", block(List.of("testContract"), Map.of("mode", "java")), "counting", block(null, Map.of())),
+                LOADED);
+
+        assertThat(plan.warnings()).singleElement().asString()
+                .isEqualTo("apiOnlyTranscriberJ: subscription('orders'): IntelliJ IDEA will not resolve the schema "
+                        + "classes (test, testContract, testSystem) or emitter('counting')'s output (test, "
+                        + "testContract, testSystem) outside the main or test module. Each is compiled in main or "
+                        + "test and in another source set, and IntelliJ's Gradle import keeps a directory that main "
+                        + "or test shares with another source set in that one module. The Gradle build is not "
+                        + "affected. To fix it, leave 'test' out of the subscription's sourceSets, or set "
+                        + "schemaClasses = 'shared'; name emitter('counting')'s sourceSets without 'test'. See "
+                        + EmitterPlan.IDE_TEST_SOURCE_SET);
+    }
+
+    @Test
+    void sharedSchemaClassesInTestAreNotWarnedAboutButAnEmittersOutputIs() {
+        List<String> withTest = List.of("test", "testContract");
+        EmitterPlan quiet = EmitterPlan.of("orders", "shared", withTest, Map.of(),
+                Map.of("modal", block(List.of("testContract"), Map.of("mode", "java")),
+                        "counting", block(List.of("testContract"), Map.of())), LOADED);
+        EmitterPlan warned = EmitterPlan.of("orders", "shared", withTest, Map.of(),
+                Map.of("modal", block(List.of("testContract"), Map.of("mode", "java")), "counting", block(null, Map.of())),
+                LOADED);
+
+        assertThat(quiet.warnings()).isEmpty();
+        assertThat(warned.warnings()).singleElement().asString()
+                .contains("will not resolve emitter('counting')'s output (test, testContract) outside")
+                .doesNotContain("the schema classes")
+                .contains("To fix it, name emitter('counting')'s sourceSets without 'test'.");
+    }
+
+    @Test
+    void testOrMainAloneIsNotWarnedAbout() {
+        Map<String, EmitterPlan.Configured> configured =
+                Map.of("modal", block(null, Map.of("mode", "files")), "counting", block(null, Map.of()));
+
+        assertThat(EmitterPlan.of("orders", "perSourceSet", List.of("test"), Map.of(), configured, LOADED).warnings())
+                .isEmpty();
+        assertThat(EmitterPlan.of("orders", "perSourceSet", List.of("main"), Map.of(), configured, LOADED).warnings())
+                .isEmpty();
+        assertThat(plan("perSourceSet", Map.of(), configured).warnings()).isEmpty();
+    }
+
+    @Test
     void theSharedSourceSetIsNamedAfterTheContract() {
         assertThat(EmitterPlan.sharedSourceSet("user-account")).isEqualTo("transcriberjUserAccount");
     }
