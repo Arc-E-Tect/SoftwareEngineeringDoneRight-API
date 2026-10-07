@@ -1,3 +1,10 @@
+# [0.15.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.14.4...api-only-transcriberj-v0.15.0) (2026-10-07)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** warn when IntelliJ will hide generated classes shared with test ([#78](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/78)) ([2de730b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2de730b207719cb447dd1f6f94dc047568a79fd9)), closes [#78](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/78)
+
 ## [0.14.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.14.3...api-only-transcriberj-v0.14.4) (2026-10-06)
 
 
