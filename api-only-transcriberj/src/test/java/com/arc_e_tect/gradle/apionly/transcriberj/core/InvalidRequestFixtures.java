@@ -81,6 +81,65 @@ final class InvalidRequestFixtures {
         return out;
     }
 
+    /**
+     * Every fixture contract, as {@link #all} generates it, but the reference contracts without their
+     * {@code example} and {@code examples}: as they were generated before values were taken from
+     * examples, for the tests that compare with what was recorded then.
+     */
+    static List<ValidValueFixtures.Fixture> allWithoutExamples(Path into) {
+        List<ValidValueFixtures.Fixture> out = new ArrayList<>();
+        for (String name : ValidValueFixtures.CORPUS) {
+            out.add(ValidValueFixtures.corpus(name, into.resolve("valid-values-" + name)));
+        }
+        for (Variant v : CORPUS) out.add(corpus(v.name(), into.resolve("invalid-requests-" + v.name())));
+        for (String name : ValidValueFixtures.REFERENCE) {
+            Path documents = withoutExamples(GeneratedSources.CONTRACTS.resolve(name),
+                    into.resolve("reference-" + name + "-without-examples"));
+            out.add(ValidValueFixtures.reference(name, documents, into.resolve("reference-" + name)));
+        }
+        return out;
+    }
+
+    /**
+     * A copy of a contract's documents with every {@code example}, {@code examples} and
+     * {@code x-transcriberj-examples} left out.
+     */
+    private static Path withoutExamples(Path directory, Path into) {
+        try {
+            Files.createDirectories(into);
+            for (String file : List.of("openapi.yaml", "asyncapi.yaml")) {
+                Path document = directory.resolve(file);
+                if (!Files.exists(document)) continue;
+                Object parsed = new org.snakeyaml.engine.v2.api.Load(
+                        org.snakeyaml.engine.v2.api.LoadSettings.builder().build())
+                        .loadFromString(Files.readString(document, java.nio.charset.StandardCharsets.UTF_8));
+                Files.writeString(into.resolve(file), Oracle.JSON.writeValueAsString(withoutExamples(parsed, null)));
+            }
+            return into;
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+    }
+
+    /** A parsed document without its example data, except where a key names a property. */
+    private static Object withoutExamples(Object node, String parentKey) {
+        if (node instanceof Map<?, ?> map) {
+            Map<Object, Object> out = new java.util.LinkedHashMap<>();
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                String key = String.valueOf(e.getKey());
+                boolean named = "properties".equals(parentKey) || "patternProperties".equals(parentKey);
+                if (!named && (key.equals("example") || key.equals("examples")
+                        || key.equals(ValidRequests.NAMED_EXAMPLES))) {
+                    continue;
+                }
+                out.put(e.getKey(), withoutExamples(e.getValue(), key));
+            }
+            return out;
+        }
+        if (node instanceof List<?> list) return list.stream().map(item -> withoutExamples(item, null)).toList();
+        return node;
+    }
+
     /** Whether a fixture was generated with strictness on. */
     static boolean strict(ValidValueFixtures.Fixture f) {
         return CORPUS.stream().filter(v -> v.name().equals(f.name())).findFirst()
@@ -90,7 +149,7 @@ final class InvalidRequestFixtures {
     private static ValidValueFixtures.Fixture fixture(String name, Path document, GeneratedSources sources,
                                                       Settings settings) {
         JsonNode report = Oracle.JSON.readTree(sources.report.renderValidValues(settings.contract(), "1.0.0"));
-        return new ValidValueFixtures.Fixture(name, document, sources, new Oracle(document), null, report);
+        return new ValidValueFixtures.Fixture(name, "1.0.0", document, sources, new Oracle(document), null, report);
     }
 
     /**
@@ -106,7 +165,7 @@ final class InvalidRequestFixtures {
             for (JsonNode c : operation.get("cases")) {
                 if (!c.get("kind").stringValue().equals("INVALID_REQUEST")) continue;
                 tools.jackson.databind.node.ObjectNode old = (tools.jackson.databind.node.ObjectNode) c.deepCopy();
-                old.remove(List.of("kind", "requiresState", "variant"));
+                old.remove(List.of("kind", "requiresState", "variant", "source"));
                 tools.jackson.databind.node.ArrayNode headers = (tools.jackson.databind.node.ArrayNode)
                         old.get("request").get("headers");
                 for (int i = headers.size() - 1; i >= 0; i--) {

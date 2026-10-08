@@ -20,8 +20,10 @@ import java.util.Optional;
  * @param responses       the reusable response components, in declaration order
  * @param parameters      the reusable parameter components, in declaration order
  * @param requestBodies   the reusable request body components, in declaration order
- * @param otherComponents components of every other type -- security schemes, headers,
- *                        examples and the like -- keyed by type, as parsed
+ * @param otherComponents components of every other type -- security schemes, headers and
+ *                        the like -- keyed by type, as parsed
+ * @param examples        the Example Objects under {@code components.examples}, by name, as
+ *                        parsed: what an example given as a reference refers to
  * @param paths           the path items, in declaration order
  * @param channels        the channels of the contract's AsyncAPI document, in
  *                        declaration order; empty when it has none
@@ -38,6 +40,7 @@ public record ContractModel(
         List<Reusable<Parameter>> parameters,
         List<Reusable<RequestBody>> requestBodies,
         Map<String, Object> otherComponents,
+        Map<String, Object> examples,
         List<PathItem> paths,
         List<AsyncChannel> channels,
         List<AsyncOperation> asyncOperations,

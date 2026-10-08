@@ -43,7 +43,16 @@ final class GeneratedSources {
         this.report = report;
     }
 
-    static Settings settings(String contract) {
+    /** The version a contract document states, in {@code info.version}: the version it is locked at. */
+    static String version(Path document) {
+        try {
+            return com.arc_e_tect.gradle.apionly.transcriberj.model.ContractParser.parse(document, null).version();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+        static Settings settings(String contract) {
         return new Settings(contract, PACKAGE, false, "PLACEHOLDER", 2);
     }
 

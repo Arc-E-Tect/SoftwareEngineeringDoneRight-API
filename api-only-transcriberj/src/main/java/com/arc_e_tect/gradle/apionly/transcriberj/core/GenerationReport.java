@@ -452,6 +452,26 @@ public final class GenerationReport {
                 out.append('\n');
             }
         }
+        if (!contractCases.isEmpty()) {
+            out.append("\nExample data -- where the valid request each case is built on comes from:\n");
+            for (Map<String, Object> e : contractCases) {
+                for (Object c : (List<?>) e.get("cases")) {
+                    Map<?, ?> source = (Map<?, ?>) ((Map<?, ?>) c).get("source");
+                    out.append("  ").append(e.get("class")).append(' ').append(((Map<?, ?>) c).get("id")).append(": ");
+                    if (source.get("namedExample") != null) {
+                        out.append("named example ").append(source.get("namedExample"));
+                    } else {
+                        out.append("generated");
+                    }
+                    List<?> examples = (List<?>) source.get("examples");
+                    if (!examples.isEmpty()) {
+                        out.append(", with the examples at ").append(String.join(", ",
+                                examples.stream().map(String::valueOf).toList()));
+                    }
+                    out.append('\n');
+                }
+            }
+        }
         return out.toString();
     }
 
@@ -466,7 +486,7 @@ public final class GenerationReport {
      */
     public String renderValidValues(String contract, String version) {
         Map<String, Object> out = new java.util.TreeMap<>();
-        out.put("schemaVersion", java.math.BigDecimal.valueOf(2));
+        out.put("schemaVersion", java.math.BigDecimal.valueOf(3));
         out.put("contract", contract);
         out.put("version", version);
         out.put("bodies", validBodies.stream().sorted(java.util.Comparator.comparing(e -> (String) e.get("class")))
@@ -549,6 +569,7 @@ public final class GenerationReport {
                 Map<String, Object> k = new java.util.LinkedHashMap<>();
                 k.put("id", ((Map<?, ?>) c).get("id"));
                 k.put("kind", ((Map<?, ?>) c).get("kind"));
+                k.put("source", ((Map<?, ?>) c).get("source"));
                 return (Object) k;
             }).toList());
             return (Object) e;

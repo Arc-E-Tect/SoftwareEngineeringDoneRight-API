@@ -860,7 +860,7 @@ One test can assert that the whole tree corresponds to the locked contract.
 === Valid values
 
 Every generated case starts from a request the contract accepts, and so does a hand-written test of a `409` or a `422`, which changes one thing about it.
-The tree generates that starting point, from the contract's constraints alone -- never from its `example` or `examples` -- so it changes when the contract does:
+The tree generates that starting point from the contract: from the examples it gives, where it gives them, as <<example-data,Example data §>> describes, and from its constraints everywhere else, so it changes when the contract does:
 
 [cols="2,3", options="header"]
 |===
@@ -875,9 +875,10 @@ Compact JSON followed by a newline, as `body(...)` writes.
 
 |`requiredRequest()`, on every operation's class
 |A `ContractRequest` with every required parameter and, when the operation declares a body, the minimal one -- whether the body is required or not.
+Where the body's media type names an example for `required` in `x-transcriberj-examples`, the body is that example.
 
 |`fullRequest()`, on the same classes
-|Every parameter a value is generated for, and the full body.
+|Every parameter a value is generated for, and the full body, or the example the media type names for `full`.
 
 |`noBodyRequest()`, where an operation declares a body and does not require it
 |The required parameters and no body: valid, since the contract says so, and worth a test of its own, as an optional body is often a mistake in the contract.
@@ -906,7 +907,8 @@ Each returns the same value on every call, and is a constant compiled into the c
 [#valid-value-rules]
 ==== How a value is chosen
 
-The rules below decide each value, and are what the TranscriberJ's own tests hold it to, checked against an independent JSON Schema 2020-12 validator.
+The rules below decide each value the contract gives no example for, and are what the TranscriberJ's own tests hold it to, checked against an independent JSON Schema 2020-12 validator.
+A value the contract gives an example for is that example: see <<example-data,Example data §>>.
 
 [cols="2,5", options="header"]
 |===
@@ -959,6 +961,66 @@ A body is sent as the first JSON content type the operation declares -- `applica
 Every choice is made by a fixed rule, and nothing depends on the clock, the machine, its locale or its time zone.
 The same contract generates byte-identical sources, and byte-identical reports, on every run and every machine, so the generation task stays up to date.
 
+[#example-data]
+==== Example data
+
+A contract's examples are written for readers, and the tree sends them, so that a contract case reads like the contract's own documentation rather than `a`, `aaaaa` and `user@example.com`.
+It takes them from two places.
+
+*A named example per request.*
+A request body's media type can name, in `x-transcriberj-examples`, the example of its `examples` that each variant's valid request sends:
+
+[source,yaml]
+----
+requestBody:
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/OrderV1'
+      examples:
+        OneBook:
+          value: {item: book, quantity: 1}
+        GiftWrapped:
+          $ref: '#/components/examples/GiftWrappedOrderV1'
+      x-transcriberj-examples:
+        required: OneBook
+        full: GiftWrapped
+----
+
+* The variants are `required` and `full`; either may be left out, and that variant's body is built as before.
+* The example is the body of that operation's `requiredRequest()` or `fullRequest()`, and of the contract cases built on it; the invalid requests change one thing about the `required` one.
+The body class's `requiredBody()` and `fullBody()` are not affected, as a schema can be the body of several operations, each naming examples of its own.
+* An example may be written inline, or refer to `#/components/examples`, as the Publisher bundles an example kept in its own file.
+* A named example must hold exactly the members its variant stands for, at every level: a `required` example only required members, a `full` one every declared member; in a `oneOf` or `anyOf`, the members of the branch the example matches.
+Array lengths and members the schema does not declare are the schema's to judge.
+* An operation that declares no optional parameter or member has no `full` case, whatever its examples, as <<contract-case-derivation,How each kind is derived §>> says; an example named for `full` there is not sent, and the report notes it.
+
+*An example per value.*
+Where no example is named, each leaf value -- a string, a number, an integer or a boolean -- takes the first example the contract gives for it, before the rules of <<valid-value-rules,How a value is chosen §>>:
+
+. a parameter's own: the `value` of its first named example, else its `example`;
+. a property's `examples` written beside its `$ref`;
+. the `examples`, else the OpenAPI 3.0 `example`, of the schema it refers to, and then of the parts of an `allOf`.
+
+Objects and arrays are built member by member and item by item, each taking its own examples; an example of an object or an array as a whole is documentation only.
+An array's items take the examples in order, then generated values: `minItems: 3` with the examples `x` and `y` gives `x`, `y` and a generated third.
+
+*An example must be valid.*
+An example that does not satisfy the schema it is written on fails the generation, naming the example and where it is written: a contract case must not be built on a value the contract itself rules out.
+The generation fails as well for a name in `x-transcriberj-examples` that the media type does not declare, for a variant other than `required` and `full`, for an `externalValue`, which is never fetched, and for a reference that names no example.
+An example that is valid where it is written, but does not fit a narrower place -- a problem type's `about:blank` where a subtype's `allOf` makes `type` a `const` -- does not apply there, and the next example, or a generated value, does.
+Only the examples a value takes are checked: an invalid second example of a value that needs one is not reported.
+
+*Where the values came from.*
+Each case in the machine-readable report has a `source`: the `namedExample` its body is, or `null`, and the `examples` -- where in the contract each example a value took is written.
+The text report lists the same under _Example data_:
+
+----
+Example data -- where the valid request each case is built on comes from:
+  PlaceOrderContractCases success-201-required: named example OneBook
+  PlaceOrderContractCases success-201-full: generated, with the examples at /components/schemas/OrderV1/properties/item
+----
+
 [#no-valid-value]
 ==== When there is no valid value
 
@@ -976,7 +1038,7 @@ It is compact, its members sorted by name, and its entries by class, so the same
 [source,json]
 ----
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "contract": "orders",
   "version": "1.4.0",
   "bodies": [
@@ -1010,7 +1072,7 @@ It is compact, its members sorted by name, and its entries by class, so the same
 Each variant holds either `value`, the value the method returns, or `unsatisfiable`, with the `location` and the `reason` the method throws.
 `noBodyRequest` is present only where the method is.
 The same file holds the contract cases and their coverage: `contractCases`, `responseCoverage`, `constraintCoverage`, `gaps` and `formatRecommendations`, described in <<contract-cases-report,The cases in the machine-readable report §>>.
-`schemaVersion` changes when the shape does: it is `2` since 0.12.0, which replaced `invalidRequests` with `contractCases` and added `responseCoverage`.
+`schemaVersion` changes when the shape does: it is `3` since 0.16.0, which added each case's `source`, and was `2` since 0.12.0, which replaced `invalidRequests` with `contractCases` and added `responseCoverage`.
 
 [#contract-cases]
 === Contract cases
@@ -1126,11 +1188,12 @@ A renderer that matches a request exactly, such as a stub, requires the ones the
 [#contract-case-derivation]
 ==== How each kind is derived
 
-Every request is built from the valid values in <<valid-values,Valid values §>>, never from `example` or `examples`, and changes one thing relative to a valid request, or nothing.
+Every request is built from the valid values in <<valid-values,Valid values §>>, examples included, and changes one thing relative to a valid request, or nothing.
 
 *Success.*
 One case per variant per exact `2xx` the operation declares: `required` sends `requiredRequest()`, `full` sends `fullRequest()`, and `noBody` sends `noBodyRequest()` where the operation declares a body it does not require.
 Where the full request is the required one -- the operation declares no optional parameter or member -- only `required` is derived, and the report notes why.
+That holds whatever values examples give the two requests: what decides is which parameters and members each sends, not their values.
 An operation that declares several `2xx` statuses -- a `PUT` that answers `200` or `201` -- gets cases for all of them: the same request expects different statuses, and it is the fixture's state that decides which one is right.
 Each case's description names its status, so that the fixture can tell them apart.
 
@@ -1301,9 +1364,18 @@ The order the kinds are written in does not matter, and a name that is not a kin
 [#contract-cases-report]
 ==== The cases in the machine-readable report
 
-In the machine-readable report, `contractCases` lists every operation, with its class, `location`, `method`, `pathTemplate`, whether it `declaresInvalidRequestStatus`, and its cases in canonical order, each with the fields of `ContractCase` and, for an invalid request, the valid `baseline` request it differs from in the one place the fault is.
+In the machine-readable report, `contractCases` lists every operation, with its class, `location`, `method`, `pathTemplate`, whether it `declaresInvalidRequestStatus`, and its cases in canonical order, each with the fields of `ContractCase`, for an invalid request the valid `baseline` request it differs from in the one place the fault is, and the `source` of the valid request it is built on, as <<example-data,Example data §>> describes.
 `responseCoverage` lists every declared response, as the text report does, with `cases` or `uncovered`, a `code`, a `label` and a `detail`.
 `constraintCoverage`, `gaps` and `formatRecommendations` are the invalid requests', in <<constraint-coverage,Constraint coverage and gaps §>>.
+
+[#upgrading-to-0-16]
+==== Upgrading from 0.15
+
+0.16.0 takes values from the contract's examples, as <<example-data,Example data §>> describes, so a contract with examples generates other values than before: `alice` where it was `aaaaa`.
+A fixture or hand-written test that relied on a generated value -- an `arrangeState` that cleans up `aaaaa` -- must read the value from the case instead, as a case's request carries it.
+A contract whose examples do not satisfy its own schemas no longer generates: correct the example, or the schema.
+The machine-readable report is at `schemaVersion` 3, with each case's `source`.
+`components/examples` is part of the model, and no longer reported as an undecided construct.
 
 [#upgrading-to-0-12]
 ==== Upgrading from 0.11
