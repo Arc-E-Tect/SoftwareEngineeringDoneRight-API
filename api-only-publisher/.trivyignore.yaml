@@ -17,3 +17,24 @@ vulnerabilities:
       both succeed with parserapiv1 and parserapiv2 deleted from the image.
       Reviewed 2026-09-29 against @asyncapi/cli 6.2.0.
     expired_at: 2027-03-31
+  - id: CVE-2026-102828
+    paths:
+      - "opt/api-only-publisher/toolchain/node_modules/simple-git/package.json"
+    statement: >-
+      simple-git 3.36.0 is a dependency of @asyncapi/generator, which AsyncAPI CLI
+      uses for `asyncapi generate` only, and the fix is only in simple-git 4, outside
+      the ^3.36.0 the generator accepts. The Publisher runs `asyncapi bundle` and
+      `asyncapi validate`, which never load it: both succeed with simple-git and
+      @simple-git deleted from the toolchain. Reviewed 2026-10-08 against
+      @asyncapi/cli 6.2.0.
+    expired_at: 2027-03-31
+  - id: CVE-2026-102829
+    paths:
+      - "opt/api-only-publisher/toolchain/node_modules/@simple-git/argv-parser/package.json"
+    statement: >-
+      @simple-git/argv-parser 1.1.1 comes with simple-git 3.36.0, a dependency of
+      @asyncapi/generator, which AsyncAPI CLI uses for `asyncapi generate` only. The
+      Publisher runs `asyncapi bundle` and `asyncapi validate`, which never load it:
+      both succeed with simple-git and @simple-git deleted from the toolchain.
+      Reviewed 2026-10-08 against @asyncapi/cli 6.2.0.
+    expired_at: 2027-03-31
