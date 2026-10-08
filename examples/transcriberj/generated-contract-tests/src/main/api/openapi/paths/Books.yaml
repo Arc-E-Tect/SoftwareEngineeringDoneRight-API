@@ -11,6 +11,27 @@ post:
       application/json:
         schema:
           $ref: ../components/schemas/BookRequestV1.yaml
+        examples:
+          DesignPatterns:
+            summary: A book without a subtitle.
+            value:
+              isbn: '9780201633610'
+              title: Design Patterns
+              pages: 395
+              format: hardcover
+          Refactoring:
+            summary: A book with every field, its subtitle included.
+            value:
+              isbn: '9780134757599'
+              title: Refactoring
+              subtitle: Improving the Design of Existing Code
+              pages: 448
+              format: hardcover
+        # The examples the generated contract cases send: the smallest valid request,
+        # and the one with every member.
+        x-transcriberj-examples:
+          required: DesignPatterns
+          full: Refactoring
   responses:
     '201':
       description: The book was added.

@@ -14,6 +14,14 @@
 :wiremock-readme: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-Library/blob/main/api-only-transcriberj-wiremock/README.adoc
 
 [NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
+[NOTE]
 .Where the links in this document go
 ====
 Every link ends with a marker saying where it leads, so you can tell before you follow it:
@@ -73,7 +81,7 @@ Its first lines, from a run of the example:
 
 [source,text]
 ----
-API-Only TranscriberJ: books 1.0.0
+API-Only TranscriberJ: books 1.0.1
 0 degraded method(s), 0 recommendation(s), 0 undecided construct(s), 0 warning(s), 0 method(s) without a valid value, 0 parameter(s) not supported yet
 Invalid requests: 30 case(s) derived, 26 constraint(s) covered, 3 uncovered (not isolatable: 1, changes the route: 1, not expressible in a parameter: 1), 0 gap(s)
 Contract cases: 5 success, 1 not found, 1 not acceptable, 1 unsupported media type, 30 invalid request; 1 declared response(s) not covered (depends on behaviour or state the contract does not describe: 1)
@@ -117,7 +125,7 @@ include::{example-dir}/build.gradle[tag=transcriberj]
 
 * The schema classes go to every suite that exercises the API, compiled once in `transcriberjBooks`.
 * The REST Docs output goes to `contractTestCommon`, where both contract suites find the interfaces, and to `documentationTest`, which needs the descriptors.
-* The WireMock stubs go on no source set; `packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.0.zip`, and `priority: '2'` leaves WireMock's highest priority to hand-written stubs.
+* The WireMock stubs go on no source set; `packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.1.zip`, and `priority: '2'` leaves WireMock's highest priority to hand-written stubs.
 
 The two contract suites differ only in their target:
 

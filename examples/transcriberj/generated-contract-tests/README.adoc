@@ -5,6 +5,14 @@
 :icons: font
 :source-highlighter: rouge
 
+[NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
 A small Spring Boot service, a catalogue of books, and everything a developer needs to adopt what the API-Only TranscriberJ and its emitters generate from its contract:
 
 * the *schema classes*, in every test suite that exercises the API;
@@ -105,6 +113,18 @@ The TranscriberJ derives 38 cases from it, and its report lists:
 The contract uses no `format` keyword: the `id` is a UUID by its `pattern`.
 A `format` beside a pattern is never checked, so it would be one more uncovered constraint without adding anything a validator enforces.
 
+The request body gives two examples, a book without a subtitle and one with every member, and names them in `x-transcriberj-examples` for the `required` and the `full` request:
+
+[source,yaml]
+----
+x-transcriberj-examples:
+  required: DesignPatterns
+  full: Refactoring
+----
+
+So the success cases add _Design Patterns_ and _Refactoring_ rather than a book titled `a`, and every invalid request changes one thing about _Design Patterns_.
+The report says, under _Example data_, which example each case is built on (link:../../../api-only-transcriberj/README.adoc#example-data[Example data in the TranscriberJ's README →]).
+
 [#configuration]
 == The configuration
 
@@ -149,7 +169,7 @@ It implements none of them, so none of them runs there.
 
 WireMock::
 Mapping files, on no source set: stubs are not test code.
-`packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.0.zip`.
+`packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.1.zip`.
 `priority: '2'` leaves WireMock's highest priority, `1`, to hand-written stubs, such as the `409`'s.
 
 == The test suites
@@ -286,7 +306,7 @@ The mapping files are the stubs the team hands to the developers of the API's co
 ./gradlew packageBooksWiremock
 ----
 
-`build/distributions/books-wiremock-1.0.0.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
+`build/distributions/books-wiremock-1.0.1.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
 
 `src/docker/stubs/Dockerfile` builds an image of the official WireMock image with the stubs in it, and `booksStubsImage` builds it from the archive.
 It needs Docker, so it is not part of `check`:
@@ -295,7 +315,7 @@ It needs Docker, so it is not part of `check`:
 [source,console]
 ----
 ./gradlew booksStubsImage
-docker run --rm -p 8080:8080 example/books-stubs:1.0.0
+docker run --rm -p 8080:8080 example/books-stubs:1.0.1
 ----
 // end::stubs-image[]
 
@@ -305,7 +325,7 @@ A consumer calls it as it would call the service:
 [source,console]
 ----
 $ curl -i -X POST localhost:8080/books -H 'Content-Type: application/json' \
-       -d '{"isbn":"9780201633610","title":"Design Patterns","pages":395,"format":"hardcover"}'
+       -d '{"isbn":"9780321125217","title":"Domain-Driven Design","pages":560,"format":"hardcover"}'
 HTTP/1.1 201 Created
 Matched-Stub-Name: createBook/fallback-valid
 
@@ -320,7 +340,7 @@ A team whose implementation is in Go or Python uses the same image as the double
 
 [source,python]
 ----
-with DockerContainer("example/books-stubs:1.0.0").with_exposed_ports(8080) as stubs:
+with DockerContainer("example/books-stubs:1.0.1").with_exposed_ports(8080) as stubs:
     base_url = f"http://{stubs.get_container_host_ip()}:{stubs.get_exposed_port(8080)}"
 ----
 
@@ -349,7 +369,7 @@ The same, machine-readable: every case in `contractCases`, with its request, in 
 `build/generated/sources/transcriberj/books/restdocs/com/example/books/contract/restdocs/`::
 The generated `<Operation>ContractTests` interfaces: one test per case, and the hooks, whose Javadoc shows the suggested `arrangeState`.
 
-`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-1.0.0.zip`::
+`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-1.0.1.zip`::
 The mapping files, one exact stub per case and the fallbacks, and the archive that ships them.
 
 `build/generated-snippets/generated-service/`, `generated-stubs/`::
