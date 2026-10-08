@@ -16,10 +16,12 @@
 // Object itself. A message with none cannot be used for Microcks-based conformance
 // testing at all, so the message says exactly that.
 //
-// OpenAPI: nothing downstream currently reads an example. The TranscriberJ
-// processes a bundle without one perfectly well -- bodies take arguments,
-// constraints become constants. So the OpenAPI message claims only what is true:
-// weaker documentation, never that the bundle cannot be used.
+// OpenAPI: the TranscriberJ sends a request body's named example, or values from
+// the schemas' own examples, in the contract cases it generates; without them it
+// generates values from the constraints, and processes the bundle perfectly well.
+// A response's example is read by nothing downstream. So the OpenAPI message
+// claims only what is true for its part -- generated values for a request body,
+// weaker documentation for both -- never that the bundle cannot be used.
 
 const KEY = "x-fragment-path";
 
@@ -160,8 +162,12 @@ function asyncapiMessage(finding) {
  */
 function openapiMessage(finding) {
     const where = finding.fragmentPath || `at ${finding.at}`;
-    return `OpenAPI operation '${finding.operationId}': ${finding.part} (${where}) ` +
-        "carries no example, which makes the generated documentation harder to read.";
+    const prefix = `OpenAPI operation '${finding.operationId}': ${finding.part} (${where}) carries no example, `;
+    if (finding.part === "request body") {
+        return prefix + "so the TranscriberJ's contract cases send generated values rather than ones the " +
+            "contract chose, and the generated documentation is harder to read.";
+    }
+    return prefix + "which makes the generated documentation harder to read.";
 }
 
 module.exports = {

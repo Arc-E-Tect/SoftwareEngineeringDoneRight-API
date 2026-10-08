@@ -1021,11 +1021,19 @@ AsyncAPI operation '<operationId>': message '<messageKey>' (<fragment, or where 
 ----
 
 For OpenAPI, it is whether a request body's or response's media type declares `example`/`examples`, or the schema it references carries its own top-level `examples`.
-Nothing downstream currently reads an OpenAPI example, so the message never claims the bundle cannot be used -- only that the generated documentation is weaker without one:
+The message never claims the bundle cannot be used, and says only what is true for the part.
+For a request body, the TranscriberJ's contract cases send the example the media type names, or values from the schemas' own examples (link:../api-only-transcriberj/README.adoc#example-data[Example data in the TranscriberJ's README →]); without one they send values it generates:
 
 [source,text]
 ----
-OpenAPI operation '<operationId>': <request body, or response <status>> (<fragment, or where in the bundle>) carries no example, which makes the generated documentation harder to read.
+OpenAPI operation '<operationId>': request body (<fragment, or where in the bundle>) carries no example, so the TranscriberJ's contract cases send generated values rather than ones the contract chose, and the generated documentation is harder to read.
+----
+
+Nothing downstream reads a response's example, so for a response only the documentation is weaker without one:
+
+[source,text]
+----
+OpenAPI operation '<operationId>': response <status> (<fragment, or where in the bundle>) carries no example, which makes the generated documentation harder to read.
 ----
 
 A body or response with no `content` at all, such as a `204`, has nothing to exemplify and is never reported.

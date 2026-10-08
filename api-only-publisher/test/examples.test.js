@@ -229,15 +229,27 @@ test("an operation with no operationId is named by its method and path instead",
     assert.strictEqual(findings[0].operationId, "GET /a/{id}");
 });
 
-test("the openapi message names the operation and the part, and never says the bundle cannot be used", () => {
+test("the openapi message for a request body says the contract cases send generated values, and never says the bundle cannot be used", () => {
     const message = openapiMessage({
         operationId: "createUser", part: "request body", fragmentPath: "openapi/paths/Users.yaml",
     });
 
     assert.strictEqual(message,
         "OpenAPI operation 'createUser': request body (openapi/paths/Users.yaml) carries no example, " +
-        "which makes the generated documentation harder to read.");
+        "so the TranscriberJ's contract cases send generated values rather than ones the contract chose, " +
+        "and the generated documentation is harder to read.");
     assert.doesNotMatch(message, /cannot be used/);
+});
+
+test("the openapi message for a response says only that the documentation is harder to read", () => {
+    const message = openapiMessage({
+        operationId: "createUser", part: "response 201", fragmentPath: "openapi/paths/Users.yaml",
+    });
+
+    assert.strictEqual(message,
+        "OpenAPI operation 'createUser': response 201 (openapi/paths/Users.yaml) carries no example, " +
+        "which makes the generated documentation harder to read.");
+    assert.doesNotMatch(message, /cannot be used|contract cases/);
 });
 
 test("with no fragment path -- a response nested in a larger stamped fragment, say -- the message falls back to where in the bundle", () => {
