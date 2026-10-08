@@ -1,3 +1,15 @@
+## [0.14.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.0...api-only-publisher-v0.14.1) (2026-10-08)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** accept the simple-git findings the image's toolchain carries for asyncapi generate only ([#80](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/80)) ([2ff0a8f](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2ff0a8f3a7ebc63c44c515dd6143ff0d5ca53ca0)), closes [#80](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/80)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.14.0 [skip ci] ([2530a13](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/2530a1340f0480e6cef1f3683d96afcd05fa3b8a))
+
 # [0.14.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.13.0...api-only-publisher-v0.14.0) (2026-10-08)
 
 
