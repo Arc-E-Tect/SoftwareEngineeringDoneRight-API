@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("T18 Emitter tasks, in-process")
 class EmitterTasksInProcessTest {
 
-    static final Path CONTRACT = Path.of(System.getProperty("transcriberj.referenceApi"), "user-account/openapi.yaml");
+    static final Path CONTRACT = ReferenceContract.USER_ACCOUNT;
 
     @TempDir
     Path projectDir;
@@ -47,7 +47,7 @@ class EmitterTasksInProcessTest {
 
     private File lockfile() {
         Lockfile lock = new Lockfile();
-        lock.put(new Lockfile.Entry("user-account", "1.0.0", "file", Map.of("openapi.yaml", "abc")));
+        lock.put(new Lockfile.Entry("user-account", ReferenceContract.VERSION, "file", Map.of("openapi.yaml", "abc")));
         File file = projectDir.resolve("apionly.lock").toFile();
         lock.write(file);
         return file;
@@ -97,11 +97,11 @@ class EmitterTasksInProcessTest {
         assertThat(projectDir.resolve("modal/files/mappings/modal.json")).exists();
         assertThat(projectDir.resolve("modal/java")).isEmptyDirectory();
         assertThat(projectDir.resolve("modal/apionly-provenance.json")).content().isEqualTo(
-                "{\"contract\":\"user-account\",\"contractSha256\":\"abc\",\"contractVersion\":\"1.0.0\","
+                "{\"contract\":\"user-account\",\"contractSha256\":\"abc\",\"contractVersion\":\"" + ReferenceContract.VERSION + "\","
                         + "\"emitter\":\"modal\",\"emitterVersion\":\"9.9.9\",\"options\":{\"mode\":\"files\"},"
                         + "\"transcriberj\":\"1.2.3\"}\n");
         assertThat(Stamp.parse(Files.readString(projectDir.resolve("stamps/counting.properties"))))
-                .isEqualTo(new Stamp("counting", "1.0.0", "abc"));
+                .isEqualTo(new Stamp("counting", ReferenceContract.VERSION, "abc"));
 
         ReportContractSourcesTask report = project.getTasks().create("report", ReportContractSourcesTask.class);
         report.getContractName().set("user-account");
@@ -114,7 +114,7 @@ class EmitterTasksInProcessTest {
         report.getAsciiDocReport().set(projectDir.resolve("user-account.adoc").toFile());
         report.report();
 
-        assertThat(projectDir.resolve("user-account.txt")).content().startsWith("API-Only TranscriberJ: user-account 1.0.0\n")
+        assertThat(projectDir.resolve("user-account.txt")).content().startsWith("API-Only TranscriberJ: user-account " + ReferenceContract.VERSION + "\n")
                 .contains("[counting]");
         assertThat(projectDir.resolve("user-account.adoc")).content()
                 .contains("include::report/counting.adoc[leveloffset=+1]");
@@ -137,14 +137,14 @@ class EmitterTasksInProcessTest {
         task.getSourcesDirectory().set(projectDir.resolve("gen").toFile());
         Files.createDirectories(projectDir.resolve("gen/com/example/contract"));
         Files.writeString(projectDir.resolve("gen/com/example/contract/ContractManifest.java"),
-                "CONTRACT_VERSION = \"1.0.0\";\nCONTRACT_SHA256 = \"abc\";\n");
+                "CONTRACT_VERSION = \"" + ReferenceContract.VERSION + "\";\nCONTRACT_SHA256 = \"abc\";\n");
         Path stamp = projectDir.resolve("stamps/restdocs.properties");
         task.getEmitterStamps().from(stamp.toFile());
 
         assertThatThrownBy(task::verify).hasMessageContaining("No output of emitter restdocs has been generated")
                 .hasMessageContaining("generateContractSourcesUserAccountRestdocs");
         Files.createDirectories(stamp.getParent());
-        Files.writeString(stamp, Stamp.render("restdocs", "1.0.0", "abc"));
+        Files.writeString(stamp, Stamp.render("restdocs", ReferenceContract.VERSION, "abc"));
         task.verify();
         Files.writeString(stamp, Stamp.render("restdocs", "0.9.0", "old"));
         assertThatThrownBy(task::verify).hasMessageContaining("The output of emitter restdocs for contract user-account "

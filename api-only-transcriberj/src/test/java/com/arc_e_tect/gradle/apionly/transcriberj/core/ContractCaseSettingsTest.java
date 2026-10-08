@@ -67,9 +67,9 @@ class ContractCaseSettingsTest {
     private static JsonNode report(String contract, List<String> derive, String run) {
         Settings settings = new Settings(contract, GeneratedSources.PACKAGE, false, "PLACEHOLDER", 2, null, "400", true,
                 List.of(), Map.of(), derive);
-        GeneratedSources sources = GeneratedSources.generate(CONTRACTS.get(contract), "1.0.0",
+        GeneratedSources sources = GeneratedSources.generate(CONTRACTS.get(contract), GeneratedSources.version(CONTRACTS.get(contract)),
                 directory.resolve(contract + "-" + run), settings, List.of());
-        return Oracle.JSON.readTree(sources.report.renderValidValues(contract, "1.0.0"));
+        return Oracle.JSON.readTree(sources.report.renderValidValues(contract, GeneratedSources.version(CONTRACTS.get(contract))));
     }
 
     @TestFactory

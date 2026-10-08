@@ -32,7 +32,7 @@ class GenerateDocsTest {
     @BeforeAll
     static void generate() {
         generated = GeneratedSources.generate(
-                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), directory,
                 new Settings("user-account", GeneratedSources.PACKAGE, true, "PLACEHOLDER", 3), List.of());
     }
 
@@ -95,7 +95,7 @@ class GenerateDocsTest {
     @Test
     void withoutGenerateDocsNothingIsReportedAndEveryDescriptionIsEmpty() {
         GeneratedSources off = GeneratedSources.generate(
-                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0",
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")),
                 directory.resolve("off"), GeneratedSources.settings("user-account"), List.of());
         assertThat(off.report.recommendations()).extracting(GenerationReport.Recommendation::advice)
                 .noneMatch(a -> a.startsWith("no description"));

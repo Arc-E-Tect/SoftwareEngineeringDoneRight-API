@@ -10,6 +10,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.model.Schema;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -53,10 +54,18 @@ final class ValidRequests {
      * @param headers      the header parameters, in declaration order
      * @param contentType  the body's content type, or null without a body
      * @param body         the body as JSON text, or null without one
+     * @param namedExample the name of the example the body is, or null when the body is generated
+     * @param examples     where the examples are written that values of a generated request took
      */
     record Request(String method, String pathTemplate, List<String> pathValues, List<Pair> query, List<Pair> headers,
-                   String contentType, Object body) {
+                   String contentType, Object body, String namedExample, List<String> examples) {
     }
+
+    /** The variants a request body's {@code x-transcriberj-examples} can name an example for. */
+    static final List<String> NAMED_VARIANTS = List.of("required", "full");
+
+    /** The extension that names, per variant, the example a valid request's body is. */
+    static final String NAMED_EXAMPLES = "x-transcriberj-examples";
 
     /** A parameter no value is generated for yet. */
     record Unsupported(String location, String name, String reason) {
@@ -123,6 +132,7 @@ final class ValidRequests {
         Map<String, String> path = new java.util.HashMap<>();
         List<Pair> query = new ArrayList<>();
         List<Pair> headers = new ArrayList<>();
+        Set<String> examples = new LinkedHashSet<>();
         for (Located located : parameters(operation)) {
             Parameter p = located.parameter();
             boolean needed = "path".equals(p.in()) || Boolean.TRUE.equals(p.required());
@@ -135,7 +145,16 @@ final class ValidRequests {
                 }
                 continue;
             }
-            String value = wire(values.value(p.schema(), located.location() + "/schema", variant), located);
+            Object own = parameterExample(located);
+            Object chosenValue;
+            if (own != NONE) {
+                chosenValue = own;
+                examples.add(located.location());
+            } else {
+                chosenValue = values.value(p.schema(), located.location() + "/schema", variant);
+                examples.addAll(values.exampleLocations(chosenValue, p.schema(), located.location() + "/schema"));
+            }
+            String value = wire(chosenValue, located);
             switch (p.in()) {
                 case "path" -> path.put(p.name(), value);
                 case "query" -> query.add(new Pair(p.name(), value));
@@ -154,6 +173,7 @@ final class ValidRequests {
         }
         String contentType = null;
         Object body = null;
+        String namedExample = null;
         if (kind != Kind.NO_BODY && operation.requestBody() != null && operation.requestBody().content() != null
                 && !operation.requestBody().content().isEmpty()) {
             RequestBody requestBody = operation.requestBody();
@@ -166,11 +186,126 @@ final class ValidRequests {
                             + requestBody.content().stream().map(MediaType::contentType).toList()
                             + "; this generator writes JSON bodies only"));
             contentType = chosen.contentType();
-            String schemaAt = bodyLocation(operation) + "/content/" + Shapes.escape(chosen.contentType()) + "/schema";
-            body = chosen.schema() == null ? ValueJson.NULL : values.value(chosen.schema(), schemaAt, variant);
+            String mediaAt = bodyLocation(operation) + "/content/" + Shapes.escape(chosen.contentType());
+            String schemaAt = mediaAt + "/schema";
+            namedExample = namedExample(chosen, mediaAt, kind);
+            if (namedExample != null) {
+                body = namedBody(chosen, mediaAt, namedExample, variant);
+            } else {
+                body = chosen.schema() == null ? ValueJson.NULL : values.value(chosen.schema(), schemaAt, variant);
+                if (chosen.schema() != null) examples.addAll(values.exampleLocations(body, chosen.schema(), schemaAt));
+            }
         }
         return new Request(operation.method().name(), operation.path(), List.copyOf(pathValues), List.copyOf(query),
-                List.copyOf(headers), contentType, body);
+                List.copyOf(headers), contentType, body, namedExample, List.copyOf(examples));
+    }
+
+    /** No example: a parameter that gives none of its own. */
+    private static final Object NONE = new Object();
+
+    /**
+     * A parameter's own example: the value of its first named example, else its {@code example};
+     * {@link #NONE} when it gives neither. One given must satisfy the parameter's schema.
+     */
+    private Object parameterExample(Located located) {
+        Parameter p = located.parameter();
+        Object value;
+        String at;
+        if (p.other().get("examples") instanceof Map<?, ?> named && !named.isEmpty()) {
+            Map.Entry<?, ?> first = named.entrySet().iterator().next();
+            at = located.location() + "/examples/" + Shapes.escape(String.valueOf(first.getKey()));
+            value = exampleValue(first.getValue(), at);
+        } else if (p.other().containsKey("example")) {
+            at = located.location() + "/example";
+            value = ValueJson.of(p.other().get("example"));
+        } else {
+            return NONE;
+        }
+        if (!values.valid(value, p.schema(), located.location() + "/schema")) {
+            throw new ValidValues.InvalidExample("The example " + ValueJson.write(value) + " at " + at
+                    + " does not satisfy the schema of parameter " + p.name() + "; correct the example, or the schema.");
+        }
+        return value;
+    }
+
+    /**
+     * The value of an Example Object, following a reference to {@code #/components/examples}.
+     *
+     * @throws ValidValues.InvalidExample when the reference names no example, or the example has
+     *                                    no inline {@code value}
+     */
+    private Object exampleValue(Object raw, String at) {
+        Object example = raw;
+        if (example instanceof Map<?, ?> m && m.get("$ref") instanceof String ref) {
+            String prefix = "#/components/examples/";
+            String name = ref.startsWith(prefix)
+                    ? ref.substring(prefix.length()).replace("~1", "/").replace("~0", "~") : null;
+            example = name == null ? null : model.examples().get(name);
+            if (example == null) {
+                throw new ValidValues.InvalidExample("The example at " + at + " refers to " + ref
+                        + ", which names no example under #/components/examples.");
+            }
+        }
+        if (!(example instanceof Map<?, ?> object) || !object.containsKey("value")) {
+            String why = example instanceof Map<?, ?> object && object.containsKey("externalValue")
+                    ? "gives an externalValue, which this generator does not fetch" : "gives no value";
+            throw new ValidValues.InvalidExample("The example at " + at + " " + why
+                    + "; give the example's value inline.");
+        }
+        return ValueJson.of(object.get("value"));
+    }
+
+    /**
+     * The name of the example the body of a request of this kind is, as the media type's
+     * {@code x-transcriberj-examples} gives it; or null when it names none for the kind.
+     */
+    private static String namedExample(MediaType mediaType, String mediaAt, Kind kind) {
+        if (!mediaType.other().containsKey(NAMED_EXAMPLES)) return null;
+        String at = mediaAt + "/" + NAMED_EXAMPLES;
+        if (!(mediaType.other().get(NAMED_EXAMPLES) instanceof Map<?, ?> pointer)) {
+            throw new ValidValues.InvalidExample(at + " must map a variant (" + String.join(", ", NAMED_VARIANTS)
+                    + ") to the name of one of the media type's examples.");
+        }
+        for (Map.Entry<?, ?> entry : pointer.entrySet()) {
+            String variant = String.valueOf(entry.getKey());
+            if (!NAMED_VARIANTS.contains(variant)) {
+                throw new ValidValues.InvalidExample(at + "/" + Shapes.escape(variant) + " names a variant this "
+                        + "generator does not know; the variants are " + String.join(", ", NAMED_VARIANTS) + ".");
+            }
+            if (!(entry.getValue() instanceof String)) {
+                throw new ValidValues.InvalidExample(at + "/" + variant + " must be the name of one of the media "
+                        + "type's examples.");
+            }
+        }
+        return kind == Kind.FULL ? (String) pointer.get("full") : (String) pointer.get("required");
+    }
+
+    /**
+     * The value of the named example, checked: it must be one of the media type's examples, satisfy
+     * the schema, and hold exactly the members the variant stands for.
+     */
+    private Object namedBody(MediaType mediaType, String mediaAt, String name, ValidValues.Variant variant) {
+        String pointerAt = mediaAt + "/" + NAMED_EXAMPLES + "/" + (variant == ValidValues.Variant.FULL ? "full"
+                : "required");
+        if (!(mediaType.other().get("examples") instanceof Map<?, ?> named) || !named.containsKey(name)) {
+            throw new ValidValues.InvalidExample(pointerAt + " names the example " + name + ", but the media type "
+                    + "declares no example of that name.");
+        }
+        String at = mediaAt + "/examples/" + Shapes.escape(name);
+        Object value = exampleValue(named.get(name), at);
+        if (mediaType.schema() == null) return value;
+        String schemaAt = mediaAt + "/schema";
+        if (!values.valid(value, mediaType.schema(), schemaAt)) {
+            throw new ValidValues.InvalidExample("The example " + name + " at " + at + " does not satisfy the "
+                    + "schema at " + schemaAt + "; correct the example, or the schema.");
+        }
+        List<String> breaches = values.variantBreaches(value, mediaType.schema(), schemaAt, variant);
+        if (!breaches.isEmpty()) {
+            throw new ValidValues.InvalidExample("The example " + name + " at " + at + " is named for the "
+                    + (variant == ValidValues.Variant.FULL ? "full" : "required") + " request, but "
+                    + String.join("; ", breaches) + ".");
+        }
+        return value;
     }
 
     /** Where an operation's request body is written: the component it refers to, or the operation itself. */

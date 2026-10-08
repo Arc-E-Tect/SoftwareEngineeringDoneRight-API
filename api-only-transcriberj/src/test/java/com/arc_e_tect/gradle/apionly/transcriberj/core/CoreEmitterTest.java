@@ -604,16 +604,17 @@ class CoreEmitterTest {
         Path contract = GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml");
         Path out = directory.resolve("out");
         Path resources = directory.resolve("resources");
-        assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
+        assertThatThrownBy(() -> Generation.run(contract, GeneratedSources.version(contract), "x",
                 new Settings("c", "not a package", false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage not a package");
-        assertThatThrownBy(() -> Generation.run(contract, "1.0.0", "x",
+        assertThatThrownBy(() -> Generation.run(contract, GeneratedSources.version(contract), "x",
                 new Settings("c", null, false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(GenerationException.class).hasMessageContaining("basePackage null");
         assertThatThrownBy(() -> Generation.run(contract, "2.0.0", "x",
                 new Settings("c", "a.b", false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(GenerationException.class)
-                .hasMessageContaining("locked at version 2.0.0, but " + contract + " says it is version 1.0.0");
+                .hasMessageContaining("locked at version 2.0.0, but " + contract + " says it is version "
+                        + GeneratedSources.version(contract));
         assertThatThrownBy(() -> Generation.run(directory.resolve("missing.yaml"), "1.0.0", "x",
                 new Settings("c", "a.b", false, "p", 1), out, resources, List.of(), null))
                 .isInstanceOf(java.io.UncheckedIOException.class);
@@ -633,7 +634,7 @@ class CoreEmitterTest {
     @Test
     void anEmitterRunsAfterTheCoreOverTheSameNamesAndReportsUnderItsOwnId() throws Throwable {
         GeneratedSources g = GeneratedSources.generate(
-                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), directory,
                 GeneratedSources.settings("user-account"), List.of(new TestEmitter()));
 
         Class<?> counter = Class.forName(GeneratedSources.PACKAGE + ".counting.UserV1Count", true, g.compile());

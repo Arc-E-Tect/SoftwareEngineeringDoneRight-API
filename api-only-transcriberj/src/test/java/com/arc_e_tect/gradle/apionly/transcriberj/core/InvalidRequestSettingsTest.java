@@ -67,14 +67,14 @@ class InvalidRequestSettingsTest {
         counting.put("with space", "a = b; c");
         Settings s = new Settings("user-account", GeneratedSources.PACKAGE, false, "p", 2, null, "400", true, List.of(),
                 Map.of("counting", counting));
-        GeneratedSources tree = GeneratedSources.generate(USER_ACCOUNT, "1.0.0", directory, s, List.of(new TestEmitter()));
+        GeneratedSources tree = GeneratedSources.generate(USER_ACCOUNT, GeneratedSources.version(USER_ACCOUNT), directory, s, List.of(new TestEmitter()));
         assertThat(Files.readString(tree.resources.resolve("counting/options.properties")))
                 .isEqualTo("tests=true\nwith space=a = b; c\n");
     }
 
     @Test
     void anEmitterWithoutOptionsWritesNone() {
-        GeneratedSources tree = GeneratedSources.generate(USER_ACCOUNT, "1.0.0", directory,
+        GeneratedSources tree = GeneratedSources.generate(USER_ACCOUNT, GeneratedSources.version(USER_ACCOUNT), directory,
                 GeneratedSources.settings("user-account"), List.of(new TestEmitter()));
         assertThat(tree.resources.resolve("counting/options.properties")).doesNotExist();
     }
@@ -83,11 +83,11 @@ class InvalidRequestSettingsTest {
     void optionsForAnEmitterThatIsNotThereFailTheGeneration() {
         Settings s = new Settings("user-account", GeneratedSources.PACKAGE, false, "p", 2, null, "400", true, List.of(),
                 Map.of("restdocs", Map.of("tests", "true")));
-        assertThatThrownBy(() -> GeneratedSources.generate(USER_ACCOUNT, "1.0.0", directory, s, List.of()))
+        assertThatThrownBy(() -> GeneratedSources.generate(USER_ACCOUNT, GeneratedSources.version(USER_ACCOUNT), directory, s, List.of()))
                 .isInstanceOf(GenerationException.class)
                 .hasMessageContaining("emitterOptions names restdocs")
                 .hasMessageContaining("the emitters there are none");
-        assertThatThrownBy(() -> GeneratedSources.generate(USER_ACCOUNT, "1.0.0", directory.resolve("2"), s,
+        assertThatThrownBy(() -> GeneratedSources.generate(USER_ACCOUNT, GeneratedSources.version(USER_ACCOUNT), directory.resolve("2"), s,
                 List.of(new TestEmitter()))).hasMessageContaining("the emitters there are counting");
     }
 
@@ -96,7 +96,7 @@ class InvalidRequestSettingsTest {
         for (String status : List.of("4XX", "default", "600", "40")) {
             Settings s = new Settings("user-account", GeneratedSources.PACKAGE, false, "p", 2, null, status, true,
                     List.of(), Map.of());
-            assertThatThrownBy(() -> GeneratedSources.generate(USER_ACCOUNT, "1.0.0", directory.resolve(status), s,
+            assertThatThrownBy(() -> GeneratedSources.generate(USER_ACCOUNT, GeneratedSources.version(USER_ACCOUNT), directory.resolve(status), s,
                     List.of())).as(status).isInstanceOf(GenerationException.class)
                     .hasMessageContaining("invalidRequestStatus " + status + " is not a status code");
         }
@@ -104,13 +104,13 @@ class InvalidRequestSettingsTest {
 
     @Test
     void theReportSaysWhatWasDerivedAndCountsIt() {
-        GeneratedSources tree = GeneratedSources.generate(USER_ACCOUNT, "1.0.0", directory,
+        GeneratedSources tree = GeneratedSources.generate(USER_ACCOUNT, GeneratedSources.version(USER_ACCOUNT), directory,
                 GeneratedSources.settings("user-account"), List.of());
         GenerationReport report = tree.report;
         assertThat(report.invalidRequestCases()).isPositive();
         assertThat(report.constraintCoverage()).containsKey("covered");
         assertThat(report.gaps()).contains("/paths/~1v1~1users~1{username}/get");
-        String text = report.render("user-account", "1.0.0");
+        String text = report.render("user-account", GeneratedSources.version(USER_ACCOUNT));
         assertThat(text.lines().toList().get(2)).startsWith("Invalid requests: " + report.invalidRequestCases()
                 + " case(s) derived, " + report.constraintCoverage().get("covered") + " constraint(s) covered, ");
         assertThat(text).contains("\nGaps -- ").contains("\nFormat recommendations:\n")

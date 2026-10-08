@@ -4,7 +4,7 @@
       "class": "GetHealthResponse200",
       "fullBody": {
         "value": {
-          "status": "a"
+          "status": "UP"
         }
       },
       "location": "/paths/~1v1~1actuator~1health/get/responses/200/content/application~1json/schema",
@@ -17,15 +17,15 @@
       "fullBody": {
         "value": {
           "dependencies": {},
-          "versionCode": 0,
-          "versionName": "aaa"
+          "versionCode": 1,
+          "versionName": "WIREMOCK"
         }
       },
       "location": "/paths/~1v1/get/responses/200/content/application~1json/schema",
       "requiredBody": {
         "value": {
-          "versionCode": 0,
-          "versionName": "aaa"
+          "versionCode": 1,
+          "versionName": "WIREMOCK"
         }
       }
     },
@@ -33,8 +33,8 @@
       "class": "InternalServerProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 500,
           "title": "Internal Server Error",
           "type": "about:blank"
@@ -43,7 +43,7 @@
       "location": "/components/schemas/InternalServerProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 500,
           "title": "Internal Server Error",
           "type": "about:blank"
@@ -110,7 +110,7 @@
       }
     }
   ],
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "unsupportedParameters": [],
   "version": "1.0.0"
 }

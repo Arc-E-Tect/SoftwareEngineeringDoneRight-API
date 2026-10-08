@@ -735,7 +735,7 @@ final class InvalidRequests {
             try {
                 withBody = requests.request(operation, ValidRequests.Kind.REQUIRED);
                 noBody = new ValidRequests.Request(withBody.method(), withBody.pathTemplate(), withBody.pathValues(),
-                        withBody.query(), withBody.headers(), null, null);
+                        withBody.query(), withBody.headers(), null, null, null, List.of());
             } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
                 c.uncovered(Reason.NO_VALID_BASELINE, why(e));
                 return;
@@ -936,7 +936,7 @@ final class InvalidRequests {
             List<String> path = new ArrayList<>(r.pathValues());
             path.set(placeholders(operation.path()).indexOf(name), value);
             return new ValidRequests.Request(r.method(), r.pathTemplate(), List.copyOf(path), r.query(), r.headers(),
-                    r.contentType(), r.body());
+                    r.contentType(), r.body(), r.namedExample(), r.examples());
         }
         List<ValidRequests.Pair> current = in.equals(QUERY) ? r.query() : r.headers();
         List<ValidRequests.Pair> out = new ArrayList<>();
@@ -954,9 +954,9 @@ final class InvalidRequests {
         if (!placed && value != null) out.add(new ValidRequests.Pair(name, value));
         return in.equals(QUERY)
                 ? new ValidRequests.Request(r.method(), r.pathTemplate(), r.pathValues(), List.copyOf(out), r.headers(),
-                r.contentType(), r.body())
+                r.contentType(), r.body(), r.namedExample(), r.examples())
                 : new ValidRequests.Request(r.method(), r.pathTemplate(), r.pathValues(), r.query(), List.copyOf(out),
-                r.contentType(), r.body());
+                r.contentType(), r.body(), r.namedExample(), r.examples());
     }
 
     // --------------------------------------------------------------- body
@@ -1004,9 +1004,11 @@ final class InvalidRequests {
                 List<Faults.Fault> found = faults.of(mutated, rootSchema);
                 if (found.equals(List.of(expectedFault))) {
                     ValidRequests.Request request = new ValidRequests.Request(baseline.method(), baseline.pathTemplate(),
-                            baseline.pathValues(), baseline.query(), baseline.headers(), baseline.contentType(), mutated);
+                            baseline.pathValues(), baseline.query(), baseline.headers(), baseline.contentType(), mutated,
+                            baseline.namedExample(), baseline.examples());
                     ValidRequests.Request valid = new ValidRequests.Request(baseline.method(), baseline.pathTemplate(),
-                            baseline.pathValues(), baseline.query(), baseline.headers(), baseline.contentType(), prepared);
+                            baseline.pathValues(), baseline.query(), baseline.headers(), baseline.contentType(), prepared,
+                            baseline.namedExample(), baseline.examples());
                     String id = "body" + media + segments(c.pointer) + "-" + variant.id();
                     cases.add(newCase(c, id, subject(c, node) + " " + candidate.description(), BODY, null,
                             expectedFault.pointer(), variant.keyword(), request, valid, expected));

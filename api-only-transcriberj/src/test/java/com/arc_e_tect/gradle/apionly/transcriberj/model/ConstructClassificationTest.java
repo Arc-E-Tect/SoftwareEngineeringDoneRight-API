@@ -267,6 +267,24 @@ class ConstructClassificationTest {
     }
 
     @Test
+    void exampleComponentsAreKeptByNameForTheExamplesThatReferToThem() {
+        ContractModel model = ContractParser.parse("""
+                openapi: 3.1.0
+                info: {title: Examples, version: '1'}
+                paths: {}
+                components:
+                  examples:
+                    Alice: {summary: Alice, value: {username: alice}}
+                """, "examples.yaml");
+
+        assertThat(model.examples()).containsOnlyKeys("Alice");
+        assertThat(model.examples().get("Alice")).isEqualTo(Map.of("summary", "Alice", "value",
+                Map.of("username", "alice")));
+        assertThat(model.otherComponents()).isEmpty();
+        assertThat(model.findings()).isEmpty();
+    }
+
+    @Test
     void componentTypesTheModelDoesNotTypeAreKeptAndClassified() {
         ContractModel model = ContractParser.parse("""
                 openapi: 3.0.3

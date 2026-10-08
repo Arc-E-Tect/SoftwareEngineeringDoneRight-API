@@ -26,8 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** The plugin, applied to a real build, with a real Subscriber fetching a real contract. */
 class ApiOnlyTranscriberJPluginFunctionalTest {
 
-    static final Path CONTRACT = Path.of(System.getProperty("transcriberj.referenceApi"),
-            "user-account/openapi.yaml");
 
     @TempDir
     Path projectDir;
@@ -35,7 +33,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
     @BeforeEach
     void seedProject() throws Exception {
         Files.writeString(projectDir.resolve("settings.gradle"), "rootProject.name = 'consumer'\n");
-        publish("1.0.0", Files.readString(CONTRACT));
+        publish("1.0.0", ReferenceContract.at("1.0.0"));
         emitterJar(projectDir.resolve("emitter.jar"));
         Files.writeString(projectDir.resolve("build.gradle"), """
                 plugins {
@@ -199,7 +197,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         assertThat(again.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.UP_TO_DATE);
 
         // A new version of the contract regenerates the tree, whatever its file looks like.
-        publish("1.0.1", Files.readString(CONTRACT).replace("  version: 1.0.0", "  version: 1.0.1"));
+        publish("1.0.1", ReferenceContract.at("1.0.1"));
         BuildResult upgraded = runner("useContract", "-PcontractVersion=1.0.1").build();
         assertThat(upgraded.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(upgraded.getOutput()).contains("VERSION 1.0.1");
@@ -290,7 +288,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
     void theCommandLineChoosesTheContractVersionOverTheSubscription() throws Exception {
         // The Subscriber the plugin brings decides where the version comes from; with a
         // current one, -PapiContractVersion overrides the subscription's own.
-        publish("1.0.1", Files.readString(CONTRACT).replace("  version: 1.0.0", "  version: 1.0.1"));
+        publish("1.0.1", ReferenceContract.at("1.0.1"));
         BuildResult result = runner("useContract", "-PapiContractVersion=1.0.1").build();
         assertThat(result.getOutput()).contains("VERSION 1.0.1");
     }
@@ -345,7 +343,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
 
     @Test
     void aContractNoClassesCanBeGeneratedFromFailsWithTheReason() throws Exception {
-        publish("2.0.0", Files.readString(CONTRACT).replace("  version: 1.0.0", "  version: 2.0.0")
+        publish("2.0.0", ReferenceContract.at("2.0.0")
                 .replaceAll("\\n\\s+x-fragment-path: [^\\n]+", ""));
         BuildResult result = runner("generateContractSourcesUserAccount", "-PcontractVersion=2.0.0").buildAndFail();
         assertThat(result.getOutput()).contains("These components have no x-fragment-path");

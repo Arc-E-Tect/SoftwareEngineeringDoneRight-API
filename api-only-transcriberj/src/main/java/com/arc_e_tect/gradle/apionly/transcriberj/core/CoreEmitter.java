@@ -722,6 +722,11 @@ final class CoreEmitter implements Emitter {
         out.put("expectedStatus", java.math.BigDecimal.valueOf(c.status()));
         out.put("expectedContentTypes", c.contentTypes());
         out.put("responseBodyClass", c.bodyClass());
+        ValidRequests.Request basis = c.baseline() != null ? c.baseline() : c.request();
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("namedExample", basis.namedExample());
+        source.put("examples", basis.examples());
+        out.put("source", source);
         return out;
     }
 

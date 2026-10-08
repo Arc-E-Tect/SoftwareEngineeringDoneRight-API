@@ -131,7 +131,7 @@ class EmitterResponseBodiesTest {
     private static void assertSeen(Path document, com.arc_e_tect.gradle.apionly.transcriberj.spi.Settings settings,
                                    String name) throws Exception {
         Capturing capturing = new Capturing();
-        GeneratedSources sources = GeneratedSources.generate(document, "1.0.0", directory.resolve(name), settings,
+        GeneratedSources sources = GeneratedSources.generate(document, GeneratedSources.version(document), directory.resolve(name), settings,
                 List.of(capturing));
         assertThat(capturing.unknown).allSatisfy(u -> assertThat(u).isEmpty());
         for (String classes : capturing.caseClasses.values()) {

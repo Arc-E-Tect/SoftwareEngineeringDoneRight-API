@@ -24,7 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the same ids, relative order, requests, expected responses and fault locations. Only what came
  * with the unified list differs: the class name, the kind, {@code requiresState} and
  * {@code variant}, the {@code Accept} every case now sends, the index, and {@code representative},
- * which is gone.
+ * which is gone; and {@code source}, which came with example data. The reference contracts are
+ * generated without their examples, as they were when the cases were recorded.
  */
 @DisplayName("T19.7 Invalid-request cases unchanged")
 class InvalidRequestsUnchangedTest {
@@ -38,7 +39,7 @@ class InvalidRequestsUnchangedTest {
 
     @BeforeAll
     static void generate() {
-        fixtures = InvalidRequestFixtures.all(directory);
+        fixtures = InvalidRequestFixtures.allWithoutExamples(directory);
     }
 
     /** The file a fixture's cases were recorded in: the valid-value corpus's keywords contract shares its name. */

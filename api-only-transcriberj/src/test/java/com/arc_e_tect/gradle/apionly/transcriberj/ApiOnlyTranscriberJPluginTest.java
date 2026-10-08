@@ -172,7 +172,7 @@ class ApiOnlyTranscriberJPluginTest {
         GenerateContractSourcesAction.Parameters parameters =
                 project.getObjects().newInstance(GenerateContractSourcesAction.Parameters.class);
         parameters.getContract().set(contract.toFile());
-        parameters.getContractVersion().set("1.0.0");
+        parameters.getContractVersion().set(ReferenceContract.VERSION);
         parameters.getContractSha256().set("x");
         parameters.getContractName().set("user-account");
         parameters.getBasePackage().set("a.b");
@@ -271,7 +271,7 @@ class ApiOnlyTranscriberJPluginTest {
         ApiOnlyTranscriberJPluginFunctionalTest.emitterJar(jar);
         GenerateContractSourcesTask task = project.getTasks().create("generate", InProcessGenerateTask.class);
         task.getContract().set(contract.toFile());
-        task.getLockfile().set(lockfile("1.0.0", "abc").toFile());
+        task.getLockfile().set(lockfile(ReferenceContract.VERSION, "abc").toFile());
         task.getContractName().set("user-account");
         task.getBasePackage().set("com.example.contract");
         task.getRecursionDepth().set(3);

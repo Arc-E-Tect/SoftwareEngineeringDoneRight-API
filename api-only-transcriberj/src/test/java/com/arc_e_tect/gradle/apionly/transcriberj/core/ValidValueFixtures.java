@@ -26,14 +26,15 @@ final class ValidValueFixtures {
      * One contract, generated.
      *
      * @param name     its name
+     * @param version  the version it is generated at, as its document states it
      * @param document its OpenAPI document
      * @param sources  what was generated
      * @param oracle   the independent validator, over the document
      * @param async    the independent validator over the contract's AsyncAPI document, or null
      * @param report   the machine-readable report of every valid value
      */
-    record Fixture(String name, Path document, GeneratedSources sources, Oracle oracle, Oracle async,
-                   JsonNode report) {
+    record Fixture(String name, String version, Path document, GeneratedSources sources, Oracle oracle,
+                   Oracle async, JsonNode report) {
 
         /** The oracle over whichever document a pointer points into: a message payload's is the AsyncAPI one. */
         Oracle oracleFor(String pointer) {
@@ -60,7 +61,7 @@ final class ValidValueFixtures {
 
         /** The text report. */
         String text() {
-            return sources.report.render(name, "1.0.0");
+            return sources.report.render(name, version);
         }
 
         private JsonNode entry(String list, String className) {
@@ -81,10 +82,15 @@ final class ValidValueFixtures {
     }
 
     static Fixture reference(String name, Path into) {
-        Path directory = GeneratedSources.CONTRACTS.resolve(name);
+        return reference(name, GeneratedSources.CONTRACTS.resolve(name), into);
+    }
+
+    /** A reference contract, generated from the documents in the given directory rather than its own. */
+    static Fixture reference(String name, Path directory, Path into) {
         Path document = directory.resolve("openapi.yaml");
         Path async = directory.resolve("asyncapi.yaml");
-        GeneratedSources sources = GeneratedSources.generate(document, Files.exists(async) ? async : null, "1.0.0",
+        GeneratedSources sources = GeneratedSources.generate(document, Files.exists(async) ? async : null,
+                GeneratedSources.version(document),
                 into, GeneratedSources.settings(name), List.of());
         return fixture(name, document, Files.exists(async) ? async : null, sources);
     }
@@ -98,8 +104,9 @@ final class ValidValueFixtures {
     }
 
     private static Fixture fixture(String name, Path document, Path async, GeneratedSources sources) {
-        JsonNode report = Oracle.JSON.readTree(sources.report.renderValidValues(name, "1.0.0"));
-        return new Fixture(name, document, sources, new Oracle(document), async == null ? null : new Oracle(async),
+        String version = GeneratedSources.version(document);
+        JsonNode report = Oracle.JSON.readTree(sources.report.renderValidValues(name, version));
+        return new Fixture(name, version, document, sources, new Oracle(document), async == null ? null : new Oracle(async),
                 report);
     }
 }

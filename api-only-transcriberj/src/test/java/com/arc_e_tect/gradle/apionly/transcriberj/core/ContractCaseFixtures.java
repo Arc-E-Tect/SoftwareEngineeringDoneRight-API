@@ -47,7 +47,7 @@ final class ContractCaseFixtures {
         Path document = CORPUS_DIRECTORY.resolve(v.contract() + ".yaml");
         GeneratedSources sources = GeneratedSources.generate(document, "1.0.0", into, v.settings(), List.of());
         JsonNode report = Oracle.JSON.readTree(sources.report.renderValidValues(v.settings().contract(), "1.0.0"));
-        return new ValidValueFixtures.Fixture(v.name(), document, sources, new Oracle(document), null, report);
+        return new ValidValueFixtures.Fixture(v.name(), "1.0.0", document, sources, new Oracle(document), null, report);
     }
 
     /** The contract-case corpus, generated. */

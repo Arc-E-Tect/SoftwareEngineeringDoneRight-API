@@ -63,6 +63,15 @@ final class ValidValues {
         }
     }
 
+    /** An example the contract gives for a value that does not satisfy what applies to the value. */
+    static final class InvalidExample extends GenerationException {
+        private static final long serialVersionUID = 1L;
+
+        InvalidExample(String message) {
+            super(message);
+        }
+    }
+
     /** A reference that would be followed more often than {@code recursionDepth} allows. */
     static final class TooDeep extends Unsatisfiable {
         private static final long serialVersionUID = 1L;
@@ -139,6 +148,106 @@ final class ValidValues {
         return roots.stream().map(r -> new At(r.schema(), r.location())).toList();
     }
 
+    /**
+     * Where the examples are written that the leaves of a value took, each location once, in the
+     * order the value reaches them.
+     */
+    List<String> exampleLocations(Object value, Schema schema, String location) {
+        Set<String> out = new LinkedHashSet<>();
+        walk(value, root(schema, location), "", (at, v, in) -> {
+            if (v instanceof Map || v instanceof List) return;
+            in.exampleSources().stream()
+                    .filter(source -> examples(source.schema()).stream().anyMatch(e -> ValueJson.equal(e, v)))
+                    .findFirst().ifPresent(source -> out.add(source.location()));
+        });
+        return List.copyOf(out);
+    }
+
+    /**
+     * Where a value breaks the member rule of a variant, at every level and in the branch of a
+     * choice it matches: for {@link Variant#REQUIRED}, every optional member it holds; for
+     * {@link Variant#FULL}, every declared member it lacks. Members a schema does not declare,
+     * and the number of items, are the schema's to judge, not the variant's.
+     */
+    List<String> variantBreaches(Object value, Schema schema, String location, Variant variant) {
+        List<String> out = new ArrayList<>();
+        walk(value, root(schema, location), "", (at, v, in) -> {
+            if (!(v instanceof Map<?, ?> map)) return;
+            Set<String> declared = new LinkedHashSet<>();
+            Set<String> required = new LinkedHashSet<>();
+            for (At part : in.parts) {
+                if (part.schema().properties() != null) declared.addAll(part.schema().properties().keySet());
+                if (part.schema().required() != null) required.addAll(part.schema().required());
+            }
+            for (String name : declared) {
+                if (variant == Variant.REQUIRED && map.containsKey(name) && !required.contains(name)) {
+                    out.add(at + "/" + Shapes.escape(name) + " is optional, and a required example holds only "
+                            + "required members");
+                } else if (variant == Variant.FULL && !map.containsKey(name)) {
+                    out.add(at + "/" + Shapes.escape(name) + " is declared but missing, and a full example holds "
+                            + "every declared member");
+                }
+            }
+        });
+        return out;
+    }
+
+    private Intersection root(Schema schema, String location) {
+        return intersection(List.of(new At(schema, location)), Set.of(), new Context(Variant.FULL, List.of()));
+    }
+
+    /** What {@link #walk} reports for each value it reaches: where in the value, the value, and its schemas. */
+    @FunctionalInterface
+    private interface Visitor {
+        void visit(String pointer, Object value, Intersection in);
+    }
+
+    /**
+     * Visits a value and every value inside it, each with every schema it must be valid against;
+     * a choice by the branch the value matches, as {@code oneOf} and {@code anyOf} say. The value
+     * must be valid: one generated, or an example checked first.
+     */
+    private void walk(Object value, Intersection in, String pointer, Visitor visitor) {
+        List<Choice> choices = in.choices();
+        if (!choices.isEmpty()) {
+            Choice choice = choices.get(0);
+            At branch = choice.branches().stream().filter(b -> valid(value, b.schema(), b.location(), 0))
+                    .findFirst().orElseThrow();
+            walk(value, in.with(branch, Set.of(choice.owner().location())), pointer, visitor);
+            return;
+        }
+        visitor.visit(pointer, value, in);
+        Context context = new Context(Variant.FULL, List.of());
+        if (value instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                String name = String.valueOf(e.getKey());
+                walk(e.getValue(), member(in, name, context), pointer + "/" + Shapes.escape(name), visitor);
+            }
+        } else if (value instanceof List<?> list) {
+            List<At> items = new ArrayList<>();
+            for (At part : in.with(s -> s.items() != null)) {
+                items.add(new At(part.schema().items(), part.location() + "/items"));
+            }
+            if (items.isEmpty()) return;
+            Intersection each = intersection(items, Set.of(), context);
+            for (int i = 0; i < list.size(); i++) walk(list.get(i), each, pointer + "/" + i, visitor);
+        }
+    }
+
+    /** The examples a schema gives: its {@code examples}, else its OpenAPI 3.0 {@code example}; or none. */
+    static List<Object> examples(Schema schema) {
+        Object list = schema.annotations().get("examples");
+        if (list instanceof List<?> given && !given.isEmpty()) return given.stream().map(ValueJson::of).toList();
+        if (schema.annotations().containsKey("example")) return List.of(ValueJson.of(schema.annotations().get("example")));
+        return List.of();
+    }
+
+    /** Where the {@code i}th example of a schema is written. */
+    private static String exampleLocation(At source, int i) {
+        return source.location() + (source.schema().annotations().get("examples") instanceof List<?> given
+                && !given.isEmpty() ? "/examples/" + i : "/example");
+    }
+
     /** Whether a value is valid against a schema, as far as the keywords the model types go. */
     boolean valid(Object value, Schema schema, String location) {
         return valid(value, schema, location, 0);
@@ -201,6 +310,8 @@ final class ValidValues {
         final List<At> parts = new ArrayList<>();
         final Set<String> refs = new LinkedHashSet<>();
         final Set<String> resolved;
+        /** Set where an enclosing intersection already offered the examples, so a branch does not again. */
+        boolean examplesOffered;
 
         Intersection(List<At> roots, Set<String> resolved) {
             this.roots = roots;
@@ -233,6 +344,32 @@ final class ValidValues {
 
         String location() {
             return roots.get(0).location();
+        }
+
+        /**
+         * Every schema that gives examples for a value, in the order they are offered: each root
+         * before what it refers to, and a reference before the parts of an {@code allOf}.
+         */
+        List<At> exampleSources() {
+            List<At> out = new ArrayList<>();
+            if (examplesOffered) return out;
+            Set<String> seen = new HashSet<>();
+            for (At root : roots) exampleSources(root, seen, out);
+            return out;
+        }
+
+        private void exampleSources(At at, Set<String> seen, List<At> out) {
+            Schema s = at.schema();
+            if (!examples(s).isEmpty()) out.add(at);
+            if (s.ref() != null && seen.add(s.ref())) {
+                exampleSources(new At(shapes.component(s.ref()).orElseThrow(),
+                        "/components/schemas/" + Shapes.escape(s.ref())), seen, out);
+            }
+            if (s.allOf() != null) {
+                for (int i = 0; i < s.allOf().size(); i++) {
+                    exampleSources(new At(s.allOf().get(i), at.location() + "/allOf/" + i), seen, out);
+                }
+            }
         }
 
         Intersection with(At extra, Set<String> alsoResolved) {
@@ -380,8 +517,48 @@ final class ValidValues {
     /** Valid values of an intersection, lazily, in a fixed order. */
     private Iterator<Object> candidates(Intersection in, Context context) {
         in.assertionsModelled();
+        Iterator<Object> given = examples(in);
+        if (given == null) return generated(in, context, false);
+        return Lazy.concat(() -> given, () -> generated(in, context, true));
+    }
+
+    /**
+     * The examples a leaf value takes, in the order their schemas offer them: each must satisfy
+     * the schema it is written on, and is left out where it does not fit everything else that
+     * applies to the value here. Null when no schema gives any, or the value is an object or an
+     * array, whose members and items take their own.
+     *
+     * @throws InvalidExample, as the examples are taken, for one that breaks the schema it is written on
+     */
+    private Iterator<Object> examples(Intersection in) {
+        List<At> sources = in.exampleSources();
+        if (sources.isEmpty()) return null;
+        String type = in.type();
+        if ("object".equals(type) || "array".equals(type)) return null;
+        if (type == null && sources.stream().flatMap(s -> examples(s.schema()).stream())
+                .anyMatch(v -> v instanceof Map || v instanceof List)) {
+            return null;
+        }
+        Iterator<Object> all = Lazy.flatMap(sources.iterator(), source -> {
+            List<Object> given = examples(source.schema());
+            Iterator<Integer> indexes = java.util.stream.IntStream.range(0, given.size()).boxed().iterator();
+            return Lazy.map(indexes, i -> {
+                Object value = given.get(i);
+                if (!valid(value, source.schema(), source.location(), 0)) {
+                    throw new InvalidExample("The example " + ValueJson.write(value) + " at "
+                            + exampleLocation(source, i) + " does not satisfy the schema it is written on, at "
+                            + source.location() + "; correct the example, or the schema.");
+                }
+                return value;
+            });
+        });
+        return Lazy.filter(all, in::accepts);
+    }
+
+    /** Valid values of an intersection built from its constraints, lazily, in a fixed order. */
+    private Iterator<Object> generated(Intersection in, Context context, boolean examplesOffered) {
         List<Choice> choices = in.choices();
-        if (!choices.isEmpty()) return chosen(in, choices.get(0), context);
+        if (!choices.isEmpty()) return chosen(in, choices.get(0), context, examplesOffered);
 
         List<Object> consts = in.consts();
         if (!consts.isEmpty()) {
@@ -435,7 +612,7 @@ final class ValidValues {
      * against exactly that one branch. With a discriminator, the discriminating property
      * takes the value the mapping gives the branch.
      */
-    private Iterator<Object> chosen(Intersection in, Choice choice, Context context) {
+    private Iterator<Object> chosen(Intersection in, Choice choice, Context context, boolean examplesOffered) {
         String keyword = choice.exclusive() ? "oneOf" : "anyOf";
         List<String> reasons = new ArrayList<>();
         boolean allTooDeep = true;
@@ -445,6 +622,7 @@ final class ValidValues {
                 Intersection with = in.with(branch, Set.of(choice.owner().location()));
                 At discriminating = discriminating(choice, branch);
                 if (discriminating != null) with = with.with(discriminating, Set.of());
+                with.examplesOffered = examplesOffered;
                 for (String ref : with.refs) {
                     if (context.count(ref) > recursionDepth) {
                         throw new TooDeep(branch.location(), "branch " + i + " recurses beyond recursionDepth");
@@ -775,9 +953,16 @@ final class ValidValues {
         Iterator<Object> values = each == null ? Lazy.of(ValueJson.NULL) : candidates(each, child);
         String at = items.isEmpty() ? in.location() + "/items" : items.get(0).location();
         if (!unique) {
-            if (!values.hasNext()) throw new Unsatisfiable(at, "no valid item was found");
-            Object value = values.next();
-            return Collections.nCopies(count, value);
+            List<Object> out = new ArrayList<>();
+            Iterator<Object> given = each == null ? null : examples(each);
+            while (given != null && given.hasNext() && out.size() < count) out.add(given.next());
+            if (out.size() < count) {
+                Iterator<Object> generated = each == null ? Lazy.of(ValueJson.NULL)
+                        : generated(each, child, given != null);
+                if (!generated.hasNext()) throw new Unsatisfiable(at, "no valid item was found");
+                out.addAll(Collections.nCopies(count - out.size(), generated.next()));
+            }
+            return List.copyOf(out);
         }
         List<Object> distinct = new ArrayList<>();
         int tried = 0;

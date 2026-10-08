@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: API-Only - Reference API Specification
-  version: 1.0.0
+  version: 1.0.1
   contact:
     name: Arc-E-Tect
     email: sedr@arc-e-tect.com
@@ -309,6 +309,11 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserRegistrationRequestV1'
+            examples:
+              Alice:
+                $ref: '#/components/examples/AliceRegistrationV1'
+            x-transcriberj-examples:
+              required: Alice
       responses:
         '202':
           description: Registration initiated. A verification email has been dispatched to the provided address.
@@ -876,3 +881,10 @@ components:
               type: string
               examples:
                 - The registration process has expired. Start a new registration process.
+  examples:
+    AliceRegistrationV1:
+      x-fragment-path: openapi/components/apionly/user-account/examples/AliceRegistrationV1.yaml
+      summary: Alice registers with the username and email address she wants to use.
+      value:
+        username: alice
+        emailAddress: alice@wonderland.com

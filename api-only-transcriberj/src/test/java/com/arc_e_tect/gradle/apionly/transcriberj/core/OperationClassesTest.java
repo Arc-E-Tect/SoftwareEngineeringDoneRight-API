@@ -24,7 +24,7 @@ class OperationClassesTest {
 
     private GeneratedSources userAccount() {
         return GeneratedSources.generate(
-                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), directory,
                 GeneratedSources.settings("user-account"), List.of());
     }
 
@@ -47,7 +47,7 @@ class OperationClassesTest {
         assertThat(g.constant("GetUserOperation", "STATUS_404")).isEqualTo(404);
         assertThat(g.constant("GetUserOperation", "CONTENT_TYPE_404")).isEqualTo("application/problem+json");
         assertThat(g.constant("GetUserOperation", "LOCATION")).isEqualTo("/paths/~1v1~1users~1{username}/get");
-        assertThat(g.constant("GetUserOperation", "CONTRACT_VERSION")).isEqualTo("1.0.0");
+        assertThat(g.constant("GetUserOperation", "CONTRACT_VERSION")).isEqualTo(GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")));
         assertThat((String) g.constant("GetUserOperation", "OPERATION_SHA256")).hasSize(64);
         assertThat(g.call("GetUserOperation", "path", new Class<?>[]{String.class}, "alice"))
                 .isEqualTo("/v1/users/alice");
@@ -69,10 +69,11 @@ class OperationClassesTest {
     void theEndpointIndexListsEveryGeneratedPath() throws Exception {
         Path index = directory.resolve("index/contract-endpoints.properties");
         GeneratedSources.generate(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"),
-                "1.0.0", directory, GeneratedSources.settings("user-account"), List.of(), index);
+                GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), directory, GeneratedSources.settings("user-account"), List.of(), index);
 
         assertThat(Files.readAllLines(index)).containsExactly(
-                "# The path of every class the API-Only TranscriberJ generated from contract user-account 1.0.0,",
+                "# The path of every class the API-Only TranscriberJ generated from contract user-account "
+                        + GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")) + ",",
                 "# keyed ClassName.PATH, for tools that read test sources without a classpath.",
                 "GetRootOperation.PATH=/v1",
                 "GetHealthOperation.PATH=/v1/actuator/health",

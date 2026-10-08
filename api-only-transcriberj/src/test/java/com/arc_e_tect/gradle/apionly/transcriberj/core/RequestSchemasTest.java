@@ -129,9 +129,9 @@ class RequestSchemasTest {
 
     private static void generate(String name, Path document, Settings settings) {
         Recording recording = new Recording();
-        GeneratedSources sources = GeneratedSources.generate(document, "1.0.0", directory.resolve(name), settings,
+        GeneratedSources sources = GeneratedSources.generate(document, GeneratedSources.version(document), directory.resolve(name), settings,
                 List.of(recording));
-        JsonNode report = Oracle.JSON.readTree(sources.report.renderValidValues(settings.contract(), "1.0.0"));
+        JsonNode report = Oracle.JSON.readTree(sources.report.renderValidValues(settings.contract(), GeneratedSources.version(document)));
         GENERATED.add(new Generated(name, report, sources.report.notes(), recording.bodies, recording.parameters));
     }
 

@@ -223,9 +223,11 @@ final class ContractCases {
         try {
             ValidRequests.Request full = requests.request(operation, ValidRequests.Kind.FULL);
             String unverifiable = invalid.unverifiable(operation, full);
-            if (full.equals(required)) {
+            if (sameShape(full, required)) {
                 notes.add("success-" + status + "-full is not derived: the full request is the required one, as "
-                        + "the operation declares no optional parameter or member");
+                        + "the operation declares no optional parameter or member" + (full.namedExample() == null ? ""
+                        : "; the example " + full.namedExample() + " that x-transcriberj-examples names for it is "
+                        + "not sent"));
             } else if (unverifiable != null) {
                 notes.add("success-" + status + "-full is not derived: " + unverifiable);
             } else {
@@ -294,7 +296,8 @@ final class ContractCases {
             others.add(other);
         }
         ValidRequests.Request request = new ValidRequests.Request(required.method(), required.pathTemplate(),
-                List.copyOf(others), required.query(), required.headers(), required.contentType(), required.body());
+                List.copyOf(others), required.query(), required.headers(), required.contentType(), required.body(),
+                required.namedExample(), required.examples());
         InvalidRequests.Expected expected = InvalidRequests.expected(names, operation, response);
         Case c = new Case("not-found", CaseKind.NOT_FOUND, null, "a valid request naming a resource that does not "
                 + "exist", null, null, null, null, withAccept(request, accept), null, 404, expected.contentTypes(),
@@ -351,7 +354,8 @@ final class ContractCases {
         ValidRequests.Request required = required(operation, status, coverage);
         if (required == null) return;
         ValidRequests.Request request = new ValidRequests.Request(required.method(), required.pathTemplate(),
-                required.pathValues(), required.query(), required.headers(), chosen, required.body());
+                required.pathValues(), required.query(), required.headers(), chosen, required.body(),
+                required.namedExample(), required.examples());
         InvalidRequests.Expected expected = InvalidRequests.expected(names, operation, response);
         Case c = new Case("unsupported-media-type", CaseKind.UNSUPPORTED_MEDIA_TYPE, null, "the valid body sent as "
                 + chosen + ", which the operation does not accept", null, null, null, null,
@@ -399,13 +403,39 @@ final class ContractCases {
         return List.copyOf(out);
     }
 
+    /**
+     * Whether two requests send the same parameters and a body of the same members and items, whatever
+     * their values: the full request is then the required one, though examples may give it other values.
+     */
+    static boolean sameShape(ValidRequests.Request a, ValidRequests.Request b) {
+        return a.pathValues().size() == b.pathValues().size()
+                && a.query().stream().map(ValidRequests.Pair::name).toList()
+                        .equals(b.query().stream().map(ValidRequests.Pair::name).toList())
+                && a.headers().stream().map(ValidRequests.Pair::name).toList()
+                        .equals(b.headers().stream().map(ValidRequests.Pair::name).toList())
+                && java.util.Objects.equals(a.contentType(), b.contentType())
+                && java.util.Objects.equals(shape(a.body()), shape(b.body()));
+    }
+
+    /** A value's members and items, each leaf the same: what is left when the values are taken out. */
+    private static Object shape(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<Object, Object> out = new java.util.TreeMap<>();
+            map.forEach((k, v) -> out.put(String.valueOf(k), shape(v)));
+            return out;
+        }
+        if (value instanceof List<?> list) return list.stream().map(ContractCases::shape).toList();
+        return value == null ? null : "";
+    }
+
     /** A request with an {@code Accept} header, after its declared headers, or unchanged when there is none. */
     static ValidRequests.Request withAccept(ValidRequests.Request request, String accept) {
         if (accept == null) return request;
         List<ValidRequests.Pair> headers = new ArrayList<>(request.headers());
         headers.add(new ValidRequests.Pair(ACCEPT, accept));
         return new ValidRequests.Request(request.method(), request.pathTemplate(), request.pathValues(),
-                request.query(), List.copyOf(headers), request.contentType(), request.body());
+                request.query(), List.copyOf(headers), request.contentType(), request.body(), request.namedExample(),
+                request.examples());
     }
 
     /** The first candidate no declared media type matches, or null. */

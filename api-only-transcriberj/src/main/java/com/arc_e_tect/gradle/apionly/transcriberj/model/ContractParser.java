@@ -37,6 +37,7 @@ public final class ContractParser {
     private static final String RESPONSES = "responses";
     private static final String PARAMETERS = "parameters";
     private static final String REQUEST_BODIES = "requestBodies";
+    private static final String EXAMPLES = "examples";
 
     private final String source;
     private final Set<String> componentNames = new HashSet<>();
@@ -143,7 +144,10 @@ public final class ContractParser {
         List<Reusable<Parameter>> parameters = new ArrayList<>();
         List<Reusable<RequestBody>> requestBodies = new ArrayList<>();
         Map<String, Object> otherComponents = new LinkedHashMap<>();
+        Map<String, Object> examples = new LinkedHashMap<>();
         if (components != null) {
+            Map<String, Object> exampleMap = optionalMap(components.get(EXAMPLES), "/components/" + EXAMPLES);
+            if (exampleMap != null) examples.putAll(exampleMap);
             Map<String, Object> schemaMap = optionalMap(components.get("schemas"), "/components/schemas");
             if (schemaMap != null) {
                 componentNames.addAll(schemaMap.keySet());
@@ -167,7 +171,7 @@ public final class ContractParser {
                     requestBodies.add(reusable(REQUEST_BODIES, name, raw, this::requestBody,
                             ContractParser::rereference)));
             components.forEach((type, entries) -> {
-                if (List.of("schemas", RESPONSES, PARAMETERS, REQUEST_BODIES).contains(type)) return;
+                if (List.of("schemas", RESPONSES, PARAMETERS, REQUEST_BODIES, EXAMPLES).contains(type)) return;
                 otherComponents.put(type, entries);
                 Map<String, Object> typed = optionalMap(entries, "/components/" + escape(type));
                 if (typed != null) {
@@ -195,6 +199,7 @@ public final class ContractParser {
                 List.copyOf(parameters),
                 List.copyOf(requestBodies),
                 Collections.unmodifiableMap(otherComponents),
+                Collections.unmodifiableMap(examples),
                 List.copyOf(paths),
                 List.of(),
                 List.of(),
@@ -237,7 +242,8 @@ public final class ContractParser {
         List<Finding> all = new ArrayList<>(http.findings());
         all.addAll(findings);
         return new ContractModel(http.openapi(), http.title(), asyncTitle, http.version(), List.copyOf(components),
-                http.responses(), http.parameters(), http.requestBodies(), http.otherComponents(), http.paths(),
+                http.responses(), http.parameters(), http.requestBodies(), http.otherComponents(), http.examples(),
+                http.paths(),
                 List.copyOf(channels), List.copyOf(operations), List.copyOf(all));
     }
 

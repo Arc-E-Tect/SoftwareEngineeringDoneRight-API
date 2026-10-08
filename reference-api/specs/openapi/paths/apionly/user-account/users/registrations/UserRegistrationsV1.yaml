@@ -16,6 +16,11 @@ post:
       application/json:
         schema:
           $ref: '../../../../../components/apionly/user-account/schemas/UserRegistrationRequestV1.yaml'
+        examples:
+          Alice:
+            $ref: '../../../../../components/apionly/user-account/examples/AliceRegistrationV1.yaml'
+        x-transcriberj-examples:
+          required: Alice
   responses:
     '202':
       description:

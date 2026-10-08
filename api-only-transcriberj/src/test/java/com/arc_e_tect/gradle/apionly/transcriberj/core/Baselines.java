@@ -49,9 +49,9 @@ public final class Baselines {
             Path dir = GeneratedSources.CONTRACTS.resolve(contract);
             Path async = dir.resolve("asyncapi.yaml");
             Path asyncOrNull = Files.exists(async) ? async : null;
-            out.put("plain/" + contract, GeneratedSources.generate(dir.resolve("openapi.yaml"), asyncOrNull, "1.0.0",
+            out.put("plain/" + contract, GeneratedSources.generate(dir.resolve("openapi.yaml"), asyncOrNull, GeneratedSources.version(dir.resolve("openapi.yaml")),
                     into.resolve("plain/" + contract), GeneratedSources.settings(contract), List.of()));
-            out.put("docs/" + contract, GeneratedSources.generate(dir.resolve("openapi.yaml"), asyncOrNull, "1.0.0",
+            out.put("docs/" + contract, GeneratedSources.generate(dir.resolve("openapi.yaml"), asyncOrNull, GeneratedSources.version(dir.resolve("openapi.yaml")),
                     into.resolve("docs/" + contract), new Settings(contract, GeneratedSources.PACKAGE, true,
                             "PLACEHOLDER", 3, "docs.Descriptions"), List.of()));
         }

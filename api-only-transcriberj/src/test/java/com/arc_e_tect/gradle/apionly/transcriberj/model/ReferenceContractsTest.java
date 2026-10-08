@@ -51,6 +51,7 @@ class ReferenceContractsTest {
 
         assertThat(ModelWriter.schemas(model)).isEqualTo(components.get("schemas"));
         assertThat(ModelWriter.otherComponents(model)).isEmpty();
+        assertThat(model.examples()).isEqualTo(components.getOrDefault("examples", Map.of()));
         assertThat(model.responses()).isEmpty();
         assertThat(model.parameters()).isEmpty();
         assertThat(model.requestBodies()).isEmpty();

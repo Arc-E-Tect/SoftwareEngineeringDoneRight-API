@@ -28,7 +28,7 @@ class AsyncClassesTest {
         generated = GeneratedSources.generate(
                 GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"),
                 GeneratedSources.CONTRACTS.resolve("user-account/asyncapi.yaml"),
-                "1.0.0", directory, GeneratedSources.settings("user-account"), List.of());
+                GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), directory, GeneratedSources.settings("user-account"), List.of());
     }
 
     @Test
@@ -59,7 +59,7 @@ class AsyncClassesTest {
         assertThat(generated.constant("AuditV1Channel", "LOCATION")).isEqualTo("/channels/auditV1");
         assertThat(generated.constant("AuditV1Channel", "FRAGMENT_PATH"))
                 .isEqualTo("asyncapi/channels/apionly/useraccount/AuditV1.yaml");
-        assertThat(generated.constant("AuditV1Channel", "CONTRACT_VERSION")).isEqualTo("1.0.0");
+        assertThat(generated.constant("AuditV1Channel", "CONTRACT_VERSION")).isEqualTo(GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")));
         assertThat(generated.source("AuditV1Channel")).contains("Audit events for the user-account domain");
     }
 
@@ -99,7 +99,7 @@ class AsyncClassesTest {
     void generateDocsDescribesAnEventsFieldsFromTheContract(@TempDir Path into) throws Throwable {
         GeneratedSources docs = GeneratedSources.generate(
                 GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"),
-                GeneratedSources.CONTRACTS.resolve("user-account/asyncapi.yaml"), "1.0.0", into,
+                GeneratedSources.CONTRACTS.resolve("user-account/asyncapi.yaml"), GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), into,
                 new Settings("user-account", GeneratedSources.PACKAGE, true, "PLACEHOLDER", 3), List.of());
 
         List<?> fields = (List<?>) docs.call("RegistrationInitiatedEventV1", "fields",
