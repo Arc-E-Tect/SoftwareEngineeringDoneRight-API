@@ -6,6 +6,14 @@
 :source-highlighter: rouge
 
 [NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
+[NOTE]
 .Where the links in this document go
 ====
 Every link ends with a marker saying where it leads, so you can tell before you follow it:
