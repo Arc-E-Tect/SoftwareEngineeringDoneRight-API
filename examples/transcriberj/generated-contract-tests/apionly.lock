@@ -4,6 +4,6 @@
 format 1
 
 target books
-version 1.0.0
+version 1.0.1
 channel file
-sha256 d220cdc1acfd395202ed542d8bec8cb656323ccfe78d831ed7021247c56b6006 openapi.yaml
+sha256 6451c5ede7d6b6433df283b19039056836115e1527f089b8d9372b7717620af6 openapi.yaml
