@@ -27,8 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 final class EmitterBuild {
 
-    static final Path CONTRACT = Path.of(System.getProperty("transcriberj.referenceApi"),
-            "user-account/openapi.yaml");
 
     final Path dir;
     private final List<Class<? extends Emitter>> emitters;
@@ -130,7 +128,7 @@ final class EmitterBuild {
 
     /** Publishes the reference contract to the file channel at a version, as the Publisher ships one. */
     void publish(String version) throws Exception {
-        String document = Files.readString(CONTRACT).replace("version: 1.0.0", "version: " + version);
+        String document = ReferenceContract.at(version);
         Path stage = Files.createTempDirectory(dir, "stage");
         Files.writeString(stage.resolve("openapi.yaml"), document);
         Files.writeString(stage.resolve("manifest.json"),

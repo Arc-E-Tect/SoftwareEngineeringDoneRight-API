@@ -1,0 +1,4 @@
+summary: Alice registers with the username and email address she wants to use.
+value:
+  username: alice
+  emailAddress: alice@wonderland.com

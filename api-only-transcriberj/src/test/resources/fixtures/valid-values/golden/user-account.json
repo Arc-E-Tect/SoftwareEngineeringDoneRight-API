@@ -6,7 +6,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/confirmationEmailSentMessage/payload",
@@ -14,7 +14,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -22,15 +22,15 @@
       "class": "ErrorDetailV1",
       "fullBody": {
         "value": {
-          "context": "aaaaa",
-          "message": "aaaaa"
+          "context": "While calculating the average of an empty list of numbers, the divider was 0 (zero).",
+          "message": "Divider was 0 (zero)."
         }
       },
       "location": "/components/schemas/ErrorDetailV1",
       "requiredBody": {
         "value": {
-          "context": "aaaaa",
-          "message": "aaaaa"
+          "context": "While calculating the average of an empty list of numbers, the divider was 0 (zero).",
+          "message": "Divider was 0 (zero)."
         }
       }
     },
@@ -38,7 +38,7 @@
       "class": "GetHealthResponse200",
       "fullBody": {
         "value": {
-          "status": "a"
+          "status": "UP"
         }
       },
       "location": "/paths/~1v1~1actuator~1health/get/responses/200/content/application~1json/schema",
@@ -51,15 +51,15 @@
       "fullBody": {
         "value": {
           "dependencies": {},
-          "versionCode": 0,
-          "versionName": "aaa"
+          "versionCode": 1,
+          "versionName": "WIREMOCK"
         }
       },
       "location": "/paths/~1v1/get/responses/200/content/application~1json/schema",
       "requiredBody": {
         "value": {
-          "versionCode": 0,
-          "versionName": "aaa"
+          "versionCode": 1,
+          "versionName": "WIREMOCK"
         }
       }
     },
@@ -67,8 +67,8 @@
       "class": "InternalServerProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 500,
           "title": "Internal Server Error",
           "type": "about:blank"
@@ -77,7 +77,7 @@
       "location": "/components/schemas/InternalServerProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 500,
           "title": "Internal Server Error",
           "type": "about:blank"
@@ -88,14 +88,14 @@
       "class": "InvalidRequestProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "errors": [
             {
-              "context": "aaaaa",
-              "message": "aaaaa"
+              "context": "While calculating the average of an empty list of numbers, the divider was 0 (zero).",
+              "message": "Divider was 0 (zero)."
             }
           ],
-          "instance": "https://example.com/",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 400,
           "title": "Invalid Request",
           "type": "https://api.apionly.arc-e-tect.com/problems/invalid-request"
@@ -104,7 +104,7 @@
       "location": "/components/schemas/InvalidRequestProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 400,
           "title": "Invalid Request",
           "type": "https://api.apionly.arc-e-tect.com/problems/invalid-request"
@@ -117,7 +117,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/newVerificationEmailSentMessage/payload",
@@ -125,7 +125,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -135,7 +135,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/personDeletedMessage/payload",
@@ -143,7 +143,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -151,8 +151,8 @@
       "class": "RegisteredRequestCannotBeProcessedProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 422,
           "title": "Registration Request Cannot Be Processed",
           "type": "https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed"
@@ -161,7 +161,7 @@
       "location": "/components/schemas/RegisteredRequestCannotBeProcessedProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 422,
           "title": "Registration Request Cannot Be Processed",
           "type": "https://api.apionly.arc-e-tect.com/problems/registration-request-cannot-be-processed"
@@ -174,7 +174,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/registrationAttemptedWithExpiredLinkMessage/payload",
@@ -182,7 +182,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -192,7 +192,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/registrationAttemptedWithExpiredRegistrationProcessMessage/payload",
@@ -200,7 +200,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -208,7 +208,7 @@
       "class": "RegistrationAttemptedWithInitiatedEmailAddressEventV1",
       "fullBody": {
         "value": {
-          "attemptedUsername": "aaaaa",
+          "attemptedUsername": "alice_1",
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z"
         }
@@ -216,7 +216,7 @@
       "location": "/channels/auditV1/messages/registrationAttemptedWithInitiatedEmailAddressMessage/payload",
       "requiredBody": {
         "value": {
-          "attemptedUsername": "aaaaa",
+          "attemptedUsername": "alice_1",
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z"
         }
@@ -244,7 +244,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/registrationAttemptedWithReservedUsernameMessage/payload",
@@ -252,7 +252,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -260,7 +260,7 @@
       "class": "RegistrationAttemptedWithTakenEmailAddressEventV1",
       "fullBody": {
         "value": {
-          "attemptedUsername": "aaaaa",
+          "attemptedUsername": "alice_1",
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z"
         }
@@ -268,7 +268,7 @@
       "location": "/channels/auditV1/messages/registrationAttemptedWithTakenEmailAddressMessage/payload",
       "requiredBody": {
         "value": {
-          "attemptedUsername": "aaaaa",
+          "attemptedUsername": "alice_1",
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z"
         }
@@ -280,7 +280,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/registrationAttemptedWithTakenUsernameMessage/payload",
@@ -288,7 +288,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -298,7 +298,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/registrationInitiatedMessage/payload",
@@ -306,7 +306,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -314,8 +314,8 @@
       "class": "RegistrationNotFoundProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 404,
           "title": "Registration Not Found",
           "type": "https://api.apionly.arc-e-tect.com/problems/registration-not-found"
@@ -324,7 +324,7 @@
       "location": "/components/schemas/RegistrationNotFoundProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 404,
           "title": "Registration Not Found",
           "type": "https://api.apionly.arc-e-tect.com/problems/registration-not-found"
@@ -335,8 +335,8 @@
       "class": "RegistrationProcessExpiredProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 422,
           "title": "Registration Process Expired",
           "type": "https://api.apionly.arc-e-tect.com/problems/registration-process-expired"
@@ -345,7 +345,7 @@
       "location": "/components/schemas/RegistrationProcessExpiredProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 422,
           "title": "Registration Process Expired",
           "type": "https://api.apionly.arc-e-tect.com/problems/registration-process-expired"
@@ -358,7 +358,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/userAccountCreatedMessage/payload",
@@ -366,7 +366,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -374,15 +374,15 @@
       "class": "UserAccountV1",
       "fullBody": {
         "value": {
-          "emailAddress": "user@example.com",
-          "username": "aaaaa"
+          "emailAddress": "alice@wonderland.com",
+          "username": "alice_1"
         }
       },
       "location": "/components/schemas/UserAccountV1",
       "requiredBody": {
         "value": {
-          "emailAddress": "user@example.com",
-          "username": "aaaaa"
+          "emailAddress": "alice@wonderland.com",
+          "username": "alice_1"
         }
       }
     },
@@ -390,8 +390,8 @@
       "class": "UserNotFoundProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 404,
           "title": "User Not Found",
           "type": "https://api.apionly.arc-e-tect.com/problems/user-not-found"
@@ -400,7 +400,7 @@
       "location": "/components/schemas/UserNotFoundProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 404,
           "title": "User Not Found",
           "type": "https://api.apionly.arc-e-tect.com/problems/user-not-found"
@@ -411,15 +411,15 @@
       "class": "UserRegistrationRequestV1",
       "fullBody": {
         "value": {
-          "emailAddress": "user@example.com",
-          "username": "aaaaa"
+          "emailAddress": "alice@wonderland.com",
+          "username": "alice_1"
         }
       },
       "location": "/components/schemas/UserRegistrationRequestV1",
       "requiredBody": {
         "value": {
-          "emailAddress": "user@example.com",
-          "username": "aaaaa"
+          "emailAddress": "alice@wonderland.com",
+          "username": "alice_1"
         }
       }
     },
@@ -427,13 +427,13 @@
       "class": "UserRegistrationResendEmailRequestV1",
       "fullBody": {
         "value": {
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/components/schemas/UserRegistrationResendEmailRequestV1",
       "requiredBody": {
         "value": {
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -441,13 +441,13 @@
       "class": "UserRegistrationResponseV1",
       "fullBody": {
         "value": {
-          "message": "aaaaaaaaaa"
+          "message": "A verification email has been sent to alice@wonderland.com"
         }
       },
       "location": "/components/schemas/UserRegistrationResponseV1",
       "requiredBody": {
         "value": {
-          "message": "aaaaaaaaaa"
+          "message": "A verification email has been sent to alice@wonderland.com"
         }
       }
     },
@@ -455,15 +455,15 @@
       "class": "UserV1",
       "fullBody": {
         "value": {
-          "emailAddress": "user@example.com",
-          "username": "aaaaa"
+          "emailAddress": "alice@wonderland.com",
+          "username": "alice_1"
         }
       },
       "location": "/components/schemas/UserV1",
       "requiredBody": {
         "value": {
-          "emailAddress": "user@example.com",
-          "username": "aaaaa"
+          "emailAddress": "alice@wonderland.com",
+          "username": "alice_1"
         }
       }
     },
@@ -471,8 +471,8 @@
       "class": "UsernameAlreadyRegisteredProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 409,
           "title": "Username Already Registered",
           "type": "https://api.apionly.arc-e-tect.com/problems/username-already-registered"
@@ -481,7 +481,7 @@
       "location": "/components/schemas/UsernameAlreadyRegisteredProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 409,
           "title": "Username Already Registered",
           "type": "https://api.apionly.arc-e-tect.com/problems/username-already-registered"
@@ -494,7 +494,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/verificationEmailResendRequestedMessage/payload",
@@ -502,7 +502,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -512,7 +512,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       },
       "location": "/channels/auditV1/messages/verificationEmailSentMessage/payload",
@@ -520,7 +520,7 @@
         "value": {
           "emailAddress": "user@example.com",
           "occurredAt": "2000-01-01T00:00:00Z",
-          "username": "aaaaa"
+          "username": "alice_1"
         }
       }
     },
@@ -528,8 +528,8 @@
       "class": "VerificationLinkExpiredProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 422,
           "title": "Verification Link Expired",
           "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-expired"
@@ -538,7 +538,7 @@
       "location": "/components/schemas/VerificationLinkExpiredProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 422,
           "title": "Verification Link Expired",
           "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-expired"
@@ -549,8 +549,8 @@
       "class": "VerificationLinkSupersededProblemV1",
       "fullBody": {
         "value": {
-          "detail": "a",
-          "instance": "https://example.com/",
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
           "status": 410,
           "title": "Verification Link Superseded",
           "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-superseded"
@@ -559,7 +559,7 @@
       "location": "/components/schemas/VerificationLinkSupersededProblemV1",
       "requiredBody": {
         "value": {
-          "detail": "a",
+          "detail": "An unexpected error occurred while processing the request.",
           "status": 410,
           "title": "Verification Link Superseded",
           "type": "https://api.apionly.arc-e-tect.com/problems/verification-link-superseded"
@@ -578,7 +578,7 @@
           "headers": [],
           "method": "GET",
           "pathParameters": [
-            "a"
+            "abc123token"
           ],
           "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
           "query": []
@@ -594,7 +594,7 @@
           "headers": [],
           "method": "GET",
           "pathParameters": [
-            "a"
+            "abc123token"
           ],
           "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
           "query": []
@@ -666,7 +666,7 @@
           "headers": [],
           "method": "GET",
           "pathParameters": [
-            "aaaaa"
+            "alice_1"
           ],
           "pathTemplate": "/v1/users/{username}",
           "query": []
@@ -682,7 +682,7 @@
           "headers": [],
           "method": "GET",
           "pathParameters": [
-            "aaaaa"
+            "alice_1"
           ],
           "pathTemplate": "/v1/users/{username}",
           "query": []
@@ -694,8 +694,8 @@
       "fullRequest": {
         "value": {
           "body": {
-            "emailAddress": "user@example.com",
-            "username": "aaaaa"
+            "emailAddress": "alice@wonderland.com",
+            "username": "alice_1"
           },
           "contentType": "application/json",
           "headers": [],
@@ -711,8 +711,8 @@
       "requiredRequest": {
         "value": {
           "body": {
-            "emailAddress": "user@example.com",
-            "username": "aaaaa"
+            "emailAddress": "alice@wonderland.com",
+            "username": "alice"
           },
           "contentType": "application/json",
           "headers": [],
@@ -728,7 +728,7 @@
       "fullRequest": {
         "value": {
           "body": {
-            "username": "aaaaa"
+            "username": "alice_1"
           },
           "contentType": "application/json",
           "headers": [],
@@ -744,7 +744,7 @@
       "requiredRequest": {
         "value": {
           "body": {
-            "username": "aaaaa"
+            "username": "alice_1"
           },
           "contentType": "application/json",
           "headers": [],
@@ -756,7 +756,7 @@
       }
     }
   ],
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "unsupportedParameters": [],
-  "version": "1.0.0"
+  "version": "1.0.1"
 }

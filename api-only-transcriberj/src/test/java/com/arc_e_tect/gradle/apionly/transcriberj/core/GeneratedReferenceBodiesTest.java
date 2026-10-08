@@ -24,7 +24,7 @@ class GeneratedReferenceBodiesTest {
     @BeforeAll
     static void generate() {
         generated = GeneratedSources.generate(
-                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), "1.0.0", directory,
+                GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml"), GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")), directory,
                 GeneratedSources.settings("user-account"), List.of());
     }
 
@@ -56,7 +56,7 @@ class GeneratedReferenceBodiesTest {
     void constantsCarryProvenanceAndConstraints() {
         assertThat(generated.constant("UsernameV1", "FRAGMENT_PATH"))
                 .isEqualTo("openapi/components/common/schemas/UsernameV1.yaml");
-        assertThat(generated.constant("UsernameV1", "CONTRACT_VERSION")).isEqualTo("1.0.0");
+        assertThat(generated.constant("UsernameV1", "CONTRACT_VERSION")).isEqualTo(GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")));
         assertThat(generated.constant("UsernameV1", "MIN_LENGTH")).isEqualTo(5);
         assertThat(generated.constant("UsernameV1", "MAX_LENGTH")).isEqualTo(12);
         assertThat(generated.constant("UsernameV1", "PATTERN")).isEqualTo("^[a-z][a-z0-9_-]*$");
@@ -69,7 +69,7 @@ class GeneratedReferenceBodiesTest {
         assertThat(generated.constant("GetRootResponse200", "CONTENT_TYPE")).isEqualTo("application/json");
         assertThat(generated.constant("GetRootResponse200", "OPERATION_ID")).isEqualTo("GetRoot");
         assertThat(generated.constant("ContractManifest", "CONTRACT")).isEqualTo("user-account");
-        assertThat(generated.constant("ContractManifest", "CONTRACT_VERSION")).isEqualTo("1.0.0");
+        assertThat(generated.constant("ContractManifest", "CONTRACT_VERSION")).isEqualTo(GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")));
         assertThat((List<?>) generated.constant("ContractManifest", "ENTRIES")).hasSize(25);
     }
 

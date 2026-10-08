@@ -413,13 +413,19 @@
             ],
             "method": "GET",
             "pathParameters": [
-              "a"
+              "abc123token"
             ],
             "pathTemplate": "/v1/users/registrations/completion/{verificationLink}",
             "query": []
           },
           "requiresState": true,
           "responseBodyClass": "UserAccountV1",
+          "source": {
+            "examples": [
+              "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get/parameters/0/schema"
+            ],
+            "namedExample": null
+          },
           "variant": "required"
         }
       ],
@@ -460,6 +466,10 @@
           },
           "requiresState": true,
           "responseBodyClass": "GetHealthResponse200",
+          "source": {
+            "examples": [],
+            "namedExample": null
+          },
           "variant": "required"
         }
       ],
@@ -500,6 +510,10 @@
           },
           "requiresState": true,
           "responseBodyClass": "GetRootResponse200",
+          "source": {
+            "examples": [],
+            "namedExample": null
+          },
           "variant": "required"
         }
       ],
@@ -535,13 +549,19 @@
             ],
             "method": "GET",
             "pathParameters": [
-              "aaaaa"
+              "alice_1"
             ],
             "pathTemplate": "/v1/users/{username}",
             "query": []
           },
           "requiresState": true,
           "responseBodyClass": "UserV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": "required"
         },
         {
@@ -568,13 +588,19 @@
             ],
             "method": "GET",
             "pathParameters": [
-              "aaaab"
+              "user-name"
             ],
             "pathTemplate": "/v1/users/{username}",
             "query": []
           },
           "requiresState": true,
           "responseBodyClass": "UserNotFoundProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         }
       ],
@@ -601,8 +627,8 @@
           "pointer": null,
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [
@@ -618,13 +644,17 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserRegistrationResponseV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": "required"
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -660,13 +690,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -688,7 +722,7 @@
           "pointer": "/emailAddress",
           "request": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [
@@ -704,13 +738,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -732,7 +770,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "emailAddress": "user@example.com"
+              "emailAddress": "alice@wonderland.com"
             },
             "contentType": "application/json",
             "headers": [
@@ -748,13 +786,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -790,13 +832,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -819,7 +865,7 @@
           "request": {
             "body": {
               "emailAddress": {},
-              "username": "aaaaa"
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [
@@ -835,13 +881,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -863,7 +913,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
+              "emailAddress": "alice@wonderland.com",
               "username": {}
             },
             "contentType": "application/json",
@@ -880,13 +930,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -909,7 +963,7 @@
           "request": {
             "body": {
               "emailAddress": null,
-              "username": "aaaaa"
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [
@@ -925,13 +979,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -953,7 +1011,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
+              "emailAddress": "alice@wonderland.com",
               "username": null
             },
             "contentType": "application/json",
@@ -970,13 +1028,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -998,7 +1060,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
+              "emailAddress": "alice@wonderland.com",
               "username": "aaaa"
             },
             "contentType": "application/json",
@@ -1015,13 +1077,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1044,7 +1110,7 @@
           "request": {
             "body": {
               "emailAddress": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example.com",
-              "username": "aaaaa"
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [
@@ -1060,13 +1126,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1088,7 +1158,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
+              "emailAddress": "alice@wonderland.com",
               "username": "aaaaaaaaaaaaa"
             },
             "contentType": "application/json",
@@ -1105,13 +1175,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1133,7 +1207,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
+              "emailAddress": "alice@wonderland.com",
               "username": "%%%%%"
             },
             "contentType": "application/json",
@@ -1150,13 +1224,17 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "emailAddress": "user@example.com",
-              "username": "aaaaa"
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1178,9 +1256,9 @@
           "pointer": "/unexpectedMember",
           "request": {
             "body": {
-              "emailAddress": "user@example.com",
+              "emailAddress": "alice@wonderland.com",
               "unexpectedMember": "unexpected",
-              "username": "aaaaa"
+              "username": "alice"
             },
             "contentType": "application/json",
             "headers": [
@@ -1196,6 +1274,10 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
           "variant": null
         }
       ],
@@ -1222,7 +1304,7 @@
           "pointer": null,
           "request": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [
@@ -1238,12 +1320,18 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserRegistrationResponseV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": "required"
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1279,12 +1367,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1320,12 +1414,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1361,12 +1461,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1404,12 +1510,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1447,12 +1559,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1490,12 +1608,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1533,12 +1657,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1560,7 +1690,7 @@
           "pointer": "/username",
           "request": {
             "body": {
-              "username": "%%%%%"
+              "username": "%%%%%%%"
             },
             "contentType": "application/json",
             "headers": [
@@ -1576,12 +1706,18 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         },
         {
           "baseline": {
             "body": {
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [],
@@ -1604,7 +1740,7 @@
           "request": {
             "body": {
               "unexpectedMember": "unexpected",
-              "username": "aaaaa"
+              "username": "alice_1"
             },
             "contentType": "application/json",
             "headers": [
@@ -1620,6 +1756,12 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
           "variant": null
         }
       ],

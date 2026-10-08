@@ -165,6 +165,11 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserRegistrationRequestV1'
+            examples:
+              Alice:
+                $ref: '#/components/examples/AliceRegistrationV1'
+            x-transcriberj-examples:
+              required: Alice
       responses:
         '202':
           description: Registration initiated. A verification email has been dispatched to
@@ -762,3 +767,10 @@ components:
               examples:
                 - The registration process has expired. Start a new registration
                   process.
+  examples:
+    AliceRegistrationV1:
+      x-fragment-path: openapi/components/apionly/user-account/examples/AliceRegistrationV1.yaml
+      summary: Alice registers with the username and email address she wants to use.
+      value:
+        username: alice
+        emailAddress: alice@wonderland.com

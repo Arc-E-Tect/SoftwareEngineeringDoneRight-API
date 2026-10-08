@@ -1,7 +1,7 @@
 asyncapi: 3.1.0
 info:
   title: API-Only Async API
-  version: 1.0.0
+  version: 1.0.1
   description: Asynchronous events published by the API-Only platform over Apache Kafka.
 servers:
   kafka:
