@@ -1,3 +1,22 @@
+# [0.14.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.13.0...api-only-publisher-v0.14.0) (2026-10-08)
+
+
+### ✅ Tests
+
+* **api-only-publisher:** hold the end-to-end workflow to what the reference pipelines do, not to their pinned versions ([#73](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/73)) ([b677bf7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b677bf757da36b9b2ca6d2753940b93f72c3c983)), closes [#73](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/73)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** take valid values from the contract's examples ([#79](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/79)) ([b947d6d](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b947d6d2de49af356de87a9851413d15b919c40a)), closes [#79](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/79)
+
+
+### 🔧 Misc
+
+* dependency updates for API projects ([#74](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/74)) ([28f73d1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/28f73d164a76ffead67d024bb57ced19e95b2892)), closes [#74](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/74)
+* **api-only-publisher:** update README version to 0.13.0 [skip ci] ([b97eebe](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b97eebe11e94df36d1791a06c38ed45e80fa5ff2))
+* **api-only-publisher:** update README version to 0.13.1 [skip ci] ([6177623](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/61776238c84dc6a127bbcdec8136ca4aedb03060))
+
 # [0.13.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.12.1...api-only-publisher-v0.13.0) (2026-10-04)
 
 
