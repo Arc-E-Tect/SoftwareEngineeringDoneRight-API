@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-transcriberj-version: 0.15.0
+:api-only-transcriberj-version: 0.16.0
 
 [NOTE]
 .About this documentation
