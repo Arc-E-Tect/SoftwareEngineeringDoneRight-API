@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-publisher-version: 0.13.1
+:api-only-publisher-version: 0.14.0
 
 [NOTE]
 .About this documentation
