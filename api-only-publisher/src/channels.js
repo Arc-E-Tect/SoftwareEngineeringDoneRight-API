@@ -15,6 +15,7 @@ const { execFileSync } = require("child_process");
 const { isPrerelease, npmDistTag } = require("./version-policy");
 const { ChannelError } = require("./channel-error");
 const { publishNuget } = require("./nuget");
+const { publishGitlabPackage } = require("./gitlab");
 const { refuseRemote } = require("./remote");
 
 /** What every package and release says it is, unless `description` says otherwise. */
@@ -393,6 +394,7 @@ function publishMavenRemote(archive, manifest, options, log) {
 
 const CHANNELS = {
     file: publishFile, maven: publishMaven, npm: publishNpm, "github-release": publishGithubRelease, nuget: publishNuget,
+    "gitlab-package": publishGitlabPackage,
 };
 
 function publish(archive, manifest, channel, options, log = () => {}) {

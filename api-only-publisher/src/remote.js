@@ -36,6 +36,7 @@ function isRemote(channel, settings = {}) {
         case "npm":
             return settings.publish !== false;
         case "github-release":
+        case "gitlab-package":
             return true;
         default:
             return false;
