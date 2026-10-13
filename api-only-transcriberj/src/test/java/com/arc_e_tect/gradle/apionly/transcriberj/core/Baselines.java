@@ -176,8 +176,15 @@ public final class Baselines {
             ValidValueFixtures.Fixture f = ValidValueFixtures.reference("user-account", into.resolve("user-account"));
             Files.writeString(InvalidRequestFixtures.GOLDEN.resolve("user-account.json"), InvalidRequestFixtures.golden(f),
                     StandardCharsets.UTF_8);
+        } else if (args.length == 1 && args[0].equals("before")) {
+            for (ValidValueFixtures.Fixture f : InvalidRequestFixtures.allWithoutExamples(into)) {
+                tools.jackson.databind.node.ObjectNode record = Oracle.JSON.createObjectNode();
+                record.set("invalidRequests", InvalidRequestFixtures.invalidRequests(f.report()));
+                Files.writeString(InvalidRequestsUnchangedTest.before(f), pretty(record, "") + "\n",
+                        StandardCharsets.UTF_8);
+            }
         } else {
-            throw new IllegalArgumentException("say what to record: sources, golden or invalid-requests");
+            throw new IllegalArgumentException("say what to record: sources, golden, invalid-requests or before");
         }
     }
 }

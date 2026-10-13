@@ -19,6 +19,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`optional` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -27,7 +28,6 @@
           "keyword": "type",
           "name": "optional",
           "pointer": null,
-          "representative": true,
           "request": {
             "body": {
               "name": "a"
@@ -58,6 +58,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -66,7 +67,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": null,
             "contentType": null,
@@ -90,6 +90,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`name` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -98,9 +99,84 @@
           "keyword": "required",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {},
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": 0
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.barks` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-barks-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/pet/barks",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": false
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.meows` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-meows-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/pet/meows",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {}
+            },
             "contentType": "application/json",
             "headers": [],
             "method": "POST",
@@ -122,6 +198,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -130,7 +207,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
@@ -155,6 +231,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`free` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -163,7 +240,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/free",
-          "representative": false,
           "request": {
             "body": {
               "free": [],
@@ -191,6 +267,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`list` sent as an object, where the contract requires an array",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -199,7 +276,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/list",
-          "representative": false,
           "request": {
             "body": {
               "list": {},
@@ -229,6 +305,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`list[0]` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -237,7 +314,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/list/0",
-          "representative": false,
           "request": {
             "body": {
               "list": [
@@ -266,6 +342,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`name` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -274,10 +351,127 @@
           "keyword": "type",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {
               "name": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": false
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet` sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pet",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": []
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": 0
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.barks` sent as the string \"not-a-number\", where the contract requires an integer",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-barks-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pet/barks",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": "not-a-number"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": false
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.meows` sent as the string \"not-a-boolean\", where the contract requires a boolean",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-meows-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pet/meows",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": "not-a-boolean"
+              }
             },
             "contentType": "application/json",
             "headers": [],
@@ -301,6 +495,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -309,7 +504,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -339,6 +533,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -347,7 +542,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -381,6 +575,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.child` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -389,7 +584,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child/child",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -427,6 +621,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.child.label` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -435,7 +630,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child/child/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -473,6 +667,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.label` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -481,7 +676,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -515,6 +709,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.label` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -523,7 +718,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -553,6 +747,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`free` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -561,7 +756,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/free",
-          "representative": false,
           "request": {
             "body": {
               "free": null,
@@ -589,6 +783,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`list` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -597,7 +792,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/list",
-          "representative": false,
           "request": {
             "body": {
               "list": null,
@@ -627,6 +821,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`list[0]` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -635,7 +830,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/list/0",
-          "representative": false,
           "request": {
             "body": {
               "list": [
@@ -664,6 +858,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`name` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -672,10 +867,127 @@
           "keyword": "type",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {
               "name": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": false
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pet",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": 0
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.barks` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-barks-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pet/barks",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": null
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": false
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.meows` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-meows-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/pet/meows",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "meows": null
+              }
             },
             "contentType": "application/json",
             "headers": [],
@@ -699,6 +1011,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -707,7 +1020,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -737,6 +1049,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -745,7 +1058,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -779,6 +1091,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.child` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -787,7 +1100,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child/child",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -825,6 +1137,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.child.label` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -833,7 +1146,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child/child/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -871,6 +1183,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.label` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -879,7 +1192,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/child/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -913,6 +1225,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.label` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -921,7 +1234,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tree/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -950,6 +1262,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`name` longer than its maxLength of 8",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -958,7 +1271,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {
               "name": "aaaaaaaaa"
@@ -991,6 +1303,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.child.label` longer than its maxLength of 4",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -999,7 +1312,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/tree/child/child/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -1037,6 +1349,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.label` longer than its maxLength of 4",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1045,7 +1358,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/tree/child/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -1079,6 +1391,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.label` longer than its maxLength of 4",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1087,12 +1400,51 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/tree/label",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
               "tree": {
                 "label": "aaaaa"
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": 0
+              }
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/structure",
+            "query": []
+          },
+          "branch": null,
+          "description": "`pet.barks` below its minimum of 0",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-pet-barks-minimum",
+          "in": "body",
+          "keyword": "minimum",
+          "name": null,
+          "pointer": "/pet/barks",
+          "request": {
+            "body": {
+              "name": "a",
+              "pet": {
+                "barks": -1
               }
             },
             "contentType": "application/json",
@@ -1121,6 +1473,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child.child` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1129,7 +1482,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/tree/child/child/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -1165,6 +1517,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree.child` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1173,7 +1526,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/tree/child/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -1205,6 +1557,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "`tree` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1213,7 +1566,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/tree/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -1242,6 +1594,7 @@
             "pathTemplate": "/structure",
             "query": []
           },
+          "branch": null,
           "description": "the body with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1250,7 +1603,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -1266,7 +1618,7 @@
           "responseBodyClass": null
         }
       ],
-      "class": "PostStructureInvalidRequests",
+      "class": "PostStructureContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1structure/post",
       "method": "POST",

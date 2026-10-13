@@ -2,7 +2,7 @@
   "invalidRequests": [
     {
       "cases": [],
-      "class": "PostCorpusInvalidRequests",
+      "class": "PostCorpusContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1corpus/post",
       "method": "POST",
@@ -10,7 +10,7 @@
     },
     {
       "cases": [],
-      "class": "PostOverlapInvalidRequests",
+      "class": "PostOverlapContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1overlap/post",
       "method": "POST",

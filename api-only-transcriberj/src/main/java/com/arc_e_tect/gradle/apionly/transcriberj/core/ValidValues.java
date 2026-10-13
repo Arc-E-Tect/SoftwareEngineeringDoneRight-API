@@ -107,7 +107,17 @@ final class ValidValues {
      * @throws Shapes.Unrepresentable when the value reaches a construct no rule represents
      */
     Object value(Schema schema, String location, Variant variant) {
-        Context context = new Context(variant, List.of());
+        return value(schema, location, variant, Map.of());
+    }
+
+    /**
+     * A valid value of a schema, taking the given branch of each {@code oneOf} named by the
+     * location of the schema it is written in, and the first valid branch of every other.
+     * @throws Unsatisfiable when no valid value exists or none can be found
+     * @throws Shapes.Unrepresentable when the value reaches a construct no rule represents
+     */
+    Object value(Schema schema, String location, Variant variant, Map<String, Integer> pins) {
+        Context context = new Context(variant, List.of(), pins);
         Intersection in = intersection(List.of(new At(schema, location)), Set.of(), context);
         return first(candidates(in, context), in);
     }
@@ -120,7 +130,12 @@ final class ValidValues {
      * @throws Shapes.Unrepresentable when the value reaches a construct no rule represents
      */
     Object value(List<Faults.At> roots, Variant variant) {
-        Context context = new Context(variant, List.of());
+        return value(roots, variant, Map.of());
+    }
+
+    /** A valid value of several schemas at once, with the {@code oneOf} branches the pins name. */
+    Object value(List<Faults.At> roots, Variant variant, Map<String, Integer> pins) {
+        Context context = new Context(variant, List.of(), pins);
         Intersection in = intersection(at(roots), Set.of(), context);
         return first(candidates(in, context), in);
     }
@@ -133,7 +148,7 @@ final class ValidValues {
      * @throws Shapes.Unrepresentable when a value reaches a construct no rule represents
      */
     List<Object> values(List<Faults.At> roots, int count) {
-        Context context = new Context(Variant.REQUIRED, List.of());
+        Context context = new Context(Variant.REQUIRED, List.of(), Map.of());
         Intersection in = intersection(at(roots), Set.of(), context);
         Iterator<Object> candidates = Lazy.limit(candidates(in, context), SEARCH);
         List<Object> out = new ArrayList<>();
@@ -193,7 +208,7 @@ final class ValidValues {
     }
 
     private Intersection root(Schema schema, String location) {
-        return intersection(List.of(new At(schema, location)), Set.of(), new Context(Variant.FULL, List.of()));
+        return intersection(List.of(new At(schema, location)), Set.of(), new Context(Variant.FULL, List.of(), Map.of()));
     }
 
     /** What {@link #walk} reports for each value it reaches: where in the value, the value, and its schemas. */
@@ -217,7 +232,7 @@ final class ValidValues {
             return;
         }
         visitor.visit(pointer, value, in);
-        Context context = new Context(Variant.FULL, List.of());
+        Context context = new Context(Variant.FULL, List.of(), Map.of());
         if (value instanceof Map<?, ?> map) {
             for (Map.Entry<?, ?> e : map.entrySet()) {
                 String name = String.valueOf(e.getKey());
@@ -231,6 +246,56 @@ final class ValidValues {
             if (items.isEmpty()) return;
             Intersection each = intersection(items, Set.of(), context);
             for (int i = 0; i < list.size(); i++) walk(list.get(i), each, pointer + "/" + i, visitor);
+        }
+    }
+
+    /**
+     * A {@code oneOf} a value passes through.
+     *
+     * @param location the location of the schema the {@code oneOf} is written in
+     * @param pointer  the JSON pointer of the instance it applies to, within the value
+     * @param branches each branch's component name, or null for an inline branch
+     * @param chosen   the index of the branch the value matches
+     */
+    record OneOf(String location, String pointer, List<String> branches, int chosen) {
+    }
+
+    /** Every {@code oneOf} a valid value passes through, outermost first, each with the branch it takes. */
+    List<OneOf> oneOfs(Object value, Schema schema, String location) {
+        List<OneOf> out = new ArrayList<>();
+        oneOfs(value, root(schema, location), "", out);
+        return out;
+    }
+
+    private void oneOfs(Object value, Intersection in, String pointer, List<OneOf> out) {
+        List<Choice> choices = in.choices();
+        if (!choices.isEmpty()) {
+            Choice choice = choices.get(0);
+            int index = 0;
+            while (!valid(value, choice.branches().get(index).schema(), choice.branches().get(index).location(), 0)) {
+                index++;
+            }
+            if (choice.exclusive()) {
+                out.add(new OneOf(choice.owner().location(), pointer,
+                        choice.branches().stream().map(b -> b.schema().ref()).toList(), index));
+            }
+            oneOfs(value, in.with(choice.branches().get(index), Set.of(choice.owner().location())), pointer, out);
+            return;
+        }
+        Context context = new Context(Variant.FULL, List.of(), Map.of());
+        if (value instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                String name = String.valueOf(e.getKey());
+                oneOfs(e.getValue(), member(in, name, context), pointer + "/" + Shapes.escape(name), out);
+            }
+        } else if (value instanceof List<?> list) {
+            List<At> items = new ArrayList<>();
+            for (At part : in.with(s -> s.items() != null)) {
+                items.add(new At(part.schema().items(), part.location() + "/items"));
+            }
+            if (items.isEmpty()) return;
+            Intersection each = intersection(items, Set.of(), context);
+            for (int i = 0; i < list.size(); i++) oneOfs(list.get(i), each, pointer + "/" + i, out);
         }
     }
 
@@ -268,12 +333,12 @@ final class ValidValues {
      * Where generation is: the variant, and for each enclosing value the components it
      * referred to, so that recursion is counted.
      */
-    private record Context(Variant variant, List<Set<String>> ancestors) {
+    private record Context(Variant variant, List<Set<String>> ancestors, Map<String, Integer> pins) {
 
         Context child(Set<String> refs) {
             List<Set<String>> out = new ArrayList<>(ancestors);
             out.add(refs);
-            return new Context(variant, List.copyOf(out));
+            return new Context(variant, List.copyOf(out), pins);
         }
 
         int count(String ref) {
@@ -610,13 +675,16 @@ final class ValidValues {
     /**
      * The first branch, in declared order, whose value is valid; for {@code oneOf}, valid
      * against exactly that one branch. With a discriminator, the discriminating property
-     * takes the value the mapping gives the branch.
+     * takes the value the mapping gives the branch. A {@code oneOf} the context pins takes the
+     * pinned branch only.
      */
     private Iterator<Object> chosen(Intersection in, Choice choice, Context context, boolean examplesOffered) {
         String keyword = choice.exclusive() ? "oneOf" : "anyOf";
         List<String> reasons = new ArrayList<>();
         boolean allTooDeep = true;
+        Integer pinned = choice.exclusive() ? context.pins().get(choice.owner().location()) : null;
         for (int i = 0; i < choice.branches().size(); i++) {
+            if (pinned != null && i != pinned) continue;
             At branch = choice.branches().get(i);
             try {
                 Intersection with = in.with(branch, Set.of(choice.owner().location()));

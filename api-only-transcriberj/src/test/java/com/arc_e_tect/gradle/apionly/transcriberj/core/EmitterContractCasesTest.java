@@ -155,7 +155,7 @@ class EmitterContractCasesTest {
                 new ArrayList<>(List.of(new ContractRequest.Pair("q", "1"))), new ArrayList<>(), null, null);
         ContractCase c = new ContractCase("query-q-type", CaseKind.INVALID_REQUEST, false, null, "d", "query", "q",
                 null, "type", request, 400, new ArrayList<>(List.of("application/json")), null, "getA",
-                new ArrayList<>(List.of("q")), new ArrayList<>(List.of("X-A")), 0);
+                new ArrayList<>(List.of("q")), new ArrayList<>(List.of("X-A")), 0, null);
 
         assertThatThrownBy(() -> request.pathParameters().add("y")).isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> request.query().clear()).isInstanceOf(UnsupportedOperationException.class);

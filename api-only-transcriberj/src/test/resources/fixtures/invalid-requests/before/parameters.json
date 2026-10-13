@@ -2,7 +2,7 @@
   "invalidRequests": [
     {
       "cases": [],
-      "class": "GetItemInvalidRequests",
+      "class": "GetItemContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1items~1{id}~1{flag}~1{code}/get",
       "method": "GET",
@@ -10,7 +10,7 @@
     },
     {
       "cases": [],
-      "class": "PostNoteInvalidRequests",
+      "class": "PostNoteContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1notes/post",
       "method": "POST",
@@ -18,7 +18,7 @@
     },
     {
       "cases": [],
-      "class": "PutDocumentInvalidRequests",
+      "class": "PutDocumentContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1documents/put",
       "method": "PUT",
@@ -26,7 +26,7 @@
     },
     {
       "cases": [],
-      "class": "SearchInvalidRequests",
+      "class": "SearchContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1search/post",
       "method": "POST",

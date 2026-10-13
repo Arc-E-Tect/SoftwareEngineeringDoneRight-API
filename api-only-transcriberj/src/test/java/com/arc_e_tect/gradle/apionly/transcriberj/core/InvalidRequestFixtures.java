@@ -41,7 +41,8 @@ final class InvalidRequestFixtures {
             new Variant("degraded", "degraded", settings("degraded")),
             new Variant("collisions", "collisions", settings("collisions")),
             new Variant("media", "media", settings("media")),
-            new Variant("structure", "structure", settings("structure")));
+            new Variant("structure", "structure", settings("structure")),
+            new Variant("choices", "choices", settings("choices")));
 
     private InvalidRequestFixtures() {
     }

@@ -2,7 +2,7 @@
   "invalidRequests": [
     {
       "cases": [],
-      "class": "PostUnsatisfiableInvalidRequests",
+      "class": "PostUnsatisfiableContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1unsatisfiable/post",
       "method": "POST",

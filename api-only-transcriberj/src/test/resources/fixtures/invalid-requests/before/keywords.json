@@ -41,6 +41,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -51,7 +52,6 @@
           "keyword": "type",
           "name": "count",
           "pointer": null,
-          "representative": true,
           "request": {
             "body": {
               "count": 1,
@@ -131,6 +131,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` sent as the string \"not-a-number\", where the contract requires a number",
           "expectedContentTypes": [
             "application/problem+json"
@@ -141,7 +142,6 @@
           "keyword": "type",
           "name": "ratio",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -221,6 +221,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -231,7 +232,6 @@
           "keyword": "type",
           "name": "step",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -311,6 +311,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`kind` not one of its enum values",
           "expectedContentTypes": [
             "application/problem+json"
@@ -321,7 +322,6 @@
           "keyword": "enum",
           "name": "kind",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -401,6 +401,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`fixed` not its const value",
           "expectedContentTypes": [
             "application/problem+json"
@@ -411,7 +412,6 @@
           "keyword": "const",
           "name": "fixed",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -491,6 +491,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`code` shorter than its minLength of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -501,7 +502,6 @@
           "keyword": "minLength",
           "name": "code",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -581,6 +581,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`code` longer than its maxLength of 6",
           "expectedContentTypes": [
             "application/problem+json"
@@ -591,7 +592,6 @@
           "keyword": "maxLength",
           "name": "code",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -671,6 +671,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`code` not matching its pattern ^[a-z]+$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -681,7 +682,6 @@
           "keyword": "pattern",
           "name": "code",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -761,6 +761,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`day` not a valid date",
           "expectedContentTypes": [
             "application/problem+json"
@@ -771,7 +772,6 @@
           "keyword": "format",
           "name": "day",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -851,6 +851,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` below its minimum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -861,7 +862,6 @@
           "keyword": "minimum",
           "name": "count",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -941,6 +941,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` above its maximum of 99",
           "expectedContentTypes": [
             "application/problem+json"
@@ -951,7 +952,6 @@
           "keyword": "maximum",
           "name": "count",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1031,6 +1031,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` equal to its exclusive minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1041,7 +1042,6 @@
           "keyword": "exclusiveMinimum",
           "name": "ratio",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1121,6 +1121,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` equal to its exclusive maximum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1131,7 +1132,6 @@
           "keyword": "exclusiveMaximum",
           "name": "ratio",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1211,6 +1211,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` not a multiple of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1221,7 +1222,6 @@
           "keyword": "multipleOf",
           "name": "step",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1301,6 +1301,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "query parameter `limit` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1311,7 +1312,6 @@
           "keyword": "required",
           "name": "limit",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1390,6 +1390,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`flag` sent as the string \"not-a-boolean\", where the contract requires a boolean",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1400,7 +1401,6 @@
           "keyword": "type",
           "name": "flag",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1484,6 +1484,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`limit` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1494,7 +1495,6 @@
           "keyword": "type",
           "name": "limit",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1578,6 +1578,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`lot` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1588,7 +1589,6 @@
           "keyword": "type",
           "name": "lot",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1676,6 +1676,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`share` sent as the string \"not-a-number\", where the contract requires a number",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1686,7 +1687,6 @@
           "keyword": "type",
           "name": "share",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1774,6 +1774,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`colour` not one of its enum values",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1784,7 +1785,6 @@
           "keyword": "enum",
           "name": "colour",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1872,6 +1872,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`mode` not its const value",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1882,7 +1883,6 @@
           "keyword": "const",
           "name": "mode",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -1970,6 +1970,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`name` shorter than its minLength of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1980,7 +1981,6 @@
           "keyword": "minLength",
           "name": "name",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2068,6 +2068,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`name` longer than its maxLength of 6",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2078,7 +2079,6 @@
           "keyword": "maxLength",
           "name": "name",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2166,6 +2166,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`name` not matching its pattern ^[a-z]+$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2176,7 +2177,6 @@
           "keyword": "pattern",
           "name": "name",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2264,6 +2264,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`since` not a valid date",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2274,7 +2275,6 @@
           "keyword": "format",
           "name": "since",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2358,6 +2358,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`limit` below its minimum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2368,7 +2369,6 @@
           "keyword": "minimum",
           "name": "limit",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2448,6 +2448,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`limit` above its maximum of 100",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2458,7 +2459,6 @@
           "keyword": "maximum",
           "name": "limit",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2542,6 +2542,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`share` equal to its exclusive minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2552,7 +2553,6 @@
           "keyword": "exclusiveMinimum",
           "name": "share",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2640,6 +2640,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`share` equal to its exclusive maximum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2650,7 +2651,6 @@
           "keyword": "exclusiveMaximum",
           "name": "share",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2738,6 +2738,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`lot` not a multiple of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2748,7 +2749,6 @@
           "keyword": "multipleOf",
           "name": "lot",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2832,6 +2832,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "header parameter `X-Level` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2842,7 +2843,6 @@
           "keyword": "required",
           "name": "X-Level",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -2917,6 +2917,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Level` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -2927,7 +2928,6 @@
           "keyword": "type",
           "name": "X-Level",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3011,6 +3011,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Lot` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3021,7 +3022,6 @@
           "keyword": "type",
           "name": "X-Lot",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3109,6 +3109,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Share` sent as the string \"not-a-number\", where the contract requires a number",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3119,7 +3120,6 @@
           "keyword": "type",
           "name": "X-Share",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3207,6 +3207,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Colour` not one of its enum values",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3217,7 +3218,6 @@
           "keyword": "enum",
           "name": "X-Colour",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3305,6 +3305,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Fixed` not its const value",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3315,7 +3316,6 @@
           "keyword": "const",
           "name": "X-Fixed",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3403,6 +3403,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Token` shorter than its minLength of 4",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3413,7 +3414,6 @@
           "keyword": "minLength",
           "name": "X-Token",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3501,6 +3501,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Token` longer than its maxLength of 4",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3511,7 +3512,6 @@
           "keyword": "maxLength",
           "name": "X-Token",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3599,6 +3599,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Token` not matching its pattern ^[A-Z]+$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3609,7 +3610,6 @@
           "keyword": "pattern",
           "name": "X-Token",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3697,6 +3697,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Day` not a valid date",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3707,7 +3708,6 @@
           "keyword": "format",
           "name": "X-Day",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3791,6 +3791,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Level` below its minimum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3801,7 +3802,6 @@
           "keyword": "minimum",
           "name": "X-Level",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3881,6 +3881,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Level` above its maximum of 9",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3891,7 +3892,6 @@
           "keyword": "maximum",
           "name": "X-Level",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -3975,6 +3975,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Share` equal to its exclusive minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -3985,7 +3986,6 @@
           "keyword": "exclusiveMinimum",
           "name": "X-Share",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4073,6 +4073,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Share` equal to its exclusive maximum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4083,7 +4084,6 @@
           "keyword": "exclusiveMaximum",
           "name": "X-Share",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4171,6 +4171,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`X-Lot` not a multiple of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4181,7 +4182,6 @@
           "keyword": "multipleOf",
           "name": "X-Lot",
           "pointer": null,
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4265,6 +4265,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4275,7 +4276,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": null,
             "contentType": null,
@@ -4344,6 +4344,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4354,7 +4355,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/count",
-          "representative": false,
           "request": {
             "body": {
               "items": [
@@ -4433,6 +4433,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4443,7 +4444,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/items",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4518,6 +4518,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].quantity` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4528,7 +4529,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/items/0/quantity",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4606,6 +4606,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4616,7 +4617,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/nested",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4696,6 +4696,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.detail.line` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4706,7 +4707,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/nested/detail/line",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4787,6 +4787,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`text` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4797,7 +4798,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/text",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -4876,6 +4876,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4886,7 +4887,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
@@ -4955,6 +4955,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -4965,7 +4966,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/count",
-          "representative": false,
           "request": {
             "body": {
               "count": "not-a-number",
@@ -5046,6 +5046,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`day` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5056,7 +5057,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/day",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5138,6 +5138,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`flag` sent as the string \"not-a-boolean\", where the contract requires a boolean",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5148,7 +5149,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/flag",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5230,6 +5230,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`id` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5240,7 +5241,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/id",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5321,6 +5321,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items` sent as an object, where the contract requires an array",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5331,7 +5332,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5407,6 +5407,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0]` sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5417,7 +5418,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5496,6 +5496,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].gift` sent as the string \"not-a-boolean\", where the contract requires a boolean",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5506,7 +5507,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/gift",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5588,6 +5588,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].label` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5598,7 +5599,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/label",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5680,6 +5680,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].pack` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5690,7 +5691,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/pack",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5771,6 +5771,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].quantity` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5781,7 +5782,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/quantity",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5862,6 +5862,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].sku` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5872,7 +5873,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/sku",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -5954,6 +5954,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].until` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -5964,7 +5965,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/until",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6046,6 +6046,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].weight` sent as the string \"not-a-number\", where the contract requires a number",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6056,7 +6057,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/weight",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6138,6 +6138,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix` sent as an object, where the contract requires an array",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6148,7 +6149,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/matrix",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6234,6 +6234,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0]` sent as an object, where the contract requires an array",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6244,7 +6245,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/matrix/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6332,6 +6332,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0][0]` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6342,7 +6343,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/matrix/0/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6427,6 +6427,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested` sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6437,7 +6438,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6516,6 +6516,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.city` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6526,7 +6527,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/city",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6610,6 +6610,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.detail` sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6620,7 +6621,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/detail",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6704,6 +6704,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.detail.line` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6714,7 +6715,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/detail/line",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6800,6 +6800,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list` sent as an object, where the contract requires an array",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6810,7 +6811,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/list",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6894,6 +6894,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list[0]` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6904,7 +6905,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/list/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -6988,6 +6988,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.lot` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -6998,7 +6999,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/lot",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7080,6 +7080,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.note` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7090,7 +7091,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/note",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7171,6 +7171,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.postalCode` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7181,7 +7182,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/postalCode",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7262,6 +7262,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.rank` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7272,7 +7273,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/rank",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7354,6 +7354,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.share` sent as the string \"not-a-number\", where the contract requires a number",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7364,7 +7365,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/share",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7448,6 +7448,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.sub` sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7458,7 +7459,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/sub",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7540,6 +7540,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.when` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7550,7 +7551,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/when",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7635,6 +7635,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`props` sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7645,7 +7646,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/props",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7731,6 +7731,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`props.additionalMember` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7741,7 +7742,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/props/additionalMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7827,6 +7827,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` sent as the string \"not-a-number\", where the contract requires a number",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7837,7 +7838,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/ratio",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -7919,6 +7919,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records` sent as an object, where the contract requires an array",
           "expectedContentTypes": [
             "application/problem+json"
@@ -7929,7 +7930,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/records",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8015,6 +8015,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records[0]` sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8025,7 +8026,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/records/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8114,6 +8114,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records[0].additionalMember` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8124,7 +8125,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/records/0/additionalMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8211,6 +8211,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8221,7 +8222,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/step",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8303,6 +8303,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags` sent as an object, where the contract requires an array",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8313,7 +8314,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tags",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8397,6 +8397,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags[0]` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8407,7 +8408,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tags/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8490,6 +8490,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`text` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8500,7 +8501,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/text",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8580,6 +8580,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8590,7 +8591,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/count",
-          "representative": false,
           "request": {
             "body": {
               "count": null,
@@ -8671,6 +8671,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`day` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8681,7 +8682,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/day",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8763,6 +8763,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`flag` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8773,7 +8774,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/flag",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8855,6 +8855,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`id` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8865,7 +8866,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/id",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -8946,6 +8946,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -8956,7 +8957,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9032,6 +9032,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0]` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9042,7 +9043,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9121,6 +9121,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].gift` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9131,7 +9132,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/gift",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9213,6 +9213,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].label` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9223,7 +9224,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/label",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9305,6 +9305,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].pack` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9315,7 +9316,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/pack",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9396,6 +9396,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].quantity` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9406,7 +9407,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/quantity",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9487,6 +9487,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].sku` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9497,7 +9498,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/sku",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9579,6 +9579,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].until` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9589,7 +9590,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/until",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9671,6 +9671,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].weight` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9681,7 +9682,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/items/0/weight",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9763,6 +9763,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9773,7 +9774,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/matrix",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9859,6 +9859,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0]` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9869,7 +9870,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/matrix/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -9957,6 +9957,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0][0]` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -9967,7 +9968,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/matrix/0/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10052,6 +10052,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10062,7 +10063,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10141,6 +10141,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.city` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10151,7 +10152,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/city",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10235,6 +10235,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.detail` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10245,7 +10246,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/detail",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10329,6 +10329,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.detail.line` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10339,7 +10340,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/detail/line",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10425,6 +10425,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10435,7 +10436,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/list",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10519,6 +10519,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list[0]` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10529,7 +10530,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/list/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10613,6 +10613,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.lot` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10623,7 +10624,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/lot",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10705,6 +10705,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.note` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10715,7 +10716,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/note",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10796,6 +10796,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.postalCode` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10806,7 +10807,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/postalCode",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10887,6 +10887,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.rank` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10897,7 +10898,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/rank",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -10979,6 +10979,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.share` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -10989,7 +10990,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/share",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11073,6 +11073,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.sub` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11083,7 +11084,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/sub",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11165,6 +11165,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.when` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11175,7 +11176,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/nested/when",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11260,6 +11260,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`props` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11270,7 +11271,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/props",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11356,6 +11356,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`props.additionalMember` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11366,7 +11367,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/props/additionalMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11452,6 +11452,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11462,7 +11463,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/ratio",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11544,6 +11544,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11554,7 +11555,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/records",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11640,6 +11640,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records[0]` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11650,7 +11651,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/records/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11739,6 +11739,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records[0].additionalMember` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11749,7 +11750,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/records/0/additionalMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11836,6 +11836,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11846,7 +11847,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/step",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -11928,6 +11928,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -11938,7 +11939,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tags",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12022,6 +12022,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags[0]` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12032,7 +12033,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/tags/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12115,6 +12115,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`text` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12125,7 +12126,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/text",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12206,6 +12206,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].colour` not one of its enum values",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12216,7 +12217,6 @@
           "keyword": "enum",
           "name": null,
           "pointer": "/items/0/colour",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12298,6 +12298,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`mode` not one of its enum values",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12308,7 +12309,6 @@
           "keyword": "enum",
           "name": null,
           "pointer": "/mode",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12390,6 +12390,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.kind` not one of its enum values",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12400,7 +12401,6 @@
           "keyword": "enum",
           "name": null,
           "pointer": "/nested/kind",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12482,6 +12482,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`fixed` not its const value",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12492,7 +12493,6 @@
           "keyword": "const",
           "name": null,
           "pointer": "/fixed",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12574,6 +12574,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].unit` not its const value",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12584,7 +12585,6 @@
           "keyword": "const",
           "name": null,
           "pointer": "/items/0/unit",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12666,6 +12666,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.tag` not its const value",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12676,7 +12677,6 @@
           "keyword": "const",
           "name": null,
           "pointer": "/nested/tag",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12758,6 +12758,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].label` shorter than its minLength of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12768,7 +12769,6 @@
           "keyword": "minLength",
           "name": null,
           "pointer": "/items/0/label",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12850,6 +12850,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.city` shorter than its minLength of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12860,7 +12861,6 @@
           "keyword": "minLength",
           "name": null,
           "pointer": "/nested/city",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -12944,6 +12944,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags[0]` shorter than its minLength of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -12954,7 +12955,6 @@
           "keyword": "minLength",
           "name": null,
           "pointer": "/tags/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13037,6 +13037,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`text` shorter than its minLength of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13047,7 +13048,6 @@
           "keyword": "minLength",
           "name": null,
           "pointer": "/text",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13128,6 +13128,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].label` longer than its maxLength of 8",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13138,7 +13139,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/items/0/label",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13220,6 +13220,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.note` longer than its maxLength of 3",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13230,7 +13231,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/nested/note",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13314,6 +13314,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags[0]` longer than its maxLength of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13324,7 +13325,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/tags/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13407,6 +13407,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`text` longer than its maxLength of 10",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13417,7 +13418,6 @@
           "keyword": "maxLength",
           "name": null,
           "pointer": "/text",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13498,6 +13498,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].sku` not matching its pattern ^[A-Z]{3}-[0-9]{3}$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13508,7 +13509,6 @@
           "keyword": "pattern",
           "name": null,
           "pointer": "/items/0/sku",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13589,6 +13589,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.postalCode` not matching its pattern ^[0-9]{4}[A-Z]{2}$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13599,7 +13600,6 @@
           "keyword": "pattern",
           "name": null,
           "pointer": "/nested/postalCode",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13679,6 +13679,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`text` not matching its pattern ^[a-z]+$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13689,7 +13690,6 @@
           "keyword": "pattern",
           "name": null,
           "pointer": "/text",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13770,6 +13770,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`day` not a valid date",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13780,7 +13781,6 @@
           "keyword": "format",
           "name": null,
           "pointer": "/day",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13862,6 +13862,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`id` not a valid uuid",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13872,7 +13873,6 @@
           "keyword": "format",
           "name": null,
           "pointer": "/id",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -13954,6 +13954,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].until` not a valid date",
           "expectedContentTypes": [
             "application/problem+json"
@@ -13964,7 +13965,6 @@
           "keyword": "format",
           "name": null,
           "pointer": "/items/0/until",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14046,6 +14046,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.when` not a valid date",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14056,7 +14057,6 @@
           "keyword": "format",
           "name": null,
           "pointer": "/nested/when",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14137,6 +14137,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` below its minimum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14147,7 +14148,6 @@
           "keyword": "minimum",
           "name": null,
           "pointer": "/count",
-          "representative": false,
           "request": {
             "body": {
               "count": 0,
@@ -14227,6 +14227,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].quantity` below its minimum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14237,7 +14238,6 @@
           "keyword": "minimum",
           "name": null,
           "pointer": "/items/0/quantity",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14318,6 +14318,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.rank` below its minimum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14328,7 +14329,6 @@
           "keyword": "minimum",
           "name": null,
           "pointer": "/nested/rank",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14410,6 +14410,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` below its minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14420,7 +14421,6 @@
           "keyword": "minimum",
           "name": null,
           "pointer": "/step",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14501,6 +14501,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`count` above its maximum of 10",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14511,7 +14512,6 @@
           "keyword": "maximum",
           "name": null,
           "pointer": "/count",
-          "representative": false,
           "request": {
             "body": {
               "count": 11,
@@ -14591,6 +14591,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].quantity` above its maximum of 9",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14601,7 +14602,6 @@
           "keyword": "maximum",
           "name": null,
           "pointer": "/items/0/quantity",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14682,6 +14682,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.rank` above its maximum of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14692,7 +14693,6 @@
           "keyword": "maximum",
           "name": null,
           "pointer": "/nested/rank",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14774,6 +14774,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` above its maximum of 100",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14784,7 +14785,6 @@
           "keyword": "maximum",
           "name": null,
           "pointer": "/step",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14866,6 +14866,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].weight` equal to its exclusive minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14876,7 +14877,6 @@
           "keyword": "exclusiveMinimum",
           "name": null,
           "pointer": "/items/0/weight",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -14958,6 +14958,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.share` equal to its exclusive minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -14968,7 +14969,6 @@
           "keyword": "exclusiveMinimum",
           "name": null,
           "pointer": "/nested/share",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15050,6 +15050,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` equal to its exclusive minimum of 0",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15060,7 +15061,6 @@
           "keyword": "exclusiveMinimum",
           "name": null,
           "pointer": "/ratio",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15142,6 +15142,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].weight` equal to its exclusive maximum of 100",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15152,7 +15153,6 @@
           "keyword": "exclusiveMaximum",
           "name": null,
           "pointer": "/items/0/weight",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15234,6 +15234,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.share` equal to its exclusive maximum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15244,7 +15245,6 @@
           "keyword": "exclusiveMaximum",
           "name": null,
           "pointer": "/nested/share",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15326,6 +15326,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`ratio` equal to its exclusive maximum of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15336,7 +15337,6 @@
           "keyword": "exclusiveMaximum",
           "name": null,
           "pointer": "/ratio",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15418,6 +15418,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0].pack` not a multiple of 6",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15428,7 +15429,6 @@
           "keyword": "multipleOf",
           "name": null,
           "pointer": "/items/0/pack",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15510,6 +15510,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.lot` not a multiple of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15520,7 +15521,6 @@
           "keyword": "multipleOf",
           "name": null,
           "pointer": "/nested/lot",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15602,6 +15602,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`step` not a multiple of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15612,7 +15613,6 @@
           "keyword": "multipleOf",
           "name": null,
           "pointer": "/step",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15693,6 +15693,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items` with fewer items than its minItems of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15703,7 +15704,6 @@
           "keyword": "minItems",
           "name": null,
           "pointer": "/items",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15784,6 +15784,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0]` with fewer items than its minItems of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15794,7 +15795,6 @@
           "keyword": "minItems",
           "name": null,
           "pointer": "/matrix/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15880,6 +15880,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list` with fewer items than its minItems of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15890,7 +15891,6 @@
           "keyword": "minItems",
           "name": null,
           "pointer": "/nested/list",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -15971,6 +15971,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items` with more items than its maxItems of 3",
           "expectedContentTypes": [
             "application/problem+json"
@@ -15981,7 +15982,6 @@
           "keyword": "maxItems",
           "name": null,
           "pointer": "/items",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16075,6 +16075,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0]` with more items than its maxItems of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16085,7 +16086,6 @@
           "keyword": "maxItems",
           "name": null,
           "pointer": "/matrix/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16175,6 +16175,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list` with more items than its maxItems of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16185,7 +16186,6 @@
           "keyword": "maxItems",
           "name": null,
           "pointer": "/nested/list",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16271,6 +16271,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`tags` with more items than its maxItems of 4",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16281,7 +16282,6 @@
           "keyword": "maxItems",
           "name": null,
           "pointer": "/tags",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16368,6 +16368,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items` with two equal items, though its items must be unique",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16378,7 +16379,6 @@
           "keyword": "uniqueItems",
           "name": null,
           "pointer": "/items",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16466,6 +16466,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`matrix[0]` with two equal items, though its items must be unique",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16476,7 +16477,6 @@
           "keyword": "uniqueItems",
           "name": null,
           "pointer": "/matrix/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16565,6 +16565,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.list` with two equal items, though its items must be unique",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16575,7 +16576,6 @@
           "keyword": "uniqueItems",
           "name": null,
           "pointer": "/nested/list",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16662,6 +16662,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.sub` with fewer members than its minProperties of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16672,7 +16673,6 @@
           "keyword": "minProperties",
           "name": null,
           "pointer": "/nested/sub",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16757,6 +16757,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`props` with fewer members than its minProperties of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16767,7 +16768,6 @@
           "keyword": "minProperties",
           "name": null,
           "pointer": "/props",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16855,6 +16855,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records[0]` with fewer members than its minProperties of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16865,7 +16866,6 @@
           "keyword": "minProperties",
           "name": null,
           "pointer": "/records/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -16948,6 +16948,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested` with more members than its maxProperties of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -16958,7 +16959,6 @@
           "keyword": "maxProperties",
           "name": null,
           "pointer": "/nested",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17043,6 +17043,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.sub` with more members than its maxProperties of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17053,7 +17054,6 @@
           "keyword": "maxProperties",
           "name": null,
           "pointer": "/nested/sub",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17141,6 +17141,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`props` with more members than its maxProperties of 3",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17151,7 +17152,6 @@
           "keyword": "maxProperties",
           "name": null,
           "pointer": "/props",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17242,6 +17242,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`records[0]` with more members than its maxProperties of 2",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17252,7 +17253,6 @@
           "keyword": "maxProperties",
           "name": null,
           "pointer": "/records/0",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17339,6 +17339,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`items[0]` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17349,7 +17350,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/items/0/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17433,6 +17433,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested.detail` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17443,7 +17444,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/nested/detail/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17527,6 +17527,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "`nested` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17537,7 +17538,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/nested/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17618,6 +17618,7 @@
               }
             ]
           },
+          "branch": null,
           "description": "the body with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"
@@ -17628,7 +17629,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "count": 1,
@@ -17671,7 +17671,7 @@
           "responseBodyClass": "ProblemV1"
         }
       ],
-      "class": "PostKeywordsInvalidRequests",
+      "class": "PostKeywordsContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1keywords~1{count}~1{code}~1{kind}~1{fixed}~1{day}~1{ratio}~1{step}/post",
       "method": "POST",

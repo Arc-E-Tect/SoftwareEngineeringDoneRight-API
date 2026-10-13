@@ -1,0 +1,67 @@
+# A body that is a oneOf of three closed, named branches: plain, with a voucher, with an invite.
+# The branches share handle (through a $ref) and email; each code is confined to its branch.
+# Every branch is a way to call the operation, so each gets a success case; a rule inside a
+# branch gets a case only when breaking it makes the body match no branch; and merging the
+# branches with a voucher and with an invite gives a body that matches none.
+openapi: 3.1.0
+info:
+  title: Invalid-request corpus, choices
+  version: 1.0.0
+paths:
+  /sign-ups:
+    post:
+      operationId: postSignUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpV1'
+      responses:
+        '201':
+          description: Signed up.
+        '400':
+          description: The request is invalid.
+components:
+  schemas:
+    SignUpV1:
+      x-fragment-path: schemas/SignUpV1.yaml
+      oneOf:
+        - $ref: '#/components/schemas/PlainSignUpV1'
+        - $ref: '#/components/schemas/VoucherSignUpV1'
+        - $ref: '#/components/schemas/InviteSignUpV1'
+    PlainSignUpV1:
+      x-fragment-path: schemas/PlainSignUpV1.yaml
+      type: object
+      additionalProperties: false
+      required: [handle, email]
+      properties:
+        handle:
+          $ref: '#/components/schemas/HandleV1'
+        email: {type: string, minLength: 6, maxLength: 64}
+    VoucherSignUpV1:
+      x-fragment-path: schemas/VoucherSignUpV1.yaml
+      type: object
+      additionalProperties: false
+      required: [handle, email, voucher]
+      properties:
+        handle:
+          $ref: '#/components/schemas/HandleV1'
+        email: {type: string, minLength: 6, maxLength: 64}
+        voucher: {type: string, pattern: '^V-[0-9]{4}$'}
+    InviteSignUpV1:
+      x-fragment-path: schemas/InviteSignUpV1.yaml
+      type: object
+      additionalProperties: false
+      required: [handle, email, invite]
+      properties:
+        handle:
+          $ref: '#/components/schemas/HandleV1'
+        email: {type: string, minLength: 6, maxLength: 64}
+        invite: {type: string, pattern: '^I-[a-f0-9]{8}$'}
+    HandleV1:
+      x-fragment-path: schemas/HandleV1.yaml
+      type: string
+      minLength: 3
+      maxLength: 12
+      pattern: '^[a-z][a-z0-9]*$'

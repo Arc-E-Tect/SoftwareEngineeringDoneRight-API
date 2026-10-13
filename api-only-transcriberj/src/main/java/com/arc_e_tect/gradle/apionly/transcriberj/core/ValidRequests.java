@@ -128,6 +128,19 @@ final class ValidRequests {
      * @throws Shapes.Unrepresentable    when a value reaches a construct no rule represents
      */
     Request request(Operation operation, Kind kind, MediaType json) {
+        return request(operation, kind, json, Map.of());
+    }
+
+    /**
+     * A valid request whose body takes, in each {@code oneOf} the pins name by the location of
+     * the schema it is written in, the pinned branch: a named example is never sent then, as it
+     * stands for the request without pins.
+     *
+     * @throws ValidValues.Unsatisfiable when a parameter or the body has no valid value, or
+     *                                   a parameter the request needs is not supported yet
+     * @throws Shapes.Unrepresentable    when a value reaches a construct no rule represents
+     */
+    Request request(Operation operation, Kind kind, MediaType json, Map<String, Integer> pins) {
         ValidValues.Variant variant = kind == Kind.FULL ? ValidValues.Variant.FULL : ValidValues.Variant.REQUIRED;
         Map<String, String> path = new java.util.HashMap<>();
         List<Pair> query = new ArrayList<>();
@@ -188,16 +201,28 @@ final class ValidRequests {
             contentType = chosen.contentType();
             String mediaAt = bodyLocation(operation) + "/content/" + Shapes.escape(chosen.contentType());
             String schemaAt = mediaAt + "/schema";
-            namedExample = namedExample(chosen, mediaAt, kind);
+            namedExample = pins.isEmpty() ? namedExample(chosen, mediaAt, kind) : null;
             if (namedExample != null) {
                 body = namedBody(chosen, mediaAt, namedExample, variant);
             } else {
-                body = chosen.schema() == null ? ValueJson.NULL : values.value(chosen.schema(), schemaAt, variant);
+                body = chosen.schema() == null ? ValueJson.NULL : values.value(chosen.schema(), schemaAt, variant, pins);
                 if (chosen.schema() != null) examples.addAll(values.exampleLocations(body, chosen.schema(), schemaAt));
             }
         }
         return new Request(operation.method().name(), operation.path(), List.copyOf(pathValues), List.copyOf(query),
                 List.copyOf(headers), contentType, body, namedExample, List.copyOf(examples));
+    }
+
+    /** Every {@code oneOf} a request's body passes through, outermost first, each with the branch it takes. */
+    List<ValidValues.OneOf> oneOfs(Operation operation, Request request) {
+        if (request.body() == null || request.contentType() == null || operation.requestBody() == null) {
+            return List.of();
+        }
+        MediaType media = operation.requestBody().content().stream()
+                .filter(m -> m.contentType().equals(request.contentType())).findFirst().orElse(null);
+        if (media == null || media.schema() == null) return List.of();
+        String schemaAt = bodyLocation(operation) + "/content/" + Shapes.escape(media.contentType()) + "/schema";
+        return values.oneOfs(request.body(), media.schema(), schemaAt);
     }
 
     /** No example: a parameter that gives none of its own. */

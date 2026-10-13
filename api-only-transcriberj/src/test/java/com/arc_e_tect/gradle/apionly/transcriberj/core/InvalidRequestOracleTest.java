@@ -53,8 +53,12 @@ class InvalidRequestOracleTest {
                 tests.add(DynamicTest.dynamicTest(f.name() + " " + c.get("id").stringValue(), () -> {
                     List<RequestValidation.Problem> problems = withoutDroppedAnnotations(
                             validation.problems(c.get("request")), c);
-                    assertThat(problems).as("the faults of %s", c.get("request")).hasSize(1);
-                    assertMatches(c, problems.get(0));
+                    if (problems.stream().anyMatch(p -> p.keyword().equals("oneOf"))) {
+                        assertTheOneFaultInsideAOneOf(validation, c, problems);
+                    } else {
+                        assertThat(problems).as("the faults of %s", c.get("request")).hasSize(1);
+                        assertMatches(c, problems.get(0));
+                    }
                     assertThat(validation.problems(c.get("baseline"))).as("the faults of the baseline").isEmpty();
                     assertThat(restored(c)).as("the request with its one change undone")
                             .isEqualTo(c.get("baseline"));
@@ -84,6 +88,38 @@ class InvalidRequestOracleTest {
         List<JsonNode> out = new ArrayList<>();
         for (JsonNode entry : InvalidRequestFixtures.invalidRequests(f.report())) entry.get("cases").forEach(out::add);
         return out;
+    }
+
+    /**
+     * A case inside a {@code oneOf}: a validator reports, beside the {@code oneOf}, what each branch
+     * finds wrong, so the one fault is judged as the derivation proves it. The body matches no
+     * branch, nothing outside the {@code oneOf} is wrong, and, against the one branch the baseline
+     * matches, the body has exactly the case's fault; a case of the {@code oneOf} itself is about
+     * the body matching no branch only.
+     */
+    private static void assertTheOneFaultInsideAOneOf(RequestValidation validation, JsonNode c,
+                                                      List<RequestValidation.Problem> problems) {
+        List<RequestValidation.Problem> oneOfs = problems.stream().filter(p -> p.keyword().equals("oneOf")).toList();
+        assertThat(oneOfs).as("the oneOf faults of %s", c.get("request")).hasSize(1);
+        String at = oneOfs.get(0).pointer();
+        assertThat(problems).as("what is wrong outside the oneOf at %s", at)
+                .allMatch(p -> p.in().equals("body") && (p.pointer() + "/").startsWith(at + "/"));
+        List<String> branches = validation.oneOfBranches(c.get("request"), at);
+        JsonNode value = c.get("request").get("body").at(at);
+        JsonNode valid = c.get("baseline").get("body").at(at);
+        for (String branch : branches) {
+            assertThat(validation.problemsAgainst(branch, value)).as("the body against %s", branch).isNotEmpty();
+        }
+        List<String> matched = branches.stream().filter(b -> validation.problemsAgainst(b, valid).isEmpty()).toList();
+        assertThat(matched).as("the branches the baseline matches").hasSize(1);
+        if (c.get("keyword").stringValue().equals("oneOf")) {
+            assertThat(c.get("pointer").stringValue()).isEqualTo(at);
+            return;
+        }
+        List<RequestValidation.Problem> inBranch = validation.problemsAgainst(matched.get(0), value);
+        assertThat(inBranch).as("the faults against %s", matched.get(0)).hasSize(1);
+        RequestValidation.Problem p = inBranch.get(0);
+        assertMatches(c, new RequestValidation.Problem(p.in(), p.name(), p.keyword(), at + p.pointer(), p.property()));
     }
 
     private static void assertMatches(JsonNode c, RequestValidation.Problem p) {

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -58,10 +57,7 @@ class InvalidRequestsUnchangedTest {
                 JsonNode now = InvalidRequestFixtures.invalidRequests(f.report());
                 assertThat(now).hasSameSizeAs(recorded);
                 for (int i = 0; i < now.size(); i++) {
-                    ObjectNode was = (ObjectNode) recorded.get(i).deepCopy();
-                    was.put("class", was.get("class").stringValue().replaceAll("InvalidRequests$", "ContractCases"));
-                    was.get("cases").forEach(c -> ((ObjectNode) c).remove("representative"));
-                    assertThat(now.get(i)).as(was.get("class").stringValue()).isEqualTo(was);
+                    assertThat(now.get(i)).as(recorded.get(i).get("class").stringValue()).isEqualTo(recorded.get(i));
                 }
             }));
         }

@@ -2,7 +2,7 @@
   "invalidRequests": [
     {
       "cases": [],
-      "class": "GetUnconstrainedInvalidRequests",
+      "class": "GetUnconstrainedContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1unconstrained/get",
       "method": "GET",
@@ -10,7 +10,7 @@
     },
     {
       "cases": [],
-      "class": "PostBareInvalidRequests",
+      "class": "PostBareContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1bare/post",
       "method": "POST",
@@ -18,7 +18,7 @@
     },
     {
       "cases": [],
-      "class": "PostDeclaredInvalidRequests",
+      "class": "PostDeclaredContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1declared/post",
       "method": "POST",
@@ -26,7 +26,7 @@
     },
     {
       "cases": [],
-      "class": "PostReferencedInvalidRequests",
+      "class": "PostReferencedContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1referenced/post",
       "method": "POST",
@@ -34,7 +34,7 @@
     },
     {
       "cases": [],
-      "class": "PostSeveralInvalidRequests",
+      "class": "PostSeveralContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1several/post",
       "method": "POST",
@@ -42,7 +42,7 @@
     },
     {
       "cases": [],
-      "class": "PostUndeclaredInvalidRequests",
+      "class": "PostUndeclaredContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1undeclared/post",
       "method": "POST",
@@ -62,6 +62,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -72,7 +73,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "",
-          "representative": true,
           "request": {
             "body": null,
             "contentType": null,
@@ -96,6 +96,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "`name` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -106,7 +107,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {},
             "contentType": "application/json",
@@ -130,6 +130,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -140,7 +141,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
@@ -164,6 +164,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "`name` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -174,7 +175,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {
               "name": {}
@@ -200,6 +200,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "`name` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -210,7 +211,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {
               "name": null
@@ -236,6 +236,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "`name` shorter than its minLength of 1",
           "expectedContentTypes": [
             "application/problem+json"
@@ -246,7 +247,6 @@
           "keyword": "minLength",
           "name": null,
           "pointer": "/name",
-          "representative": false,
           "request": {
             "body": {
               "name": ""
@@ -272,6 +272,7 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
+          "branch": null,
           "description": "the body with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"
@@ -282,7 +283,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "name": "a",
@@ -298,7 +298,7 @@
           "responseBodyClass": "ProblemV1"
         }
       ],
-      "class": "PostUnprocessableInvalidRequests",
+      "class": "PostUnprocessableContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1unprocessable/post",
       "method": "POST",

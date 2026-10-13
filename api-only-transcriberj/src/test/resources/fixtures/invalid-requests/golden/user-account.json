@@ -391,6 +391,7 @@
       "cases": [
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request with the required parameters and body members only",
           "expectedContentTypes": [
             "application/json"
@@ -439,6 +440,7 @@
       "cases": [
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request with the required parameters and body members only",
           "expectedContentTypes": [
             "application/json"
@@ -483,6 +485,7 @@
       "cases": [
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request with the required parameters and body members only",
           "expectedContentTypes": [
             "application/json"
@@ -527,6 +530,7 @@
       "cases": [
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request with the required parameters and body members only",
           "expectedContentTypes": [
             "application/json"
@@ -566,6 +570,7 @@
         },
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request naming a resource that does not exist",
           "expectedContentTypes": [
             "application/problem+json"
@@ -614,6 +619,7 @@
       "cases": [
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request with the required parameters and body members only",
           "expectedContentTypes": [
             "application/json"
@@ -663,6 +669,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -709,6 +716,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`emailAddress` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -757,6 +765,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`username` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -805,6 +814,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -851,6 +861,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`emailAddress` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -900,6 +911,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`username` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -949,6 +961,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`emailAddress` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -998,6 +1011,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`username` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1047,6 +1061,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`username` shorter than its minLength of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1096,6 +1111,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`emailAddress` longer than its maxLength of 254",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1145,6 +1161,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`username` longer than its maxLength of 12",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1194,6 +1211,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "`username` not matching its pattern ^[a-z][a-z0-9_-]*$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1243,6 +1261,7 @@
             "pathTemplate": "/v1/users/registrations",
             "query": []
           },
+          "branch": null,
           "description": "the body with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1291,6 +1310,7 @@
       "cases": [
         {
           "baseline": null,
+          "branch": null,
           "description": "a valid request with the required parameters and body members only",
           "expectedContentTypes": [
             "application/json"
@@ -1340,6 +1360,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1387,6 +1408,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "`username` missing, though it is required",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1434,6 +1456,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1481,6 +1504,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "`username` sent as an object, where the contract requires a string",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1530,6 +1554,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "`username` null, which its type does not allow",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1579,6 +1604,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "`username` shorter than its minLength of 5",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1628,6 +1654,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "`username` longer than its maxLength of 12",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1677,6 +1704,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "`username` not matching its pattern ^[a-z][a-z0-9_-]*$",
           "expectedContentTypes": [
             "application/problem+json"
@@ -1726,6 +1754,7 @@
             "pathTemplate": "/v1/users/registrations/verification-email",
             "query": []
           },
+          "branch": null,
           "description": "the body with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [
             "application/problem+json"

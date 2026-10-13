@@ -1,5 +1,13 @@
 = Invalid-request fixtures
 
+[NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
 What invalid-request derivation -- the `ContractCase` records of kind `INVALID_REQUEST` each operation's `ContractCases` class lists -- is held to.
 Every case is checked against the same independent JSON Schema 2020-12 validator the valid values are (networknt, with ECMA-262 patterns by joni), a test-only dependency that never reaches the plugin's classpath.
 
@@ -41,14 +49,18 @@ Generated with the default `invalidRequestStatus`, and with `422`.
 |`corpus/structure.yaml`
 |What is reported rather than derived: a keyword the model does not type, a `oneOf` of references, recursion beyond `recursionDepth`, keywords that assert nothing, a parameter style not supported.
 
+|`corpus/choices.yaml`
+|A body that is a `oneOf` of three closed, named branches sharing two members, each of two branches with a member of its own: a success case per branch, cases for rules inside a branch where breaking them makes the body match no branch, and the case of two branches merged.
+
 |`golden/user-account.json`
 |The contract cases of the reference API's `user-account` contract, of every kind -- id, kind, keyword, pointer, request and expected response -- with the coverage of every response it declares and of every constraint on its request input, the gaps and the format recommendations: the tests an implementation of that contract is run against.
 Re-record with `./gradlew recordInvalidRequestsGolden`, and review the diff.
 
 |`before/*.json`
-|The invalid-request cases of every fixture contract as they were before contract cases of every kind were derived, recorded from 0.11.0: what `InvalidRequestsUnchangedTest` holds them to.
+|The invalid-request cases of every fixture contract: what `InvalidRequestsUnchangedTest` holds them to.
+First recorded from 0.11.0; re-recorded at 0.17.0, when the rules inside the branches of a `oneOf` got cases and every case its `branch`.
 `valid-values-keywords.json` is the valid-value corpus's `keywords` contract, which shares its name with this corpus's.
-Never re-recorded.
+Re-record with `./gradlew recordInvalidRequestsBefore` only when derivation changes on purpose, and review the diff.
 |===
 
 The corpus contracts are hand-written, not built by the Publisher, and are free to change with the tests.

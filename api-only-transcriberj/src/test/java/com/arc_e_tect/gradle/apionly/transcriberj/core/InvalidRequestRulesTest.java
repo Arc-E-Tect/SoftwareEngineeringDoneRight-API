@@ -431,8 +431,11 @@ class InvalidRequestRulesTest {
             assertThat(reason(entry("structure", "/pet", "oneOf"))).isEqualTo("NO_VIOLATION_RULE");
             assertThat(reason(entry("structure", "/name", "minLength"))).isEqualTo("ASSERTS_NOTHING");
             assertThat(reason(entry("structure", "/list", "uniqueItems"))).isEqualTo("ASSERTS_NOTHING");
-            assertThat(coverage("structure").stream().filter(e -> e.get("pointer").stringValue().startsWith("/pet/"))
-                    .map(InvalidRequestRulesTest::reason).distinct().toList()).containsExactly("NOT_ISOLATABLE");
+            assertThat(caseWithId("structure", "body-pet-barks-minimum")).isNotNull();
+            assertThat(caseWithId("structure", "body-pet-meows-type")).isNotNull();
+            coverage("structure").stream().filter(e -> e.get("pointer").stringValue().startsWith("/pet/"))
+                    .filter(e -> e.has("uncovered"))
+                    .forEach(e -> assertThat(reason(e)).isEqualTo("NOT_ISOLATABLE"));
             assertThat(coverage("structure").stream().filter(e -> e.has("uncovered")
                     && e.get("uncovered").get("code").stringValue().equals("BEYOND_RECURSION_DEPTH"))).isNotEmpty();
             assertThat(coverage("structure").stream().filter(e -> "tags".equals(e.get("name").stringValue()))

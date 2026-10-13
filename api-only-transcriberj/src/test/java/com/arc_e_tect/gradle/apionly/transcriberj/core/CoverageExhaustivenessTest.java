@@ -167,7 +167,9 @@ class CoverageExhaustivenessTest {
                     body(op);
                 }
             }
-            return out;
+            // A rule the branches of a oneOf reach through the same reference, at the same
+            // pointer, is written in one place: one constraint, however many branches reach it.
+            return out.stream().distinct().toList();
         }
 
         private void parameters(String itemAt, String opAt) {

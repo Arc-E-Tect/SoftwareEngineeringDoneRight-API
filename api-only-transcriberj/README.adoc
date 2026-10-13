@@ -953,6 +953,7 @@ In the full body, an optional member that refers back to its own component is fo
 The class's constants and descriptors go on taking the first definition of each keyword, as they always have.
 |`oneOf`, `anyOf` of references |The first branch, in declared order, whose value is valid; for `oneOf`, one valid against _exactly_ that branch, so a branch whose value another branch accepts too is passed over.
 With a `discriminator`, the discriminating property takes the value its mapping gives the branch.
+Contract cases also take every other branch of a `oneOf`: see <<contract-case-derivation,How each kind is derived §>>.
 |`oneOf`, `anyOf` with an inline branch, a type list, a `true` or `false` schema |No value, as there is no `body(...)`: see <<unrepresentable,Constructs no rule represents yet §>>.
 |`not`, `if`, `prefixItems` and every other keyword that asserts something the model does not type |No value: the schema's validity depends on it, and a value is never guessed at.
 |===
@@ -1156,7 +1157,7 @@ They are generated whether or not an emitter renders them.
 |Class |Holds
 
 |`ContractCase`, in the base package beside `ContractRequest`
-|One case: a record of `id`, `kind`, `requiresState`, `variant`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass`, `operationId`, `declaredQuery` and `declaredHeaders`.
+|One case: a record of `id`, `kind`, `requiresState`, `variant`, `description`, `in`, `name`, `pointer`, `keyword`, `request`, `expectedStatus`, `expectedContentTypes`, `responseBodyClass`, `operationId`, `declaredQuery`, `declaredHeaders` and `branch`.
 
 |`CaseKind`, beside it
 |The kinds: `SUCCESS`, `NOT_FOUND`, `NOT_ACCEPTABLE`, `UNSUPPORTED_MEDIA_TYPE` and `INVALID_REQUEST`, each with `requiresState()`.
@@ -1170,11 +1171,12 @@ Empty where the operation declares no response a case can be derived for.
 |===
 |Field |What it is
 
-|`id` |Readable, unique within the operation, and the same on every run: `success-201-required`, `success-201-full`, `success-204-no-body`, `not-found`, `not-acceptable`, `unsupported-media-type`, and for invalid requests `query-page-minimum`, `body-emailAddress-maxLength`, `body-unknown-member`.
+|`id` |Readable, unique within the operation, and the same on every run: `success-201-required`, `success-201-full`, `success-204-no-body`, `success-201-voucher-sign-up-v1`, `not-found`, `not-acceptable`, `unsupported-media-type`, and for invalid requests `query-page-minimum`, `body-emailAddress-maxLength`, `body-unknown-member`, `body-oneOf-voucher-sign-up-v1-invite-sign-up-v1`.
 It becomes a test method name and a snippet directory, so it is a valid Java identifier once converted, as `JavaText.variableName` converts it.
 |`kind` |What the case tests, a `CaseKind`.
 |`requiresState` |Whether the target must be put in a particular state before the request is sent: true for `SUCCESS` and `NOT_FOUND`. See <<requires-state,State, and what a fixture must do §>>.
 |`variant` |For a success case, the valid request it sends: `required`, `full` or `noBody`. `null` for every other kind.
+A success case of a further `oneOf` branch is `required`: it sends the required members of that branch.
 |`description` |One sentence for a display name.
 |`in`, `name`, `pointer`, `keyword` |For an invalid request, where the fault is and which constraint it breaks: see <<invalid-requests,Invalid requests §>>. `null` for every other kind.
 |`request` |The complete request, as a `ContractRequest`. Its values are raw: encoding them for the path, the query or a header is the renderer's job.
@@ -1183,11 +1185,12 @@ It becomes a test method name and a snippet directory, so it is a valid Java ide
 |`operationId` |The operation's `operationId`, or `null` when the contract gives it none.
 |`declaredQuery`, `declaredHeaders` |The name of every query parameter and every header the operation declares -- its path item's and its own -- in declaration order, whether or not the request carries it; `Accept`, `Content-Type` and `Authorization` left out, as OpenAPI ignores them as parameters.
 A renderer that matches a request exactly, such as a stub, requires the ones the request leaves out to be absent: that is what tells a missing `required` parameter apart from a valid request.
+|`branch` |For a success case that sends a further branch of a `oneOf`, the component name of that branch: `VoucherSignUpV1`. `null` for every other case.
 |===
 
 *Canonical order*, per operation:
 
-. success cases, by status, then by variant: `required`, `full`, `noBody`;
+. success cases, by status, then by variant: `required` -- the required request, then each further `oneOf` branch in declared order -- `full`, `noBody`;
 . not found;
 . not acceptable;
 . unsupported media type;
@@ -1204,6 +1207,11 @@ Where the full request is the required one -- the operation declares no optional
 That holds whatever values examples give the two requests: what decides is which parameters and members each sends, not their values.
 An operation that declares several `2xx` statuses -- a `PUT` that answers `200` or `201` -- gets cases for all of them: the same request expects different statuses, and it is the fixture's state that decides which one is right.
 Each case's description names its status, so that the fixture can tell them apart.
+
+Every branch of a `oneOf` of references is a way to call the operation.
+The required request takes one branch of each `oneOf` its body passes through; every other branch of such a `oneOf` gets a success case of its own, `success-<status>-<branch>`, the branch's component name in kebab case: `success-201-voucher-sign-up-v1` for `VoucherSignUpV1`.
+It sends the required members of that branch, its `variant` is `required`, and its `branch` names the branch.
+A branch with no valid value, or with one that cannot be vouched for, gets no case, and the report notes why.
 
 *Not found.*
 `requiredRequest()` with different path values: for each path parameter, the next valid value after the one `requiredRequest()` has, in the generator's own order -- `aaa` gives `aab`, `1` gives `2`, and a `uuid` the next documentation UUID.
@@ -1468,6 +1476,14 @@ A case is kept only when the request breaks the one keyword at the one place and
 Where no value breaks a constraint alone -- a `minLength` whose length the pattern forces, an `enum` that lists nothing shorter than `maxLength` -- there is no case, and the report names the keyword that breaks with it.
 A `minLength: 6` email is one: the shortest address a strict validator accepts, `a@b.co`, is six characters long.
 
+*Inside a `oneOf`.*
+A rule inside a branch of a `oneOf` of references is broken in a request of that branch: the required request with that branch taken.
+A body that breaks it does not match that branch, so whether it is invalid depends on the other branches too; the case is kept only when it is proven, against every branch, to match none, and to break exactly the one keyword in its own branch.
+Where breaking it gives a body another branch accepts -- leaving out the member only that branch requires -- there is no case, and the report names the branch the body still matches.
+A rule the branches reach through the same reference, at the same pointer, is one constraint, with one case.
+The `oneOf` itself gets a case for every two branches whose members, merged into one body, match no branch: `body-oneOf-<first>-<second>`, the two branches' component names in kebab case.
+A `oneOf` nested inside a branch of another keeps its rules uncovered, as not isolatable.
+
 *Types a binder does not coerce.*
 Many JSON binders coerce by default: Jackson turns `5` into `"5"` for a string, truncates `1.5` into an integer, and reads `"5"` as a number.
 A type case sending a coercible value would pass or fail by the binder's settings rather than by the contract, so:
@@ -1540,7 +1556,7 @@ The report lists every constraint on request input -- every keyword of every par
 |===
 |Reason |Meaning
 
-|not isolatable |Every violating value breaks another keyword too; the report names it. Inside a `oneOf` or `anyOf` of references, that keyword is the choice itself.
+|not isolatable |Every violating value breaks another keyword too; the report names it. Inside an `anyOf` of references, or a `oneOf` nested inside another, that keyword is the choice itself; inside a `oneOf`, the body still matches another branch, which the report names.
 |changes the route |A path parameter's `required`, or a path value only an empty or `/`, `?` or `#` value would violate.
 |keyword not modelled |`not`, `if`, `contains` and the other keywords the model does not type -- and the other constraints of a schema whose validity depends on one.
 |parameter style not supported |A parameter no valid value is generated for: in a cookie, an array or an object, a `style` or `explode` other than the default, or described by `content`.
@@ -1554,7 +1570,7 @@ The report lists every constraint on request input -- every keyword of every par
 |format not supported |`validateFormats` names a format no check exists for.
 |no valid baseline |There is no valid request to change: the operation, or the member to add, has no valid value, or holds one that cannot be vouched for.
 |asserts nothing |A keyword no value can violate: `minLength: 0`, `uniqueItems: false`, `required: []`, a 3.0 `exclusiveMinimum: false`, a parameter's `required: false`.
-|no violation rule |`oneOf` or `anyOf` of references: it composes schemas rather than constraining a value.
+|no violation rule |An `anyOf` of references: it composes schemas rather than constraining a value. A `oneOf` of references no two branches of which merge into a body that matches no branch.
 |media type not used |A request body media type that is not JSON.
 |kind switched off |The constraint would have a case, but `derive` does not name `invalidRequest`: see <<derive,Choosing the kinds §>>.
 |===

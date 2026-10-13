@@ -2,7 +2,7 @@
   "invalidRequests": [
     {
       "cases": [],
-      "class": "PostBoundsInvalidRequests",
+      "class": "PostBoundsContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1bounds/post",
       "method": "POST",

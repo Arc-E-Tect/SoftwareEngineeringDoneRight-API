@@ -91,6 +91,56 @@ final class RequestValidation {
         return out;
     }
 
+    /**
+     * Where each branch of the {@code oneOf} that applies to the body at an instance pointer is
+     * written, found by following the body's schema to that instance: through {@code $ref},
+     * {@code properties} and {@code allOf}.
+     */
+    List<String> oneOfBranches(JsonNode request, String instancePointer) {
+        String path = request.get("pathTemplate").stringValue();
+        String method = request.get("method").stringValue().toLowerCase(Locale.ROOT);
+        String bodyAt = "/paths/" + escape(path) + "/" + method + "/requestBody";
+        JsonNode body = oracle.document.at(bodyAt);
+        if (body.has("$ref")) bodyAt = body.get("$ref").stringValue().substring(1);
+        String at = bodyAt + "/content/" + escape(request.get("contentType").stringValue()) + "/schema";
+        at = dereferenced(at);
+        if (!instancePointer.isEmpty()) {
+            for (String segment : instancePointer.substring(1).split("/", -1)) at = member(at, segment);
+        }
+        List<String> out = new ArrayList<>();
+        JsonNode branches = oracle.document.at(at + "/oneOf");
+        for (int i = 0; i < branches.size(); i++) out.add(dereferenced(at + "/oneOf/" + i));
+        return out;
+    }
+
+    /** Every problem of a value against the schema written at a pointer, as the body is validated. */
+    List<Problem> problemsAgainst(String schemaAt, JsonNode value) {
+        List<Problem> out = new ArrayList<>();
+        for (Error e : bodies.validate(schemaAt, value)) out.add(problem("body", null, e));
+        return out;
+    }
+
+    private String dereferenced(String at) {
+        for (int i = 0; i < 16 && oracle.document.at(at).has("$ref"); i++) {
+            at = oracle.document.at(at).get("$ref").stringValue().substring(1);
+        }
+        return at;
+    }
+
+    private String member(String at, String segment) {
+        JsonNode schema = oracle.document.at(at);
+        if (schema.path("properties").has(segment.replace("~1", "/").replace("~0", "~"))) {
+            return dereferenced(at + "/properties/" + segment);
+        }
+        for (int i = 0; i < schema.path("allOf").size(); i++) {
+            String part = dereferenced(at + "/allOf/" + i);
+            if (oracle.document.at(part).path("properties").has(segment.replace("~1", "/").replace("~0", "~"))) {
+                return dereferenced(part + "/properties/" + segment);
+            }
+        }
+        throw new AssertionError("no member " + segment + " in the schema at " + at);
+    }
+
     /** The pointers of an operation's parameters: its path item's, each replaced by the operation's own of that name. */
     private List<String[]> parameters(String itemAt, String operationAt) {
         List<String[]> own = new ArrayList<>();

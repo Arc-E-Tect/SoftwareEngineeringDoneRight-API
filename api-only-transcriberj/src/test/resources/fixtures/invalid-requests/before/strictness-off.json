@@ -29,6 +29,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -37,7 +38,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "",
-          "representative": true,
           "request": {
             "body": null,
             "contentType": null,
@@ -76,6 +76,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`closed` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -84,7 +85,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/closed",
-          "representative": false,
           "request": {
             "body": {
               "merged": {
@@ -137,6 +137,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`closed.a` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -145,7 +146,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/closed/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {},
@@ -199,6 +199,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -207,7 +208,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/merged",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -259,6 +259,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged.first` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -267,7 +268,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/merged/first",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -322,6 +322,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged.second` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -330,7 +331,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/merged/second",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -385,6 +385,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`open` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -393,7 +394,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/open",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -446,6 +446,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`open.a` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -454,7 +455,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/open/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -508,6 +508,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -516,7 +517,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/patterned",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -569,6 +569,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned.a` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -577,7 +578,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/patterned/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -631,6 +631,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -639,7 +640,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/typed",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -692,6 +692,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed.a` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -700,7 +701,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/typed/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -754,6 +754,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -762,7 +763,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
@@ -801,6 +801,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`closed` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -809,7 +810,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/closed",
-          "representative": false,
           "request": {
             "body": {
               "closed": [],
@@ -863,6 +863,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`closed.a` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -871,7 +872,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/closed/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -928,6 +928,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -936,7 +937,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/forbidden",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -996,6 +996,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden.a` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1004,7 +1005,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/forbidden/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1066,6 +1066,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden.x-` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1074,7 +1075,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/forbidden/x-",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1133,6 +1133,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged.first` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1141,7 +1142,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/merged/first",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1197,6 +1197,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged.second` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1205,7 +1206,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/merged/second",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1261,6 +1261,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`open` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1269,7 +1270,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/open",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1323,6 +1323,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`open.a` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1331,7 +1332,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/open/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1387,6 +1387,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1395,7 +1396,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/patterned",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1449,6 +1449,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned.a` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1457,7 +1458,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/patterned/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1514,6 +1514,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned.x-` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1522,7 +1523,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/patterned/x-",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1579,6 +1579,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1587,7 +1588,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/typed",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1641,6 +1641,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed.a` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1649,7 +1650,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/typed/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1706,6 +1706,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed.additionalMember` sent as the string \"not-a-number\", where the contract requires an integer",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1714,7 +1715,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/typed/additionalMember",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1771,6 +1771,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`closed` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1779,7 +1780,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/closed",
-          "representative": false,
           "request": {
             "body": {
               "closed": null,
@@ -1833,6 +1833,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`closed.a` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1841,7 +1842,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/closed/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1898,6 +1898,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1906,7 +1907,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/forbidden",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -1966,6 +1966,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden.a` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -1974,7 +1975,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/forbidden/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2036,6 +2036,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden.x-` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2044,7 +2045,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/forbidden/x-",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2103,6 +2103,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged.first` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2111,7 +2112,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/merged/first",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2167,6 +2167,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`merged.second` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2175,7 +2176,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/merged/second",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2231,6 +2231,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`open` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2239,7 +2240,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/open",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2293,6 +2293,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`open.a` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2301,7 +2302,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/open/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2357,6 +2357,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2365,7 +2366,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/patterned",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2419,6 +2419,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned.a` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2427,7 +2428,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/patterned/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2484,6 +2484,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`patterned.x-` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2492,7 +2493,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/patterned/x-",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2549,6 +2549,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2557,7 +2558,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/typed",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2611,6 +2611,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed.a` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2619,7 +2620,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/typed/a",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2676,6 +2676,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`typed.additionalMember` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2684,7 +2685,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/typed/additionalMember",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2742,6 +2742,7 @@
             "pathTemplate": "/strict",
             "query": []
           },
+          "branch": null,
           "description": "`forbidden` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -2750,7 +2751,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/forbidden/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "closed": {
@@ -2783,7 +2783,7 @@
           "responseBodyClass": null
         }
       ],
-      "class": "PostStrictInvalidRequests",
+      "class": "PostStrictContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1strict/post",
       "method": "POST",
