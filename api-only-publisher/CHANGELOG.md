@@ -1,3 +1,15 @@
+## [0.14.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.3...api-only-publisher-v0.14.4) (2026-10-13)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** record the repository URL without the credentials it may hold ([#93](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/93)) ([c3be63b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/c3be63b9e1d67a8e25759348ae8e34b116f66e09)), closes [#93](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/93)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.14.3 [skip ci] ([f21a74c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/f21a74cddb8915b3ebf44ee0ab57611ffdaf8c47))
+
 ## [0.14.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.2...api-only-publisher-v0.14.3) (2026-10-13)
 
 
