@@ -1,3 +1,20 @@
+## [0.14.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.1...api-only-publisher-v0.14.2) (2026-10-13)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** keep npm and NuGet publishes idempotent on GitLab registries ([#90](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/90)) ([d1b2084](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/d1b2084caee2324a08398bf45072de1e6f871539)), closes [#90](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/90) [#86](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/86) [#87](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/87) [#88](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/88) [#89](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/89)
+
+
+### 📝 Documentation
+
+* **api-only-publisher:** add configuration recipes ([#85](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/85)) ([17f8c76](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/17f8c767321e785626daa41e11d49a84e1557e99)), closes [#85](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/85) [#84](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/84)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.14.1 [skip ci] ([e8ae13e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e8ae13eb9db45e6815cf4491147cb30d7ff15c9b))
+
 ## [0.14.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.0...api-only-publisher-v0.14.1) (2026-10-08)
 
 
