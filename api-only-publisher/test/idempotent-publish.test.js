@@ -66,18 +66,31 @@ test("the archive writer refuses a name that is not a plain file name", () => {
 
 // ------------------------------------------------------------------ maven
 
-test("maven: an artifact the repository already has is left alone when identical, and refused when not", async () => {
-    const { archive, manifest } = packed();
-    const bytes = fs.readFileSync(archive);
+test("maven: each file the repository already has is left alone when identical, uploaded when missing, and refused when not", async () => {
+    const { config, archive, manifest } = packed();
+    // The three files a version consists of, exactly as the channel writes them.
+    const local = publish(archive, manifest, "maven", { groupId: "com.example", repository: "m2", baseDir: config.root });
+    const dir = path.dirname(local.location);
+    const files = {
+        "orders-1.0.0.tgz": fs.readFileSync(path.join(dir, "orders-1.0.0.tgz")),
+        "orders-1.0.0.pom": fs.readFileSync(path.join(dir, "orders-1.0.0.pom")),
+        "orders-1.0.0-manifest.json": fs.readFileSync(path.join(dir, "orders-1.0.0-manifest.json")),
+    };
+    const other = Buffer.from("something else");
     await withEnv({ M2_KEY: "t" }, async () => {
-        for (const [held, expectPut, expected] of [
-            [null, true, null],
-            [bytes, false, "same"],
-            [Buffer.from("something else"), false, /already has com\.example:orders:1\.0\.0, and it is not this archive/],
+        for (const [label, held, expected, puts] of [
+            ["nothing", {}, "published", Object.keys(files)],
+            ["everything, identical", files, "same", []],
+            // A run interrupted after the artifact: the next one completes the version.
+            ["only the artifact", { "orders-1.0.0.tgz": files["orders-1.0.0.tgz"] }, "published", ["orders-1.0.0.pom", "orders-1.0.0-manifest.json"]],
+            ["another artifact", { ...files, "orders-1.0.0.tgz": other }, /already has com\.example:orders:1\.0\.0, and its orders-1\.0\.0\.tgz is not this one/, []],
+            ["another POM", { ...files, "orders-1.0.0.pom": other }, /its orders-1\.0\.0\.pom is not this one/, []],
+            ["another manifest", { "orders-1.0.0.tgz": files["orders-1.0.0.tgz"], "orders-1.0.0-manifest.json": other }, /its orders-1\.0\.0-manifest\.json is not this one/, []],
         ]) {
             const { server, requests, base } = await serve((request, response) => {
+                const name = request.url.split("/").pop();
                 if (request.method === "GET") {
-                    if (held) { response.writeHead(200); response.end(held); } else { response.writeHead(404); response.end(); }
+                    if (held[name]) { response.writeHead(200); response.end(held[name]); } else { response.writeHead(404); response.end(); }
                     return;
                 }
                 response.writeHead(201); response.end();
@@ -85,12 +98,13 @@ test("maven: an artifact the repository already has is left alone when identical
             try {
                 const call = publish(archive, manifest, "maven", { groupId: "com.example", repository: `${base}/repo`, tokenEnv: "M2_KEY" });
                 if (expected instanceof RegExp) {
-                    await assert.rejects(call, (e) => e instanceof ChannelError && expected.test(e.message));
+                    await assert.rejects(call, (e) => e instanceof ChannelError && expected.test(e.message)
+                        && /A published version is never replaced/.test(e.message), label);
                 } else {
                     const result = await call;
-                    assert.strictEqual(result.alreadyPublished === true, expected === "same");
+                    assert.strictEqual(result.alreadyPublished === true, expected === "same", label);
                 }
-                assert.strictEqual(requests.some((r) => r.method === "PUT"), expectPut, String(held));
+                assert.deepStrictEqual(requests.filter((r) => r.method === "PUT").map((r) => r.url.split("/").pop()), puts, label);
                 assert.strictEqual(requests[0].headers.authorization, "Bearer t");
             } finally {
                 server.close();
