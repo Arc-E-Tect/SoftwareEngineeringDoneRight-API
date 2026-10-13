@@ -162,3 +162,40 @@ test("a SOURCE_DATE_EPOCH that is not a whole number of seconds is refused", () 
     assert.throws(() => withEpoch("yesterday", () => manifest(config, "svc", { version: "1.0.0", files: [file] })),
         (e) => e instanceof PackError && /SOURCE_DATE_EPOCH/.test(e.message));
 });
+
+// ------------------------------------ the recorded repository URL holds no credentials
+
+test("the repository URL is recorded without credentials, query string or fragment", () => {
+    const { publicUrl } = require("../src/pack");
+    for (const [remote, recorded] of [
+        // GitLab CI checks out with the job token in the URL.
+        ["https://gitlab-ci-token:placeholder-job-token@gitlab.com/group/library.git", "https://gitlab.com/group/library.git"],
+        ["https://someone:placeholder-access-token@git.example.com:8443/group/library.git", "https://git.example.com:8443/group/library.git"],
+        ["https://someone@git.example.com/library.git", "https://git.example.com/library.git"],
+        ["https://x-access-token:<app-token>@github.com/org/library", "https://github.com/org/library"],
+        ["https://tok@en@git.example.com/library.git", "https://git.example.com/library.git"],
+        ["https://git.example.com/library.git?private_token=placeholder#main", "https://git.example.com/library.git"],
+        ["ssh://git:placeholder-password@git.example.com:2222/group/library.git", "ssh://git.example.com:2222/group/library.git"],
+        ["git://git.example.com/library.git", "git://git.example.com/library.git"],
+        // scp-like: `git` is the SSH user, not a secret, and there is nothing else to strip.
+        ["git@github.com:org/library.git", "git@github.com:org/library.git"],
+        ["/srv/git/library.git", "/srv/git/library.git"],
+        ["https://github.com/org/library.git", "https://github.com/org/library.git"],
+        [null, null],
+    ]) {
+        assert.strictEqual(publicUrl(remote), recorded, String(remote));
+    }
+});
+
+test("a library cloned with a token in its origin URL packs a manifest without it, the URL every channel copies", () => {
+    const { execFileSync } = require("node:child_process");
+    const config = library();
+    const git = (...args) => execFileSync("git", ["-C", config.root, ...args], { encoding: "utf8" });
+    git("init", "-q");
+    git("remote", "add", "origin", "https://gitlab-ci-token:placeholder-job-token@gitlab.example.com/group/library.git");
+    git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "--allow-empty", "-m", "c");
+    const file = document(config, "svc", "openapi.yaml", "openapi: 3.1.1\n");
+    const data = manifest(config, "svc", { version: "1.0.0", files: [file], closureSha256: "x" });
+    assert.strictEqual(data.source.repository, "https://gitlab.example.com/group/library.git");
+    assert.doesNotMatch(JSON.stringify(data), /placeholder/);
+});

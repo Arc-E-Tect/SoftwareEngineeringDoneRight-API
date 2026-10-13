@@ -22,6 +22,21 @@ function sha256(file) {
     return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
+/**
+ * A repository URL fit to publish: without the credentials a remote URL can carry --
+ * GitLab CI checks out with `https://gitlab-ci-token:<job token>@host/...`, and a
+ * clone made with a token in its URL keeps it there -- and without a query string or
+ * fragment, where some hosts carry one too. An scp-like `git@host:path` and a local
+ * path are left alone: neither holds a secret.
+ */
+function publicUrl(url) {
+    if (!url) return url;
+    const match = /^([a-z][a-z0-9+.-]*:\/\/)([^/?#]*)([^?#]*)/i.exec(url);
+    if (!match) return url;
+    const [, scheme, authority, rest] = match;
+    return scheme + authority.slice(authority.lastIndexOf("@") + 1) + rest;
+}
+
 function gitInfo(cwd) {
     const git = (args) => {
         try {
@@ -31,7 +46,7 @@ function gitInfo(cwd) {
         }
     };
     return {
-        repository: git(["config", "--get", "remote.origin.url"]),
+        repository: publicUrl(git(["config", "--get", "remote.origin.url"])),
         commit: git(["rev-parse", "HEAD"]),
     };
 }
@@ -145,4 +160,4 @@ function pack(config, target, { version, closureSha256, outDir, log = () => {} }
     return { archive, manifest: data, manifestPath };
 }
 
-module.exports = { pack, manifest, sha256, MANIFEST_NAME, MANIFEST_SCHEMA_VERSION, PackError };
+module.exports = { pack, manifest, sha256, MANIFEST_NAME, MANIFEST_SCHEMA_VERSION, PackError, publicUrl };
