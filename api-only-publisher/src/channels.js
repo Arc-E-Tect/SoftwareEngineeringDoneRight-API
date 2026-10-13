@@ -12,7 +12,7 @@ const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
-const { isPrerelease, npmDistTag } = require("./version-policy");
+const { parse, compare, isPrerelease, npmDistTag } = require("./version-policy");
 const { ChannelError } = require("./channel-error");
 const { publishNuget } = require("./nuget");
 const { publishGitlabPackage } = require("./gitlab");
@@ -303,11 +303,11 @@ function publishGithubRelease(archive, manifest, options, log) {
  * configuration file gets committed, and a credential in a committed file is a
  * credential that has leaked.
  */
-async function putFile(url, body, token, contentType) {
+async function putFile(url, body, auth, contentType) {
     const response = await fetch(url, {
         method: "PUT",
         headers: {
-            "Authorization": `Bearer ${token}`,
+            ...auth,
             "Content-Type": contentType,
             "Content-Length": String(body.length),
         },
@@ -324,8 +324,8 @@ async function putFile(url, body, token, contentType) {
 }
 
 /** What a Maven repository holds at `url`, or null when it holds nothing there. */
-async function getFile(url, token) {
-    const response = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+async function getFile(url, auth) {
+    const response = await fetch(url, { headers: auth });
     if (response.status === 404) return null;
     if (!response.ok) {
         throw new ChannelError(`GET ${url} failed: ${response.status} ${response.statusText}. ` +
@@ -333,6 +333,54 @@ async function getFile(url, token) {
                 ? "Check the token in the environment variable named by channels.maven.tokenEnv." : ""));
     }
     return Buffer.from(await response.arrayBuffer());
+}
+
+/** An HTTP header name: RFC 9110's token. */
+const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+
+/** The highest of `versions` that parse as semver and pass `keep`, or null. */
+function highest(versions, keep = () => true) {
+    const valid = versions.filter((v) => { try { parse(v); return keep(v); } catch { return false; } });
+    return valid.length ? valid.reduce((a, b) => (compare(a, b) >= 0 ? a : b)) : null;
+}
+
+/** The artifact's maven-metadata.xml, as `mvn deploy` keeps it. */
+function metadataXml(groupId, artifactId, versions, lastUpdated) {
+    const latest = highest(versions);
+    const release = highest(versions, (v) => !isPrerelease(v));
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<metadata>\n' +
+        `  <groupId>${groupId}</groupId>\n  <artifactId>${artifactId}</artifactId>\n  <versioning>\n` +
+        (latest ? `    <latest>${latest}</latest>\n` : "") + (release ? `    <release>${release}</release>\n` : "") +
+        `    <versions>\n${versions.map((v) => `      <version>${v}</version>\n`).join("")}    </versions>\n` +
+        `    <lastUpdated>${lastUpdated}</lastUpdated>\n  </versioning>\n</metadata>\n`;
+}
+
+/**
+ * Adds the version to the artifact's maven-metadata.xml, which a repository that does not
+ * generate it -- GitLab's -- otherwise never has, so that update bots never see a new
+ * version. Written only when it lacks the version, or its latest or release would change.
+ */
+async function updateMetadata(url, groupId, artifactId, manifest, auth, log) {
+    const held = await getFile(url, auth);
+    const xml = held ? held.toString("utf8") : "";
+    const block = /<versions>([\s\S]*?)<\/versions>/.exec(xml);
+    const versions = block ? [...block[1].matchAll(/<version>\s*([^<\s]+)\s*<\/version>/g)].map((m) => m[1]) : [];
+    const tag = (name) => ((new RegExp(`<${name}>\\s*([^<\\s]+)\\s*</${name}>`).exec(xml)) || [])[1] || null;
+    const listed = versions.includes(manifest.version) ? versions : [...versions, manifest.version];
+    if (listed === versions && tag("latest") === highest(listed)
+        && tag("release") === highest(listed, (v) => !isPrerelease(v))) {
+        return;
+    }
+    // The commit's time, as the archive's producedAt, so the same commit writes the same file.
+    const lastUpdated = String(manifest.producedAt || new Date().toISOString()).replace(/\.\d+Z$/, "Z").replace(/[-:TZ]/g, "");
+    try {
+        await putFile(url, Buffer.from(metadataXml(groupId, artifactId, listed, lastUpdated), "utf8"), auth, "application/xml");
+    } catch (error) {
+        throw new ChannelError(`the repository refused maven-metadata.xml for ${groupId}:${artifactId}: ${error.message.trim()} ` +
+            "The version's files are published; a re-run retries only the metadata. For a repository that generates " +
+            "its own maven-metadata.xml, set channels.maven.metadata: false.");
+    }
+    log(`-- Listed ${manifest.version} in ${groupId}:${artifactId}'s maven-metadata.xml`);
 }
 
 function publishMavenRemote(archive, manifest, options, log) {
@@ -344,12 +392,20 @@ function publishMavenRemote(archive, manifest, options, log) {
             `Remote publication needs one; set it in the release job's environment.`
         );
     }
+    // A bearer token unless tokenHeader names another header, which then carries the
+    // token as it is: GitLab takes a job, personal or deploy token as Job-Token,
+    // Private-Token or Deploy-Token, and Bearer only for OAuth.
+    if (options.tokenHeader !== undefined && !HEADER_NAME.test(options.tokenHeader)) {
+        throw new ChannelError(`channels.maven.tokenHeader must be an HTTP header name, such as Job-Token, ` +
+            `not ${JSON.stringify(options.tokenHeader)}`);
+    }
+    const auth = options.tokenHeader === undefined ? { "Authorization": `Bearer ${token}` } : { [options.tokenHeader]: token };
 
     const artifactId = options.artifactId || manifest.target;
     const version = manifest.version;
     const extension = options.extension || "tgz";
-    const base = `${options.repository.replace(/\/+$/, "")}/` +
-        `${options.groupId.split(".").join("/")}/${artifactId}/${version}/${artifactId}-${version}`;
+    const artifactDir = `${options.repository.replace(/\/+$/, "")}/${options.groupId.split(".").join("/")}/${artifactId}`;
+    const base = `${artifactDir}/${version}/${artifactId}-${version}`;
 
     const work = (async () => {
         // Idempotent, file by file: each file the repository already has is left alone when
@@ -365,7 +421,7 @@ function publishMavenRemote(archive, manifest, options, log) {
         ];
         const missing = [];
         for (const file of files) {
-            const existing = await getFile(file.url, token);
+            const existing = await getFile(file.url, auth);
             if (!existing) {
                 missing.push(file);
             } else if (!existing.equals(file.bytes)) {
@@ -375,7 +431,10 @@ function publishMavenRemote(archive, manifest, options, log) {
                     "A published version is never replaced; publish the change as a new version.");
             }
         }
-        for (const file of missing) await putFile(file.url, file.bytes, token, file.type);
+        for (const file of missing) await putFile(file.url, file.bytes, auth, file.type);
+        if (options.metadata !== false) {
+            await updateMetadata(`${artifactDir}/maven-metadata.xml`, options.groupId, artifactId, manifest, auth, log);
+        }
         return missing.length === 0;
     })();
 

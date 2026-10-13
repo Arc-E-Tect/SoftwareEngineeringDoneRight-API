@@ -49,3 +49,15 @@ test("classifies what kind of pre-release a version is", () => {
     assert.deepStrictEqual(describeVersion("1.0.0-rc.2"), { prerelease: true, kind: "rc" });
     assert.deepStrictEqual(describeVersion("1.0.0-alpha.1"), { prerelease: true, kind: "other" });
 });
+
+test("versions compare by semver precedence, build metadata ignored", () => {
+    const { compare } = require("../src/version-policy");
+    const ascending = ["0.9.0", "1.0.0-alpha", "1.0.0-alpha.1", "1.0.0-alpha.beta", "1.0.0-beta", "1.0.0-beta.2",
+        "1.0.0-beta.11", "1.0.0-rc.1", "1.0.0", "1.0.1", "1.2.0", "1.10.0", "2.0.0"];
+    for (let i = 0; i < ascending.length - 1; i++) {
+        assert.ok(compare(ascending[i], ascending[i + 1]) < 0, `${ascending[i]} < ${ascending[i + 1]}`);
+        assert.ok(compare(ascending[i + 1], ascending[i]) > 0, `${ascending[i + 1]} > ${ascending[i]}`);
+    }
+    assert.strictEqual(compare("1.0.0+build.1", "1.0.0+build.2"), 0);
+    assert.strictEqual(compare("1.0.0", "1.0.0"), 0);
+});
