@@ -15,6 +15,7 @@ const { execFileSync } = require("child_process");
 const { isPrerelease, npmDistTag } = require("./version-policy");
 const { ChannelError } = require("./channel-error");
 const { publishNuget } = require("./nuget");
+const { refuseRemote } = require("./remote");
 
 /** What every package and release says it is, unless `description` says otherwise. */
 const DEFAULT_DESCRIPTION = "API description documents for {target}.";
@@ -401,6 +402,8 @@ function publish(archive, manifest, channel, options, log = () => {}) {
             `unknown channel '${channel}'; available channels are ${Object.keys(CHANNELS).join(", ")}`
         );
     }
+    // Here as well as in the CLI, so the Publisher used as a library keeps it too.
+    refuseRemote([channel], { [channel]: options || {} });
     return handler(archive, manifest, options || {}, log);
 }
 

@@ -1030,3 +1030,58 @@ test("publish to every local channel writes a hand-off listing every file it pro
     }
     assert.strictEqual(fs.readFileSync(path.join(dir, "build", "packages", HANDOFF_SHA256), "utf8").split("\n").length, 21);
 });
+
+// ------------------------------------ API_ONLY_PUBLISHER_REMOTE=never: nothing is contacted
+
+async function withRemote(value, action) {
+    const saved = process.env.API_ONLY_PUBLISHER_REMOTE;
+    process.env.API_ONLY_PUBLISHER_REMOTE = value;
+    try {
+        return await action();
+    } finally {
+        if (saved === undefined) delete process.env.API_ONLY_PUBLISHER_REMOTE; else process.env.API_ONLY_PUBLISHER_REMOTE = saved;
+    }
+}
+
+function remoteLibrary() {
+    const dir = library({
+        ...SHIPPING,
+        "apionly.yaml": SHIPPING["apionly.yaml"].replace("channels:\n  file:\n    directory: build/publish\n",
+            "channels:\n  file:\n    directory: build/publish\n" +
+            "  maven:\n    groupId: com.example.api\n    repository: https://maven.example.invalid/releases\n"),
+    });
+    prepare(loadFrom(dir));
+    shipped(dir, "alpha", "openapi", "1.0.0");
+    return dir;
+}
+
+test("publish under API_ONLY_PUBLISHER_REMOTE=never refuses a remote channel before packing anything", async () => {
+    const dir = remoteLibrary();
+    await withRemote("never", async () => {
+        await assert.rejects(main(["publish", "--target", "alpha", "-C", dir, "-q"]),
+            (e) => /API_ONLY_PUBLISHER_REMOTE=never refuses the remote channels maven/.test(e.message)
+                && /API_ONLY_PUBLISHER_REMOTE=allow/.test(e.message));
+        await assert.rejects(main(["publish", "--channel", "maven", "-C", dir, "-q"]), /refuses the remote channels maven/);
+    });
+    assert.ok(!fs.existsSync(path.join(dir, "build", "packages")), "nothing was packed");
+    assert.ok(!fs.existsSync(path.join(dir, "build", "publish")), "nothing was published");
+});
+
+test("publish under API_ONLY_PUBLISHER_REMOTE=never still ships to the local channels a run names", async () => {
+    const dir = remoteLibrary();
+    await withRemote("never", async () => {
+        assert.strictEqual((await run(["publish", "--target", "alpha", "--channel", "file", "-C", dir, "-q"])).code, 0);
+    });
+    assert.ok(fs.existsSync(path.join(dir, "build", "publish", "alpha", "1.0.0", "alpha-1.0.0.tgz")));
+});
+
+test("publish with an invalid API_ONLY_PUBLISHER_REMOTE fails, even when every channel is local", async () => {
+    const dir = library(SHIPPING);
+    prepare(loadFrom(dir));
+    shipped(dir, "alpha", "openapi", "1.0.0");
+    await withRemote("no", async () => {
+        await assert.rejects(main(["publish", "--target", "alpha", "-C", dir, "-q"]),
+            /API_ONLY_PUBLISHER_REMOTE must be allow or never, not "no"/);
+    });
+    assert.ok(!fs.existsSync(path.join(dir, "build", "packages")), "nothing was packed");
+});

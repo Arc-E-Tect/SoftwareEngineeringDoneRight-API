@@ -165,6 +165,18 @@ done
 [ ! -e "$WORK/sealed/build" ] || fail "the build staged files before refusing"
 pass "failed in ${elapsed}s, naming the image's toolchain and the opt-in"
 
+step "8a. Publishing to a remote channel is refused by default, before anything is packed"
+cp -R "$WORK/lib" "$WORK/remote"
+rm -rf "$WORK/remote/build/packages"
+if sealed remote publish -q --target example-service --channel github-release >"$WORK/remote.txt" 2>&1; then
+    fail "a publish to github-release succeeded in the sealed image"
+fi
+for expected in "API_ONLY_PUBLISHER_REMOTE=never refuses the remote channels github-release" "API_ONLY_PUBLISHER_REMOTE=allow"; do
+    grep -qF "$expected" "$WORK/remote.txt" || fail "the message does not say '$expected': $(cat "$WORK/remote.txt")"
+done
+[ ! -e "$WORK/remote/build/packages" ] || fail "publish packed before refusing"
+pass "refused, naming the channel and the opt-in, with nothing packed"
+
 step "9. Shell mode, as a CI job calls it"
 sealed empty sh -c 'api-only-publisher --help' | grep -q '^Usage:' || fail "sh -c 'api-only-publisher --help' failed"
 pass "sh -c 'api-only-publisher --help'"

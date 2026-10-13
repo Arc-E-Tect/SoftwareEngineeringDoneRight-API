@@ -17,6 +17,7 @@ const { pack, PackError } = require("./pack");
 const { changedSince, ChangedError } = require("./changed");
 const { split, SplitError } = require("./split");
 const { publish, ChannelError } = require("./channels");
+const { refuseRemote } = require("./remote");
 const { VersionError: PolicyError, describe } = require("./version-policy");
 const { versionOf, BundleVersionError } = require("./bundle-version");
 const { unreferenced } = require("./unreferenced");
@@ -451,6 +452,8 @@ async function main(argv, io = {}) {
             if (names.length === 0) {
                 throw new ConfigError("no channels configured; add a `channels:` block or pass --channel");
             }
+            // Every channel this run uses, before anything is read, packed or sent.
+            refuseRemote(names, configured);
             const shipped = shippedTargets(config, targets);
             const versions = versionsOf(config, shipped, options.preRelease);
             const closures = forTargets(config, undefined, shipped);

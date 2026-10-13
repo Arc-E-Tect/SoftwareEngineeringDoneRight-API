@@ -61,6 +61,9 @@ A library pinning other versions fails at once, before anything is built, saying
 Nothing phones home: npm's update notifier, Redocly CLI's telemetry and AsyncAPI CLI's analytics and update checks are switched off in the image's environment.
 The smoke test was run on a network whose every packet was captured, and the image sent none.
 
+Nor does `publish` contact anything: the image sets `API_ONLY_PUBLISHER_REMOTE=never`, which refuses every channel's remote mode -- a repository or feed at a URL, a registry, a release -- before anything is packed.
+A pipeline that publishes from the image sets `API_ONLY_PUBLISHER_REMOTE=allow` on that job.
+
 ## Verify
 
 The image is signed with Sigstore cosign, keyless, by the release workflow's GitHub identity:

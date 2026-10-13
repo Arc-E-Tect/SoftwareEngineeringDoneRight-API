@@ -681,6 +681,38 @@ What happens when the destination already has the version:
 A NuGet feed that cannot return the package it has, so there is nothing to compare, fails as a different one would.
 |===
 
+[#remote-switch]
+=== Refusing remote publishing
+
+A channel's *local mode* writes files: `file`, `maven` and `nuget` to a directory, `npm` with `publish: false`.
+Its *remote mode* sends them somewhere: `maven` and `nuget` to a URL, `npm` with publishing, `github-release`.
+
+`API_ONLY_PUBLISHER_REMOTE` decides whether `publish` may use a remote mode:
+
+[cols="1,3", options="header"]
+|===
+| Value | Effect
+
+| `allow`, or unset
+| Every channel works. The default outside the Docker image.
+
+| `never`
+| `publish` refuses a run that would use any remote channel, naming each of them, before it reads a version or packs anything; the local modes work as always.
+The Publisher then contacts nothing. The default in the Docker image (<<docker-network,Nothing phones home §>>).
+|===
+
+[source,text]
+----
+Error: API_ONLY_PUBLISHER_REMOTE=never refuses the remote channels maven, github-release, so nothing was built, packed or sent. Publish with their local modes, or set API_ONLY_PUBLISHER_REMOTE=allow where this run may contact them.
+----
+
+Any other value fails `publish`, whatever its channels: a typo in a switch that keeps the Publisher sealed is not ignored.
+`--channel` narrows what is checked: `publish --channel file` succeeds under `never`, whatever else `apionly.yaml` configures.
+The Publisher used as a library keeps the same rule.
+
+The switch is a promise the Publisher keeps, not an enforcement: whoever runs it can change the variable.
+Where contacting nothing must be guaranteed, isolate the job's network on the platform as well -- `docker run --network none`, or a network policy for the runner.
+
 [#handoff]
 === The hand-off: what a `publish` run wrote
 
@@ -1562,7 +1594,8 @@ Credentials never enter the image.
 .What the image does not do yet
 ====
 The image does not publish to a remote registry itself.
-The channels' remote modes -- `maven` or `nuget` to a URL, `npm` with publishing, `github-release` -- may work from inside it, but they are neither tested nor supported there.
+It refuses the channels' remote modes -- `maven` or `nuget` to a URL, `npm` with publishing, `github-release` -- because it sets `API_ONLY_PUBLISHER_REMOTE=never` (<<remote-switch,Refusing remote publishing §>>).
+Setting `allow` lifts the refusal, but the remote modes are neither tested nor supported in the image yet.
 Publish in a second step, as <<docker-pipelines>> shows.
 ====
 
@@ -1802,6 +1835,10 @@ The image makes no outbound connection: it sets, in its environment, what switch
 |===
 
 This is tested, not assumed: the whole smoke test was run on a network whose every packet was captured, and the image sent none.
+
+Nor does `publish` contact anything: the image sets `API_ONLY_PUBLISHER_REMOTE=never`, so a run that would use a remote channel fails before it packs anything, naming the channels (<<remote-switch,Refusing remote publishing §>>).
+A pipeline that publishes from the image sets `API_ONLY_PUBLISHER_REMOTE: allow` on that job: a visible line, reviewed like any other.
+The variable is the Publisher's promise; a pipeline that must be sure the job contacts nothing also runs it without a network, `docker run --network none`.
 
 [#docker-ci-job]
 ==== As a CI job image
