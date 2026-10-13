@@ -13,7 +13,7 @@ The full documentation is [on GitHub](https://github.com/Arc-E-Tect/SoftwareEngi
 
 The image publishes itself to a GitLab project's Generic Package Registry and Maven registry, in one job, with the job's `CI_JOB_TOKEN`: the job sets `API_ONLY_PUBLISHER_REMOTE=allow`, and nothing but the image runs.
 The [GitLab CI reference pipeline](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/gitlab-ci.yml) does that, and [Publishing to GitLab](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/docs/guides/publishing-to-gitlab/overview.adoc) is the guide.
-The image's smoke test publishes this way, to a GitLab stand-in; no GitLab pipeline has run the reference pipeline yet.
+The reference pipeline has run on gitlab.com, publishing to both registries and creating the release with the job token.
 
 ## Two steps
 

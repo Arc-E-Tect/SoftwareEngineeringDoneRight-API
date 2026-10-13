@@ -2013,11 +2013,8 @@ One job, on a `v*` tag, as the GitHub Actions pipeline: the image builds, lints 
 Copy it to `.gitlab-ci.yml`, then set the digest and the targets.
 The tag pattern keeps out the tag a GitLab release puts on the commit, `<target>-v<version>`, which would otherwise start the pipeline a second time; a library that tags its releases otherwise changes the rule, and keeps that one out.
 
-[WARNING]
-====
-*Exercised against a stand-in, not yet on GitLab.*
-It is validated against GitLab's published CI schema, and the image's smoke test publishes as this job does, to a GitLab stand-in; no GitLab pipeline has run it yet.
-====
+It has run on gitlab.com: with the job token, it published to the project's generic and Maven registries, created the release, and, run again, found everything published and changed nothing.
+It is validated against GitLab's published CI schema, the image's smoke test publishes as this job does to a GitLab stand-in, and the link:../.github/workflows/api-only-publisher-image-e2e.yml[end-to-end workflow →] publishes the same way to a gitlab.com test project, with a deploy token.
 
 [source,yaml]
 ----
@@ -2129,6 +2126,7 @@ link:../.github/workflows/api-only-publisher-image-e2e.yml[`api-only-publisher-i
 link:test/docker.test.js[`test/docker.test.js` →] holds it to what the link:pipelines/[reference pipelines →] do, the same actions, commands, inputs and environment, but not to the versions they pin.
 The reference pipelines are examples, maintained on their own, and the end-to-end workflow is maintained with this repository's other workflows, so a new version of an action in one never fails the Publisher's build while the other has not moved.
 Give it an image by digest; it publishes version `0.<run>.<attempt>` of two scratch targets, `apionly-e2e-alpha` and `apionly-e2e-beta`, to npm, Maven and NuGet on GitHub Packages and to a scratch release, publishes again to prove a re-run is safe, resolves each package with its own client and with the Subscriber, and removes what it published.
+Its `gitlab` job publishes the same targets from the image, in one job, to a gitlab.com test project's Generic Package Registry and Maven registry with a deploy token (secret `GITLAB_E2E_DEPLOY_TOKEN`), publishes again, checks GitLab serves the image's bytes and lists the version in `maven-metadata.xml`, and resolves a contract with the Subscriber; a deploy token cannot delete packages, so the run's summary lists the scratch versions to delete by hand.
 The image workflow, dispatched by hand, is the release's dry run: its defaults are the scratch names `ghcr.io/arc-e-tect/api-only-publisher-scratch` and `arcetect/api-only-publisher-scratch`, and it builds from the branch's source.
 
 [#adapting]

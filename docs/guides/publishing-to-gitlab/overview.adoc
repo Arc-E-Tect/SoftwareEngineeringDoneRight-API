@@ -36,12 +36,12 @@ A specification library hosted on GitLab, on gitlab.com or a self-managed instan
 This guide covers what is particular to GitLab.
 link:../../../api-only-publisher/README.adoc#gitlab-package[The `gitlab-package` channel →] is its reference, and link:../publishing-from-ci/overview.adoc[Publishing from CI with the image →] explains the image, and when to publish in two steps instead.
 
-[#status]
-[WARNING]
+[#checked]
+[NOTE]
+.How this was checked
 ====
-*Not yet run on GitLab.*
-The channel was checked against gitlab.com by hand with a deploy token, and the image's smoke test publishes as the reference pipeline does, to a GitLab stand-in.
-No GitLab pipeline has run the reference pipeline yet: what this guide says about the job token, and about `release: true` in a pipeline, rests on GitLab's documentation until it has.
+The reference pipeline has run on gitlab.com: with the job token it published to the project's Generic Package Registry and Maven registry, created the release, and, run again, found everything published and changed nothing.
+The deploy-token setup, the duplicate-package behaviour and the error messages in this guide were checked against gitlab.com too.
 ====
 
 [#steps]

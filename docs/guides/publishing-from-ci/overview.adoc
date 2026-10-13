@@ -125,7 +125,7 @@ Keep the toolchain pins in `apionly.yaml` at the image's versions, which `init` 
 * link:../../../api-only-publisher/pipelines/github-actions.yml[GitHub Actions →], to npm, Maven and NuGet on GitHub Packages, and a GitHub Release, with `GITHUB_TOKEN`.
 It is exercised end to end, publishing and then resolving every package with its own client.
 * link:../../../api-only-publisher/pipelines/gitlab-ci.yml[GitLab CI, one job →], to the project's generic and Maven registries, with `CI_JOB_TOKEN`.
-The image's smoke test publishes as it does, to a GitLab stand-in; no GitLab pipeline has run it yet.
+It has run on gitlab.com, and the image's smoke test and end-to-end workflow publish as it does.
 * link:../../../api-only-publisher/pipelines/gitlab-ci-two-step.yml[GitLab CI, two steps →], to the project's npm, Maven, NuGet and generic package registries, with `CI_JOB_TOKEN`.
 *It is not exercised yet*: it is validated against GitLab's CI schema only.
 
