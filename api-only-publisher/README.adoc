@@ -58,6 +58,7 @@ It need not be a deployable, which is why this is not called `services`.
 
 This document is the reference for the Publisher alone.
 To set it up for your situation, start at link:../docs/README.adoc[the documentation →].
+For the configuration that fits a typical situation -- one API or several, one kind of consumer or many -- see <<recipes,Recipes §>>.
 
 [#requirements]
 == Requirements
@@ -980,6 +981,354 @@ When that version changes, the review is redone rather than rewritten, and the c
 `"x-updater": "report-only"` in `docker/toolchain/package.json` asks a dependency updater to report a newer version of a tool, and what `npm audit` finds, rather than install anything there: installing one is the change above.
 Everything in the Publisher's own link:package.json[`package.json` →] is an ordinary dependency, left to a dependency updater: `yaml`, and semantic-release and its plugins, with which the Publisher is released.
 link:../README.adoc#dependency-updates[The repository's dependency updates →] list every project, and which of the two changes it.
+
+[#recipes]
+== Recipes
+
+Configuring the Publisher is the easy part.
+The unfamiliar part is the idea behind it: an API description is a product.
+It has a version, it is released, and the teams and companies that build against it obtain it the way they obtain any other dependency, in the package format their own build already understands.
+
+Two questions decide how a library is configured:
+
+* *How many targets?*
+A target is one contract with a version of its own and consumers of its own: what gets shipped.
+* *How many channels?*
+A channel is one way of shipping it -- `file`, `maven`, `npm`, `nuget` or `github-release` -- chosen to suit the technology of whoever consumes it: how it reaches them.
+
+Each recipe below answers both, for a situation in which the answer is typical.
+They are starting points, not boundaries: the situations describe where each shape usually turns up, and nothing stops a shape being used elsewhere.
+
+[cols="2,1,1,2,4",options="header"]
+|===
+|Recipe |Targets |Channels |Every target on every channel? |Typical situation
+
+|<<recipe-vanilla,Vanilla §>>
+|One
+|One
+|Yes
+|One API, consumed by builds that all use the same technology.
+
+|<<recipe-microservices,Microservice architecture §>>
+|Several
+|One
+|Yes
+|Several services, each with its own contract, built by teams that share a technology.
+
+|<<recipe-business-partners,Business partners §>>
+|One
+|Several
+|Yes
+|One API offered to third parties, each building its client with a different technology.
+
+|<<recipe-platform,Platform §>>
+|Several
+|Several
+|Yes
+|A set of backend services that first and third parties build applications on, each with the technology of its choice.
+
+|<<recipe-ecosystem,Eco-system §>>
+|Several
+|Several
+|No
+|Parties that each use some of the backend services, with technologies of their own.
+|===
+
+[#recipes-two-facts]
+=== Two facts every recipe rests on
+
+*A channel is named after its type.*
+`channels.maven` is the Maven channel, `channels.npm` the npm channel, and so on, so one `apionly.yaml` has at most one channel of each type, with one destination each.
+Two consumers who both read Maven get the same Maven repository; <<recipe-business-partners,Business partners §>> shows what to do when they each need their own.
+
+*`apionly.yaml` says which channels exist, not which target goes where.*
+Without `--channel`, `publish` ships every published target to every configured channel, packing each target once and sending the same bytes everywhere.
+`--target` and `--channel` narrow a run, and both may be repeated:
+
+[source,console]
+----
+npm run apionly -- publish --target payments --channel nuget
+----
+
+So when different targets go to different channels, the routing lives in the commands that run `publish`, as <<recipe-ecosystem,Eco-system §>> shows, and not in `apionly.yaml`.
+
+The excerpts below show only `channels` and `targets`; the rest of `apionly.yaml` is as <<configuration,Configuration §>> describes, and as `init` writes it.
+Every published target also needs its version file, as <<versions,Versions §>> describes, and a `build` before its `publish`.
+
+[#recipe-vanilla]
+=== Vanilla: one target, one channel
+
+*When.*
+One API, described in one library, and consumed by builds that all use the same technology.
+A single service whose clients are all Gradle or Maven builds; a library that lives in the same repository as its only implementation.
+
+.apionly.yaml (excerpt)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.example.com/releases  # a directory works too
+    # tokenEnv: MAVEN_TOKEN                         # the variable holding the token
+
+targets:
+  orders:
+    openapi:
+      bundle: bundles/orders_openapi_structure.yaml
+----
+
+[source,console]
+----
+npm run apionly -- build
+npm run apionly -- publish
+----
+
+This publishes `com.example.contracts:orders:<version>@tgz`, which a build fetches with the link:../api-only-subscriber/README.adoc[API-Only Subscriber →].
+
+*Variations.*
+
+* A library that lives in the same repository as its implementation needs no repository at all: the `file` channel, with `directory: build/publish`, is what `init` writes, and the Subscriber reads it from there.
+* A consumer that is not a JVM build takes a different channel in place of `maven`: `npm` for a Node.js or TypeScript build, `nuget` for .NET, `github-release` for anything else.
+
+[#recipe-microservices]
+=== Microservice architecture: several targets, one channel
+
+*When.*
+Several services, each owning its own contract, and one library describing them all, so that a schema the services share is one fragment rather than several copies.
+The teams use the same technology, so one channel reaches all of them.
+
+.apionly.yaml (excerpt)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://maven.example.com/releases
+
+targets:
+  orders:
+    openapi:
+      bundle: bundles/orders_openapi_structure.yaml
+    asyncapi:
+      bundle: bundles/orders_asyncapi_structure.yaml
+  payments:
+    openapi:
+      bundle: bundles/payments_openapi_structure.yaml
+  shipping:
+    openapi:
+      bundle: bundles/shipping_openapi_structure.yaml
+  landscape:
+    openapi:
+      aggregate: [orders, payments, shipping]  # a view of all of them; never published
+----
+
+[source,console]
+----
+npm run apionly -- build
+npm run apionly -- changed --since origin/main  # the targets this branch changes
+npm run apionly -- publish
+----
+
+Each target is published as an artifact of its own, at the version in its own version file: `com.example.contracts:orders`, `com.example.contracts:payments` and `com.example.contracts:shipping`.
+A service subscribes to its own contract to implement it, and to the contracts of the services it calls, as a client.
+
+*Worth knowing.*
+
+* Versions are per target, so a change to one service's fragments releases only that service's contract.
+A change to a fragment several targets share changes all of them, and `changed` names which, as <<closure,Independent versioning, and the dependency closure §>> describes.
+* Publishing every target on every run is safe: a version that is already published, with the same bytes, is left alone (<<idempotent,Publishing the same version again §>>).
+What fails is a changed contract whose version was not changed, which is the mistake `changed` exists to catch first.
+* `landscape` is optional: a whole-landscape view for reading, generated on every build and never published, as <<aggregates,Aggregates §>> describes.
+
+[#recipe-business-partners]
+=== Business partners: one target, several channels
+
+*When.*
+One API, offered to third parties who each build their own client: one in Java, one in TypeScript, one in C#, one in whatever it chose.
+Each of them should get the contract in the package format its own build understands, and all of them should get the same contract.
+
+.apionly.yaml (excerpt)
+[source,yaml]
+----
+channels:
+  maven:                       # the partners that build on the JVM
+    groupId: com.example.partner
+    repository: https://maven.example.com/partner
+  npm:                         # the partners that build with Node.js or TypeScript
+    scope: "@example-partner"
+    access: restricted
+  nuget:                       # the partners that build with .NET
+    idPrefix: Example.Partner
+    repository: https://nuget.example.com/v3/index.json
+  github-release:              # everyone else: a download, no package manager needed
+    repository: example/partner-api
+
+targets:
+  partner-api:
+    openapi:
+      bundle: bundles/partner-api_openapi_structure.yaml
+    asyncapi:
+      bundle: bundles/partner-api_asyncapi_structure.yaml
+----
+
+[source,console]
+----
+npm run apionly -- build
+npm run apionly -- publish
+----
+
+One run publishes `com.example.partner:partner-api`, `@example-partner/partner-api`, `Example.Partner.PartnerApi` and the release `partner-api-v<version>`, all four from the same packed archive, so a Java partner and a .NET partner always read byte-identical documents.
+
+*Worth knowing.*
+
+* `--channel` publishes to one of them on its own, for instance when one partner's feed was unreachable during the release: `npm run apionly -- publish --channel nuget`.
+The other channels already have the version, and would leave it alone anyway.
+* A pre-release, `publish --pre-release rc.1`, is how a partner gets an unfinished contract to start building against, without any partner's production build picking it up by accident (<<pre-releases,Pre-releases §>>).
+* Each channel takes its credential from the environment, never from `apionly.yaml`: `MAVEN_TOKEN` and `NUGET_API_KEY` by default, npm's own configuration for `npm`, and the GitHub CLI's for `github-release` (<<channel-text,What a package says about itself §>>).
+* Partners that each need a repository of *the same type* -- two Maven repositories, one per partner -- cannot be two `maven` channels.
+Publish to a local destination instead, `repository` or `directory` set to a directory, and let the pipeline copy the files it lists in `packages.sha256` to each partner's repository, as <<handoff,The hand-off §>> describes.
+
+[#recipe-platform]
+=== Platform: several targets, several channels, every target on every channel
+
+*When.*
+A set of backend services that others build applications on: the organisation's own teams, and third parties.
+Which services an application uses, and with which technology it is built, is up to whoever builds it, so every contract is offered in every format.
+
+.apionly.yaml (excerpt)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.platform
+    repository: https://maven.example.com/platform
+  npm:
+    scope: "@example-platform"
+    access: public
+  nuget:
+    idPrefix: Example.Platform
+    repository: https://api.nuget.org/v3/index.json
+
+targets:
+  catalog:
+    openapi:
+      bundle: bundles/catalog_openapi_structure.yaml
+  customers:
+    openapi:
+      bundle: bundles/customers_openapi_structure.yaml
+  orders:
+    openapi:
+      bundle: bundles/orders_openapi_structure.yaml
+    asyncapi:
+      bundle: bundles/orders_asyncapi_structure.yaml
+  payments:
+    openapi:
+      bundle: bundles/payments_openapi_structure.yaml
+  platform:
+    openapi:
+      aggregate: [catalog, customers, orders, payments]
+----
+
+[source,console]
+----
+npm run apionly -- build
+npm run apionly -- publish
+----
+
+The configuration is the <<recipe-microservices,microservice architecture §>>'s targets with the <<recipe-business-partners,business partners §>>' channels, and the plain `publish` ships every target to every channel.
+
+*Worth knowing.*
+
+* Adding a target to `targets` publishes it on every channel, and adding a channel publishes every target on it.
+For a platform that is the point; when it is not, the library is an <<recipe-ecosystem,eco-system §>>.
+* The `platform` aggregate is the one document that shows the whole platform, for a developer portal or a review; it is never published, so nobody can build against it by accident (<<aggregates-never-published,An aggregate is never published §>>).
+* A target that is not for others at all -- a service's internal administration API, say -- stays in the library with `publish: false`: it is built and linted with the rest, and shipped nowhere.
+
+[#recipe-ecosystem]
+=== Eco-system: several targets, several channels, not every target on every channel
+
+*When.*
+Several parties, first and third, each use some of the backend services, and each builds with a technology of its own.
+The internal Java teams use all of them; the web front end, in TypeScript, uses the catalogue and the orders; a .NET payment provider uses the payments contract and nothing else.
+Offering every contract in every format would publish contracts to places nobody reads them, and offer a third party contracts it has no business with.
+
+This is also the answer to a question that comes up as soon as a library holds more than one target: _how do I publish one of the targets to a different channel?_
+
+Start from a routing table: which target goes to which channel.
+
+[cols="1,1,1,1",options="header"]
+|===
+|Target |`maven` |`npm` |`nuget`
+|`catalog`  |Yes |Yes |
+|`customers`|Yes |    |
+|`orders`   |Yes |Yes |
+|`payments` |Yes |    |Yes
+|===
+
+`apionly.yaml` declares the channels and the targets, as for a <<recipe-platform,platform §>>:
+
+.apionly.yaml (excerpt)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.services
+    repository: https://maven.example.com/services
+  npm:
+    scope: "@example-web"
+    access: restricted
+  nuget:
+    idPrefix: Example.Services
+    repository: https://nuget.example.com/v3/index.json
+
+targets:
+  catalog:
+    openapi:
+      bundle: bundles/catalog_openapi_structure.yaml
+  customers:
+    openapi:
+      bundle: bundles/customers_openapi_structure.yaml
+  orders:
+    openapi:
+      bundle: bundles/orders_openapi_structure.yaml
+  payments:
+    openapi:
+      bundle: bundles/payments_openapi_structure.yaml
+----
+
+The routing table becomes one `publish` per channel, each naming its targets.
+Keeping those commands as scripts in the library's `package.json` keeps the routing in one place, reviewed with the library, rather than spread across pipeline files:
+
+.package.json (excerpt)
+[source,json]
+----
+{
+  "scripts": {
+    "apionly": "api-only-publisher",
+    "publish:maven": "api-only-publisher publish --channel maven",
+    "publish:npm": "api-only-publisher publish --channel npm --target catalog --target orders",
+    "publish:nuget": "api-only-publisher publish --channel nuget --target payments",
+    "publish:all": "npm run publish:maven && npm run publish:npm && npm run publish:nuget"
+  }
+}
+----
+
+[source,console]
+----
+npm run apionly -- build
+npm run publish:all
+----
+
+`publish:maven` names no target, because every target goes there; a channel that takes only some names each of them.
+
+*Worth knowing.*
+
+* A new target goes only where a script sends it.
+`publish:maven` picks it up because it names no target; the npm and NuGet consumers do not see it until it is added to their script, which is the deliberate step an eco-system wants.
+* Each script passes its arguments on: `npm run publish:npm -- --pre-release rc.1` publishes a pre-release of the npm targets alone.
+* Each run packs again, and the archives are the same bytes every time (<<idempotent,Publishing the same version again §>>), so a target on two channels is identical on both.
+* Each run replaces the hand-off files in the packages directory (<<handoff,The hand-off §>>).
+A pipeline that publishes the files itself gives each run its own `--out`, such as `--out build/packages/npm`, and keeps every channel's list.
 
 [#behaviour]
 == Behaviour worth knowing about
