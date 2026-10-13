@@ -5,6 +5,14 @@
 :icons: font
 
 [NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
+[NOTE]
 .Where the links in this document go
 ====
 Every link ends with a marker saying where it leads, so you can tell before you follow it:
@@ -201,10 +209,14 @@ A guide covers one feature across the tools, rather than one way of adopting the
 |Guide |What it does |Documents
 
 |**Publishing API bundles from CI with the sealed Publisher image**
-|A pipeline packages its bundles in the Publisher's Docker image, which downloads nothing and holds no credential, and publishes the files in a second job with the platform's own tools; why a vetting team can approve the image, and when to choose it over the npm package.
+|A pipeline runs the Publisher's Docker image, which downloads nothing and contacts nothing unless a job allows it to publish: in one job, where the image publishes itself, or in two, where the platform's own tools publish what it packaged; why a vetting team can approve the image, and when to choose it over the npm package.
 |link:guides/publishing-from-ci/overview.adoc[Overview →] +
 link:guides/publishing-from-ci/prompt-claude-code.md[Claude Code prompt →] +
 link:guides/publishing-from-ci/prompt-codex.md[Codex prompt →]
+
+|**Publishing API bundles to GitLab**
+|A library on GitLab publishes from a GitLab CI pipeline, in one job on the sealed image, to its project's Generic Package Registry, and to its Maven registry for JVM consumers; which token, GitLab releases, duplicate packages, a self-managed instance, and what consumers need.
+|link:guides/publishing-to-gitlab/overview.adoc[Overview →]
 
 |**Descriptions a project owns, in one language or several**
 |The classes the API-Only TranscriberJ generates take their descriptions from a `ResourceBundle` the project writes, falling back to the contract's text, so one generated tree documents a contract in as many languages as the bundle has files.

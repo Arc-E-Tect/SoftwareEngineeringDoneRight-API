@@ -165,6 +165,18 @@ done
 [ ! -e "$WORK/sealed/build" ] || fail "the build staged files before refusing"
 pass "failed in ${elapsed}s, naming the image's toolchain and the opt-in"
 
+step "8a. Publishing to a remote channel is refused by default, before anything is packed"
+cp -R "$WORK/lib" "$WORK/remote"
+rm -rf "$WORK/remote/build/packages"
+if sealed remote publish -q --target example-service --channel github-release >"$WORK/remote.txt" 2>&1; then
+    fail "a publish to github-release succeeded in the sealed image"
+fi
+for expected in "API_ONLY_PUBLISHER_REMOTE=never refuses the remote channels github-release" "API_ONLY_PUBLISHER_REMOTE=allow"; do
+    grep -qF "$expected" "$WORK/remote.txt" || fail "the message does not say '$expected': $(cat "$WORK/remote.txt")"
+done
+[ ! -e "$WORK/remote/build/packages" ] || fail "publish packed before refusing"
+pass "refused, naming the channel and the opt-in, with nothing packed"
+
 step "9. Shell mode, as a CI job calls it"
 sealed empty sh -c 'api-only-publisher --help' | grep -q '^Usage:' || fail "sh -c 'api-only-publisher --help' failed"
 pass "sh -c 'api-only-publisher --help'"
@@ -177,5 +189,49 @@ docker run --rm --network "$NETWORK" --read-only --tmpfs /tmp --user 54321:54321
     git init -q && git add -A && git -c user.name=smoke -c user.email=smoke@example.invalid commit -qm scaffold
     api-only-publisher build -q' || fail "build as UID 54321 failed"
 pass "UID 54321 builds both kinds"
+
+step "11. Allowed, it publishes to GitLab's generic and Maven registries, with nothing else reachable"
+# A GitLab stand-in, run from this same image, on a Docker network with no route
+# out: the publish can reach the stand-in and nothing else, and the stand-in
+# records every request. gitlab-package has no settings, as in a GitLab CI job:
+# the CI variables are all it needs.
+SMOKE_NET="api-only-publisher-smoke-$$"
+STUB="api-only-publisher-gitlab-$$"
+trap 'docker rm -f "$STUB" >/dev/null 2>&1; docker network rm "$SMOKE_NET" >/dev/null 2>&1
+      rm -rf "$WORK" 2>/dev/null || docker run --rm -v "$WORK:/w" --entrypoint rm "$IMAGE" -rf /w/lib /w/sealed' EXIT
+docker network create --internal "$SMOKE_NET" >/dev/null
+docker run -d --name "$STUB" --network "$SMOKE_NET" --network-alias gitlab --read-only --tmpfs /tmp \
+    --user "$USER_SPEC" --entrypoint node "$IMAGE" -e '
+    const files = new Map();
+    require("http").createServer((req, res) => {
+        const chunks = [];
+        req.on("data", (c) => chunks.push(c));
+        req.on("end", () => {
+            console.log(`${req.method} ${req.url} ${req.headers["job-token"] === "smoke-job-token" ? "job-token" : "NO-TOKEN"}`);
+            if (req.method === "PUT") { files.set(req.url, Buffer.concat(chunks)); res.writeHead(201); return res.end("{}"); }
+            if (files.has(req.url)) { res.writeHead(200); return res.end(files.get(req.url)); }
+            res.writeHead(404); res.end("{\"message\":\"404 Not Found\"}");
+        });
+    }).listen(8080);' >/dev/null
+cp -R "$WORK/lib" "$WORK/gitlab"
+sealed gitlab sh -c "sed -i 's|^    repository: build/maven\$|    repository: http://gitlab:8080/api/v4/projects/42/packages/maven\n    tokenEnv: CI_JOB_TOKEN\n    tokenHeader: Job-Token|' apionly.yaml"
+in_gitlab_ci() {
+    docker run --rm --network "$SMOKE_NET" --read-only --tmpfs /tmp --user "$USER_SPEC" \
+        -e SOURCE_DATE_EPOCH=1700000000 -e API_ONLY_PUBLISHER_REMOTE=allow \
+        -e CI_API_V4_URL=http://gitlab:8080/api/v4 -e CI_PROJECT_ID=42 -e CI_JOB_TOKEN=smoke-job-token \
+        -v "$WORK/gitlab:/work" "$IMAGE" "$@"
+}
+in_gitlab_ci publish -q --target example-service --channel gitlab-package --channel maven || fail "publish to the stand-in failed"
+in_gitlab_ci publish -q --target example-service --channel gitlab-package --channel maven || fail "the identical re-run failed"
+docker logs "$STUB" >"$WORK/gitlab.log" 2>&1
+puts=$(grep -c '^PUT ' "$WORK/gitlab.log" || true)
+[ "$puts" -eq 6 ] || fail "expected 6 uploads (2 generic, 3 Maven, maven-metadata.xml), saw $puts: $(cat "$WORK/gitlab.log")"
+! grep -v ' /api/v4/projects/42/packages/\(generic\|maven\)/.* job-token$' "$WORK/gitlab.log" \
+    || fail "a request outside the project's package registries, or without the job token"
+grep -q '^PUT /api/v4/projects/42/packages/generic/example-service/0.1.0/example-service-0.1.0.tgz ' "$WORK/gitlab.log" \
+    || fail "the archive was not uploaded to the generic registry"
+grep -q '^PUT /api/v4/projects/42/packages/maven/com/example/api/example-service/maven-metadata.xml ' "$WORK/gitlab.log" \
+    || fail "maven-metadata.xml was not written"
+pass "6 uploads with the job token, all to the project's package registries; the re-run uploaded nothing"
 
 printf '\nSmoke test passed: %s\n' "$IMAGE"

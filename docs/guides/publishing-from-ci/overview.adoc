@@ -6,6 +6,14 @@
 :source-highlighter: rouge
 
 [NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
+[NOTE]
 .Where the links in this document go
 ====
 Every link ends with a marker saying where it leads, so you can tell before you follow it:
@@ -19,10 +27,13 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 [#in-short]
 == In short
 
-The API-Only Publisher is also a Docker image: one Publisher version and the bundlers it runs, sealed, so it downloads nothing when it runs.
-A pipeline packages its bundles in the image, and publishes the files it produced in a second job, with the platform's own tools and credentials.
+The API-Only Publisher is also a Docker image: one Publisher version and the bundlers it runs, sealed, so it downloads nothing when it runs, and contacts nothing unless a job allows it to publish.
+A pipeline publishes with it in one of two ways:
 
-This guide is about when to choose the image, and what the two steps give you.
+* *one job*: the image builds and publishes itself, to the registries it is tested with -- a GitLab project's generic and Maven registries;
+* *two steps*: the image packages the bundles into files, and a second job publishes them with the platform's own tools and credentials.
+
+This guide is about when to choose the image, and which of the two.
 link:../../../api-only-publisher/README.adoc#docker[The Publisher's reference →] describes the image in full, with both reference pipelines, and the prompts beside this guide set the pipeline up in your own repository:
 
 * link:prompt-claude-code.md[the Claude Code prompt →];
@@ -37,7 +48,7 @@ The npm package is hard to vet that way.
 Vetting it does not vet what it runs: it fetches Redocly CLI and AsyncAPI CLI with `npx` when it runs, and calls `git`, `tar` and `npm`.
 
 The image closes that gap.
-It is one artefact, with one digest, holding the Publisher *and* its toolchain, and it neither downloads nor contacts anything when it runs.
+It is one artefact, with one digest, holding the Publisher *and* its toolchain, and it neither downloads nor contacts anything when it runs, unless a job sets `API_ONLY_PUBLISHER_REMOTE: allow` to let it publish.
 A vetting team can:
 
 . pull it by digest;
@@ -48,6 +59,19 @@ A vetting team can:
 
 A pipeline that pins that digest then runs exactly what was vetted.
 link:../../../api-only-publisher/README.adoc#docker-vetting[For a vetting team →] has the commands.
+
+[#one-job]
+== One job
+
+The job runs `build`, `lint` and `publish` in the image, with `API_ONLY_PUBLISHER_REMOTE: allow` and the registry's token in its environment.
+Nothing but the image runs, so it is the only artefact to vet and mirror.
+
+The image publishes itself with the remote modes it is tested with: `gitlab-package`, a GitLab project's Generic Package Registry, and `maven` to a URL, such as the project's Maven registry.
+In a GitLab CI job, `gitlab-package` needs no settings: it takes the API, the project and `CI_JOB_TOKEN` from GitLab's CI variables.
+link:../publishing-to-gitlab/overview.adoc[Publishing to GitLab →] is the guide for it.
+
+Choose it when the image may hold the job's token and reach the registry.
+Choose two steps when it may not, or when the registry is one the image does not publish to itself yet: npm, NuGet, or a GitHub Release.
 
 [#two-steps]
 == Two steps
@@ -62,9 +86,7 @@ The first step writes a hand-off, `build/packages/packages.sha256`, listing ever
 The second checks the files against it before publishing, and publishes only what it lists, so the bytes in the registry are the bytes the vetted tool produced.
 
 The second step has two jobs the Publisher's remote channels would otherwise do: it checks whether a version is already published, so a re-run is safe and a real conflict still fails, and it lets `mvn deploy:deploy-file` write the checksums and metadata a Maven repository expects.
-Both reference pipelines do both.
-
-The image does not yet publish to remote registries itself; that is a later step, once this one is in use.
+The two-step reference pipelines do both.
 
 [#when]
 == The image or the npm package
@@ -82,11 +104,11 @@ The image does not yet publish to remote registries itself; that is a later step
 | Fetched with `npx` at the versions `apionly.yaml` pins.
 
 | Network when it runs
-| None.
-| npm, for the toolchain.
+| None; with `API_ONLY_PUBLISHER_REMOTE: allow`, the registries `apionly.yaml` configures.
+| npm, for the toolchain, and the registries.
 
 | Publishing
-| In a second step, with the platform's tools.
+| In the same job, to a GitLab project's generic and Maven registries; otherwise in a second step, with the platform's tools.
 | By the Publisher's channels, directly.
 
 | Pinned by
@@ -102,7 +124,9 @@ Keep the toolchain pins in `apionly.yaml` at the image's versions, which `init` 
 
 * link:../../../api-only-publisher/pipelines/github-actions.yml[GitHub Actions →], to npm, Maven and NuGet on GitHub Packages, and a GitHub Release, with `GITHUB_TOKEN`.
 It is exercised end to end, publishing and then resolving every package with its own client.
-* link:../../../api-only-publisher/pipelines/gitlab-ci.yml[GitLab CI →], to the project's npm, Maven, NuGet and generic package registries, with `CI_JOB_TOKEN`.
+* link:../../../api-only-publisher/pipelines/gitlab-ci.yml[GitLab CI, one job →], to the project's generic and Maven registries, with `CI_JOB_TOKEN`.
+It has run on gitlab.com, and the image's smoke test and end-to-end workflow publish as it does.
+* link:../../../api-only-publisher/pipelines/gitlab-ci-two-step.yml[GitLab CI, two steps →], to the project's npm, Maven, NuGet and generic package registries, with `CI_JOB_TOKEN`.
 *It is not exercised yet*: it is validated against GitLab's CI schema only.
 
 link:../../../api-only-publisher/README.adoc#docker-pipelines[For a pipeline author →] explains them, and how to run the image as a CI job image or from an organisation's mirror.

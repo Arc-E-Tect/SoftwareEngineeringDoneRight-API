@@ -56,6 +56,8 @@ RUN --mount=type=bind,source=api-only-publisher.tgz,target=/tmp/api-only-publish
 
 ENV API_ONLY_PUBLISHER_TOOLCHAIN_DIR=/opt/api-only-publisher/toolchain \
     API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD=never \
+    # Sealed: publish refuses every remote channel unless a pipeline sets allow.
+    API_ONLY_PUBLISHER_REMOTE=never \
     # Any UID, with or without a passwd entry, and a read-only root filesystem:
     # everything that writes to HOME writes to /tmp, which is writable or a tmpfs.
     HOME=/tmp \

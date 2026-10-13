@@ -104,7 +104,9 @@ test("maven: each file the repository already has is left alone when identical, 
                     const result = await call;
                     assert.strictEqual(result.alreadyPublished === true, expected === "same", label);
                 }
-                assert.deepStrictEqual(requests.filter((r) => r.method === "PUT").map((r) => r.url.split("/").pop()), puts, label);
+                // The version's own files; maven-metadata.xml has tests of its own (maven-remote.test.js).
+                assert.deepStrictEqual(requests.filter((r) => r.method === "PUT").map((r) => r.url.split("/").pop())
+                    .filter((name) => name !== "maven-metadata.xml"), puts, label);
                 assert.strictEqual(requests[0].headers.authorization, "Bearer t");
             } finally {
                 server.close();

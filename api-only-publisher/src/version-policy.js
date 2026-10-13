@@ -33,6 +33,32 @@ function parse(version) {
     };
 }
 
+/**
+ * Semver precedence: negative when `a` comes before `b`, positive after, 0 when equal.
+ * Build metadata is ignored; a release comes after its pre-releases; pre-release
+ * identifiers compare numerically when both are numbers, a number before a word.
+ */
+function compare(a, b) {
+    const x = parse(a);
+    const y = parse(b);
+    for (const part of ["major", "minor", "patch"]) {
+        if (x[part] !== y[part]) return x[part] - y[part];
+    }
+    if (x.prerelease === y.prerelease) return 0;
+    if (x.prerelease === null) return 1;
+    if (y.prerelease === null) return -1;
+    const xs = x.prerelease.split(".");
+    const ys = y.prerelease.split(".");
+    for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
+        if (xs[i] === ys[i]) continue;
+        const [xn, yn] = [/^\d+$/.test(xs[i]), /^\d+$/.test(ys[i])];
+        if (xn && yn) return Number(xs[i]) - Number(ys[i]);
+        if (xn !== yn) return xn ? -1 : 1;
+        return xs[i] < ys[i] ? -1 : 1;
+    }
+    return xs.length - ys.length;
+}
+
 function isPrerelease(version) {
     // -SNAPSHOT is not semver-legal as Maven spells it, but it is what Maven
     // consumers expect, so it is recognised rather than rejected.
@@ -65,4 +91,4 @@ function describe(version) {
     return { prerelease: true, kind: "other" };
 }
 
-module.exports = { parse, isPrerelease, npmDistTag, describe, VersionError, SEMVER };
+module.exports = { parse, compare, isPrerelease, npmDistTag, describe, VersionError, SEMVER };

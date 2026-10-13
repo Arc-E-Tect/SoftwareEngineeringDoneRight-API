@@ -236,9 +236,9 @@ A missing version fails the fetch and lists the versions that exist.
 |`channels.file.directory`, `channels.file.clean`
 
 |`maven`
-|`<groupId as path>/<artifactId>/<version>/<artifactId>-<version>.<extension>`, `.pom` and `-manifest.json`, into a directory, or uploaded with HTTP `PUT` and a bearer token to a URL.
+|`<groupId as path>/<artifactId>/<version>/<artifactId>-<version>.<extension>`, `.pom` and `-manifest.json`, into a directory, or uploaded with HTTP `PUT` to a URL, with a bearer token or in the header `tokenHeader` names, adding the version to `<artifactId>/maven-metadata.xml`.
 |`<groupId>:<artifactId>:<version>@<extension>`, resolved by Gradle from the build's `repositories`, with `channel.type = 'maven'`.
-|`channels.maven.groupId`, `repository`, `tokenEnv`, `artifactId`, `extension`, `description`
+|`channels.maven.groupId`, `repository`, `tokenEnv`, `tokenHeader`, `metadata`, `artifactId`, `extension`, `description`
 
 |`npm`
 |A package `<scope>/<target>`, or `<namePrefix><target>` without a scope, holding the archive's contents, published under the `next` dist-tag for a pre-release and `latest` otherwise.
@@ -250,6 +250,12 @@ With `publish: false`, the package is only packed into `directory`.
 |The archive, attached to a release tagged `<target>-v<version>`, marked as a pre-release where it is one.
 |Not read.
 |`channels.github-release.repository`, `tagFormat`, `title`, `notes`, `description`
+
+|`gitlab-package`
+|A generic package `<packageName>` at `<version>` in a GitLab project's Generic Package Registry, holding `<target>-<version>.tgz` and `manifest.json`, each read back before upload; with `release: true`, the tag's GitLab release linking both, except for a pre-release.
+In a GitLab CI job the API, the project and `CI_JOB_TOKEN` come from GitLab's CI variables.
+|Not read.
+|`channels.gitlab-package.url`, `project`, `tokenEnv`, `tokenType`, `packageName`, `release`, `tagFormat`, `title`, `notes`, `description`
 
 |`nuget`
 |`<id>.<version>.nupkg` holding the archive's contents under `contracts/`, into a local feed as `<id>/<version>/` with the `.sha512`, `.nuspec` and `manifest.json` beside it, or pushed with a multipart `PUT` and `X-NuGet-ApiKey` to the endpoint a remote feed's service index names.

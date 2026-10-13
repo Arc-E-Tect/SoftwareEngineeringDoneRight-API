@@ -34,7 +34,8 @@ When we are done:
 - **The image packages; the pipeline publishes.**
   The image runs with no network and no credential.
   Publishing happens in a separate job, with the registry's own client.
-  Do not configure a channel's remote mode -- `maven` or `nuget` to a URL, `npm` with publishing, `github-release` -- for the image: it is not supported there yet.
+  Do not configure a channel's remote mode -- `maven` or `nuget` to a URL, `npm` with publishing, `github-release`, `gitlab-package` -- for the image: in this pipeline it stays sealed, with no network and no credential.
+  On GitLab, the image can instead publish itself, in one job, to the project's generic and Maven registries; if I say the image may hold the job token and reach the registry, point me to https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/docs/guides/publishing-to-gitlab/overview.adoc instead of continuing with this prompt.
 - **Exactly the bytes the image produced.**
   The publishing job runs `sha256sum -c` on the hand-off before anything else, and publishes only files the hand-off lists.
   It never repackages, rebuilds or edits a file.
@@ -76,8 +77,9 @@ This is the Publisher version this prompt was verified with: the first release w
 - The reference pipelines, which you copy:
   - GitHub Actions: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/github-actions.yml, and its container-job variant, https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/github-actions-container-job.yml.
     It is exercised end to end.
-  - GitLab CI: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/gitlab-ci.yml.
+  - GitLab CI: https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/gitlab-ci-two-step.yml.
     It is **not exercised yet**: validated against GitLab's CI schema only.
+    Its sibling `gitlab-ci.yml` is the one-job pipeline, which this prompt does not set up.
 - GitHub Packages requires an npm package's scope to be the repository owner's name, lower-cased.
 
 ## Step 1: Ask, then investigate
