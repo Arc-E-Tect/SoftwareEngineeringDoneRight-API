@@ -350,24 +350,31 @@ function publishMavenRemote(archive, manifest, options, log) {
         `${options.groupId.split(".").join("/")}/${artifactId}/${version}/${artifactId}-${version}`;
 
     const work = (async () => {
-        // Idempotent: an artifact the repository already has is left alone when it is
-        // the same bytes, and refused when it is not.
-        const bytes = fs.readFileSync(archive);
-        const existing = await getFile(`${base}.${extension}`, token);
-        if (existing) {
-            if (existing.equals(bytes)) return true;
-            throw new ChannelError(
-                `${options.repository} already has ${options.groupId}:${artifactId}:${version}, and it is not this archive. ` +
-                "A published version is never replaced; publish the change as a new version.");
+        // Idempotent, file by file: each file the repository already has is left alone when
+        // it is the same bytes, and refuses the whole version when it is not. Every file is
+        // read back before any is uploaded, so a run interrupted after the artifact is
+        // completed by the next one, and a version that differs anywhere is not touched.
+        const files = [
+            { url: `${base}.${extension}`, bytes: fs.readFileSync(archive), type: "application/octet-stream" },
+            { url: `${base}.pom`, type: "application/xml",
+              bytes: Buffer.from(pom(options.groupId, artifactId, version, extension, pomDescription(options, manifest)), "utf8") },
+            { url: `${base}-manifest.json`, type: "application/json",
+              bytes: Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8") },
+        ];
+        const missing = [];
+        for (const file of files) {
+            const existing = await getFile(file.url, token);
+            if (!existing) {
+                missing.push(file);
+            } else if (!existing.equals(file.bytes)) {
+                throw new ChannelError(
+                    `${options.repository} already has ${options.groupId}:${artifactId}:${version}, ` +
+                    `and its ${file.url.split("/").pop()} is not this one. ` +
+                    "A published version is never replaced; publish the change as a new version.");
+            }
         }
-        await putFile(`${base}.${extension}`, bytes, token, "application/octet-stream");
-        await putFile(`${base}.pom`,
-            Buffer.from(pom(options.groupId, artifactId, version, extension, pomDescription(options, manifest)), "utf8"),
-            token, "application/xml");
-        await putFile(`${base}-manifest.json`,
-            Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8"),
-            token, "application/json");
-        return false;
+        for (const file of missing) await putFile(file.url, file.bytes, token, file.type);
+        return missing.length === 0;
     })();
 
     // The CLI is synchronous throughout; surfacing the promise here would make
