@@ -1,3 +1,15 @@
+# [0.15.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.4...api-only-publisher-v0.15.0) (2026-10-13)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** publish to a GitLab Package Registry ([#94](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/94)) ([285c279](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/285c2794bba87a471050c7ff5d98a233ff419f3c)), closes [#94](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/94) [#90](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/90) [#92](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/92) [#93](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/93)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.14.4 [skip ci] ([cd9f4c6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/cd9f4c6df776f9876e25f03e2face925db1d7cd9))
+
 ## [0.14.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.3...api-only-publisher-v0.14.4) (2026-10-13)
 
 
