@@ -67,7 +67,7 @@ Copy link:../../../api-only-publisher/pipelines/gitlab-ci.yml[the reference pipe
 Its one job sets `API_ONLY_PUBLISHER_REMOTE: allow`: the image is sealed, and refuses to contact anything in any job that does not.
 
 . *Tag a release.*
-The pipeline runs on a tag.
+The pipeline runs on a tag starting with `v`, such as `v2.1.0`.
 A version is published once; a re-run finds it published, identical, and changes nothing.
 
 . *Check it.*
@@ -123,7 +123,8 @@ channels:
     # tagFormat: "{target}-v{version}"    # the default
 ----
 
-* The release tags the pipeline's commit, `CI_COMMIT_SHA`.
+* The release tags the pipeline's commit, `CI_COMMIT_SHA`, with `<target>-v<version>`.
+A pipeline that ran on any tag would start again on that one, finding everything published; the reference pipeline runs on `v*` tags only, so it does not.
 * A release that exists keeps everything it has, and only gets the links it lacks.
 * A pre-release publishes the package but no release: GitLab has no pre-release flag, and the release would become the project's latest.
 * A deploy token cannot create a release, so `release: true` with `tokenType: deploy` is refused before anything is sent; publish with the job token, or set `release: false`.

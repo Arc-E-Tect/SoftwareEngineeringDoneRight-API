@@ -2008,9 +2008,10 @@ Each publishing step checks for the version first, compares the bytes, and publi
 [#docker-gitlab]
 ==== Reference pipeline: GitLab CI
 
-One job, on a tag: the image builds, lints and publishes the targets to the project's Generic Package Registry with `gitlab-package`, and, where `apionly.yaml` configures it, to the project's Maven registry, both with the job's `CI_JOB_TOKEN`.
+One job, on a `v*` tag, as the GitHub Actions pipeline: the image builds, lints and publishes the targets to the project's Generic Package Registry with `gitlab-package`, and, where `apionly.yaml` configures it, to the project's Maven registry, both with the job's `CI_JOB_TOKEN`.
 `apionly.yaml` needs no GitLab settings for it; the pipeline's header says what to add for the Maven registry.
 Copy it to `.gitlab-ci.yml`, then set the digest and the targets.
+The tag pattern keeps out the tag a GitLab release puts on the commit, `<target>-v<version>`, which would otherwise start the pipeline a second time; a library that tags its releases otherwise changes the rule, and keeps that one out.
 
 [WARNING]
 ====

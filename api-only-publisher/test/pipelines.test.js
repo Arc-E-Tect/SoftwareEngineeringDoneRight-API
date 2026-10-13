@@ -16,7 +16,7 @@ const read = (name) => fs.readFileSync(path.join(PIPELINES, name), "utf8");
 test("the GitLab pipeline is one job on the image, pinned by digest, publishing on a tag", () => {
     const pipeline = YAML.parse(read("gitlab-ci.yml"));
     assert.match(pipeline.variables.PUBLISHER_IMAGE, /@sha256:/);
-    assert.deepStrictEqual(pipeline.workflow.rules, [{ if: "$CI_COMMIT_TAG" }]);
+    assert.deepStrictEqual(pipeline.workflow.rules, [{ if: "$CI_COMMIT_TAG =~ /^v/" }]);
     const jobs = Object.keys(pipeline).filter((key) => pipeline[key] && pipeline[key].script);
     assert.deepStrictEqual(jobs, ["publish"]);
     assert.strictEqual(pipeline.publish.image, "$PUBLISHER_IMAGE");
@@ -52,4 +52,12 @@ test("the two-step GitLab pipeline remains, its packaging job sealed", () => {
     assert.strictEqual(pipeline.package.image, "$PUBLISHER_IMAGE");
     assert.strictEqual((pipeline.package.variables || {}).API_ONLY_PUBLISHER_REMOTE, undefined);
     assert.ok(pipeline["publish:generic"], "the generic registry by the platform's own tools");
+});
+
+test("the GitLab pipeline runs on a v* tag, never on the tag a GitLab release it creates puts on the commit", () => {
+    // release: true creates <target>-v<version>; a pipeline on that tag would run again.
+    const rule = YAML.parse(read("gitlab-ci.yml")).workflow.rules[0].if;
+    const pattern = new RegExp(/=~ \/(.*)\/$/.exec(rule)[1]);
+    for (const tag of ["v1.2.0", "v0.1.0-rc.1", "v2026.10"]) assert.match(tag, pattern, tag);
+    for (const tag of ["orders-v1.2.0", "apionly-gitlab-ci-v0.1.1", "release-1"]) assert.doesNotMatch(tag, pattern, tag);
 });
