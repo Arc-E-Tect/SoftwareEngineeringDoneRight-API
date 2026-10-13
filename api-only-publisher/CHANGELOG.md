@@ -1,3 +1,15 @@
+# [0.16.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.15.0...api-only-publisher-v0.16.0) (2026-10-13)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** route each target to its own channels, and name channels ([#97](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/97)) ([fb656c7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/fb656c756807e5fa37c24c3a2e8efb4034365eee)), closes [#97](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/97) [#84](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/84)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.15.0 [skip ci] ([7d001f8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/7d001f82451be16054a133a3c368660ab74708bd))
+
 # [0.15.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.4...api-only-publisher-v0.15.0) (2026-10-13)
 
 
