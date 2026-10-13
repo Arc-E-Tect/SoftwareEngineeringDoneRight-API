@@ -10,6 +10,11 @@ name: API-Only Publisher - Image end to end
 # scaffold instead of a checkout. The container-job variant packages the same
 # library, and must produce the same bytes.
 #
+# The `gitlab` job publishes the same library from the image in one job, as the
+# GitLab CI reference pipeline does, to a test project on gitlab.com with a
+# deploy token (secret GITLAB_E2E_DEPLOY_TOKEN): its Generic Package Registry and
+# its Maven registry, twice, and resolves the result.
+#
 # Manual only: it publishes, and it costs minutes.
 
 on:
@@ -441,6 +446,138 @@ jobs:
           gradle --no-daemon fetchApiSpec
           cat apionly.lock
           find build -name '*.yaml' | sort
+
+  gitlab:
+    name: Publish to GitLab from the image, in one job, and resolve it
+    needs: library
+    runs-on: ubuntu-latest
+    env:
+      # The test project on gitlab.com, and a deploy token of it with
+      # read_package_registry and write_package_registry, and nothing else.
+      GITLAB_API: https://gitlab.com/api/v4
+      GITLAB_PROJECT_ID: '87585791'
+      GITLAB_MAVEN: https://gitlab.com/api/v4/projects/87585791/packages/maven
+    steps:
+      - name: Receive the library
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: library
+          path: .
+
+      - name: Aim its channels at GitLab
+        run: |
+          # gitlab-package to the test project with the deploy token, and maven to
+          # its Maven registry, the token in Deploy-Token as GitLab takes it.
+          sed -i "s|^  maven: .*|  maven: { groupId: $MAVEN_GROUP, repository: $GITLAB_MAVEN, tokenEnv: GITLAB_E2E_DEPLOY_TOKEN, tokenHeader: Deploy-Token }|" apionly.yaml
+          sed -i "s|^channels:$|channels:\n  gitlab-package: { project: '$GITLAB_PROJECT_ID', tokenEnv: GITLAB_E2E_DEPLOY_TOKEN, tokenType: deploy }|" apionly.yaml
+          git -c user.name=e2e -c user.email=e2e@example.invalid commit -qam "Publish to GitLab"
+          cat apionly.yaml
+
+      - name: Build, lint and publish in one job, twice
+        env:
+          GITLAB_E2E_DEPLOY_TOKEN: ${{ secrets.GITLAB_E2E_DEPLOY_TOKEN }}
+        run: |
+          sealed() {
+            docker run --rm --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+              -v "$PWD:/work" "$PUBLISHER_IMAGE" "$@"
+          }
+          # shellcheck disable=SC2046 # one --target per word, deliberately
+          set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
+          sealed build "$@"
+          sealed lint
+          # The file channel's bytes, sealed, to compare GitLab's with below.
+          sealed publish "$@" --channel file
+          # Allowed: the one run that contacts anything, and only GitLab.
+          for pass in first second; do
+            echo "== $pass pass"
+            docker run --rm --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+              -e API_ONLY_PUBLISHER_REMOTE=allow -e GITLAB_E2E_DEPLOY_TOKEN \
+              -v "$PWD:/work" "$PUBLISHER_IMAGE" publish "$@" --channel gitlab-package --channel maven | tee "$pass.log"
+          done
+          grep -q "already in GitLab project $GITLAB_PROJECT_ID, identical" second.log
+          grep -q "is already in $GITLAB_MAVEN, identical" second.log
+
+      - name: GitLab serves the image's bytes
+        env:
+          GITLAB_E2E_DEPLOY_TOKEN: ${{ secrets.GITLAB_E2E_DEPLOY_TOKEN }}
+        run: |
+          group_path=$(echo "$MAVEN_GROUP" | tr . /)
+          for target in $TARGETS; do
+            for file in "$target-$BUNDLE_VERSION.tgz" manifest.json; do
+              curl --fail -sS --header "DEPLOY-TOKEN: $GITLAB_E2E_DEPLOY_TOKEN" -o "$RUNNER_TEMP/$file" \
+                "$GITLAB_API/projects/$GITLAB_PROJECT_ID/packages/generic/$target/$BUNDLE_VERSION/$file"
+              cmp "$RUNNER_TEMP/$file" "build/publish/$target/$BUNDLE_VERSION/$file"
+              echo "Generic: $target $file is the image's bytes"
+            done
+            curl --fail -sS --header "Deploy-Token: $GITLAB_E2E_DEPLOY_TOKEN" -o "$RUNNER_TEMP/metadata.xml" \
+              "$GITLAB_MAVEN/$group_path/$target/maven-metadata.xml"
+            grep -q "<version>$BUNDLE_VERSION</version>" "$RUNNER_TEMP/metadata.xml"
+            echo "Maven: $target's maven-metadata.xml lists $BUNDLE_VERSION"
+          done
+
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          gradle-version: '9.7.1'
+
+      - name: The API-Only Subscriber, from GitLab's Maven registry
+        env:
+          GITLAB_E2E_DEPLOY_TOKEN: ${{ secrets.GITLAB_E2E_DEPLOY_TOKEN }}
+        run: |
+          mkdir consumer && cd consumer
+          alpha=${TARGETS%% *}
+          cat > settings.gradle <<'EOF'
+          rootProject.name = 'consumer'
+          EOF
+          cat > build.gradle <<EOF
+          plugins {
+              id 'com.arc-e-tect.api-only-subscriber' version '0.4.0'
+          }
+          repositories {
+              maven {
+                  name = 'gitlab'
+                  url = '$GITLAB_MAVEN'
+                  credentials(HttpHeaderCredentials) {
+                      name = 'Deploy-Token'
+                      value = System.getenv('GITLAB_E2E_DEPLOY_TOKEN')
+                  }
+                  authentication { header(HttpHeaderAuthentication) }
+              }
+          }
+          apiOnlySubscriber {
+              channel {
+                  type = 'maven'
+                  groupId = '$MAVEN_GROUP'
+              }
+              subscribe('$alpha') {
+                  apiContractVersion = '$BUNDLE_VERSION'
+              }
+          }
+          EOF
+          gradle --no-daemon fetchApiSpec
+          cat apionly.lock
+
+      - name: List the scratch versions
+        if: ${{ always() }}
+        run: |
+          # A deploy token cannot delete packages: delete them by hand in the
+          # project's Deploy > Package registry.
+          {
+            echo "## GitLab scratch versions of run ${{ github.run_number }}.${{ github.run_attempt }}"
+            echo
+            for target in $TARGETS; do
+              echo "- generic \`$target\` $BUNDLE_VERSION"
+              echo "- maven \`$MAVEN_GROUP:$target\` $BUNDLE_VERSION"
+            done
+            echo
+            echo "Delete them in the test project's Deploy > Package registry."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   cleanup:
     name: Remove the scratch versions
