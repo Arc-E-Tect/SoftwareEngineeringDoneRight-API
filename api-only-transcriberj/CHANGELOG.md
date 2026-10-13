@@ -1,3 +1,15 @@
+# [0.17.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.16.0...api-only-transcriberj-v0.17.0) (2026-10-13)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** derive contract cases for oneOf request bodies ([#83](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/83)) ([885fa5e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/885fa5e9afcc1489281088f158b62ff0baf7d5e0)), closes [#83](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/83)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.16.0 [skip ci] ([3d1902b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3d1902bda16b487bfbe3388f63b46bac5520f7c8))
+
 # [0.16.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.15.0...api-only-transcriberj-v0.16.0) (2026-10-08)
 
 
