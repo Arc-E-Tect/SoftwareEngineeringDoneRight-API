@@ -50,7 +50,11 @@ function isRemote(channel, settings = {}) {
  */
 function refuseRemote(names, configured = {}, env = process.env) {
     if (remoteMode(env) === "allow") return;
-    const remote = names.filter((name) => isRemote(name, configured[name] || {}));
+    // Judged by type: a channel named partner-a may be a Maven repository at a URL.
+    const remote = names.filter((name) => {
+        const settings = configured[name] || {};
+        return isRemote(settings.type || name, settings);
+    });
     if (remote.length === 0) return;
     throw new ChannelError(
         `${REMOTE_ENV}=never refuses the remote channels ${remote.join(", ")}, so nothing was built, packed or sent. ` +

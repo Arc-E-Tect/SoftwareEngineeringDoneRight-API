@@ -224,9 +224,13 @@ Changing its shape means changing the Publisher's `src/pack.js` and the Subscrib
 [#channels]
 == Channels
 
+A channel in `apionly.yaml` has a name and a type: a channel named after a type is that type, and any other name says its type with `type`, so there can be several channels of one type.
+Each target is published to the channels its `channels` list names, or to every configured channel without one.
+The Publisher's link:../../api-only-publisher/README.adoc#channel-routing[Which channels a target goes to →] describes the rules; the table lists each type.
+
 [cols="1,2,2,1", options="header"]
 |===
-|Channel |Publisher writes |Subscriber reads |Configured with
+|Type |Publisher writes |Subscriber reads |Configured with
 
 |`file`
 |`<directory>/<target>/<version>/<target>-<version>.tgz` and `manifest.json` beside it.

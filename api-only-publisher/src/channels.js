@@ -456,8 +456,13 @@ const CHANNELS = {
     "gitlab-package": publishGitlabPackage,
 };
 
+/**
+ * Publishes to the channel named `channel`, of the type its settings' `type` names, or
+ * of the type it is named after -- `maven` is a Maven channel, as it has always been.
+ */
 function publish(archive, manifest, channel, options, log = () => {}) {
-    const handler = CHANNELS[channel];
+    const { type = channel, ...settings } = options || {};
+    const handler = CHANNELS[type];
     if (!handler) {
         throw new ChannelError(
             `unknown channel '${channel}'; available channels are ${Object.keys(CHANNELS).join(", ")}`
@@ -465,7 +470,7 @@ function publish(archive, manifest, channel, options, log = () => {}) {
     }
     // Here as well as in the CLI, so the Publisher used as a library keeps it too.
     refuseRemote([channel], { [channel]: options || {} });
-    return handler(archive, manifest, options || {}, log);
+    return handler(archive, manifest, settings, log);
 }
 
 module.exports = { publish, CHANNELS, ChannelError, pom, format, DEFAULT_DESCRIPTION };

@@ -9,7 +9,7 @@ const { execFileSync } = require("node:child_process");
 
 const { writeHandoff, HANDOFF_JSON, HANDOFF_SHA256, HANDOFF_SCHEMA_VERSION } = require("../src/handoff");
 
-test("writeHandoff lists every file with its hash, target, version and channel, relative to the root", () => {
+test("writeHandoff lists every file with its hash, target, version, channel and type, relative to the root", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "aop-handoff-"));
     const outDir = path.join(root, "build", "packages");
     fs.mkdirSync(path.join(root, "out", "b"), { recursive: true });
@@ -27,11 +27,11 @@ test("writeHandoff lists every file with its hash, target, version and channel, 
     assert.deepStrictEqual(listed.files, [
         {
             path: "out/b/two.tgz", sha256: "3fc4ccfe745870e2c0d99f71f30ff0656c8dedd41cc1d7d3d376b0dbe685e2f3",
-            target: "gamma", version: "2.0.0", channel: "maven",
+            target: "gamma", version: "2.0.0", channel: "maven", type: "maven",
         },
         {
             path: "out/one.tgz", sha256: "7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed",
-            target: "alpha", version: "1.0.0", channel: "file",
+            target: "alpha", version: "1.0.0", channel: "file", type: "file",
         },
     ]);
     assert.strictEqual(fs.readFileSync(written.sha256, "utf8"),
