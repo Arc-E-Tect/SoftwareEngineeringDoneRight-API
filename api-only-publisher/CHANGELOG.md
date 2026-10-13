@@ -1,3 +1,15 @@
+## [0.14.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.2...api-only-publisher-v0.14.3) (2026-10-13)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** complete a Maven version whose upload was interrupted ([#92](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/92)) ([200909e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/200909e310ec8211278666ec665c1515144be13a)), closes [#92](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/92) [#91](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/91)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.14.2 [skip ci] ([9d91986](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/9d91986d615173bbdc270f47e6453df835d81028))
+
 ## [0.14.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.14.1...api-only-publisher-v0.14.2) (2026-10-13)
 
 
