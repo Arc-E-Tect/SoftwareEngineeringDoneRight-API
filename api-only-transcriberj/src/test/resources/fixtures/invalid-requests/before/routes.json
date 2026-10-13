@@ -15,6 +15,7 @@
             "pathTemplate": "/things/{name}/{slug}",
             "query": []
           },
+          "branch": null,
           "description": "`slug` not matching its pattern ^[a-z]+$",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -23,7 +24,6 @@
           "keyword": "pattern",
           "name": "slug",
           "pointer": null,
-          "representative": true,
           "request": {
             "body": null,
             "contentType": null,
@@ -39,7 +39,7 @@
           "responseBodyClass": null
         }
       ],
-      "class": "GetThingInvalidRequests",
+      "class": "GetThingContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1things~1{name}~1{slug}/get",
       "method": "GET",

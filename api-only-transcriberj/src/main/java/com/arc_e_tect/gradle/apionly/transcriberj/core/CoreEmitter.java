@@ -670,6 +670,7 @@ final class CoreEmitter implements Emitter {
                     .append(literalOrNull(c.bodyClass())).append(",\n")
                     .append(more).append(literalOrNull(operation.operationId()))
                     .append(", ").append(listOf(declared.query())).append(", ").append(listOf(declared.headers()))
+                    .append(", ").append(literalOrNull(c.branch()))
                     .append(')');
         }
         out.append(");\n\n");
@@ -698,7 +699,7 @@ final class CoreEmitter implements Emitter {
                 r.body() == null ? null : ValueJson.write(r.body()) + "\n");
         return new ContractCase(c.id(), c.kind(), c.kind().requiresState(), c.variant(), c.description(), c.in(),
                 c.name(), c.pointer(), c.keyword(), request, c.status(), c.contentTypes(), c.bodyClass(), operationId,
-                declared.query(), declared.headers(), index);
+                declared.query(), declared.headers(), index, c.branch());
     }
 
     private static List<ContractRequest.Pair> spiPairs(List<ValidRequests.Pair> pairs) {
@@ -712,6 +713,7 @@ final class CoreEmitter implements Emitter {
         out.put("kind", c.kind().name());
         out.put("requiresState", c.kind().requiresState());
         out.put("variant", c.variant());
+        out.put("branch", c.branch());
         out.put("description", c.description());
         out.put("in", c.in());
         out.put("name", c.name());

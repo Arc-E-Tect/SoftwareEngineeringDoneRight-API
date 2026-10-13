@@ -185,6 +185,22 @@ final class Faults {
         }
     }
 
+    /**
+     * The indexes of the branches of a {@code oneOf} or {@code anyOf} a value is valid against,
+     * each evaluated as the choice evaluates it.
+     *
+     * @param prefix the location of the choice's keyword, ending in {@code /oneOf/} or {@code /anyOf/}
+     */
+    List<Integer> matches(Object value, List<Schema> branches, String prefix) {
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < branches.size(); i++) {
+            List<Fault> faults = new ArrayList<>();
+            evaluate(value, List.of(new At(branches.get(i), prefix + i)), "", true, faults, 1);
+            if (faults.isEmpty()) out.add(i);
+        }
+        return out;
+    }
+
     private int matching(Object value, List<Schema> branches, String prefix, String pointer, int depth) {
         int count = 0;
         for (int i = 0; i < branches.size(); i++) {

@@ -51,6 +51,15 @@ class SuccessVariantsTest {
                     int status = c.get("expectedStatus").intValue();
                     assertThat(status).isBetween(200, 299);
                     assertThat(c.get("requiresState").booleanValue()).isTrue();
+                    if (!c.get("branch").isNull()) {
+                        // A further oneOf branch: its own required request, named after the branch.
+                        assertThat(variant).isEqualTo("required");
+                        assertThat(c.get("id").stringValue()).isEqualTo("success-" + status + "-"
+                                + InvalidRequests.kebab(c.get("branch").stringValue()));
+                        assertThat(ContractCaseFixtures.withoutAccept(c.get("request")))
+                                .isNotEqualTo(ContractCaseFixtures.request(f.report(), c, "requiredRequest"));
+                        return;
+                    }
                     assertThat(c.get("id").stringValue()).isEqualTo("success-" + status + "-"
                             + (variant.equals("noBody") ? "no-body" : variant));
                     JsonNode expected = ContractCaseFixtures.request(f.report(), c, REQUESTS.get(variant));

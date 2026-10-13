@@ -142,9 +142,9 @@ tasks.named('test') {
 // recordInvalidRequestsGolden does the same for the invalid-request cases of the user-account
 // contract of the reference API (T13.14), the tests an implementation of it is run against.
 ['recordBaselineSources': 'sources', 'recordValidValuesGolden': 'golden',
- 'recordInvalidRequestsGolden': 'invalid-requests'].each { name, what ->
+ 'recordInvalidRequestsGolden': 'invalid-requests', 'recordInvalidRequestsBefore': 'before'].each { name, what ->
     tasks.register(name, JavaExec) {
-        description = "Re-records the committed ${['sources': 'hashes of the existing generated sources', 'golden': 'valid values of the reference contracts', 'invalid-requests': 'invalid-request cases of the user-account contract'][what]}."
+        description = "Re-records the committed ${['sources': 'hashes of the existing generated sources', 'golden': 'valid values of the reference contracts', 'invalid-requests': 'invalid-request cases of the user-account contract', 'before': 'invalid-request cases of every fixture contract'][what]}."
         group = 'verification'
         classpath = sourceSets.test.runtimeClasspath
         mainClass = 'com.arc_e_tect.gradle.apionly.transcriberj.core.Baselines'

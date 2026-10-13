@@ -30,11 +30,14 @@ import java.util.List;
  * @param declaredHeaders      every header parameter the operation declares, in declaration order,
  *                             without {@code Accept}, {@code Content-Type} and {@code Authorization}
  * @param index                the case's position in its operation's {@code CASES}
+ * @param branch               for a success case that sends a {@code oneOf} branch other than
+ *                             the first, that branch's component name; {@code null} otherwise
  */
 public record ContractCase(String id, CaseKind kind, boolean requiresState, String variant, String description,
                            String in, String name, String pointer, String keyword, ContractRequest request,
                            int expectedStatus, List<String> expectedContentTypes, String responseBodyClass,
-                           String operationId, List<String> declaredQuery, List<String> declaredHeaders, int index) {
+                           String operationId, List<String> declaredQuery, List<String> declaredHeaders, int index,
+                           String branch) {
 
     /**
      * A case, with its lists copied so that they cannot change.
@@ -56,6 +59,7 @@ public record ContractCase(String id, CaseKind kind, boolean requiresState, Stri
      * @param declaredQuery        the declared query parameters
      * @param declaredHeaders      the declared headers
      * @param index                the position in {@code CASES}
+     * @param branch               the {@code oneOf} branch a success case sends, or {@code null}
      */
     public ContractCase {
         expectedContentTypes = List.copyOf(expectedContentTypes);

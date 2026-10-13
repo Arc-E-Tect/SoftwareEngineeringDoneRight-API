@@ -2,7 +2,7 @@
   "invalidRequests": [
     {
       "cases": [],
-      "class": "GetHealthInvalidRequests",
+      "class": "GetHealthContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1v1~1actuator~1health/get",
       "method": "GET",
@@ -10,7 +10,7 @@
     },
     {
       "cases": [],
-      "class": "GetRootInvalidRequests",
+      "class": "GetRootContractCases",
       "declaresInvalidRequestStatus": false,
       "location": "/paths/~1v1/get",
       "method": "GET",

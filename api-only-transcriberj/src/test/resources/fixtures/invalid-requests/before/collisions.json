@@ -17,6 +17,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "no body, though the body is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -25,7 +26,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "",
-          "representative": true,
           "request": {
             "body": null,
             "contentType": null,
@@ -52,6 +52,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -60,7 +61,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/a",
-          "representative": false,
           "request": {
             "body": {
               "a-b": "a"
@@ -89,6 +89,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a-b` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -97,7 +98,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/a-b",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -128,6 +128,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a.b` missing, though it is required",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -136,7 +137,6 @@
           "keyword": "required",
           "name": null,
           "pointer": "/a/b",
-          "representative": false,
           "request": {
             "body": {
               "a": {},
@@ -166,6 +166,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "the body sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -174,7 +175,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "",
-          "representative": false,
           "request": {
             "body": [],
             "contentType": "application/json",
@@ -201,6 +201,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a` sent as an array, where the contract requires an object",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -209,7 +210,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/a",
-          "representative": false,
           "request": {
             "body": {
               "a": [],
@@ -239,6 +239,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a-b` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -247,7 +248,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/a-b",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -279,6 +279,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a.b` sent as an object, where the contract requires a string",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -287,7 +288,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/a/b",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -319,6 +319,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -327,7 +328,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/a",
-          "representative": false,
           "request": {
             "body": {
               "a": null,
@@ -357,6 +357,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a-b` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -365,7 +366,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/a-b",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -397,6 +397,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a.b` null, which its type does not allow",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -405,7 +406,6 @@
           "keyword": "type",
           "name": null,
           "pointer": "/a/b",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -437,6 +437,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "`a` with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -445,7 +446,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/a/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -478,6 +478,7 @@
             "pathTemplate": "/collisions",
             "query": []
           },
+          "branch": null,
           "description": "the body with a member it does not declare, `unexpectedMember`",
           "expectedContentTypes": [],
           "expectedStatus": 400,
@@ -486,7 +487,6 @@
           "keyword": "additionalProperties",
           "name": null,
           "pointer": "/unexpectedMember",
-          "representative": false,
           "request": {
             "body": {
               "a": {
@@ -505,7 +505,7 @@
           "responseBodyClass": null
         }
       ],
-      "class": "PostCollisionsInvalidRequests",
+      "class": "PostCollisionsContractCases",
       "declaresInvalidRequestStatus": true,
       "location": "/paths/~1collisions/post",
       "method": "POST",

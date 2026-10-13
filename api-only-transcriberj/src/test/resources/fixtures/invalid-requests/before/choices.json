@@ -1,0 +1,777 @@
+{
+  "invalidRequests": [
+    {
+      "cases": [
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": "V-0000"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "the body with the members of both VoucherSignUpV1 and InviteSignUpV1, which matches no branch of its oneOf",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-oneOf-voucher-sign-up-v1-invite-sign-up-v1",
+          "in": "body",
+          "keyword": "oneOf",
+          "name": null,
+          "pointer": "",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": "I-aaaaaaaa",
+              "voucher": "V-0000"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "no body, though the body is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "",
+          "request": {
+            "body": null,
+            "contentType": null,
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`email` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-email-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/email",
+          "request": {
+            "body": {
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`handle` missing, though it is required",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-handle-required",
+          "in": "body",
+          "keyword": "required",
+          "name": null,
+          "pointer": "/handle",
+          "request": {
+            "body": {
+              "email": "aaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "the body sent as an array, where the contract requires an object",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "",
+          "request": {
+            "body": [],
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`email` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-email-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/email",
+          "request": {
+            "body": {
+              "email": {},
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`handle` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-handle-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/handle",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": "I-aaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`invite` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-invite-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/invite",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": "V-0000"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`voucher` sent as an object, where the contract requires a string",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-voucher-type",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/voucher",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": {}
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`email` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-email-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/email",
+          "request": {
+            "body": {
+              "email": null,
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`handle` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-handle-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/handle",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": "I-aaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`invite` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-invite-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/invite",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": "V-0000"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`voucher` null, which its type does not allow",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-voucher-null",
+          "in": "body",
+          "keyword": "type",
+          "name": null,
+          "pointer": "/voucher",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": null
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`email` shorter than its minLength of 6",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-email-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/email",
+          "request": {
+            "body": {
+              "email": "aaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`handle` shorter than its minLength of 3",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-handle-minLength",
+          "in": "body",
+          "keyword": "minLength",
+          "name": null,
+          "pointer": "/handle",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`email` longer than its maxLength of 64",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-email-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/email",
+          "request": {
+            "body": {
+              "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`handle` longer than its maxLength of 12",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-handle-maxLength",
+          "in": "body",
+          "keyword": "maxLength",
+          "name": null,
+          "pointer": "/handle",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaaaaaaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`handle` not matching its pattern ^[a-z][a-z0-9]*$",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-handle-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/handle",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "%%%"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": "I-aaaaaaaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`invite` not matching its pattern ^I-[a-f0-9]{8}$",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-invite-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/invite",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "invite": "%%%%%%%%%%"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": "V-0000"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "`voucher` not matching its pattern ^V-[0-9]{4}$",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-voucher-pattern",
+          "in": "body",
+          "keyword": "pattern",
+          "name": null,
+          "pointer": "/voucher",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "voucher": "%%%%%%"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        },
+        {
+          "baseline": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "branch": null,
+          "description": "the body with a member it does not declare, `unexpectedMember`",
+          "expectedContentTypes": [],
+          "expectedStatus": 400,
+          "id": "body-unknown-member",
+          "in": "body",
+          "keyword": "additionalProperties",
+          "name": null,
+          "pointer": "/unexpectedMember",
+          "request": {
+            "body": {
+              "email": "aaaaaa",
+              "handle": "aaa",
+              "unexpectedMember": "unexpected"
+            },
+            "contentType": "application/json",
+            "headers": [],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/sign-ups",
+            "query": []
+          },
+          "responseBodyClass": null
+        }
+      ],
+      "class": "PostSignUpContractCases",
+      "declaresInvalidRequestStatus": true,
+      "location": "/paths/~1sign-ups/post",
+      "method": "POST",
+      "pathTemplate": "/sign-ups"
+    }
+  ]
+}

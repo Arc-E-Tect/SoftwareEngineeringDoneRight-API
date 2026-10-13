@@ -207,6 +207,10 @@ final class InvalidRequests {
         final List<Set<String>> ancestors;
         /** Whether it is a branch of a choice: the object the choice is part of decides strictness. */
         final boolean branch;
+        /** For a branch of a {@code oneOf}: the location of the schema the {@code oneOf} is written in; else null. */
+        String oneOf;
+        /** For a branch of a {@code oneOf}: its index among the branches. */
+        int branchIndex = -1;
         Reason flag;
         String flagDetail;
 
@@ -345,6 +349,7 @@ final class InvalidRequests {
         Expected expected = expected(operation, declared);
         for (Constraint c : constraints) {
             if (c.reason != null || c.sharing != null) continue;
+            if (sharedWithASiblingBranch(c, constraints)) continue;
             deriveCase(operation, c, json, expected, cases);
         }
         for (Constraint c : constraints) {
@@ -354,6 +359,12 @@ final class InvalidRequests {
                 c.detail = c.sharing.detail;
             }
         }
+        // A rule the branches of a oneOf reach through the same reference is one constraint,
+        // written in one place: it is listed once, as the first branch reaches it.
+        Set<String> listed = new HashSet<>();
+        constraints.removeIf(c -> c.node != null && branchOf(c.node) != null
+                && !listed.add(String.join(" ", c.in, String.valueOf(c.name), String.valueOf(c.mediaType), c.pointer,
+                c.keyword, c.schemaLocation)));
         return new Result(operation, location, order(cases), constraints, true);
     }
 
@@ -488,7 +499,10 @@ final class InvalidRequests {
                         List.of(new Faults.At(branches.get(i), part.location() + "/" + keyword + "/" + i)), node, null,
                         node.ancestors, true);
                 inherit(node, child);
-                if (child.flag == null) {
+                if (child.flag == null && keyword.equals("oneOf") && branchOf(node) == null) {
+                    child.oneOf = part.location();
+                    child.branchIndex = i;
+                } else if (child.flag == null) {
                     child.flag = Reason.NOT_ISOLATABLE;
                     child.flagDetail = "inside a branch of the " + keyword + " at " + part.location()
                             + ": a violation there fails the " + keyword + ", conflicting keyword " + keyword;
@@ -615,7 +629,7 @@ final class InvalidRequests {
             Constraint choice = add(node, part, keyword, node.pointer, into);
             if (branches.stream().anyMatch(b -> b.ref() == null)) {
                 choice.uncovered(Reason.DEGRADED_CONSTRUCT, keyword + " with an inline branch");
-            } else {
+            } else if (keyword.equals("anyOf")) {
                 choice.uncovered(Reason.NO_VIOLATION_RULE, keyword + " composes schemas rather than constraining a value");
             }
         }
@@ -756,8 +770,12 @@ final class InvalidRequests {
         ValidRequests.Request baseline;
         MediaType media = c.in.equals(BODY) ? json.stream().filter(m -> m.contentType().equals(c.mediaType))
                 .findFirst().orElse(null) : null;
+        if (c.keyword.equals("oneOf")) {
+            oneOf(operation, c, media, json.size() > 1, expected, cases);
+            return;
+        }
         try {
-            baseline = requests.request(operation, ValidRequests.Kind.REQUIRED, media);
+            baseline = requests.request(operation, ValidRequests.Kind.REQUIRED, media, pins(c.node));
         } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
             c.uncovered(Reason.NO_VALID_BASELINE, why(e));
             return;
@@ -969,7 +987,7 @@ final class InvalidRequests {
         List<Faults.At> rootSchema = root.roots;
         Object prepared;
         try {
-            prepared = present(baseline.body(), node);
+            prepared = present(baseline.body(), node, pins(node));
         } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
             c.uncovered(Reason.NO_VALID_BASELINE, why(e));
             return;
@@ -990,6 +1008,8 @@ final class InvalidRequests {
         Object current = get(prepared, path);
         String media = severalTypes ? "-" + slug(c.mediaType) : "";
         Map<String, Integer> conflicts = new LinkedHashMap<>();
+        Node branch = branchOf(node);
+        String stillMatches = null;
         List<Variant> variants = new ArrayList<>();
         variants.add(new Variant(idKeyword(c), expectedKeyword(c), candidates(c, node, current)));
         if (c.keyword.equals("type") && !node.pointer.isEmpty() && !c.declaring.types().contains("null")) {
@@ -1002,7 +1022,17 @@ final class InvalidRequests {
                         c.schemaLocation);
                 Object mutated = replace(prepared, path, candidate.value());
                 List<Faults.Fault> found = faults.of(mutated, rootSchema);
-                if (found.equals(List.of(expectedFault))) {
+                boolean proven;
+                if (branch == null) {
+                    proven = found.equals(List.of(expectedFault));
+                } else {
+                    String matched = otherBranchMatched(branch, mutated);
+                    if (matched != null && stillMatches == null) stillMatches = matched;
+                    proven = matched == null && provenInBranch(branch, mutated, found, expectedFault);
+                    if (!proven) found = faults.of(get(mutated, branch.parent.path()), List.of(branch.roots.get(0)));
+                    expectedFault = proven ? expectedFault : relative(expectedFault, branch.pointer);
+                }
+                if (proven) {
                     ValidRequests.Request request = new ValidRequests.Request(baseline.method(), baseline.pathTemplate(),
                             baseline.pathValues(), baseline.query(), baseline.headers(), baseline.contentType(), mutated,
                             baseline.namedExample(), baseline.examples());
@@ -1017,7 +1047,173 @@ final class InvalidRequests {
                 conflict(found, expectedFault, conflicts);
             }
         }
+        if (c.drafts.isEmpty() && stillMatches != null) {
+            c.uncovered(Reason.NOT_ISOLATABLE, "breaking it gives a body that still matches the branch at "
+                    + stillMatches + ", conflicting keyword oneOf");
+        }
         if (c.drafts.isEmpty()) notIsolatable(c, conflicts);
+    }
+
+    // -------------------------------------------------------------- oneOf
+
+    /** The branch of a {@code oneOf} a node is in, or null when it is in none. */
+    private static Node branchOf(Node node) {
+        for (Node n = node; n != null; n = n.parent) {
+            if (n.oneOf != null) return n;
+        }
+        return null;
+    }
+
+    /** The {@code oneOf} branches a node's value is in, by the location of the schema each {@code oneOf} is written in. */
+    private static Map<String, Integer> pins(Node node) {
+        Map<String, Integer> out = new LinkedHashMap<>();
+        for (Node n = node; n != null; n = n.parent) {
+            if (n.oneOf != null) out.put(n.oneOf, n.branchIndex);
+        }
+        return out;
+    }
+
+    /** The branches of the {@code oneOf} a branch node is one of. */
+    private static List<Schema> siblings(Node branch) {
+        for (Faults.At part : branch.parent.parts) {
+            if (part.location().equals(branch.oneOf)) return part.schema().oneOf();
+        }
+        throw new IllegalStateException("no oneOf at " + branch.oneOf);
+    }
+
+    /** Where a branch is written: its component when it is a reference. */
+    private static String branchLocation(String oneOf, List<Schema> branches, int index) {
+        String ref = branches.get(index).ref();
+        return ref != null ? "/components/schemas/" + Shapes.escape(ref) : oneOf + "/oneOf/" + index;
+    }
+
+    /** Where the first branch is written that a body's value at the {@code oneOf} still matches, other than its own; or null. */
+    private String otherBranchMatched(Node branch, Object body) {
+        List<Schema> branches = siblings(branch);
+        for (int i : faults.matches(get(body, branch.parent.path()), branches, branch.oneOf + "/oneOf/")) {
+            if (i != branch.branchIndex) return branchLocation(branch.oneOf, branches, i);
+        }
+        return null;
+    }
+
+    /**
+     * Whether a changed body is invalid for one reason only, inside one branch of a {@code oneOf}:
+     * the body as a whole has the one fault of matching no branch, and the branch it was valid
+     * against has exactly the expected fault.
+     */
+    private boolean provenInBranch(Node branch, Object body, List<Faults.Fault> found, Faults.Fault expected) {
+        Faults.Fault noBranch = new Faults.Fault("oneOf", branch.pointer, branch.oneOf);
+        if (!found.equals(List.of(noBranch))) return false;
+        if (!faults.matches(get(body, branch.parent.path()), siblings(branch), branch.oneOf + "/oneOf/").isEmpty()) {
+            return false;
+        }
+        List<Faults.Fault> inBranch = faults.of(get(body, branch.parent.path()), List.of(branch.roots.get(0)));
+        return inBranch.equals(List.of(relative(expected, branch.pointer)));
+    }
+
+    /** A fault with its pointer made relative to the instance at a pointer. */
+    private static Faults.Fault relative(Faults.Fault fault, String to) {
+        return new Faults.Fault(fault.keyword(), fault.pointer().substring(to.length()), fault.schemaLocation(),
+                fault.checked());
+    }
+
+    /**
+     * Whether a constraint inside a branch of a {@code oneOf} is already covered by the case of
+     * the same rule in an earlier sibling branch: when that case's body breaks it in this branch
+     * too. A rule the branches share, such as a member each declares through the same reference,
+     * then has one case.
+     */
+    private boolean sharedWithASiblingBranch(Constraint c, List<Constraint> constraints) {
+        if (c.node == null) return false;
+        Node branch = branchOf(c.node);
+        if (branch == null) return false;
+        for (Constraint d : constraints) {
+            if (d == c) return false;
+            if (d.drafts.isEmpty() || !d.in.equals(c.in) || !d.pointer.equals(c.pointer)
+                    || !d.keyword.equals(c.keyword) || !java.util.Objects.equals(d.mediaType, c.mediaType)) {
+                continue;
+            }
+            Node other = branchOf(d.node);
+            if (other == null || !other.oneOf.equals(branch.oneOf) || other.branchIndex == branch.branchIndex) continue;
+            Draft draft = d.drafts.get(0);
+            Faults.Fault expected = new Faults.Fault(draft.keyword, draft.pointer, c.schemaLocation);
+            List<Faults.Fault> inBranch = faults.of(get(draft.request.body(), branch.parent.path()),
+                    List.of(branch.roots.get(0)));
+            if (inBranch.contains(relative(expected, branch.pointer))) {
+                c.drafts.addAll(d.drafts);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The cases of a {@code oneOf} itself: for each two branches, in declared order, a body
+     * holding the members of both, kept when it is proven to match no branch.
+     */
+    private void oneOf(Operation operation, Constraint c, MediaType media, boolean severalTypes, Expected expected,
+                       List<Draft> cases) {
+        Node owner = c.node;
+        List<Schema> branches = c.declaring.oneOf();
+        Node root = owner;
+        while (root.parent != null) root = root.parent;
+        List<Faults.At> rootSchema = root.roots;
+        String prefix = c.schemaLocation + "/oneOf/";
+        String mediaId = severalTypes ? "-" + slug(c.mediaType) : "";
+        Faults.Fault noBranch = new Faults.Fault("oneOf", c.pointer, c.schemaLocation);
+        List<String> unmerged = new ArrayList<>();
+        for (int i = 0; i < branches.size(); i++) {
+            for (int j = i + 1; j < branches.size(); j++) {
+                String first = branches.get(i).ref();
+                String second = branches.get(j).ref();
+                try {
+                    Map<String, Integer> pinFirst = new LinkedHashMap<>(pins(owner));
+                    pinFirst.put(c.schemaLocation, i);
+                    Map<String, Integer> pinSecond = new LinkedHashMap<>(pins(owner));
+                    pinSecond.put(c.schemaLocation, j);
+                    ValidRequests.Request baseline = requests.request(operation, ValidRequests.Kind.REQUIRED, media,
+                            pinFirst);
+                    Object prepared = present(baseline.body(), owner, pinFirst);
+                    Object other = present(requests.request(operation, ValidRequests.Kind.REQUIRED, media, pinSecond)
+                            .body(), owner, pinSecond);
+                    List<Object> path = owner.path();
+                    if (!(get(prepared, path) instanceof Map<?, ?> a) || !(get(other, path) instanceof Map<?, ?> b)) {
+                        unmerged.add(first + " and " + second + " are not both objects");
+                        continue;
+                    }
+                    Map<Object, Object> merged = new LinkedHashMap<>(a);
+                    b.forEach(merged::putIfAbsent);
+                    Object mutated = replace(prepared, path, merged);
+                    if (faults.of(mutated, rootSchema).equals(List.of(noBranch))
+                            && faults.matches(merged, branches, prefix).isEmpty()) {
+                        ValidRequests.Request request = new ValidRequests.Request(baseline.method(),
+                                baseline.pathTemplate(), baseline.pathValues(), baseline.query(), baseline.headers(),
+                                baseline.contentType(), mutated, baseline.namedExample(), baseline.examples());
+                        ValidRequests.Request valid = new ValidRequests.Request(baseline.method(),
+                                baseline.pathTemplate(), baseline.pathValues(), baseline.query(), baseline.headers(),
+                                baseline.contentType(), prepared, baseline.namedExample(), baseline.examples());
+                        cases.add(newCase(c, "body" + mediaId + segments(c.pointer) + "-oneOf-" + kebab(first) + "-"
+                                        + kebab(second), subject(c, owner) + " with the members of both " + first
+                                        + " and " + second + ", which matches no branch of its oneOf", BODY, null,
+                                c.pointer, "oneOf", request, valid, expected));
+                    } else {
+                        unmerged.add(first + " and " + second + " merged still match a branch");
+                    }
+                } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
+                    unmerged.add(first + " and " + second + ": " + why(e));
+                }
+            }
+        }
+        if (c.drafts.isEmpty()) {
+            c.uncovered(Reason.NO_VIOLATION_RULE, "no two branches merge into a value that matches no branch: "
+                    + String.join("; ", unmerged));
+        }
+    }
+
+    /** A component name as a case id spells it: {@code VoucherSignUpV1} becomes {@code voucher-sign-up-v1}. */
+    static String kebab(String name) {
+        return name.replaceAll("([a-z0-9])([A-Z])", "$1-$2").replaceAll("([A-Z])([A-Z][a-z])", "$1-$2")
+                .toLowerCase(java.util.Locale.ROOT);
     }
 
     private record Variant(String id, String keyword, List<Candidate> candidates) {
@@ -1053,7 +1249,7 @@ final class InvalidRequests {
     }
 
     /** The value at the node's path, with every missing member and item on the way added with a valid value. */
-    private Object present(Object body, Node node) {
+    private Object present(Object body, Node node, Map<String, Integer> pins) {
         List<Node> chain = new ArrayList<>();
         for (Node n = node; n != null; n = n.parent) {
             if (!n.branch || n == node) chain.add(0, n);
@@ -1066,7 +1262,7 @@ final class InvalidRequests {
             Object key = step.member != null ? step.member : (Object) 0;
             path.add(key);
             if (get(out, path) == MISSING) {
-                Object value = values.value(step.roots, ValidValues.Variant.REQUIRED);
+                Object value = values.value(step.roots, ValidValues.Variant.REQUIRED, pins);
                 out = set(out, path, value);
             }
         }
