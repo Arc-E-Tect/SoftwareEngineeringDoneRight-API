@@ -156,6 +156,9 @@ function publishNpm(archive, manifest, options, log) {
                 ? { type: "git", url: manifest.source.repository }
                 : undefined,
         }, null, 2) + "\n");
+        // npm packs each file with its mode, and extracting and writing them applied this
+        // process's umask: fixed modes keep the package the same bytes on every machine.
+        for (const file of fs.readdirSync(workDir)) fs.chmodSync(path.join(workDir, file), 0o644);
 
         const outDir = path.resolve(options.baseDir || ".", options.directory || "build/packages/npm");
         fs.mkdirSync(outDir, { recursive: true });
@@ -173,16 +176,25 @@ function publishNpm(archive, manifest, options, log) {
         // Idempotent: a version the registry already has is left alone when it is the
         // same package, and refused when it is not -- npm never replaces a version.
         const registry = options.registry ? ["--registry", options.registry] : [];
-        const local = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"],
-            { cwd: workDir, encoding: "utf8", stdio: "pipe" }))[0].integrity;
-        const published = npmPublishedIntegrity(name, version, registry);
-        if (published === local) {
-            log(`-- npm ${name}@${version} is already published, identical; nothing to do`);
-            return { location: name + "@" + version, distTag, name, alreadyPublished: true };
-        }
+        const [local] = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"],
+            { cwd: workDir, encoding: "utf8", stdio: "pipe" }));
+        const published = npmPublishedDist(name, version, registry);
         if (published) {
+            // The SHA-512 integrity when the registry records one; the tarball's SHA-1
+            // otherwise, as GitLab's npm registry records only that.
+            const [held, mine] = published.integrity ? [published.integrity, local.integrity]
+                : published.shasum ? [published.shasum, local.shasum] : [null, null];
+            if (!held) {
+                throw new ChannelError(
+                    `npm already has ${name}@${version}, and it cannot be compared: the registry records neither ` +
+                    "an integrity nor a shasum for it. A published version is never replaced; publish the change as a new version.");
+            }
+            if (held === mine) {
+                log(`-- npm ${name}@${version} is already published, identical; nothing to do`);
+                return { location: name + "@" + version, distTag, name, alreadyPublished: true };
+            }
             throw new ChannelError(
-                `npm already has ${name}@${version}, and it is not this package (${published}, not ${local}). ` +
+                `npm already has ${name}@${version}, and it is not this package (${held}, not ${mine}). ` +
                 "A published version is never replaced; publish the change as a new version.");
         }
 
@@ -201,12 +213,12 @@ function publishNpm(archive, manifest, options, log) {
     }
 }
 
-/** The integrity npm records for `name@version`, or null when it has no such version. */
-function npmPublishedIntegrity(name, version, registry) {
+/** The `dist` npm records for `name@version` -- integrity, shasum, tarball -- or null when it has no such version. */
+function npmPublishedDist(name, version, registry) {
     try {
-        const out = execFileSync("npm", ["view", `${name}@${version}`, "dist.integrity", ...registry],
+        const out = execFileSync("npm", ["view", `${name}@${version}`, "dist", "--json", ...registry],
             { encoding: "utf8", stdio: "pipe" }).trim();
-        return out || null;
+        return out ? JSON.parse(out) : null;
     } catch (error) {
         const output = `${error.stdout || ""}${error.stderr || ""}`;
         if (/E404/.test(output)) return null;

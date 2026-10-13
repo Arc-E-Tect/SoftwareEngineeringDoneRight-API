@@ -158,6 +158,97 @@ test("nuget: a version the feed already has is success when identical, and refus
     });
 });
 
+test("nuget: a version the feed already has is read back before the push, on a feed that would accept a duplicate", async () => {
+    // GitLab allows duplicate versions by default: a push of a different package under
+    // an existing version answers 201, and the feed serves the new one from then on.
+    const { config, archive, manifest } = packed();
+    const local = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: "feed", baseDir: config.root });
+    const bytes = fs.readFileSync(local.location);
+    await withEnv({ NUGET_KEY: "k" }, async () => {
+        for (const [held, expected, pushes] of [
+            [null, "published", true],
+            [bytes, "same", false],
+            [Buffer.from("other"), /already has Contoso\.Orders 1\.0\.0, and it is not this package/, false],
+            [500, /could not read Contoso\.Orders 1\.0\.0 back from .*\/flat\/.*: 500/, false],
+        ]) {
+            const { server, requests } = await serve((request, response, base) => {
+                if (request.url === "/v3/index.json") {
+                    response.writeHead(200, { "Content-Type": "application/json" });
+                    response.end(JSON.stringify({ resources: [
+                        { "@id": `${base}/push`, "@type": "PackagePublish/2.0.0" },
+                        { "@id": `${base}/flat`, "@type": "PackageBaseAddress/3.0.0" }] }));
+                } else if (request.method === "PUT") {
+                    response.writeHead(201); response.end();
+                } else if (typeof held === "number") {
+                    response.writeHead(held); response.end();
+                } else if (held && request.url === "/flat/contoso.orders/1.0.0/contoso.orders.1.0.0.nupkg") {
+                    response.writeHead(200); response.end(held);
+                } else {
+                    response.writeHead(404); response.end();
+                }
+            });
+            try {
+                const index = `http://127.0.0.1:${server.address().port}/v3/index.json`;
+                const call = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: index, tokenEnv: "NUGET_KEY" });
+                if (expected instanceof RegExp) {
+                    await assert.rejects(call, (e) => e instanceof ChannelError && expected.test(e.message), String(expected));
+                } else {
+                    assert.strictEqual((await call).alreadyPublished === true, expected === "same", String(held));
+                }
+                assert.strictEqual(requests.some((r) => r.method === "PUT"), pushes, String(held));
+                const readBack = requests.find((r) => r.url.startsWith("/flat/"));
+                assert.ok(readBack, "the feed's copy is asked for");
+                assert.strictEqual(readBack.headers["x-nuget-apikey"], "k");
+            } finally {
+                server.close();
+            }
+        }
+    });
+});
+
+test("nuget: a version that appears between the read-back and the push is compared after the 409", async () => {
+    // Another publisher pushing at the same moment, or a feed that serves a fresh push
+    // only after a while, as GitLab's does: absent when read, there when pushed.
+    const { config, archive, manifest } = packed();
+    const local = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: "feed", baseDir: config.root });
+    const bytes = fs.readFileSync(local.location);
+    await withEnv({ NUGET_KEY: "k" }, async () => {
+        for (const [held, expected] of [
+            [bytes, "same"],
+            [Buffer.from("other"), /already has Contoso\.Orders 1\.0\.0, and it is not this package/],
+        ]) {
+            let pushed = false;
+            const { server } = await serve((request, response, base) => {
+                if (request.url === "/v3/index.json") {
+                    response.writeHead(200, { "Content-Type": "application/json" });
+                    response.end(JSON.stringify({ resources: [
+                        { "@id": `${base}/push`, "@type": "PackagePublish/2.0.0" },
+                        { "@id": `${base}/flat`, "@type": "PackageBaseAddress/3.0.0" }] }));
+                } else if (request.method === "PUT") {
+                    pushed = true;
+                    response.writeHead(409); response.end();
+                } else if (pushed) {
+                    response.writeHead(200); response.end(held);
+                } else {
+                    response.writeHead(404); response.end();
+                }
+            });
+            try {
+                const index = `http://127.0.0.1:${server.address().port}/v3/index.json`;
+                const call = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: index, tokenEnv: "NUGET_KEY" });
+                if (expected instanceof RegExp) {
+                    await assert.rejects(call, (e) => e instanceof ChannelError && expected.test(e.message), String(expected));
+                } else {
+                    assert.strictEqual((await call).alreadyPublished, true);
+                }
+                assert.ok(pushed);
+            } finally {
+                server.close();
+            }
+        }
+    });
+});
+
 test("nuget: a package the feed cannot return is not taken for the same one", async () => {
     const { archive, manifest } = packed();
     await withEnv({ NUGET_KEY: "k" }, async () => {
@@ -195,9 +286,11 @@ function standIn(name, script) {
     return { dir, log: path.join(dir, "calls.log") };
 }
 
+// `npm view <name>@<version> dist --json` prints the version's dist object, or nothing
+// when the package exists without that version; PUBLISHED is what the registry holds.
 const NPM = `
 const env = process.env;
-if (args[0] === "pack") { console.log(JSON.stringify([{ integrity: env.LOCAL_INTEGRITY }])); process.exit(0); }
+if (args[0] === "pack") { console.log(JSON.stringify([{ integrity: env.LOCAL_INTEGRITY, shasum: env.LOCAL_SHASUM }])); process.exit(0); }
 if (args[0] === "view") {
     if (env.PUBLISHED === "E404") { console.error("npm error code E404"); process.exit(1); }
     if (env.PUBLISHED === "BROKEN") { console.error("npm error code ECONNREFUSED"); process.exit(1); }
@@ -208,16 +301,21 @@ process.exit(0);`;
 test("npm: a version the registry already has is left alone when identical, and refused when not", async () => {
     const { archive, manifest } = packed();
     const npm = standIn("npm", NPM);
+    const dist = (fields) => JSON.stringify({ tarball: "http://registry.invalid/orders-1.0.0.tgz", ...fields });
     for (const [published, expected, publishes] of [
         ["E404", "published", true],
         ["", "published", true],
-        ["sha512-same", "same", false],
-        ["sha512-other", /already has orders@1\.0\.0, and it is not this package/, false],
+        [dist({ integrity: "sha512-same", shasum: "sha1-same" }), "same", false],
+        [dist({ integrity: "sha512-other", shasum: "sha1-same" }), /already has orders@1\.0\.0, and it is not this package/, false],
+        // A registry whose metadata has no integrity, such as GitLab's: the SHA-1 decides.
+        [dist({ shasum: "sha1-same" }), "same", false],
+        [dist({ shasum: "sha1-other" }), /already has orders@1\.0\.0, and it is not this package/, false],
+        [dist({}), /already has orders@1\.0\.0, and it cannot be compared/, false],
         ["BROKEN", /could not ask npm whether orders@1\.0\.0 is published: npm error code ECONNREFUSED/, false],
     ]) {
         fs.writeFileSync(npm.log, "");
         await withEnv({ PATH: `${npm.dir}${path.delimiter}${process.env.PATH}`, STANDIN_LOG: npm.log,
-            LOCAL_INTEGRITY: "sha512-same", PUBLISHED: published }, async () => {
+            LOCAL_INTEGRITY: "sha512-same", LOCAL_SHASUM: "sha1-same", PUBLISHED: published }, async () => {
             const call = () => publish(archive, manifest, "npm", { registry: "http://registry.invalid" });
             if (expected instanceof RegExp) {
                 assert.throws(call, (e) => e instanceof ChannelError && expected.test(e.message), published);
@@ -227,6 +325,26 @@ test("npm: a version the registry already has is left alone when identical, and 
         });
         const calls = fs.readFileSync(npm.log, "utf8");
         assert.strictEqual(/^npm publish --tag latest --registry http:\/\/registry\.invalid$/m.test(calls), publishes, calls);
+    }
+});
+
+test("npm: the same archive packs to the same package whatever the umask of the process that publishes it", () => {
+    // A re-run on a runner with another umask must be recognised as identical; the files
+    // npm packs would otherwise carry the extracting process's modes.
+    const { archive, manifest } = packed();
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), "aop-umask-"));
+    const saved = process.umask();
+    try {
+        const tarballs = ["022", "077"].map((mask) => {
+            process.umask(parseInt(mask, 8));
+            const result = publish(archive, manifest, "npm", { publish: false, directory: path.join(out, mask) });
+            return result.location;
+        });
+        assert.ok(fs.readFileSync(tarballs[0]).equals(fs.readFileSync(tarballs[1])), "the same bytes under umask 022 and 077");
+        const listing = require("node:child_process").execFileSync("tar", ["-tvzf", tarballs[1]], { encoding: "utf8" });
+        for (const line of listing.trim().split("\n")) assert.match(line, /^-rw-r--r--/, line);
+    } finally {
+        process.umask(saved);
     }
 });
 

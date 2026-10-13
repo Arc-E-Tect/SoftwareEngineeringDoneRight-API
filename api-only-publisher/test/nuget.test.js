@@ -198,7 +198,7 @@ test("a remote feed with no API key in the environment fails, naming the variabl
 });
 
 /** A NuGet feed on localhost: a service index, and a publish endpoint that records what it was sent. */
-async function stubFeed({ status = 201, publishResource = true } = {}) {
+async function stubFeed({ status = 201, publishResource = true, publishPath = "/api/v2/package" } = {}) {
     const received = [];
     const server = http.createServer((request, response) => {
         const chunks = [];
@@ -208,7 +208,7 @@ async function stubFeed({ status = 201, publishResource = true } = {}) {
             const base = `http://127.0.0.1:${server.address().port}`;
             if (request.method === "GET" && request.url === "/v3/index.json") {
                 const resources = [{ "@id": `${base}/query`, "@type": "SearchQueryService" }];
-                if (publishResource) resources.push({ "@id": `${base}/api/v2/package`, "@type": "PackagePublish/2.0.0" });
+                if (publishResource) resources.push({ "@id": `${base}${publishPath}`, "@type": "PackagePublish/2.0.0" });
                 response.writeHead(200, { "Content-Type": "application/json" });
                 response.end(JSON.stringify({ version: "3.0.0", resources }));
                 return;
@@ -234,7 +234,9 @@ test("a remote feed receives the package as a multipart PUT to the publish endpo
         assert.strictEqual(received.length, 1);
         const [request] = received;
         assert.strictEqual(request.method, "PUT");
-        assert.strictEqual(request.url, "/api/v2/package");
+        // With a trailing slash, as dotnet nuget push sends it: a GitLab feed only
+        // recognises the upload at that form of the URL.
+        assert.strictEqual(request.url, "/api/v2/package/");
         assert.strictEqual(request.headers["x-nuget-apikey"], "k3y");
         const boundary = /boundary=(\S+)/.exec(request.headers["content-type"])[1];
         assert.match(request.headers["content-type"], /^multipart\/form-data;/);
@@ -244,7 +246,20 @@ test("a remote feed receives the package as a multipart PUT to the publish endpo
         assert.ok(request.body.subarray(start, start + nupkg.length).equals(nupkg), "the first part is the .nupkg, unchanged");
         assert.ok(request.body.subarray(start + nupkg.length).toString().startsWith(`\r\n--${boundary}--`));
         assert.strictEqual(result.id, "Contoso.Contracts.UserAccount");
-        assert.match(result.location, /\/api\/v2\/package$/);
+        assert.match(result.location, /\/api\/v2\/package\/$/);
+    } finally {
+        delete process.env.TEST_NUGET_KEY;
+        server.close();
+    }
+});
+
+test("a publish endpoint the service index already names with a trailing slash keeps exactly one", async () => {
+    const { archive, manifest } = packed();
+    const { server, received, index } = await stubFeed({ publishPath: "/api/v2/package/" });
+    process.env.TEST_NUGET_KEY = "k3y";
+    try {
+        await publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: index, tokenEnv: "TEST_NUGET_KEY" });
+        assert.deepStrictEqual(received.map((r) => r.url), ["/api/v2/package/"]);
     } finally {
         delete process.env.TEST_NUGET_KEY;
         server.close();

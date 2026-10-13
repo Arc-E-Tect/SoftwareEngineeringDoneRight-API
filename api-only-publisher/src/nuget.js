@@ -184,18 +184,39 @@ async function feedResources(index) {
     return { publish, content: find(CONTENT_RESOURCE) };
 }
 
+/** Where the feed's `PackageBaseAddress/3.0.0` resource serves this version's package. */
+function contentUrl(content, id, version) {
+    const lowerId = id.toLowerCase();
+    const lowerVersion = String(version).toLowerCase();
+    return `${content.replace(/\/?$/, "/")}${lowerId}/${lowerVersion}/${lowerId}.${lowerVersion}.nupkg`;
+}
+
 /**
  * Whether the feed's copy of this version is these bytes: true or false, or null when the
  * feed offers no way to read it back.
  */
 async function sameAsPublished(content, id, version, bytes, key) {
     if (!content) return null;
-    const lowerId = id.toLowerCase();
-    const lowerVersion = String(version).toLowerCase();
-    const url = `${content.replace(/\/?$/, "/")}${lowerId}/${lowerVersion}/${lowerId}.${lowerVersion}.nupkg`;
-    const response = await fetch(url, { headers: { "X-NuGet-ApiKey": key } });
+    const response = await fetch(contentUrl(content, id, version), { headers: { "X-NuGet-ApiKey": key } });
     if (!response.ok) return null;
     return Buffer.from(await response.arrayBuffer()).equals(bytes);
+}
+
+/**
+ * The feed's copy of this version, read before the push: its bytes, or null when the feed
+ * does not have it. Anything else is reported rather than pushed over, since a push could
+ * then replace a version the feed does have.
+ */
+async function publishedCopy(content, id, version, key) {
+    const url = contentUrl(content, id, version);
+    const response = await fetch(url, { headers: { "X-NuGet-ApiKey": key } });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+        throw new ChannelError(`could not read ${id} ${version} back from ${url}: ${response.status} ${response.statusText}`.trim() +
+            (response.status === 401 || response.status === 403
+                ? ". Check the key in the environment variable named by channels.nuget.tokenEnv." : ""));
+    }
+    return Buffer.from(await response.arrayBuffer());
 }
 
 /**
@@ -216,7 +237,28 @@ function publishRemote(archive, manifest, options, id, log) {
     const { bytes } = nupkg(archive, id, manifest, options);
 
     return (async () => {
-        const { publish: endpoint, content } = await feedResources(options.repository);
+        const { publish: resource, content } = await feedResources(options.repository);
+        // With a trailing slash, as `dotnet nuget push` sends it: a GitLab feed recognises
+        // the upload only at that form of the URL, and refuses the other as invalid.
+        const endpoint = resource.replace(/\/?$/, "/");
+
+        // Idempotent before the push, not only after a 409: a feed that allows duplicate
+        // versions -- GitLab's default -- accepts a different package under a version it
+        // has, and serves that one from then on.
+        if (content) {
+            const held = await publishedCopy(content, id, manifest.version, key);
+            if (held && held.equals(bytes)) {
+                log(`-- NuGet ${id} ${manifest.version} is already published, identical; nothing to do`);
+                return {
+                    location: endpoint, id, version: manifest.version, prerelease: isPrerelease(manifest.version),
+                    alreadyPublished: true,
+                };
+            }
+            if (held) {
+                throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}, and it is not this package; ` +
+                    "a published version is never replaced, so publish the change as a new version");
+            }
+        }
         const boundary = `api-only-${crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 32)}`;
         const body = Buffer.concat([
             Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="package"; filename="package.nupkg"\r\n` +

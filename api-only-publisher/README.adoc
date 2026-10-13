@@ -677,6 +677,7 @@ What happens when the destination already has the version:
 |`maven` and `nuget` to a URL, `npm`, `github-release`
 |The same bytes: nothing is sent, and the log says `already published, identical`. Different bytes: `publish` fails, naming the version -- a published version is never replaced, so publish the change as a new version.
 `github-release` compares the asset it would upload with the one the release has, and never overwrites one.
+`npm` compares the integrity hash the registry records, or the tarball's SHA-1 where it records only that, as GitLab's does; its files are packed with fixed modes, so the package is the same bytes whatever the umask of the machine that publishes it.
 A NuGet feed that cannot return the package it has, so there is nothing to compare, fails as a different one would.
 |===
 
@@ -756,10 +757,14 @@ A .NET build uses it with `dotnet nuget add source <repository>`, or a `nuget.co
 
 *A remote feed* is configured by its service index, the URL a feed's settings show and that ends in `index.json`, such as `https://api.nuget.org/v3/index.json`.
 The Publisher reads the service index for its `PackagePublish/2.0.0` endpoint, then pushes the package there with one `PUT`, as `multipart/form-data`, with the key from the environment variable `tokenEnv` names in the `X-NuGet-ApiKey` header.
-A feed that already has the version answers 409; the Publisher then reads the feed's copy back (its `PackageBaseAddress/3.0.0` resource) and succeeds when it is the same package, and fails when it is not, or cannot be read (<<idempotent,Publishing the same version again §>>).
+The `PUT` goes to that endpoint with a trailing `/`, as `dotnet nuget push` sends it; a GitLab feed recognises the upload only there.
+Before the push, the Publisher reads the feed's copy of the version back (its `PackageBaseAddress/3.0.0` resource): the same package succeeds without a push, a different one fails, and a copy that cannot be read, other than one the feed does not have, fails rather than being pushed over (<<idempotent,Publishing the same version again §>>).
+The check comes first because a feed may accept a different package under a version it already has: GitLab does, by default, and serves the new one from then on.
+A feed that answers the push with 409 -- the version appeared in the meantime -- is read back and compared the same way.
 Without the variable set, the push fails before anything is sent, naming it.
-That is how nuget.org, GitHub Packages and self-hosted feeds such as BaGet take a push.
-A feed that authenticates some other way -- Azure Artifacts, which expects a credential provider or a token in an `Authorization` header -- is not supported yet; only the local-HTTP-stub tests exercise the push, not a real feed.
+That is how nuget.org, GitHub Packages, GitLab and self-hosted feeds such as BaGet take a push.
+A feed that authenticates some other way -- Azure Artifacts, which expects a credential provider or a token in an `Authorization` header -- is not supported yet.
+The local-HTTP-stub tests exercise the push; a real feed, GitLab's, was checked by hand.
 
 *The package holds* the `.nuspec`, the two Open Packaging Conventions parts (`[Content_Types].xml` and `_rels/.rels`), and exactly what `pack` produced -- the documents and `manifest.json` -- extracted, never rebuilt, under `contracts/`:
 
