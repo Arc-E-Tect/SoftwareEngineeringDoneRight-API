@@ -18,6 +18,7 @@ const { changedSince, ChangedError } = require("./changed");
 const { split, SplitError } = require("./split");
 const { publish, ChannelError } = require("./channels");
 const { refuseRemote } = require("./remote");
+const { CHANNEL_TYPES } = require("./channel-types");
 const { VersionError: PolicyError, describe } = require("./version-policy");
 const { versionOf, BundleVersionError } = require("./bundle-version");
 const { unreferenced } = require("./unreferenced");
@@ -324,7 +325,9 @@ async function main(argv, io = {}) {
             for (const name of Object.keys(config.targets)) {
                 const kinds = ["openapi", "asyncapi"].filter((k) => config.targets[name][k]);
                 const published = config.isPublished(name) ? "" : "  (publish: false)";
-                console.log(`${name}  [${kinds.join(", ")}]${published}`);
+                const routed = config.isPublished(name) && Object.keys(config.channels || {}).length > 0
+                    ? `  channels: ${config.channelsOf(name).join(", ")}` : "";
+                console.log(`${name}  [${kinds.join(", ")}]${published}${routed}`);
             }
             return 0;
         }
@@ -448,20 +451,43 @@ async function main(argv, io = {}) {
         case "publish": {
             const outDir = options.out ? path.resolve(options.dir, options.out) : config.packagesDir();
             const configured = config.channels || {};
-            const names = options.channels || Object.keys(configured);
-            if (names.length === 0) {
+            for (const name of options.channels || []) {
+                // An unconfigured channel named after a type is that channel with no settings.
+                if (!configured[name] && !(name in configured) && !CHANNEL_TYPES.includes(name)) {
+                    const names = Object.keys(configured);
+                    throw new ConfigError(`--channel '${name}' is not a configured channel; ` +
+                        `apionly.yaml configures ${names.length ? names.join(", ") : "no channels"}`);
+                }
+            }
+            if (!options.channels && Object.keys(configured).length === 0) {
                 throw new ConfigError("no channels configured; add a `channels:` block or pass --channel");
             }
+            // Each target's channels: its own list, or every configured one, narrowed by --channel.
+            const shippable = shippedTargets(config, targets);
+            const routes = new Map(shippable.map((target) => {
+                const own = config.targets[target].channels;
+                return [target, options.channels
+                    ? options.channels.filter((name) => !own || own.includes(name))
+                    : config.channelsOf(target)];
+            }));
+            for (const target of shippable) {
+                const own = config.targets[target].channels;
+                for (const name of (own && options.channels) || []) {
+                    if (!own.includes(name)) log(`${target}: not published to ${name} (not in targets.${target}.channels)`);
+                }
+            }
+            const shipped = shippable.filter((target) => routes.get(target).length > 0);
+            if (options.channels && shippable.length > 0 && shipped.length === 0) {
+                throw new ConfigError(`nothing was published: no target in this run is routed to ${options.channels.join(", ")}`);
+            }
             // Every channel this run uses, before anything is read, packed or sent.
-            refuseRemote(names, configured);
-            const shipped = shippedTargets(config, targets);
+            refuseRemote([...new Set(shipped.flatMap((target) => routes.get(target)))], configured);
             const versions = versionsOf(config, shipped, options.preRelease);
             const closures = forTargets(config, undefined, shipped);
             let published = 0;
             const handoff = [];
             for (const target of Object.keys(config.targets)) {
-                if (targets && !targets.includes(target)) continue;
-                if (!config.isPublished(target)) continue;
+                if (!shipped.includes(target)) continue;
                 const closure = closures.get(target);
                 // Packed once, then shipped unchanged to every channel.
                 const { archive, manifest } = pack(config, target, {
@@ -469,11 +495,11 @@ async function main(argv, io = {}) {
                     closureSha256: closure ? closure.sha256 : null,
                     outDir, log,
                 });
-                for (const name of names) {
+                for (const name of routes.get(target)) {
                     // A remote channel returns a promise; a local one does not.
                     const result = await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
                     for (const file of result.files || []) {
-                        handoff.push({ file, target, version: manifest.version, channel: name });
+                        handoff.push({ file, target, version: manifest.version, channel: name, type: config.channelType(name) });
                     }
                     published += 1;
                 }

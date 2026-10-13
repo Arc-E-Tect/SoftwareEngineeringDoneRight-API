@@ -25,10 +25,10 @@ const HANDOFF_SCHEMA_VERSION = 1;
  */
 function writeHandoff(root, outDir, entries) {
     const files = entries
-        .map(({ file, target, version, channel }) => ({
+        .map(({ file, target, version, channel, type = channel }) => ({
             path: path.relative(root, file).split(path.sep).join("/"),
             sha256: crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex"),
-            target, version, channel,
+            target, version, channel, type,
         }))
         .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 

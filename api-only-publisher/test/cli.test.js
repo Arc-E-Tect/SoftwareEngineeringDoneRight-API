@@ -494,9 +494,9 @@ test("config's flags are refused by name when invalid, and nothing is written", 
     assert.strictEqual(fs.readFileSync(path.join(dir, "apionly.yaml"), "utf8"), before);
 });
 
-test("targets lists every target, its kinds, and which are not published", async () => {
+test("targets lists every target, its kinds, its channels, and which are not published", async () => {
     const { printed } = await run(["targets", "-C", library()]);
-    assert.deepStrictEqual(printed, ["alpha  [openapi]", "beta  [openapi]  (publish: false)"]);
+    assert.deepStrictEqual(printed, ["alpha  [openapi]  channels: file", "beta  [openapi]  (publish: false)"]);
 });
 
 test("build stamps each published target with the version its version file declares", async () => {

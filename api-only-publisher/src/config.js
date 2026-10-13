@@ -9,6 +9,8 @@ const fs = require("fs");
 const path = require("path");
 const YAML = require("yaml");
 
+const { CHANNEL_TYPES, describeTypes } = require("./channel-types");
+
 const CONFIG_NAME = "apionly.yaml";
 const SUPPORTED_SCHEMA_VERSION = 1;
 
@@ -30,7 +32,7 @@ const REPORTS_KEYS = ["lint"];
 const LINT_KEYS = ["unreferenced", "examples"];
 const LINT_EXAMPLES_KEYS = ["openapi", "asyncapi"];
 const DISTRIBUTION_KEYS = ["root", "layout"];
-const TARGET_KEYS = ["openapi", "asyncapi", "publish", "versionFile"];
+const TARGET_KEYS = ["openapi", "asyncapi", "publish", "versionFile", "channels"];
 const TARGET_KIND_KEYS = ["bundle", "aggregate", "info"];
 const PORTFOLIO_KEYS = ["openapi", "security", "location"];
 const PORTFOLIO_OPENAPI_KEYS = ["paths", "operationIds", "tags"];
@@ -48,6 +50,73 @@ const PORTFOLIO_DEFAULTS = Object.freeze({
 const PATH_STRATEGIES = ["target-prefix", "none"];
 
 class ConfigError extends Error {}
+
+// A channel's name, as init asks of a target's: lowercase words joined by single hyphens.
+const CHANNEL_NAME = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
+/**
+ * Each configured channel's type, by name. A channel named after a type is that type;
+ * any other name says its type with `type`, which is how one apionly.yaml has two
+ * channels of one type -- a Maven repository per partner.
+ */
+function channelTypes(channels) {
+    if (typeof channels !== "object" || Array.isArray(channels)) {
+        throw new ConfigError("channels must be a mapping of channel names to their settings");
+    }
+    const types = {};
+    for (const [name, settings] of Object.entries(channels)) {
+        if (!CHANNEL_NAME.test(name)) {
+            throw new ConfigError(`channel name '${name}': use lowercase letters and digits, in words joined by single ` +
+                "hyphens, starting with a letter, such as partner-a");
+        }
+        if (settings !== null && (typeof settings !== "object" || Array.isArray(settings))) {
+            throw new ConfigError(`channels.${name} must be a mapping of settings`);
+        }
+        const declared = settings ? settings.type : undefined;
+        if (CHANNEL_TYPES.includes(name)) {
+            if (declared !== undefined && declared !== name) {
+                throw new ConfigError(`channel '${name}' is named after a channel type, so its type is ${name}, ` +
+                    `not ${declared}; give it another name`);
+            }
+            types[name] = name;
+        } else if (declared === undefined) {
+            throw new ConfigError(`channel '${name}' is not a channel type; say which one it is with type: ${describeTypes()}`);
+        } else if (!CHANNEL_TYPES.includes(declared)) {
+            throw new ConfigError(`channels.${name}.type '${declared}' is not a channel type: ${describeTypes()}`);
+        } else {
+            types[name] = declared;
+        }
+    }
+    return types;
+}
+
+/** Refuses a target's `channels` that cannot be what it means. */
+function checkTargetChannels(name, target, channels, isAggregate) {
+    const list = target.channels;
+    if (list === undefined) return;
+    if (!Array.isArray(list) || list.some((c) => typeof c !== "string")) {
+        throw new ConfigError(`targets.${name}.channels must be a list of channel names`);
+    }
+    if (list.length === 0) {
+        throw new ConfigError(`targets.${name}.channels is empty; a target that is published nowhere says so with publish: false`);
+    }
+    if (isAggregate) {
+        throw new ConfigError(`target '${name}' is an aggregate, which is never published, so it has no channels`);
+    }
+    if (target.publish === false) {
+        throw new ConfigError(`target '${name}' is not published (publish: false), so it has no channels`);
+    }
+    const seen = new Set();
+    for (const channel of list) {
+        if (seen.has(channel)) throw new ConfigError(`target '${name}' lists channel '${channel}' twice`);
+        seen.add(channel);
+        if (!Object.prototype.hasOwnProperty.call(channels, channel)) {
+            const configured = Object.keys(channels);
+            throw new ConfigError(`target '${name}' lists channel '${channel}', which apionly.yaml does not configure; ` +
+                `it configures ${configured.length ? configured.join(", ") : "no channels"}`);
+        }
+    }
+}
 
 /** Refuses a key `obj` has that is not in `allowed`, naming the key and where it is. */
 function checkKeys(obj, allowed, where) {
@@ -135,6 +204,9 @@ function load(configPath) {
         );
     }
 
+    const channels = parsed.channels || {};
+    const types = channelTypes(channels);
+
     const targets = parsed.targets;
     if (!targets || typeof targets !== "object" || Object.keys(targets).length === 0) {
         throw new ConfigError(`${configPath} declares no targets`);
@@ -175,6 +247,8 @@ function load(configPath) {
                 "somebody authors deliberately, with its own owner and version -- author one instead."
             );
         }
+
+        checkTargetChannels(name, target, channels, aggregateKinds.length > 0);
 
         for (const kind of kinds) {
             checkKeys(target[kind], TARGET_KIND_KEYS, `targets.${name}.${kind}`);
@@ -238,7 +312,7 @@ function load(configPath) {
         reports,
         lint,
         distribution: parsed.distribution || null,
-        channels: parsed.channels || {},
+        channels,
         portfolio,
         targets,
 
@@ -326,6 +400,15 @@ function load(configPath) {
         // An aggregate is never published either, whether or not it says so --
         // load() already refuses the one case that would contradict this, `publish:
         // true` alongside an aggregate, so nothing here needs to re-check that.
+        // A configured channel's type; a name that is not configured is taken for a type,
+        // as `publish --channel github-release` has always meant that channel unconfigured.
+        channelType(name) {
+            return types[name] || name;
+        },
+        // The channels a target is published to: its own list, or every configured one.
+        channelsOf(target) {
+            return this.targets[target].channels || Object.keys(this.channels);
+        },
         isPublished(target) {
             return this.targets[target].publish !== false && !this.isAggregate(target);
         },

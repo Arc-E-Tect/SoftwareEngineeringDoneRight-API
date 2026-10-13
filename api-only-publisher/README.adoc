@@ -182,7 +182,7 @@ At a terminal it asks the same shape of question `init` would, offering what is 
 Without `--target`, it also fails on a fragment no target reaches, as <<unreferenced,A fragment no target reaches fails the lint §>> describes.
 
 |`targets`
-|List the declared targets, what each one builds, and whether it is published.
+|List the declared targets, what each one builds, whether it is published, and to which channels.
 
 |`closure [--target <t>]...`
 |Show each target's dependency closure: how many files it reaches, and the hash of their content.
@@ -195,7 +195,7 @@ A target whose closure is untouched needs no new version, however much else in t
 |Archive each built, published target with a `manifest.json`, at the version its version file declares.
 
 |`publish [--pre-release <ids>] [--target <t>]... [--channel <c>]... [--out <dir>]`
-|Pack once, then ship those same bytes to every configured channel, or to each `--channel`.
+|Pack each target once, then ship those same bytes to each of its channels, or only to those of them each `--channel` names (<<channel-routing,Which channels a target goes to §>>).
 
 |`split [--out <dir>] [--by kind\|target]`
 |Make the library safe to break into separate repositories.
@@ -660,6 +660,43 @@ In a GitLab CI job it needs no settings at all. See <<gitlab-package,The `gitlab
 Native for .NET consumers: a `PackageReference` at a version, restored from a feed. See <<nuget,The `nuget` channel §>>.
 |===
 
+[#channel-routing]
+=== Which channels a target goes to
+
+A channel has a *name*, the key under `channels`, and a *type*, one of those above.
+A channel named after a type is that type; any other name -- lowercase words joined by single hyphens, such as `partner-a` -- says its type with `type`.
+So one `apionly.yaml` can hold several channels of one type, each with its own destination, settings and token:
+
+[source,yaml]
+----
+channels:
+  maven:                                # a Maven channel, named after its type
+    groupId: com.example.api
+    repository: https://maven.example.com/internal
+  partner-a:                            # another one, for one partner
+    type: maven
+    groupId: com.example.partner
+    repository: https://maven.partner-a.example
+    tokenEnv: PARTNER_A_TOKEN
+
+targets:
+  orders:
+    channels: [maven, partner-a]        # published to these two
+    openapi:
+      bundle: bundles/orders_openapi_structure.yaml
+  billing:                              # no list: every configured channel
+    openapi:
+      bundle: bundles/billing_openapi_structure.yaml
+----
+
+* A target with a `channels` list is published to those channels; a target without one, to every configured channel.
+* Everything is checked when `apionly.yaml` is read: a channel name that is not kebab-case, a name that is not a type without a `type`, a `type` that is not one, a type name given another `type`, and a target that lists a channel `apionly.yaml` does not configure, lists one twice, lists none (`channels: []`, where `publish: false` is meant), or is never published -- `publish: false`, or an aggregate.
+* `--channel` narrows each target to the named channels it is routed to.
+A target that is not routed to one is skipped, and `publish` says so: `payments: not published to npm (not in targets.payments.channels)`.
+A run that would publish nothing at all fails instead of succeeding quietly.
+* A `--channel` that `apionly.yaml` does not configure is refused, unless it is a type's name: `--channel github-release` is that channel with no settings, as it has always been.
+* `targets` lists each published target with its channels.
+
 [#idempotent]
 === Publishing the same version again
 
@@ -712,7 +749,7 @@ Error: API_ONLY_PUBLISHER_REMOTE=never refuses the remote channels maven, github
 ----
 
 Any other value fails `publish`, whatever its channels: a typo in a switch that keeps the Publisher sealed is not ignored.
-`--channel` narrows what is checked: `publish --channel file` succeeds under `never`, whatever else `apionly.yaml` configures.
+Only the channels a run would publish to are checked, by type: a channel named `partner-a` with `type: maven` and a URL is remote; `publish --channel file`, or a target routed only to local channels, succeeds under `never`, whatever else `apionly.yaml` configures.
 The Publisher used as a library keeps the same rule.
 
 The switch is a promise the Publisher keeps, not an enforcement: whoever runs it can change the variable.
@@ -728,7 +765,7 @@ Every `publish` run lists each file its channels wrote locally, with its SHA-256
 | File | Content
 
 | `packages.json`
-| `schemaVersion`, and `files`: for each file, its `path`, `sha256`, `target`, `version` and `channel`.
+| `schemaVersion`, and `files`: for each file, its `path`, `sha256`, `target`, `version`, `channel` -- the channel's name -- and `type`, the channel's type.
 
 | `packages.sha256`
 | The same files in the format `sha256sum -c` checks.
@@ -990,6 +1027,7 @@ channels:
 
 targets:
   orders:
+    # channels: [file]   # the channels it is published to; default: every one
     # versionFile: versions/orders.properties
     #              default: orders.bundle.properties beside the first bundle root
     openapi:
@@ -1161,20 +1199,30 @@ They are starting points, not boundaries: the situations describe where each sha
 [#recipes-two-facts]
 === Two facts every recipe rests on
 
-*A channel is named after its type.*
-`channels.maven` is the Maven channel, `channels.npm` the npm channel, and so on, so one `apionly.yaml` has at most one channel of each type, with one destination each.
-Two consumers who both read Maven get the same Maven repository; <<recipe-business-partners,Business partners §>> shows what to do when they each need their own.
+*A channel has a name and a type.*
+A channel named after a type is that type -- `channels.maven` is a Maven channel -- and any other name says its type with `type`, so one `apionly.yaml` can hold two channels of one type, each with a destination of its own:
 
-*`apionly.yaml` says which channels exist, not which target goes where.*
-Without `--channel`, `publish` ships every published target to every configured channel, packing each target once and sending the same bytes everywhere.
-`--target` and `--channel` narrow a run, and both may be repeated:
-
-[source,console]
+[source,yaml]
 ----
-npm run apionly -- publish --target payments --channel nuget
+channels:
+  partner-a: { type: maven, groupId: com.example.partner, repository: https://maven.partner-a.example }
+  partner-b: { type: maven, groupId: com.example.partner, repository: https://maven.partner-b.example }
 ----
 
-So when different targets go to different channels, the routing lives in the commands that run `publish`, as <<recipe-ecosystem,Eco-system §>> shows, and not in `apionly.yaml`.
+*`apionly.yaml` says which target goes where.*
+A target with a `channels` list is published to those channels; a target without one is published to every configured channel.
+`publish` packs each target once, and sends the same bytes to each of its channels:
+
+[source,yaml]
+----
+targets:
+  payments:
+    channels: [partner-a]
+    openapi:
+      bundle: bundles/payments_openapi_structure.yaml
+----
+
+`--target` and `--channel` narrow a run, and both may be repeated; `--channel` publishes each target only to the named channels it is routed to, and says which targets it skipped (<<channel-routing,Which channels a target goes to §>>).
 
 The excerpts below show only `channels` and `targets`; the rest of `apionly.yaml` is as <<configuration,Configuration §>> describes, and as `init` writes it.
 Every published target also needs its version file, as <<versions,Versions §>> describes, and a `build` before its `publish`.
@@ -1311,8 +1359,8 @@ The other channels already have the version, and would leave it alone anyway.
 * A pre-release, `publish --pre-release rc.1`, is how a partner gets an unfinished contract to start building against, without any partner's production build picking it up by accident (<<pre-releases,Pre-releases §>>).
 * Each channel takes its credential from the environment, never from `apionly.yaml`: `MAVEN_TOKEN`, `NUGET_API_KEY` and `GITLAB_TOKEN` by default, npm's own configuration for `npm`, and the GitHub CLI's for `github-release` (<<channel-text,What a package says about itself §>>).
 * A partner without a package manager gets a download: `github-release` where the library is on GitHub, `gitlab-package` where it is on GitLab.
-* Partners that each need a repository of *the same type* -- two Maven repositories, one per partner -- cannot be two `maven` channels.
-Publish to a local destination instead, `repository` or `directory` set to a directory, and let the pipeline copy the files it lists in `packages.sha256` to each partner's repository, as <<handoff,The hand-off §>> describes.
+* Partners that each need a repository of *the same type* -- two Maven repositories, one per partner -- are two channels with names of their own and `type: maven`, as <<recipes-two-facts,the two facts §>> show.
+* A partner that may see only some contracts gets only those: list its channel on those targets (<<recipe-ecosystem,Eco-system §>>).
 
 [#recipe-platform]
 === Platform: several targets, several channels, every target on every channel
@@ -1391,7 +1439,7 @@ Start from a routing table: which target goes to which channel.
 |`payments` |Yes |    |Yes
 |===
 
-`apionly.yaml` declares the channels and the targets, as for a <<recipe-platform,platform §>>:
+The routing table goes into `apionly.yaml` as it stands: each target lists the channels it is published to.
 
 .apionly.yaml (excerpt)
 [source,yaml]
@@ -1409,52 +1457,39 @@ channels:
 
 targets:
   catalog:
+    channels: [maven, npm]
     openapi:
       bundle: bundles/catalog_openapi_structure.yaml
   customers:
+    channels: [maven]
     openapi:
       bundle: bundles/customers_openapi_structure.yaml
   orders:
+    channels: [maven, npm]
     openapi:
       bundle: bundles/orders_openapi_structure.yaml
   payments:
+    channels: [maven, nuget]
     openapi:
       bundle: bundles/payments_openapi_structure.yaml
-----
-
-The routing table becomes one `publish` per channel, each naming its targets.
-Keeping those commands as scripts in the library's `package.json` keeps the routing in one place, reviewed with the library, rather than spread across pipeline files:
-
-.package.json (excerpt)
-[source,json]
-----
-{
-  "scripts": {
-    "apionly": "api-only-publisher",
-    "publish:maven": "api-only-publisher publish --channel maven",
-    "publish:npm": "api-only-publisher publish --channel npm --target catalog --target orders",
-    "publish:nuget": "api-only-publisher publish --channel nuget --target payments",
-    "publish:all": "npm run publish:maven && npm run publish:npm && npm run publish:nuget"
-  }
-}
 ----
 
 [source,console]
 ----
 npm run apionly -- build
-npm run publish:all
+npm run apionly -- publish
 ----
 
-`publish:maven` names no target, because every target goes there; a channel that takes only some names each of them.
+One `publish` sends each target to its own channels, packing it once.
+`npm run apionly -- targets` lists each target with its channels, so the routing can be read back.
 
 *Worth knowing.*
 
-* A new target goes only where a script sends it.
-`publish:maven` picks it up because it names no target; the npm and NuGet consumers do not see it until it is added to their script, which is the deliberate step an eco-system wants.
-* Each script passes its arguments on: `npm run publish:npm -- --pre-release rc.1` publishes a pre-release of the npm targets alone.
-* Each run packs again, and the archives are the same bytes every time (<<idempotent,Publishing the same version again §>>), so a target on two channels is identical on both.
-* Each run replaces the hand-off files in the packages directory (<<handoff,The hand-off §>>).
-A pipeline that publishes the files itself gives each run its own `--out`, such as `--out build/packages/npm`, and keeps every channel's list.
+* A target without a `channels` list goes to every configured channel.
+In an eco-system, give every target a list: a new target then goes nowhere until someone decides where, which is the deliberate step an eco-system wants.
+* `--channel` publishes to one channel alone, say after its registry was unreachable: `npm run apionly -- publish --channel npm` sends `catalog` and `orders`, says that it skipped `customers` and `payments`, and fails if it would publish nothing at all.
+* The routing is checked when `apionly.yaml` is read: a target that lists a channel `apionly.yaml` does not configure is refused, naming both, before anything is built.
+* A third party that needs a registry of a type another party already uses -- a second Maven repository -- gets a channel of its own, with `type: maven` (<<recipes-two-facts,the two facts §>>).
 
 [#behaviour]
 == Behaviour worth knowing about
