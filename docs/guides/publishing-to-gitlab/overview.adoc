@@ -1,0 +1,230 @@
+= Guide: publishing API bundles to GitLab
+:toc: left
+:toc-title: Contents
+:toclevels: 2
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+.About this documentation
+====
+This documentation was partially authored by Claude, an AI assistant.
+Documentation is part of the product, and is held to the same standard as the code it describes.
+If something here seems wrong, please file a bug report: link:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/new[open an issue in this repository ↗].
+====
+
+[NOTE]
+.Where the links in this document go
+====
+Every link ends with a marker saying where it leads, so you can tell before you follow it:
+
+[horizontal]
+`↗`:: An *external* site, outside this repository.
+`→`:: *Another file* in this repository.
+`§`:: *A section of this same file.*
+====
+
+[#in-short]
+== In short
+
+A specification library hosted on GitLab, on gitlab.com or a self-managed instance, publishes its API bundles to its own project's package registries, from a GitLab CI pipeline, in one job:
+
+* the job runs the sealed API-Only Publisher image, pinned by digest, and nothing else;
+* the `gitlab-package` channel publishes each target to the project's Generic Package Registry, and needs no settings: GitLab's CI variables give it the API, the project and the job's token;
+* where Gradle or Maven builds consume the contracts, the `maven` channel publishes them to the project's Maven registry too.
+
+This guide covers what is particular to GitLab.
+link:../../../api-only-publisher/README.adoc#gitlab-package[The `gitlab-package` channel →] is its reference, and link:../publishing-from-ci/overview.adoc[Publishing from CI with the image →] explains the image, and when to publish in two steps instead.
+
+[#status]
+[WARNING]
+====
+*Not yet run on GitLab.*
+The channel was checked against gitlab.com by hand with a deploy token, and the image's smoke test publishes as the reference pipeline does, to a GitLab stand-in.
+No GitLab pipeline has run the reference pipeline yet: what this guide says about the job token, and about `release: true` in a pipeline, rests on GitLab's documentation until it has.
+====
+
+[#steps]
+== From nothing to a published contract
+
+. *Configure the channel.*
+In `apionly.yaml`:
++
+[source,yaml]
+----
+channels:
+  gitlab-package:
+----
++
+That is all a GitLab CI job needs.
+Every published target becomes a generic package named after it, at the version its version file declares, holding `<target>-<version>.tgz` and `manifest.json`.
+
+. *Copy the pipeline.*
+Copy link:../../../api-only-publisher/pipelines/gitlab-ci.yml[the reference pipeline →] to `.gitlab-ci.yml`, and set:
+** `PUBLISHER_IMAGE`, the image by digest -- from your organisation's mirror where it has one (<<mirror,A mirrored image §>>);
+** `TARGETS`, the targets to publish.
++
+Its one job sets `API_ONLY_PUBLISHER_REMOTE: allow`: the image is sealed, and refuses to contact anything in any job that does not.
+
+. *Tag a release.*
+The pipeline runs on a tag.
+A version is published once; a re-run finds it published, identical, and changes nothing.
+
+. *Check it.*
+The project's *Deploy › Package registry* lists a package per target, at its version, with both files.
+
+[#tokens]
+== Which token
+
+The channel uses the first of these its environment holds:
+
+[cols="2,3,3", options="header"]
+|===
+| Token | Set it as | Reaches
+
+| A token in the variable `tokenEnv` names, `GITLAB_TOKEN` by default
+| A masked CI/CD variable; `tokenType: deploy` for a deploy token, `tokenType: job` for a job token, and a personal or project access token otherwise.
+| What that token may: a deploy token with `write_package_registry` and `read_package_registry` reaches one project's package registry and nothing else.
+
+| `CI_JOB_TOKEN`
+| Nothing: every GitLab CI job has it.
+| The pipeline's own project.
+|===
+
+The job token is the one to use: it exists only while the job runs, so there is nothing to store, rotate or leak.
+
+*Publishing to another project* -- a library in one project, its packages in another -- takes a deploy token of the target project, with `write_package_registry` and `read_package_registry`, as a masked CI/CD variable:
+
+[source,yaml]
+----
+channels:
+  gitlab-package:
+    project: group/api-packages    # the project to publish to
+    tokenEnv: API_PACKAGES_TOKEN   # the masked CI/CD variable holding its deploy token
+    tokenType: deploy
+----
+
+The channel reads every file back before uploading it, so the token needs `read_package_registry` as well as `write_package_registry`.
+A variable that is also *protected* is available only to pipelines on protected branches and tags, so protect the tags the pipeline runs on.
+
+A personal access token is the last resort.
+Its `api` scope, the narrowest that writes packages, reaches every project its owner can, not only this one.
+
+[#releases]
+== GitLab releases
+
+`release: true` also creates the tag's GitLab release, and links the package's two files from it:
+
+[source,yaml]
+----
+channels:
+  gitlab-package:
+    release: true
+    # tagFormat: "{target}-v{version}"    # the default
+----
+
+* The release tags the pipeline's commit, `CI_COMMIT_SHA`.
+* A release that exists keeps everything it has, and only gets the links it lacks.
+* A pre-release publishes the package but no release: GitLab has no pre-release flag, and the release would become the project's latest.
+* A deploy token cannot create a release, so `release: true` with `tokenType: deploy` is refused before anything is sent; publish with the job token, or set `release: false`.
+
+[#duplicates]
+== Turn off "Allow duplicates"
+
+GitLab accepts, by default, a different file under a package version it already has, and serves that one from then on: a published contract can be replaced without anyone noticing.
+
+The Publisher never does that.
+It reads every file back before uploading any: an identical file is left alone, a different one fails the job, naming the version.
+
+Turn it off for every other client too: in the group's *Settings › Packages and registries*, under *Duplicate packages*, turn off *Allow duplicates* for *Generic* and *Maven*.
+It takes a group Owner.
+GitLab then refuses an existing file with `400 Bad request - Duplicate package is not allowed`, whoever uploads it.
+
+[#maven]
+== GitLab's Maven registry, for Gradle and Maven builds
+
+A JVM build consumes a contract best from a Maven repository: Gradle resolves it like any other dependency, and the link:../../../api-only-subscriber/README.adoc[API-Only Subscriber →] reads it from there.
+Add the `maven` channel, aimed at the project's Maven registry:
+
+[source,yaml]
+----
+channels:
+  gitlab-package:
+  maven:
+    groupId: com.example.api
+    repository: https://gitlab.example.com/api/v4/projects/1234/packages/maven
+    tokenEnv: CI_JOB_TOKEN
+    tokenHeader: Job-Token
+----
+
+* The repository URL takes the project's numeric ID, shown on the project's overview page: Gradle reads a URL-encoded path's `%2F` as `/`.
+* GitLab takes a job token as `Job-Token`, a deploy token as `Deploy-Token`, a personal or project access token as `Private-Token`; `tokenHeader` names the header.
+* GitLab does not keep a `maven-metadata.xml` for files uploaded this way, so the channel does, and Gradle resolves version ranges and update bots see new versions.
+
+A consuming build reads the repository with a deploy token of the library's project, with `read_package_registry`:
+
+[source,kotlin]
+----
+repositories {
+    maven {
+        url = uri("https://gitlab.example.com/api/v4/projects/1234/packages/maven")
+        name = "Contracts"
+        credentials(HttpHeaderCredentials::class) {
+            name = "Deploy-Token"
+            value = providers.environmentVariable("CONTRACTS_DEPLOY_TOKEN").get()
+        }
+        authentication { create<HttpHeaderAuthentication>("header") }
+    }
+}
+----
+
+[#consumers]
+== What a consumer needs
+
+A generic package is a download, readable by any build:
+
+[source,console]
+----
+curl --fail --header "DEPLOY-TOKEN: $CONTRACTS_DEPLOY_TOKEN" -o orders-2.1.0.tgz \
+  "https://gitlab.example.com/api/v4/projects/1234/packages/generic/orders/2.1.0/orders-2.1.0.tgz"
+----
+
+* Give each consuming team, or each third party, a deploy token of its own with `read_package_registry` only, so one can be revoked without the others.
+* Verify the archive against `manifest.json`, beside it in the package.
+* A consumer inside the same GitLab can use its own job token instead, where the library's project admits its project in *Settings › CI/CD › Job token permissions*.
+
+[#self-managed]
+== A self-managed GitLab
+
+In a GitLab CI job nothing changes: `CI_API_V4_URL` is the instance's API.
+Outside one, set `url` to it: `https://gitlab.example.com/api/v4`.
+
+An instance whose certificate a private certificate authority signed needs that authority's certificate in the job.
+Store it in a CI/CD variable of type *File* -- GitLab then puts the certificate in a file and the variable holds its path -- and point Node.js at it:
+
+[source,yaml]
+----
+publish:
+  variables:
+    API_ONLY_PUBLISHER_REMOTE: allow
+    NODE_EXTRA_CA_CERTS: $COMPANY_CA_CERT    # a File variable holding the CA certificate
+----
+
+[#mirror]
+== A mirrored image
+
+Replace the image reference with the mirror's, keeping the digest, for example `registry.example.com/mirror/arcetect/api-only-publisher@sha256:<digest>`; the GitLab Container Registry works as a mirror too.
+The job contacts only the GitLab API, so its egress can be limited to that.
+link:../../../api-only-publisher/README.adoc#docker-vetting[For a vetting team →] has the commands to verify, scan and mirror the image.
+
+[#cleanup]
+== Cleanup policies
+
+A published contract version is a dependency: a consumer whose lockfile records it fails its build when it disappears.
+Keep packages cleanup out of the contract packages, or keep every version, and delete a version only when no consumer can still lock it.
+
+[#not-yet]
+== Not from the image yet
+
+The image publishes itself to the generic and Maven registries only.
+To publish to GitLab's npm or NuGet registry from CI, use link:../../../api-only-publisher/pipelines/gitlab-ci-two-step.yml[the two-step pipeline →]: the image packages the files, and those registries' own clients publish them.

@@ -1,7 +1,7 @@
 # API-Only Publisher
 
 A sealed, vettable [API-Only Publisher](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/tree/main/api-only-publisher) for CI pipelines.
-It builds, lints and packages API description bundles -- OpenAPI and AsyncAPI documents assembled from a library of reusable fragments -- and downloads nothing when it runs.
+It builds, lints and packages API description bundles -- OpenAPI and AsyncAPI documents assembled from a library of reusable fragments -- downloads nothing when it runs, and contacts nothing unless a job allows it to publish.
 
 One image, with one digest, holds one Publisher version *and* the Redocly CLI and AsyncAPI CLI it runs.
 Pull it by digest, verify its signature, read its SBOM, scan it, mirror it into your own registry, and your pipeline knows exactly what it runs.
@@ -9,16 +9,22 @@ Pull it by digest, verify its signature, read its SBOM, scan it, mirror it into 
 The full documentation is [on GitHub](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/README.adoc#docker).
 [Publishing from CI](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/docs/guides/publishing-from-ci/overview.adoc) is the guide, with prompts for Claude Code and Codex that set the pipeline up in your own repository.
 
+## One job, on GitLab
+
+The image publishes itself to a GitLab project's Generic Package Registry and Maven registry, in one job, with the job's `CI_JOB_TOKEN`: the job sets `API_ONLY_PUBLISHER_REMOTE=allow`, and nothing but the image runs.
+The [GitLab CI reference pipeline](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/gitlab-ci.yml) does that, and [Publishing to GitLab](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/docs/guides/publishing-to-gitlab/overview.adoc) is the guide.
+The image's smoke test publishes this way, to a GitLab stand-in; no GitLab pipeline has run the reference pipeline yet.
+
 ## Two steps
 
 1. **In the image**, the Publisher packages bundles into files: an archive per target, a Maven layout, `.nupkg` files and npm tarballs. It needs no network and no credential.
 2. **In your pipeline**, a following job publishes those files with the registry's own tools and credentials: `npm publish`, `mvn deploy:deploy-file`, `dotnet nuget push`, a release upload.
 
 Every packaging run writes `build/packages/packages.sha256`, listing each file it produced; the publishing job runs `sha256sum -c` on it and publishes exactly those bytes.
-Credentials never enter the image.
+In two steps, credentials never enter the image.
 
-The image does not publish to remote registries itself: that is not supported yet.
-Reference pipelines for [GitHub Actions](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/github-actions.yml) and [GitLab CI](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/gitlab-ci.yml) show the second step; the GitLab one is not exercised yet.
+Every other registry -- npm, NuGet, a GitHub Release -- is published in two steps.
+Reference pipelines for [GitHub Actions](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/github-actions.yml) and [GitLab CI](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/blob/main/api-only-publisher/pipelines/gitlab-ci-two-step.yml) show the second step; the GitLab one is not exercised yet.
 
 ## Tags
 
