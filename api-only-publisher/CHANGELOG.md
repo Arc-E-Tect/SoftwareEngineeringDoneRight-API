@@ -1,3 +1,15 @@
+## [0.16.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.16.1...api-only-publisher-v0.16.2) (2026-10-14)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** compare a published version by its documents, not its bytes ([#101](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/101)) ([f048d2c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/f048d2c1b1e0613fca69da3624c83a22c2b1bf21)), closes [#101](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/101)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.16.1 [skip ci] ([9f2e5a1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/9f2e5a191aab563a5e22728da6dc077736a08e03))
+
 ## [0.16.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.16.0...api-only-publisher-v0.16.1) (2026-10-14)
 
 
