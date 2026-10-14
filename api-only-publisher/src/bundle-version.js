@@ -22,8 +22,12 @@ class BundleVersionError extends Error {}
 // -- so a JVM build can read the same file with java.util.Properties. Only what a
 // version file needs: no escapes, no continuation lines.
 function readProperties(file) {
+    return parseProperties(fs.readFileSync(file, "utf8"));
+}
+
+function parseProperties(text) {
     const properties = {};
-    for (const raw of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    for (const raw of text.split(/\r?\n/)) {
         const line = raw.trim();
         if (line === "" || line.startsWith("#") || line.startsWith("!")) continue;
         const separator = line.search(/[=:]/);
@@ -77,4 +81,4 @@ function versionOf(config, target, { preRelease = null } = {}) {
     return version;
 }
 
-module.exports = { versionOf, readProperties, BundleVersionError };
+module.exports = { versionOf, readProperties, parseProperties, BundleVersionError };

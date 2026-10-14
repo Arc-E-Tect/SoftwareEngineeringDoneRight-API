@@ -268,7 +268,8 @@ The id is `<idPrefix>.<target in PascalCase>`; a version with build metadata is 
 |`channels.nuget.idPrefix`, `packageId`, `repository`, `tokenEnv`, `authors`, `license`, `description`
 |===
 
-Publishing a version a remote destination already has succeeds when it holds the same documents, and fails when it does not; a local one is written again.
+Publishing a version a destination already has succeeds when it holds the same documents; when it does not, the version is not replaced, and the run warns rather than fails, because a channel is an external party.
+A target changed without a new version fails the run before anything is sent; `check` catches it in the pull request.
 See the Publisher's link:../../api-only-publisher/README.adoc#idempotent[Publishing the same version again →].
 
 [#settings-map]

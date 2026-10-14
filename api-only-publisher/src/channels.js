@@ -13,7 +13,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 const { parse, compare, isPrerelease, npmDistTag } = require("./version-policy");
-const { ChannelError } = require("./channel-error");
+const { ChannelError, ChannelConflict, ChannelUnavailable } = require("./channel-error");
 const { publishNuget } = require("./nuget");
 const { publishGitlabPackage } = require("./gitlab");
 const { refuseRemote } = require("./remote");
@@ -33,26 +33,43 @@ function format(template, manifest) {
  *
  * Not a real distribution mechanism. It exists so the pipeline is testable end
  * to end before any remote exists, and as a local-iteration escape hatch
- * afterwards.
+ * afterwards. Like the registries, it never replaces a version: one it holds with
+ * the same documents is left alone, and one with other documents is refused.
  */
 function publishFile(archive, manifest, options, log) {
     // Relative to the library root, not to wherever the CLI happened to be run.
     const dir = path.resolve(options.baseDir || ".", options.directory || "publish");
     const targetDir = path.join(dir, manifest.target, manifest.version);
+    const archiveDest = path.join(targetDir, path.basename(archive));
+    const manifestDest = path.join(targetDir, "manifest.json");
+    const files = [archiveDest, manifestDest];
+
+    const held = fs.existsSync(manifestDest) ? judgeHeld(fs.readFileSync(manifestDest), "json", manifest) : null;
+    if (held && held.verdict !== "same") {
+        throw new ChannelConflict(`${dir} already has ${manifest.target} ${manifest.version}, and it ` +
+            `${held.verdict === "different" ? "is not this one" : `cannot be compared: ${held.reason}`}; ` +
+            "a published version is never replaced, so publish the change as a new version");
+    }
     // `clean: true` keeps only the version being published. Used where the
     // directory is a build output rather than a record of releases: an older
     // version is published again from the commit that declared it.
-    if (options.clean === true) {
-        fs.rmSync(path.join(dir, manifest.target), { recursive: true, force: true });
+    if (options.clean === true && fs.existsSync(path.join(dir, manifest.target))) {
+        for (const version of fs.readdirSync(path.join(dir, manifest.target))) {
+            if (version !== manifest.version) fs.rmSync(path.join(dir, manifest.target, version), { recursive: true, force: true });
+        }
+    }
+    if (held && fs.existsSync(archiveDest)) {
+        const identical = fs.readFileSync(archiveDest).equals(fs.readFileSync(archive));
+        log(`-- ${manifest.target} ${manifest.version} is already published, ` +
+            `${identical ? "identical" : "with the same documents"}, in ${dir}; nothing to do`);
+        return { location: archiveDest, files, alreadyPublished: true };
     }
     fs.mkdirSync(targetDir, { recursive: true });
-
-    const archiveDest = path.join(targetDir, path.basename(archive));
     fs.copyFileSync(archive, archiveDest);
-    fs.writeFileSync(path.join(targetDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+    fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2) + "\n");
 
     log(`-- Published ${manifest.target} ${manifest.version} to ${archiveDest}`);
-    return { location: archiveDest, files: [archiveDest, path.join(targetDir, "manifest.json")] };
+    return { location: archiveDest, files };
 }
 
 function pom(groupId, artifactId, version, packaging, description = `API description documents for ${artifactId}.`) {
@@ -192,7 +209,7 @@ function publishNpm(archive, manifest, options, log) {
                 log(`-- npm ${name}@${version} is already published, identical; nothing to do`);
                 return { location: name + "@" + version, distTag, name, alreadyPublished: true };
             }
-            const refused = (why) => new ChannelError(`npm already has ${name}@${version}, and it ${why}. ` +
+            const refused = (why) => new ChannelConflict(`npm already has ${name}@${version}, and it ${why}. ` +
                 "A published version is never replaced; publish the change as a new version.");
             const judged = judgeHeld(npmPublishedPackage(name, version, registry), "tgz", manifest);
             if (judged.verdict === "unreadable") throw refused(`cannot be compared: ${judged.reason}`);
@@ -225,7 +242,7 @@ function npmPublishedDist(name, version, registry) {
     } catch (error) {
         const output = `${error.stdout || ""}${error.stderr || ""}`;
         if (/E404/.test(output)) return null;
-        throw new ChannelError(`could not ask npm whether ${name}@${version} is published: ${output.trim() || error.message}`);
+        throw new ChannelUnavailable(`could not ask npm whether ${name}@${version} is published: ${output.trim() || error.message}`);
     }
 }
 
@@ -239,7 +256,7 @@ function npmPublishedPackage(name, version, registry) {
                 { encoding: "utf8", stdio: "pipe" }));
         } catch (error) {
             const output = `${error.stdout || ""}${error.stderr || ""}`.trim();
-            throw new ChannelError(`could not read ${name}@${version} back from npm to compare: ${output || error.message}`);
+            throw new ChannelUnavailable(`could not read ${name}@${version} back from npm to compare: ${output || error.message}`);
         }
         return fs.readFileSync(path.join(dir, packed[0].filename));
     } finally {
@@ -299,7 +316,7 @@ function publishGithubRelease(archive, manifest, options, log) {
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
         }
-        const refused = (why) => new ChannelError(`${repository} release ${tag} already has ${asset}, and it ${why}. ` +
+        const refused = (why) => new ChannelConflict(`${repository} release ${tag} already has ${asset}, and it ${why}. ` +
             "A published version is never replaced; publish the change as a new version.");
         const judged = judgeHeld(held, "tgz", manifest);
         if (judged.verdict === "unreadable") throw refused(`cannot be compared: ${judged.reason}`);
@@ -336,7 +353,7 @@ async function putFile(url, body, auth, contentType) {
         body,
     });
     if (!response.ok) {
-        throw new ChannelError(
+        throw new ChannelUnavailable(
             `PUT ${url} failed: ${response.status} ${response.statusText}. ` +
             (response.status === 401 || response.status === 403
                 ? "Check the token in the environment variable named by channels.maven.tokenEnv."
@@ -350,7 +367,7 @@ async function getFile(url, auth) {
     const response = await fetch(url, { headers: auth });
     if (response.status === 404) return null;
     if (!response.ok) {
-        throw new ChannelError(`GET ${url} failed: ${response.status} ${response.statusText}. ` +
+        throw new ChannelUnavailable(`GET ${url} failed: ${response.status} ${response.statusText}. ` +
             (response.status === 401 || response.status === 403
                 ? "Check the token in the environment variable named by channels.maven.tokenEnv." : ""));
     }
@@ -398,7 +415,7 @@ async function updateMetadata(url, groupId, artifactId, manifest, auth, log) {
     try {
         await putFile(url, Buffer.from(metadataXml(groupId, artifactId, listed, lastUpdated), "utf8"), auth, "application/xml");
     } catch (error) {
-        throw new ChannelError(`the repository refused maven-metadata.xml for ${groupId}:${artifactId}: ${error.message.trim()} ` +
+        throw new ChannelUnavailable(`the repository refused maven-metadata.xml for ${groupId}:${artifactId}: ${error.message.trim()} ` +
             "The version's files are published; a re-run retries only the metadata. For a repository that generates " +
             "its own maven-metadata.xml, set channels.maven.metadata: false.");
     }
@@ -409,7 +426,7 @@ function publishMavenRemote(archive, manifest, options, log) {
     const tokenEnv = options.tokenEnv || "MAVEN_TOKEN";
     const token = process.env[tokenEnv];
     if (!token) {
-        throw new ChannelError(
+        throw new ChannelUnavailable(
             `no credential in $${tokenEnv}, which channels.maven.tokenEnv names. ` +
             `Remote publication needs one; set it in the release job's environment.`
         );
@@ -443,7 +460,7 @@ function publishMavenRemote(archive, manifest, options, log) {
             { url: `${base}-manifest.json`, type: "application/json", kind: "json",
               bytes: Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8") },
         ];
-        const refused = (file, why) => new ChannelError(
+        const refused = (file, why) => new ChannelConflict(
             `${options.repository} already has ${options.groupId}:${artifactId}:${version}, ` +
             `and its ${file.url.split("/").pop()} ${why}. ` +
             "A published version is never replaced; publish the change as a new version.");

@@ -21,7 +21,7 @@ const SUPPORTED_SCHEMA_VERSION = 1;
 // often a typo or a bad indent than a value nobody has used yet -- see checkKeys.
 const ROOT_KEYS = [
     "schemaVersion", "sources", "defaults", "build", "reports", "lint",
-    "distribution", "channels", "targets", "toolchain", "portfolio",
+    "distribution", "channels", "targets", "toolchain", "portfolio", "versioning",
 ];
 const SOURCES_KEYS = ["root", "openapi", "asyncapi"];
 const DEFAULTS_KEYS = ["openapi", "asyncapi", "placeholders"];
@@ -36,6 +36,7 @@ const TARGET_KEYS = ["openapi", "asyncapi", "publish", "versionFile", "channels"
 const TARGET_KIND_KEYS = ["bundle", "aggregate", "info"];
 const PORTFOLIO_KEYS = ["openapi", "security", "location"];
 const PORTFOLIO_OPENAPI_KEYS = ["paths", "operationIds", "tags"];
+const VERSIONING_KEYS = ["tagFormat", "mainBranch"];
 
 // What every portfolio setting is when apionly.yaml says nothing: safe for the
 // ordinary case (a gateway routing /<target>/** to each service), and named rather
@@ -204,6 +205,16 @@ function load(configPath) {
         );
     }
 
+    const versioning = parsed.versioning || {};
+    checkKeys(versioning, VERSIONING_KEYS, "versioning");
+    if (versioning.tagFormat !== undefined) {
+        const format = requireString(versioning.tagFormat, "versioning.tagFormat");
+        if (!format.includes("{target}") || !format.includes("{version}")) {
+            throw new ConfigError(`versioning.tagFormat must contain {target} and {version}, not ${JSON.stringify(format)}`);
+        }
+    }
+    if (versioning.mainBranch !== undefined) requireString(versioning.mainBranch, "versioning.mainBranch");
+
     const channels = parsed.channels || {};
     const types = channelTypes(channels);
 
@@ -314,6 +325,7 @@ function load(configPath) {
         distribution: parsed.distribution || null,
         channels,
         portfolio,
+        versioning,
         targets,
 
         // --- derived accessors, so callers never re-derive a path themselves ---
@@ -328,6 +340,15 @@ function load(configPath) {
         // The subtree of the staged mirror that holds one specification type.
         stagingDir(kind) {
             return path.join(this.stagingRoot(kind), requireString(this.sources[kind], `sources.${kind}`));
+        },
+        // How a target's releases are tagged in git -- by the pipeline that publishes them,
+        // never by the Publisher, which only reads the tags -- and the branch a change is
+        // compared with when a target has no release tag yet.
+        tagFormat() {
+            return this.versioning.tagFormat || "{target}-v{version}";
+        },
+        mainBranch() {
+            return this.versioning.mainBranch || "main";
         },
         // Where pack and publish write archives, and split its parts, unless --out says
         // otherwise; relative to this configuration, as every other path here is.

@@ -24,7 +24,7 @@ const { execFileSync } = require("child_process");
 
 const { parse, isPrerelease } = require("./version-policy");
 const { zip } = require("./zip");
-const { ChannelError } = require("./channel-error");
+const { ChannelError, ChannelConflict, ChannelUnavailable } = require("./channel-error");
 const { judgeHeld } = require("./held-documents");
 
 /** Where the documents and manifest.json sit inside the package. */
@@ -174,13 +174,13 @@ function publishLocal(archive, manifest, options, id, log) {
 async function feedResources(index) {
     const response = await fetch(index);
     if (!response.ok) {
-        throw new ChannelError(`could not read the NuGet service index at ${index}: ${response.status} ${response.statusText}`);
+        throw new ChannelUnavailable(`could not read the NuGet service index at ${index}: ${response.status} ${response.statusText}`);
     }
     const resources = (await response.json()).resources || [];
     const find = (type) => (resources.find((r) => r["@type"] === type) || {})["@id"] || null;
     const publish = find(PUBLISH_RESOURCE);
     if (!publish) {
-        throw new ChannelError(`the NuGet feed at ${index} has no ${PUBLISH_RESOURCE} resource, so it cannot be pushed to`);
+        throw new ChannelUnavailable(`the NuGet feed at ${index} has no ${PUBLISH_RESOURCE} resource, so it cannot be pushed to`);
     }
     return { publish, content: find(CONTENT_RESOURCE) };
 }
@@ -207,7 +207,7 @@ async function readableCopy(content, id, version, key) {
  */
 function judge(held, bytes, id, manifest) {
     if (held.equals(bytes)) return "identical";
-    const refused = (why) => new ChannelError(`the NuGet feed already has ${id} ${manifest.version}, and it ${why}; ` +
+    const refused = (why) => new ChannelConflict(`the NuGet feed already has ${id} ${manifest.version}, and it ${why}; ` +
         "a published version is never replaced, so publish the change as a new version");
     const judged = judgeHeld(held, "zip", manifest);
     if (judged.verdict === "unreadable") throw refused(`cannot be compared: ${judged.reason}`);
@@ -225,7 +225,7 @@ async function publishedCopy(content, id, version, key) {
     const response = await fetch(url, { headers: { "X-NuGet-ApiKey": key } });
     if (response.status === 404) return null;
     if (!response.ok) {
-        throw new ChannelError(`could not read ${id} ${version} back from ${url}: ${response.status} ${response.statusText}`.trim() +
+        throw new ChannelUnavailable(`could not read ${id} ${version} back from ${url}: ${response.status} ${response.statusText}`.trim() +
             (response.status === 401 || response.status === 403
                 ? ". Check the key in the environment variable named by channels.nuget.tokenEnv." : ""));
     }
@@ -243,7 +243,7 @@ function publishRemote(archive, manifest, options, id, log) {
     const tokenEnv = options.tokenEnv || "NUGET_API_KEY";
     const key = process.env[tokenEnv];
     if (!key) {
-        throw new ChannelError(
+        throw new ChannelUnavailable(
             `no API key in $${tokenEnv}, which channels.nuget.tokenEnv names. ` +
             "Remote publication needs one; set it in the release job's environment.");
     }
@@ -290,11 +290,11 @@ function publishRemote(archive, manifest, options, id, log) {
             // Idempotent: the same documents again are success, others are not.
             const held = await readableCopy(content, id, manifest.version, key);
             if (held) return already(judge(held, bytes, id, manifest));
-            throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}, and it cannot be read back to compare; ` +
+            throw new ChannelConflict(`the NuGet feed already has ${id} ${manifest.version}, and it cannot be read back to compare; ` +
                 "a published version is never replaced, so publish the change as a new version");
         }
         if (!response.ok) {
-            throw new ChannelError(`the NuGet feed refused the package: ${response.status} ${response.statusText}. ` +
+            throw new ChannelUnavailable(`the NuGet feed refused the package: ${response.status} ${response.statusText}. ` +
                 (response.status === 401 || response.status === 403
                     ? "Check the key in the environment variable named by channels.nuget.tokenEnv." : ""));
         }

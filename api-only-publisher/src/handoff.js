@@ -21,9 +21,11 @@ const HANDOFF_SCHEMA_VERSION = 1;
 /**
  * Writes packages.json and packages.sha256 into `outDir`, replacing any from an
  * earlier run, listing `entries` -- `{ file, target, version, channel }`, `file`
- * absolute -- sorted by path.
+ * absolute -- sorted by path. packages.json also lists `outcomes`, what each channel
+ * made of each target: `published`, `already-published`, or a channel problem --
+ * `conflict` or `unavailable`, with its reason -- that did not fail the run.
  */
-function writeHandoff(root, outDir, entries) {
+function writeHandoff(root, outDir, entries, outcomes = []) {
     const files = entries
         .map(({ file, target, version, channel, type = channel }) => ({
             path: path.relative(root, file).split(path.sep).join("/"),
@@ -35,7 +37,7 @@ function writeHandoff(root, outDir, entries) {
     fs.mkdirSync(outDir, { recursive: true });
     const json = path.join(outDir, HANDOFF_JSON);
     const sha256 = path.join(outDir, HANDOFF_SHA256);
-    fs.writeFileSync(json, JSON.stringify({ schemaVersion: HANDOFF_SCHEMA_VERSION, files }, null, 2) + "\n");
+    fs.writeFileSync(json, JSON.stringify({ schemaVersion: HANDOFF_SCHEMA_VERSION, files, outcomes }, null, 2) + "\n");
     fs.writeFileSync(sha256, files.map((f) => `${f.sha256}  ${f.path}\n`).join(""));
     return { json, sha256 };
 }

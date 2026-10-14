@@ -13,7 +13,7 @@
 set -e
 
 case "${1-}" in
-    "" | -* | init | config | targets | build | lint | closure | changed | pack | publish | split)
+    "" | -* | init | config | targets | build | lint | closure | changed | check | pack | publish | split)
         exec api-only-publisher "$@"
         ;;
 esac
