@@ -691,7 +691,8 @@ Configured portfolio: paths=none, location=portfolios
 |`file`
 |A local directory, laid out as `<directory>/<target>/<version>/`.
 Not a distribution mechanism between repositories: it makes the pipeline testable end to end with no infrastructure, lets a library share one build with the projects that implement it, and is a local-iteration escape hatch.
-Like a registry, it never replaces a version it holds with other documents (<<idempotent,Publishing the same version again §>>); with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
+Like a registry, it never replaces a version it holds with other documents (<<idempotent,Publishing the same version again §>>).
+With `clean: true` the directory is a build output rather than a record of releases: only the version being published is kept, and it holds the last build, so a version built again with other documents replaces it.
 
 |`maven`
 |A path publishes into a repository layout on disk; an `http(s)` URL deploys to a remote repository with an HTTP `PUT` per file, and keeps its `maven-metadata.xml` (<<maven-remote,Publishing to a remote Maven repository §>>).
@@ -776,7 +777,8 @@ What happens when the destination already has the version:
 |The same documents: nothing is written or sent, and the log says `already published, identical`, or `with the same documents` when the copy came from another commit.
 Other documents: the version is not published to that channel, and the run warns, naming the version -- a published version is never replaced, so publish the change as a new version (<<channel-problems,When a channel cannot take a version §>>).
 A copy that cannot be read, so there is nothing to compare, is treated as one with other documents, saying why it `cannot be compared`.
-`file` compares the `manifest.json` in the version's directory, and with `clean: true` removes the other versions, never this one.
+`file` compares the `manifest.json` in the version's directory.
+With `clean: true`, a build output, it replaces a version with other documents instead, logging `Replaced`, and removes the other versions; what guards a release there is the check before `publish` (<<version-guard,A changed target needs a new version §>>), and a subscriber's lockfile after it.
 `maven` and `gitlab-package` read back every file before uploading any, so a run interrupted half-way is completed by the next one; a GitLab registry that allows duplicate packages, as it does by default, would otherwise replace a version.
 A version completed beside an archive from another commit gets that archive's `manifest.json`, so the two agree on where the version came from; a POM carries no documents, and one already there is left as it is.
 `github-release` reads the manifest in the asset the release has, and never overwrites one.
