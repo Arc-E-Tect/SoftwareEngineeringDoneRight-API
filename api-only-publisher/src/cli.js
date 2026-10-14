@@ -17,6 +17,8 @@ const { pack, PackError } = require("./pack");
 const { changedSince, ChangedError } = require("./changed");
 const { split, SplitError } = require("./split");
 const { publish, ChannelError } = require("./channels");
+const { outcomeOf } = require("./channel-error");
+const { guard, GuardError } = require("./version-guard");
 const { refuseRemote } = require("./remote");
 const { CHANNEL_TYPES } = require("./channel-types");
 const { VersionError: PolicyError, describe } = require("./version-policy");
@@ -40,6 +42,7 @@ Usage:
   api-only-publisher targets
   api-only-publisher closure [--target <name>]...
   api-only-publisher changed --since <ref>
+  api-only-publisher check [--target <name>]... [--pre-release <ids>] [--since <ref>]
   api-only-publisher pack [--pre-release <ids>] [--target <name>]... [--out <dir>]
   api-only-publisher publish [--pre-release <ids>] [--target <name>]... [--channel <name>]... [--out <dir>]
   api-only-publisher split [--out <dir>] [--by kind|target]
@@ -63,7 +66,9 @@ Options:
                     init only: the value of that question; a flag always wins.
   --portfolio-paths <target-prefix|none>, --portfolio-location <dir>
                     config only: the value of that question; a flag always wins.
-  --since <ref>     changed only: the git ref to compare the working tree against.
+  --since <ref>     changed: the git ref to compare the working tree against.
+                    check/publish: the ref to compare a target without a release
+                    tag against, instead of the merge-base with the main branch.
   --out <dir>       pack/publish/split: where to write, instead of build.packages
                     or build.split in apionly.yaml.
   --channel <name>  publish only: repeat for several. Default: every configured channel.
@@ -76,6 +81,8 @@ Options:
 What gets built, and where each document goes, is declared in apionly.yaml.
 A published target's version is read from its version file:
 <target>.bundle.properties beside its bundle root, or the file its versionFile names.
+A target changed since its release, or since the main branch, needs a new version:
+check says which do not have one, and publish refuses them.
 `;
 
 function parseArgs(argv) {
@@ -289,6 +296,20 @@ async function runConfig(options, positional, io, log) {
     return 0;
 }
 
+/** Fails with every target the guard refused -- and, with `undecided`, every one it could not decide -- each with its reason. */
+function refuseViolations(results, { undecided = false } = {}) {
+    const listed = (verdict) => results.filter((r) => r.verdict === verdict).map((r) => `  ${r.target} ${r.version}: ${r.reason}`);
+    const violations = listed("violation");
+    const unknown = undecided ? listed("undecided") : [];
+    const parts = [];
+    if (violations.length > 0) {
+        parts.push(`${violations.length} target(s) changed without a new version:\n${violations.join("\n")}\n` +
+            "A published version is never replaced: a changed specification needs a changed version.");
+    }
+    if (unknown.length > 0) parts.push(`${unknown.length} target(s) could not be checked:\n${unknown.join("\n")}`);
+    if (parts.length > 0) throw new GuardError(parts.join("\n\n"));
+}
+
 async function main(argv, io = {}) {
     const { options, positional } = parseArgs(argv);
     const command = positional[0];
@@ -425,6 +446,17 @@ async function main(argv, io = {}) {
             log(`\n${changed.length} of ${results.length} target(s) changed since ${options.since}.`);
             return 0;
         }
+        case "check": {
+            for (const target of targets || []) {
+                if (!config.isPublished(target)) throw new ConfigError(`${target} is not published, so it has no version to check`);
+            }
+            const results = guard(config, shippedTargets(config, targets), { preRelease: options.preRelease, since: options.since });
+            for (const r of results) log(`${r.target.padEnd(18)} ${r.version.padEnd(14)} ${r.verdict === "ok" ? "ok" : r.verdict.toUpperCase()}  ${r.reason}`);
+            // check is the gate: a target it cannot decide fails it too.
+            refuseViolations(results, { undecided: true });
+            log(`\n${results.length} target(s) checked.`);
+            return 0;
+        }
         case "pack": {
             const outDir = options.out ? path.resolve(options.dir, options.out) : config.packagesDir();
             const shipped = shippedTargets(config, targets);
@@ -483,9 +515,21 @@ async function main(argv, io = {}) {
             // Every channel this run uses, before anything is read, packed or sent.
             refuseRemote([...new Set(shipped.flatMap((target) => routes.get(target)))], configured);
             const versions = versionsOf(config, shipped, options.preRelease);
+            // A changed target needs a new version: decided before anything is packed or sent.
+            try {
+                const checked = guard(config, shipped, { preRelease: options.preRelease, since: options.since });
+                refuseViolations(checked);
+                for (const r of checked.filter((c) => c.verdict === "undecided")) {
+                    log(`warning: ${r.target} ${r.version}: version not checked: ${r.reason}`);
+                }
+            } catch (error) {
+                if (!(error instanceof GuardError && error.notARepository)) throw error;
+                log(`warning: versions not checked: ${error.message}`);
+            }
             const closures = forTargets(config, undefined, shipped);
             let published = 0;
             const handoff = [];
+            const outcomes = [];
             for (const target of Object.keys(config.targets)) {
                 if (!shipped.includes(target)) continue;
                 const closure = closures.get(target);
@@ -496,18 +540,36 @@ async function main(argv, io = {}) {
                     outDir, log,
                 });
                 for (const name of routes.get(target)) {
-                    // A remote channel returns a promise; a local one does not.
-                    const result = await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
-                    for (const file of result.files || []) {
-                        handoff.push({ file, target, version: manifest.version, channel: name, type: config.channelType(name) });
+                    const entry = { target, version: manifest.version, channel: name, type: config.channelType(name) };
+                    let result;
+                    try {
+                        // A remote channel returns a promise; a local one does not.
+                        result = await publish(archive, manifest, name, { ...(configured[name] || {}), baseDir: config.root }, log);
+                    } catch (error) {
+                        // A channel is an external party: what it cannot take is reported, never fatal.
+                        const outcome = outcomeOf(error);
+                        if (!outcome) throw error;
+                        outcomes.push({ ...entry, outcome, reason: error.message });
+                        log(`warning: ${target} ${manifest.version} was not published to ${name}: ${error.message}`);
+                        if (process.env.GITHUB_ACTIONS === "true") {
+                            console.log(`::warning title=${target} ${manifest.version} not published to ${name}::${error.message.replace(/\r?\n/g, " ")}`);
+                        }
+                        continue;
                     }
+                    outcomes.push({ ...entry, outcome: result.alreadyPublished ? "already-published" : "published" });
+                    for (const file of result.files || []) handoff.push({ file, ...entry });
                     published += 1;
                 }
             }
-            // What a later step publishes byte for byte; README.adoc#handoff.
-            const { sha256: listing } = writeHandoff(config.root, outDir, handoff);
+            // What a later step publishes byte for byte, and what each channel made of it; README.adoc#handoff.
+            const { sha256: listing } = writeHandoff(config.root, outDir, handoff, outcomes);
             log(`\nPublished ${published} artifact(s).`);
             log(`Listed ${handoff.length} file(s) in ${path.relative(config.root, listing)}.`);
+            const problems = outcomes.length - published;
+            if (problems > 0) {
+                log(`Channel problems: ${problems} of ${outcomes.length} publication(s) did not complete.` +
+                    (published === 0 ? " Nothing was published." : ""));
+            }
             return 0;
         }
         case "split": {
@@ -533,7 +595,7 @@ function report(error) {
         error instanceof ClosureError || error instanceof PackError ||
         error instanceof ChangedError || error instanceof SplitError ||
         error instanceof ChannelError || error instanceof PolicyError ||
-        error instanceof BundleVersionError) {
+        error instanceof BundleVersionError || error instanceof GuardError) {
         console.error(`Error: ${error.message}`);
         process.exitCode = 1;
     } else {

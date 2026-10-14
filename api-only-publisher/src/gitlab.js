@@ -16,7 +16,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 const { isPrerelease } = require("./version-policy");
-const { ChannelError } = require("./channel-error");
+const { ChannelError, ChannelConflict, ChannelUnavailable } = require("./channel-error");
 const { judgeHeld } = require("./held-documents");
 
 const GITLAB_COM = "https://gitlab.com/api/v4";
@@ -35,7 +35,7 @@ function channelSettings(options, env = process.env) {
         tokenType = "job";
     }
     if (!token) {
-        throw new ChannelError(
+        throw new ChannelUnavailable(
             `no token in $${tokenEnv}, which channels.gitlab-package.tokenEnv names, and no $CI_JOB_TOKEN. ` +
             "Set one in the release job's environment, or run in a GitLab CI job.");
     }
@@ -79,14 +79,14 @@ async function readBack(fileUrl, name, headers) {
     const response = await fetch(fileUrl, { headers });
     if (response.status === 404) return null;
     if (!response.ok) {
-        throw new ChannelError(`could not read ${name} back from ${fileUrl}: ${await answered(response)}.` +
+        throw new ChannelUnavailable(`could not read ${name} back from ${fileUrl}: ${await answered(response)}.` +
             (response.status === 401 || response.status === 403 ? TOKEN_HINT : ""));
     }
     return Buffer.from(await response.arrayBuffer());
 }
 
 function refused(name, manifest, why) {
-    return new ChannelError(`GitLab already has ${name} in ${manifest.target} ${manifest.version}, and it ${why}; ` +
+    return new ChannelConflict(`GitLab already has ${name} in ${manifest.target} ${manifest.version}, and it ${why}; ` +
         "a published version is never replaced, so publish the change as a new version");
 }
 
@@ -111,7 +111,7 @@ async function upload(file, manifest, headers) {
     // Refused, perhaps as a duplicate another run published meanwhile: compare that one.
     const now = await readBack(file.url, file.name, headers).catch(() => null);
     if (now) return { held: now, found: sameAs(now, file, manifest) };
-    throw new ChannelError(`GitLab refused ${file.name}: ${answer}.` +
+    throw new ChannelUnavailable(`GitLab refused ${file.name}: ${answer}.` +
         (response.status === 401 || response.status === 403 ? TOKEN_HINT : ""));
 }
 
@@ -137,18 +137,18 @@ async function release(settings, manifest, options, links, ref, log) {
             description: format(options.notes || options.description || DEFAULT_DESCRIPTION, manifest),
             assets: { links },
         });
-        if (!created.ok) throw new ChannelError(`GitLab refused the release ${tag}: ${await answered(created)}`);
+        if (!created.ok) throw new ChannelUnavailable(`GitLab refused the release ${tag}: ${await answered(created)}`);
         log(`-- Created the GitLab release ${tag}`);
         return;
     }
     if (!existing.ok) {
-        throw new ChannelError(`could not read the GitLab release ${tag}: ${await answered(existing)}`);
+        throw new ChannelUnavailable(`could not read the GitLab release ${tag}: ${await answered(existing)}`);
     }
     // A release's link names are unique: one already named, or already pointing here, is left as it is.
     const held = ((await existing.json()).assets || {}).links || [];
     for (const link of links.filter((l) => !held.some((h) => h.url === l.url || h.name === l.name))) {
         const added = await api(`${releases}/${encodeURIComponent(tag)}/assets/links`, settings.headers, "POST", link);
-        if (!added.ok) throw new ChannelError(`GitLab refused a link on the release ${tag}: ${await answered(added)}`);
+        if (!added.ok) throw new ChannelUnavailable(`GitLab refused a link on the release ${tag}: ${await answered(added)}`);
         log(`-- Linked ${link.name} from the GitLab release ${tag}`);
     }
 }

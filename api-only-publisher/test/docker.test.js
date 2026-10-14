@@ -72,7 +72,7 @@ function entrypoint(args) {
 test("the entrypoint runs the Publisher for each of its commands", () => {
     const listed = commands();
     assert.deepStrictEqual(listed,
-        ["build", "changed", "closure", "config", "init", "lint", "pack", "publish", "split", "targets"]);
+        ["build", "changed", "check", "closure", "config", "init", "lint", "pack", "publish", "split", "targets"]);
     for (const command of listed) {
         assert.strictEqual(entrypoint([command, "--target", "a b"]), `publisher ${command} --target a b`);
     }

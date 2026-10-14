@@ -191,11 +191,16 @@ Without `--target`, it also fails on a fragment no target reaches, as <<unrefere
 |Report which targets' closures changed between a git ref and the working tree.
 A target whose closure is untouched needs no new version, however much else in the repository moved.
 
+|`check [--target <t>]... [--pre-release <ids>] [--since <ref>]`
+|Fail on every published target that changed without a new version, from git alone, as <<version-guard,A changed target needs a new version §>> describes.
+Made for a pull request's pipeline: no network, no credentials, nothing built.
+
 |`pack [--pre-release <ids>] [--target <t>]... [--out <dir>]`
 |Archive each built, published target with a `manifest.json`, at the version its version file declares.
 
-|`publish [--pre-release <ids>] [--target <t>]... [--channel <c>]... [--out <dir>]`
-|Pack each target once, then ship those same bytes to each of its channels, or only to those of them each `--channel` names (<<channel-routing,Which channels a target goes to §>>).
+|`publish [--pre-release <ids>] [--target <t>]... [--channel <c>]... [--since <ref>] [--out <dir>]`
+|Check every target as `check` does, then pack each target once and ship those same bytes to each of its channels, or only to those of them each `--channel` names (<<channel-routing,Which channels a target goes to §>>).
+A channel that cannot take a version is a warning, not a failure (<<channel-problems,When a channel cannot take a version §>>).
 
 |`split [--out <dir>] [--by kind\|target]`
 |Make the library safe to break into separate repositories.
@@ -212,6 +217,7 @@ A target whose closure is untouched needs no new version, however much else in t
 npm run apionly -- build --target orders --openapi
 npm run apionly -- publish --target orders --pre-release rc.1
 npm run apionly -- changed --since origin/main --quiet
+npm run apionly -- check
 ----
 
 [#init]
@@ -408,7 +414,54 @@ Cutting one never means editing the file, and then remembering to edit it back, 
 
 A version names one set of documents.
 Publishing different documents under a version that was published before, after editing a fragment without changing the version file, is refused by the API-Only Subscriber in every project that locked the earlier ones.
-Change the version in the same commit as the fragments instead.
+Change the version in the same commit as the fragments instead; `check` and `publish` refuse a target that does not (<<version-guard,A changed target needs a new version §>>).
+
+[#version-guard]
+=== A changed target needs a new version
+
+`check` decides, for every published target, whether its version may be published, and fails naming each one that may not.
+`publish` decides the same before it packs or sends anything, so a target that fails it is never published anywhere.
+Both read only git: the target's release tags, its history, and the working tree, changes not yet committed included.
+
+[cols="1,3", options="header"]
+|===
+|What git tells |What `check` requires
+
+|A release tag for this exact version
+|The target unchanged since that tag: the version was released from what the tag points at, and publishing it again is safe only with the same specifications.
+
+|Release tags, but none for this version
+|A version above the latest release; one below it is refused.
+
+|No release tags at all
+|Compared with the merge-base with the main branch, or with the ref `--since` names: a target changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
+A target whose version file was not there yet is new, and passes.
+|===
+
+Release tags are named by `versioning.tagFormat`, `{target}-v{version}` by default: `orders-v2.1.0`.
+The Publisher never creates them: the pipeline that publishes does, after it has published, because a tool that pushes to git needs write access to the repository it builds from.
+The reference pipelines show the step, and the `gitlab-package` channel's `release: true` creates the tag with the release.
+The main branch is `versioning.mainBranch`, `main` by default; its remote-tracking branch, `origin/main`, is preferred, as that is what a CI checkout has.
+
+A pre-release follows the same rules, by its full version:
+
+* Its version file need not change: `--pre-release rc.2` already makes a new version, so a target changed since the main branch passes with an unchanged file.
+* A pre-release that was released before -- a tag `orders-v2.1.0-rc.1` -- is refused when the target changed since, as a release is.
+* A pre-release of a version already released is refused: `2.1.0-rc.1` sorts before `2.1.0`, so it can never be the next version.
+
+Where the guard cannot decide, it says so, and only `check` fails on it: `check` is the gate, while `publish` fails on a proven violation alone.
+Outside a git repository, `check` fails and `publish` warns that the versions were not checked.
+A target with no release tag, in a checkout that has no merge-base with the main branch -- a shallow clone, or no main branch at all -- is `undecided`: `check` fails naming it, and `publish` warns and publishes it; a target with a release tag is decided all the same.
+In CI, fetch the full history and the tags -- `actions/checkout` with `fetch-depth: 0`, or `GIT_DEPTH: 0` on GitLab -- so that nothing is left undecided.
+Without release tags, the check on the main branch itself compares the main branch with itself, so it is in the pull request that it catches a missing bump; the tags are what make it exact everywhere.
+
+To catch it before a push, call `check` from whatever runs the repository's git hooks -- a `pre-push` hook, or a hook manager such as husky or lefthook:
+
+[source,sh]
+----
+#!/bin/sh
+exec npx --no-install api-only-publisher check
+----
 
 [#closure]
 == Independent versioning, and the dependency closure
@@ -638,7 +691,7 @@ Configured portfolio: paths=none, location=portfolios
 |`file`
 |A local directory, laid out as `<directory>/<target>/<version>/`.
 Not a distribution mechanism between repositories: it makes the pipeline testable end to end with no infrastructure, lets a library share one build with the projects that implement it, and is a local-iteration escape hatch.
-Publishing a version again writes it again and keeps the others (<<idempotent,Publishing the same version again §>>); with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
+Like a registry, it never replaces a version it holds with other documents (<<idempotent,Publishing the same version again §>>); with `clean: true` only the version being published is kept, for a directory that is a build output rather than a record of releases.
 
 |`maven`
 |A path publishes into a repository layout on disk; an `http(s)` URL deploys to a remote repository with an HTTP `PUT` per file, and keeps its `maven-metadata.xml` (<<maven-remote,Publishing to a remote Maven repository §>>).
@@ -716,13 +769,14 @@ What happens when the destination already has the version:
 |===
 |Destination |Already has the version
 
-|`file`; `maven` and `nuget` to a directory; `npm` with `publish: false`
+|`maven` and `nuget` to a directory; `npm` with `publish: false`
 |Written again. With the same content the bytes are the same; with different content the version is replaced, and every subscriber whose lockfile recorded the old bytes fails its build until the change is published as a new version.
 
-|`maven` and `nuget` to a URL, `npm`, `github-release`, `gitlab-package`
-|The same documents: nothing is sent, and the log says `already published, identical`, or `with the same documents` when the copy came from another commit.
-Other documents: `publish` fails, naming the version -- a published version is never replaced, so publish the change as a new version.
-A copy that cannot be read, so there is nothing to compare, fails as one with other documents would, saying why it `cannot be compared`.
+|`file`; `maven` and `nuget` to a URL, `npm`, `github-release`, `gitlab-package`
+|The same documents: nothing is written or sent, and the log says `already published, identical`, or `with the same documents` when the copy came from another commit.
+Other documents: the version is not published to that channel, and the run warns, naming the version -- a published version is never replaced, so publish the change as a new version (<<channel-problems,When a channel cannot take a version §>>).
+A copy that cannot be read, so there is nothing to compare, is treated as one with other documents, saying why it `cannot be compared`.
+`file` compares the `manifest.json` in the version's directory, and with `clean: true` removes the other versions, never this one.
 `maven` and `gitlab-package` read back every file before uploading any, so a run interrupted half-way is completed by the next one; a GitLab registry that allows duplicate packages, as it does by default, would otherwise replace a version.
 A version completed beside an archive from another commit gets that archive's `manifest.json`, so the two agree on where the version came from; a POM carries no documents, and one already there is left as it is.
 `github-release` reads the manifest in the asset the release has, and never overwrites one.
@@ -730,6 +784,27 @@ A version completed beside an archive from another commit gets that archive's `m
 Its files are packed with fixed modes, so the package is the same bytes whatever the umask of the machine that publishes it.
 `nuget` reads the manifest in the package the feed returns.
 |===
+
+[#channel-problems]
+=== When a channel cannot take a version
+
+A channel is an external party, so what it does or does not do never fails `publish` on its own.
+When a channel holds the version with other documents, cannot be reached, refuses the request, or has no credential in this run, the target is not published to that channel; the run warns, naming the target, the version, the channel and the reason, and goes on with every other channel and target:
+
+[source,text]
+----
+warning: orders 2.1.0 was not published to partner: no credential in $PARTNER_TOKEN, which channels.maven.tokenEnv names. ...
+
+Published 3 artifact(s).
+Listed 2 file(s) in build/packages/packages.sha256.
+Channel problems: 1 of 4 publication(s) did not complete.
+----
+
+The last line appears only when something did not complete, and ends `Nothing was published.` when nothing did; `publish` still exits 0.
+In GitHub Actions each problem is also a `::warning` annotation on the run.
+The hand-off records every channel's outcome (<<handoff,The hand-off §>>), and publishing is idempotent, so running `publish` again completes what is missing.
+
+What fails the run is the library's to fix: a channel's settings in `apionly.yaml`, such as a `maven` channel without a `groupId`; the remote switch (<<remote-switch,Refusing remote publishing §>>); and a target changed without a new version (<<version-guard,A changed target needs a new version §>>), which is checked before anything is sent.
 
 [#remote-switch]
 === Refusing remote publishing
@@ -774,6 +849,7 @@ Every `publish` run lists each file its channels wrote locally, with its SHA-256
 
 | `packages.json`
 | `schemaVersion`, and `files`: for each file, its `path`, `sha256`, `target`, `version`, `channel` -- the channel's name -- and `type`, the channel's type.
+And `outcomes`: for each target and channel of the run, its `target`, `version`, `channel`, `type` and `outcome` -- `published`, `already-published`, `conflict` or `unavailable` -- with the `reason` for the last two.
 
 | `packages.sha256`
 | The same files in the format `sha256sum -c` checks.
@@ -781,7 +857,7 @@ Every `publish` run lists each file its channels wrote locally, with its SHA-256
 
 Paths are relative to the library root, with forward slashes, so `sha256sum -c build/packages/packages.sha256` checks them from there.
 A run replaces both files.
-A channel in a remote mode writes nothing locally, so it adds nothing.
+A channel in a remote mode writes nothing locally, so it adds no files; a channel that did not take the version adds none either, only its outcome.
 
 The hand-off is for a later step that publishes those files itself -- the second of <<docker-two-steps,the image's two steps §>> -- so that it ships exactly the bytes the Publisher produced, and nothing else.
 
@@ -840,7 +916,7 @@ A .NET build uses it with `dotnet nuget add source <repository>`, or a `nuget.co
 *A remote feed* is configured by its service index, the URL a feed's settings show and that ends in `index.json`, such as `https://api.nuget.org/v3/index.json`.
 The Publisher reads the service index for its `PackagePublish/2.0.0` endpoint, then pushes the package there with one `PUT`, as `multipart/form-data`, with the key from the environment variable `tokenEnv` names in the `X-NuGet-ApiKey` header.
 The `PUT` goes to that endpoint with a trailing `/`, as `dotnet nuget push` sends it; a GitLab feed recognises the upload only there.
-Before the push, the Publisher reads the feed's copy of the version back (its `PackageBaseAddress/3.0.0` resource): a package with the same documents succeeds without a push, one with other documents fails, and a copy that cannot be read, other than one the feed does not have, fails rather than being pushed over (<<idempotent,Publishing the same version again §>>).
+Before the push, the Publisher reads the feed's copy of the version back (its `PackageBaseAddress/3.0.0` resource): a package with the same documents succeeds without a push, one with other documents is not pushed over, and neither is a copy that cannot be read, other than one the feed does not have; `publish` warns about both (<<idempotent,Publishing the same version again §>>).
 The check comes first because a feed may accept a different package under a version it already has: GitLab does, by default, and serves the new one from then on.
 A feed that answers the push with 409 -- the version appeared in the meantime -- is read back and compared the same way.
 Without the variable set, the push fails before anything is sent, naming it.
@@ -906,12 +982,12 @@ link:pipelines/gitlab-ci.yml[The reference pipeline →] publishes this way, fro
 | A GitLab CI job publishing to its own project.
 |===
 
-Without either, `publish` fails before anything is sent, naming both.
+Without either, nothing is sent to GitLab, and `publish` warns, naming both (<<channel-problems,When a channel cannot take a version §>>).
 A deploy token is the least privilege for packages alone: it reaches one project's package registry and nothing else.
 
 *The same version again.*
 GitLab allows duplicate packages by default: it accepts a different file under a version it already has, and serves that one from then on.
-So the channel reads every file back before uploading any: a file with the same documents is left alone, a missing one is uploaded, and one with other documents fails `publish` (<<idempotent,Publishing the same version again §>>).
+So the channel reads every file back before uploading any: a file with the same documents is left alone, a missing one is uploaded, and one with other documents is never replaced; `publish` warns about it (<<idempotent,Publishing the same version again §>>).
 Turning *Allow duplicates* off for generic packages, in the group's *Settings › Packages and registries*, makes GitLab refuse a replaced file too, from every client; the Publisher keeps a version immutable either way.
 
 *`release: true`* also creates the tag's GitLab release, tagging `$CI_COMMIT_SHA` or, outside CI, the checkout's `HEAD`, and links both files as packages.
@@ -940,13 +1016,13 @@ channels:
 *The token* goes as a bearer token, `Authorization: Bearer <token>`, unless `tokenHeader` names another header, which then carries it as it is.
 GitLab's Maven registry takes a job token as `Job-Token`, a personal or project access token as `Private-Token`, and a deploy token as `Deploy-Token`; a GitLab Maven repository URL needs the project's numeric ID, since Gradle reads `%2F` in a path as `/`.
 
-*Every file is read back* before any is uploaded: the artifact and the manifest with the same documents are left alone, a missing file is uploaded, and other documents fail `publish`, naming the file; the POM carries no documents, and one already there is left alone.
+*Every file is read back* before any is uploaded: the artifact and the manifest with the same documents are left alone, a missing file is uploaded, and other documents are never replaced, and `publish` warns, naming the file; the POM carries no documents, and one already there is left alone.
 
 *`maven-metadata.xml`* lists an artifact's versions, which is how Gradle resolves a version range and how Renovate and Dependabot see a new version.
 Nexus, Artifactory and GitHub Packages keep it themselves; GitLab does not for files uploaded this way.
 So after a version's files, the channel adds the version to it, as `mvn deploy` does: `latest` is the highest version, `release` the highest that is not a pre-release, and `lastUpdated` the time of the commit, so the same commit writes the same file.
 It is written only when it lacks the version, or its `latest` or `release` would change.
-A repository that refuses it fails `publish`, naming `metadata: false`; the version's files are published by then, and a re-run retries only the metadata.
+A repository that refuses it is a warning naming `metadata: false`; the version's files are published by then, and a re-run retries only the metadata.
 
 [#why-registries]
 === Why npm, Maven and NuGet rather than release assets alone
@@ -1054,6 +1130,10 @@ targets:
 
 portfolio:                # absent is fine; an aggregate builds on documented defaults
   location: portfolios    # see Aggregates §
+
+versioning:               # absent is fine; see A changed target needs a new version §
+  tagFormat: "{target}-v{version}"  # the release tags the pipeline creates; the default
+  mainBranch: main        # compared with when a target has no release tag; the default
 ----
 
 `targets` is the single source of truth for what gets built.
@@ -1318,7 +1398,7 @@ A service subscribes to its own contract to implement it, and to the contracts o
 * Versions are per target, so a change to one service's fragments releases only that service's contract.
 A change to a fragment several targets share changes all of them, and `changed` names which, as <<closure,Independent versioning, and the dependency closure §>> describes.
 * Publishing every target on every run is safe: a version that is already published, with the same documents, is left alone, whichever commit it was packed from (<<idempotent,Publishing the same version again §>>).
-What fails is a changed contract whose version was not changed, which is the mistake `changed` exists to catch first.
+What fails is a changed contract whose version was not changed, which is the mistake `check` exists to catch first.
 * `landscape` is optional: a whole-landscape view for reading, generated on every build and never published, as <<aggregates,Aggregates §>> describes.
 
 [#recipe-business-partners]
@@ -2162,7 +2242,7 @@ docker build -t api-only-publisher:local --build-arg VERSION=0.0.0-local .
 docker/smoke-test.sh api-only-publisher:local 0.0.0-local
 ----
 
-It runs every step with a read-only root and your own user, and all but the last with no network: the version, the help, the toolchain labels against what is installed and against `init`'s pins, a library with two targets built, linted and packaged to every local channel in one run, ownership, byte-identical packaging twice, the hand-off, a foreign toolchain pin failing at once, a remote channel refused while sealed, the shell mode, and a build as an arbitrary UID.
+It runs every step with a read-only root and your own user, and all but the last with no network: the version, the help, the toolchain labels against what is installed and against `init`'s pins, a library with two targets built, linted, checked -- a change without a new version refused -- and packaged to every local channel in one run, ownership, byte-identical packaging twice, the hand-off, a foreign toolchain pin failing at once, a remote channel refused while sealed, the shell mode, and a build as an arbitrary UID.
 The last step publishes with `gitlab-package` and `maven` to a GitLab stand-in, run from the same image, on a Docker network it creates with no route out (`docker network create --internal`) and removes afterwards; it checks every request went to the project's package registries with the job token, and that a re-run uploads nothing.
 
 link:../.github/workflows/api-only-publisher-image-e2e.yml[`api-only-publisher-image-e2e.yml` →] runs the GitHub Actions reference pipeline for real, by hand only.
