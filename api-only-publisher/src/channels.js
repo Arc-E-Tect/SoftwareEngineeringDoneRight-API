@@ -17,6 +17,7 @@ const { ChannelError } = require("./channel-error");
 const { publishNuget } = require("./nuget");
 const { publishGitlabPackage } = require("./gitlab");
 const { refuseRemote } = require("./remote");
+const { judgeHeld } = require("./held-documents");
 
 /** What every package and release says it is, unless `description` says otherwise. */
 const DEFAULT_DESCRIPTION = "API description documents for {target}.";
@@ -175,29 +176,29 @@ function publishNpm(archive, manifest, options, log) {
             return { location, distTag, name, files: [location] };
         }
 
-        // Idempotent: a version the registry already has is left alone when it is the
-        // same package, and refused when it is not -- npm never replaces a version.
+        // Idempotent: a version the registry already has is left alone when it holds the
+        // same documents, and refused when it does not -- npm never replaces a version.
         const registry = options.registry ? ["--registry", options.registry] : [];
         const [local] = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"],
             { cwd: workDir, encoding: "utf8", stdio: "pipe" }));
         const published = npmPublishedDist(name, version, registry);
         if (published) {
             // The SHA-512 integrity when the registry records one; the tarball's SHA-1
-            // otherwise, as GitLab's npm registry records only that.
+            // otherwise, as GitLab's npm registry records only that. The same hash is the
+            // same package; any other answer is settled by the documents in the registry's copy.
             const [held, mine] = published.integrity ? [published.integrity, local.integrity]
                 : published.shasum ? [published.shasum, local.shasum] : [null, null];
-            if (!held) {
-                throw new ChannelError(
-                    `npm already has ${name}@${version}, and it cannot be compared: the registry records neither ` +
-                    "an integrity nor a shasum for it. A published version is never replaced; publish the change as a new version.");
-            }
-            if (held === mine) {
+            if (held && held === mine) {
                 log(`-- npm ${name}@${version} is already published, identical; nothing to do`);
                 return { location: name + "@" + version, distTag, name, alreadyPublished: true };
             }
-            throw new ChannelError(
-                `npm already has ${name}@${version}, and it is not this package (${held}, not ${mine}). ` +
+            const refused = (why) => new ChannelError(`npm already has ${name}@${version}, and it ${why}. ` +
                 "A published version is never replaced; publish the change as a new version.");
+            const judged = judgeHeld(npmPublishedPackage(name, version, registry), "tgz", manifest);
+            if (judged.verdict === "unreadable") throw refused(`cannot be compared: ${judged.reason}`);
+            if (judged.verdict === "different") throw refused(held ? `is not this package (${held}, not ${mine})` : "is not this package");
+            log(`-- npm ${name}@${version} is already published, with the same documents; nothing to do`);
+            return { location: name + "@" + version, distTag, name, alreadyPublished: true };
         }
 
         const args = ["publish", "--tag", distTag, ...registry];
@@ -225,6 +226,24 @@ function npmPublishedDist(name, version, registry) {
         const output = `${error.stdout || ""}${error.stderr || ""}`;
         if (/E404/.test(output)) return null;
         throw new ChannelError(`could not ask npm whether ${name}@${version} is published: ${output.trim() || error.message}`);
+    }
+}
+
+/** The package npm holds as `name@version`, downloaded with the registry's own credentials. */
+function npmPublishedPackage(name, version, registry) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "api-only-npm-held-"));
+    try {
+        let packed;
+        try {
+            packed = JSON.parse(execFileSync("npm", ["pack", `${name}@${version}`, "--pack-destination", dir, "--json", ...registry],
+                { encoding: "utf8", stdio: "pipe" }));
+        } catch (error) {
+            const output = `${error.stdout || ""}${error.stderr || ""}`.trim();
+            throw new ChannelError(`could not read ${name}@${version} back from npm to compare: ${output || error.message}`);
+        }
+        return fs.readFileSync(path.join(dir, packed[0].filename));
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
     }
 }
 
@@ -265,26 +284,29 @@ function publishGithubRelease(archive, manifest, options, log) {
     }
 
     // Idempotent, as the registries are: an asset the release already has is left alone
-    // when it is the same bytes, and refused when it is not. Never --clobber: that would
-    // replace a published contract under the same version.
+    // when it holds the same documents, and refused when it does not. Never --clobber: that
+    // would replace a published contract under the same version.
     const asset = path.basename(archive);
     const assets = exists
         ? gh(["release", "view", tag, "--repo", repository, "--json", "assets", "--jq", ".assets[].name"]).split("\n").map((a) => a.trim())
         : [];
     if (assets.includes(asset)) {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "api-only-gh-"));
+        let held;
         try {
             gh(["release", "download", tag, "--repo", repository, "--pattern", asset, "--dir", dir]);
-            if (fs.readFileSync(path.join(dir, asset)).equals(fs.readFileSync(archive))) {
-                log(`-- ${repository} release ${tag} already has ${asset}, identical; nothing to do`);
-                return { location: `${repository}@${tag}`, tag, alreadyPublished: true };
-            }
+            held = fs.readFileSync(path.join(dir, asset));
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
         }
-        throw new ChannelError(
-            `${repository} release ${tag} already has ${asset}, and it is not this archive. ` +
+        const refused = (why) => new ChannelError(`${repository} release ${tag} already has ${asset}, and it ${why}. ` +
             "A published version is never replaced; publish the change as a new version.");
+        const judged = judgeHeld(held, "tgz", manifest);
+        if (judged.verdict === "unreadable") throw refused(`cannot be compared: ${judged.reason}`);
+        if (judged.verdict === "different") throw refused("is not this archive");
+        const identical = held.equals(fs.readFileSync(archive));
+        log(`-- ${repository} release ${tag} already has ${asset}, ${identical ? "identical" : "with the same documents"}; nothing to do`);
+        return { location: `${repository}@${tag}`, tag, alreadyPublished: true };
     }
     gh(["release", "upload", tag, archive, "--repo", repository]);
     log(`-- Published ${manifest.target} ${manifest.version} to ${repository} release ${tag}`);
@@ -408,41 +430,57 @@ function publishMavenRemote(archive, manifest, options, log) {
     const base = `${artifactDir}/${version}/${artifactId}-${version}`;
 
     const work = (async () => {
-        // Idempotent, file by file: each file the repository already has is left alone when
-        // it is the same bytes, and refuses the whole version when it is not. Every file is
-        // read back before any is uploaded, so a run interrupted after the artifact is
-        // completed by the next one, and a version that differs anywhere is not touched.
+        // Idempotent, by documents: each file the repository already has that carries them --
+        // the artifact and the manifest -- is left alone when it holds the same documents, and
+        // refuses the whole version when it does not; the POM carries none, and is left alone.
+        // Every file is read back before any is uploaded, so a run interrupted after the
+        // artifact is completed by the next one, and a version that differs anywhere is not
+        // touched.
         const files = [
-            { url: `${base}.${extension}`, bytes: fs.readFileSync(archive), type: "application/octet-stream" },
+            { url: `${base}.${extension}`, bytes: fs.readFileSync(archive), type: "application/octet-stream", kind: "tgz" },
             { url: `${base}.pom`, type: "application/xml",
               bytes: Buffer.from(pom(options.groupId, artifactId, version, extension, pomDescription(options, manifest)), "utf8") },
-            { url: `${base}-manifest.json`, type: "application/json",
+            { url: `${base}-manifest.json`, type: "application/json", kind: "json",
               bytes: Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8") },
         ];
+        const refused = (file, why) => new ChannelError(
+            `${options.repository} already has ${options.groupId}:${artifactId}:${version}, ` +
+            `and its ${file.url.split("/").pop()} ${why}. ` +
+            "A published version is never replaced; publish the change as a new version.");
         const missing = [];
+        let identical = true;
+        let heldArchiveManifest = null;
         for (const file of files) {
             const existing = await getFile(file.url, auth);
             if (!existing) {
                 missing.push(file);
-            } else if (!existing.equals(file.bytes)) {
-                throw new ChannelError(
-                    `${options.repository} already has ${options.groupId}:${artifactId}:${version}, ` +
-                    `and its ${file.url.split("/").pop()} is not this one. ` +
-                    "A published version is never replaced; publish the change as a new version.");
+                continue;
             }
+            identical = identical && existing.equals(file.bytes);
+            if (!file.kind) continue;
+            const judged = judgeHeld(existing, file.kind, manifest);
+            if (judged.verdict === "unreadable") throw refused(file, `cannot be compared: ${judged.reason}`);
+            if (judged.verdict === "different") throw refused(file, "is not this one");
+            if (file.kind === "tgz") heldArchiveManifest = judged.held.bytes;
         }
-        for (const file of missing) await putFile(file.url, file.bytes, auth, file.type);
+        for (const file of missing) {
+            // A version completed beside an artifact from another commit gets that artifact's
+            // manifest, so the two agree on where the version came from.
+            const bytes = file.kind === "json" && heldArchiveManifest ? heldArchiveManifest : file.bytes;
+            await putFile(file.url, bytes, auth, file.type);
+        }
         if (options.metadata !== false) {
             await updateMetadata(`${artifactDir}/maven-metadata.xml`, options.groupId, artifactId, manifest, auth, log);
         }
-        return missing.length === 0;
+        return { alreadyPublished: missing.length === 0, identical };
     })();
 
     // The CLI is synchronous throughout; surfacing the promise here would make
     // every caller async for one channel's benefit.
-    return work.then((alreadyPublished) => {
+    return work.then(({ alreadyPublished, identical }) => {
         log(alreadyPublished
-            ? `-- ${options.groupId}:${artifactId}:${version} is already in ${options.repository}, identical; nothing to do`
+            ? `-- ${options.groupId}:${artifactId}:${version} is already in ${options.repository}, ` +
+              `${identical ? "identical" : "with the same documents"}; nothing to do`
             : `-- Deployed ${options.groupId}:${artifactId}:${version} to ${options.repository}`);
         return {
             location: `${base}.${extension}`, coordinates: `${options.groupId}:${artifactId}:${version}@${extension}`,

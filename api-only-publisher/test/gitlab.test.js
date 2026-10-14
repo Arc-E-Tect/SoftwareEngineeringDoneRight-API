@@ -19,15 +19,16 @@ const { isRemote } = require("../src/remote");
 const GITLAB_ENV = ["CI_API_V4_URL", "CI_PROJECT_ID", "CI_JOB_TOKEN", "CI_COMMIT_SHA", "GITLAB_TOKEN", "OTHER_TOKEN",
     "API_ONLY_PUBLISHER_REMOTE"];
 
-function packed(target = "orders", version = "1.0.0") {
+// `epoch` stands in for another commit: the archive's bytes change, its documents do not.
+function packed(target = "orders", version = "1.0.0", { epoch = "1767225600", content = "" } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-gitlab-"));
     fs.writeFileSync(path.join(dir, "apionly.yaml"),
         `schemaVersion: 1\nsources:\n  root: specs\n  openapi: openapi\ndefaults:\n  openapi:\n    outputName: openapi.yaml\n` +
         `targets:\n  ${target}:\n    openapi:\n      bundle: bundles/${target}.yaml\n`);
     const config = load(path.join(dir, "apionly.yaml"));
     fs.mkdirSync(config.distDir(target), { recursive: true });
-    fs.writeFileSync(path.join(config.distDir(target), "openapi.yaml"), `openapi: 3.1.1\ninfo:\n  version: ${version}\n`);
-    process.env.SOURCE_DATE_EPOCH = "1767225600";
+    fs.writeFileSync(path.join(config.distDir(target), "openapi.yaml"), `openapi: 3.1.1\ninfo:\n  version: ${version}\n${content}`);
+    process.env.SOURCE_DATE_EPOCH = epoch;
     try {
         const result = pack(config, target, { version, closureSha256: "c", outDir: path.join(dir, "packages") });
         return { dir, ...result, manifestBytes: Buffer.from(JSON.stringify(result.manifest, null, 2) + "\n") };
@@ -183,16 +184,24 @@ test("without a URL or CI_API_V4_URL it publishes to gitlab.com", async () => {
 
 // ------------------------------------------------------------------ the same version again
 
-test("a version GitLab already has is read back first: identical is left alone, different is refused, missing is uploaded", async () => {
+test("a version GitLab already has is read back first: the same documents are left alone, others refused, missing uploaded", async () => {
     // GitLab allows duplicates by default: a PUT of different bytes would be accepted,
     // and served from then on. Only the read-back keeps a version immutable.
     const { archive, manifest, manifestBytes } = packed();
     const bytes = fs.readFileSync(archive);
-    for (const [held, expected, puts] of [
+    const later = packed("orders", "1.0.0", { epoch: "1767312000" });
+    const laterBytes = fs.readFileSync(later.archive);
+    const changed = packed("orders", "1.0.0", { content: "x-changed: true\n" });
+    for (const [held, expected, puts, manifestSent] of [
         [{ [ARCHIVE]: bytes, [MANIFEST]: manifestBytes }, "same", []],
-        [{ [ARCHIVE]: bytes }, "published", [MANIFEST]], // an earlier run stopped between the two files
-        [{ [ARCHIVE]: Buffer.from("other") }, /already has orders-1\.0\.0\.tgz in orders 1\.0\.0, and it is not this one/, []],
-        [{ [ARCHIVE]: bytes, [MANIFEST]: Buffer.from("{}") }, /already has manifest\.json in orders 1\.0\.0, and it is not this one/, []],
+        [{ [ARCHIVE]: laterBytes, [MANIFEST]: later.manifestBytes }, "same", []],
+        [{ [ARCHIVE]: bytes }, "published", [MANIFEST], manifestBytes], // an earlier run stopped between the two files
+        // Completed with the manifest of the archive GitLab has, so the two agree.
+        [{ [ARCHIVE]: laterBytes }, "published", [MANIFEST], later.manifestBytes],
+        [{ [ARCHIVE]: fs.readFileSync(changed.archive) }, /already has orders-1\.0\.0\.tgz in orders 1\.0\.0, and it is not this one/, []],
+        [{ [ARCHIVE]: bytes, [MANIFEST]: changed.manifestBytes }, /already has manifest\.json in orders 1\.0\.0, and it is not this one/, []],
+        [{ [ARCHIVE]: Buffer.from("other") }, /already has orders-1\.0\.0\.tgz in orders 1\.0\.0, and it cannot be compared: .*not a gzipped tar archive/, []],
+        [{ [ARCHIVE]: bytes, [MANIFEST]: Buffer.from("{}") }, /already has manifest\.json in orders 1\.0\.0, and it cannot be compared: .*lists no files/, []],
     ]) {
         const stub = await gitlab({ files: { ...held } });
         try {
@@ -204,7 +213,9 @@ test("a version GitLab already has is read back first: identical is left alone, 
                 } else {
                     assert.strictEqual((await call).alreadyPublished === true, expected === "same");
                 }
-                assert.deepStrictEqual(stub.requests.filter((r) => r.method === "PUT").map((r) => r.url.replace(/^\/api\/v4/, "")), puts);
+                const sent = stub.requests.filter((r) => r.method === "PUT");
+                assert.deepStrictEqual(sent.map((r) => r.url.replace(/^\/api\/v4/, "")), puts);
+                if (manifestSent) assert.ok(sent[0].body.equals(manifestSent), "the manifest that matches GitLab's archive");
             });
         } finally {
             stub.server.close();
@@ -234,7 +245,11 @@ test("an upload GitLab refuses is read back: the same file published meanwhile i
     const bytes = fs.readFileSync(archive);
     for (const [refuse, expected] of [
         [{ url: ARCHIVE, status: 400, message: "400 Bad request - Duplicate package is not allowed", store: bytes }, "ok"],
-        [{ url: ARCHIVE, status: 400, message: "400 Bad request - Duplicate package is not allowed", store: Buffer.from("x") }, /already has orders-1\.0\.0\.tgz/],
+        [{ url: ARCHIVE, status: 400, message: "400 Bad request - Duplicate package is not allowed",
+           store: fs.readFileSync(packed("orders", "1.0.0", { epoch: "1767312000" }).archive) }, "ok"],
+        [{ url: ARCHIVE, status: 400, message: "400 Bad request - Duplicate package is not allowed",
+           store: fs.readFileSync(packed("orders", "1.0.0", { content: "x-changed: true\n" }).archive) }, /already has orders-1\.0\.0\.tgz.*not this one/],
+        [{ url: ARCHIVE, status: 400, message: "400 Bad request - Duplicate package is not allowed", store: Buffer.from("x") }, /already has orders-1\.0\.0\.tgz.*cannot be compared/],
         [{ url: ARCHIVE, status: 403, message: "403 Forbidden" }, /GitLab refused orders-1\.0\.0\.tgz: 403 Forbidden\. Check the token/],
     ]) {
         const stub = await gitlab({ refuse });

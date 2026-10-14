@@ -100,4 +100,45 @@ function zip(entries) {
     return Buffer.concat([...locals, directory, end]);
 }
 
-module.exports = { zip, crc32, ZipError };
+/**
+ * The entries of a ZIP archive, from its central directory, each inflated and checked
+ * against its CRC-32: what `zip` writes, and what a NuGet feed returns of it.
+ *
+ * @param {Buffer} bytes
+ * @returns {Array<{name: string, data: Buffer}>}
+ */
+function unzip(bytes) {
+    const end = bytes.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    if (end < 0 || end + 22 > bytes.length) throw new ZipError("not a ZIP archive: it has no end of central directory record");
+    const entries = [];
+    let offset = bytes.readUInt32LE(end + 16);
+    for (let i = 0; i < bytes.readUInt16LE(end + 10); i++) {
+        if (offset + 46 > bytes.length || bytes.readUInt32LE(offset) !== 0x02014b50) {
+            throw new ZipError(`not a ZIP archive: no central directory entry at ${offset}`);
+        }
+        const method = bytes.readUInt16LE(offset + 10);
+        const crc = bytes.readUInt32LE(offset + 16);
+        const compressed = bytes.readUInt32LE(offset + 20);
+        const nameLength = bytes.readUInt16LE(offset + 28);
+        const local = bytes.readUInt32LE(offset + 42);
+        const name = bytes.toString("utf8", offset + 46, offset + 46 + nameLength);
+        if (local + 30 > bytes.length || bytes.readUInt32LE(local) !== 0x04034b50) {
+            throw new ZipError(`not a ZIP archive: no local header for ${name}`);
+        }
+        const start = local + 30 + bytes.readUInt16LE(local + 26) + bytes.readUInt16LE(local + 28);
+        const raw = bytes.subarray(start, start + compressed);
+        let data;
+        try {
+            data = method === 8 ? zlib.inflateRawSync(raw) : method === 0 ? Buffer.from(raw) : null;
+        } catch (error) {
+            throw new ZipError(`${name} cannot be inflated: ${error.message}`);
+        }
+        if (data === null) throw new ZipError(`${name} is compressed with method ${method}, which is not supported`);
+        if (crc32(data) !== crc) throw new ZipError(`${name} does not match its CRC-32`);
+        entries.push({ name, data });
+        offset += 46 + nameLength + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32);
+    }
+    return entries;
+}
+
+module.exports = { zip, unzip, crc32, ZipError };

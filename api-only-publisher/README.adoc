@@ -700,9 +700,13 @@ A run that would publish nothing at all fails instead of succeeding quietly.
 [#idempotent]
 === Publishing the same version again
 
-`publish` is idempotent: publishing a version again with the same content changes nothing, on every channel.
+`publish` is idempotent: publishing a version again with the same documents changes nothing, on every channel.
 
-That rests on `pack` being reproducible.
+A published version is its documents: the names and SHA-256 hashes that `manifest.json` lists under `files`, which are exactly what a subscriber records in its lockfile.
+A remote channel compares those, not the bytes of what it holds.
+The manifest also records the commit a version was packed from, and that commit's time, so the same documents packed from a later commit are another archive, and the same version.
+
+Packing the same commit again gives the same bytes, because `pack` is reproducible.
 The same documents always pack to the same archive, byte for byte: the archive is written with a fixed mode, no owner and a fixed timestamp, and `manifest.json`'s `producedAt` is not the time `pack` ran but the time of the commit being packed.
 Set `SOURCE_DATE_EPOCH` (seconds since 1970, the https://reproducible-builds.org/specs/source-date-epoch/[reproducible-builds convention ↗]) to choose another; outside a git repository, where there is no commit, it is the only way to make two packs identical, and without it `producedAt` is the current time.
 
@@ -716,11 +720,15 @@ What happens when the destination already has the version:
 |Written again. With the same content the bytes are the same; with different content the version is replaced, and every subscriber whose lockfile recorded the old bytes fails its build until the change is published as a new version.
 
 |`maven` and `nuget` to a URL, `npm`, `github-release`, `gitlab-package`
-|The same bytes: nothing is sent, and the log says `already published, identical`. Different bytes: `publish` fails, naming the version -- a published version is never replaced, so publish the change as a new version.
+|The same documents: nothing is sent, and the log says `already published, identical`, or `with the same documents` when the copy came from another commit.
+Other documents: `publish` fails, naming the version -- a published version is never replaced, so publish the change as a new version.
+A copy that cannot be read, so there is nothing to compare, fails as one with other documents would, saying why it `cannot be compared`.
 `maven` and `gitlab-package` read back every file before uploading any, so a run interrupted half-way is completed by the next one; a GitLab registry that allows duplicate packages, as it does by default, would otherwise replace a version.
-`github-release` compares the asset it would upload with the one the release has, and never overwrites one.
-`npm` compares the integrity hash the registry records, or the tarball's SHA-1 where it records only that, as GitLab's does; its files are packed with fixed modes, so the package is the same bytes whatever the umask of the machine that publishes it.
-A NuGet feed that cannot return the package it has, so there is nothing to compare, fails as a different one would.
+A version completed beside an archive from another commit gets that archive's `manifest.json`, so the two agree on where the version came from; a POM carries no documents, and one already there is left as it is.
+`github-release` reads the manifest in the asset the release has, and never overwrites one.
+`npm` takes the same integrity hash the registry records, or the same tarball SHA-1 where it records only that, as GitLab's does, for the same package; otherwise it downloads the registry's copy and compares its documents.
+Its files are packed with fixed modes, so the package is the same bytes whatever the umask of the machine that publishes it.
+`nuget` reads the manifest in the package the feed returns.
 |===
 
 [#remote-switch]
@@ -832,7 +840,7 @@ A .NET build uses it with `dotnet nuget add source <repository>`, or a `nuget.co
 *A remote feed* is configured by its service index, the URL a feed's settings show and that ends in `index.json`, such as `https://api.nuget.org/v3/index.json`.
 The Publisher reads the service index for its `PackagePublish/2.0.0` endpoint, then pushes the package there with one `PUT`, as `multipart/form-data`, with the key from the environment variable `tokenEnv` names in the `X-NuGet-ApiKey` header.
 The `PUT` goes to that endpoint with a trailing `/`, as `dotnet nuget push` sends it; a GitLab feed recognises the upload only there.
-Before the push, the Publisher reads the feed's copy of the version back (its `PackageBaseAddress/3.0.0` resource): the same package succeeds without a push, a different one fails, and a copy that cannot be read, other than one the feed does not have, fails rather than being pushed over (<<idempotent,Publishing the same version again §>>).
+Before the push, the Publisher reads the feed's copy of the version back (its `PackageBaseAddress/3.0.0` resource): a package with the same documents succeeds without a push, one with other documents fails, and a copy that cannot be read, other than one the feed does not have, fails rather than being pushed over (<<idempotent,Publishing the same version again §>>).
 The check comes first because a feed may accept a different package under a version it already has: GitLab does, by default, and serves the new one from then on.
 A feed that answers the push with 409 -- the version appeared in the meantime -- is read back and compared the same way.
 Without the variable set, the push fails before anything is sent, naming it.
@@ -903,7 +911,7 @@ A deploy token is the least privilege for packages alone: it reaches one project
 
 *The same version again.*
 GitLab allows duplicate packages by default: it accepts a different file under a version it already has, and serves that one from then on.
-So the channel reads every file back before uploading any: an identical file is left alone, a missing one is uploaded, and a different one fails `publish` (<<idempotent,Publishing the same version again §>>).
+So the channel reads every file back before uploading any: a file with the same documents is left alone, a missing one is uploaded, and one with other documents fails `publish` (<<idempotent,Publishing the same version again §>>).
 Turning *Allow duplicates* off for generic packages, in the group's *Settings › Packages and registries*, makes GitLab refuse a replaced file too, from every client; the Publisher keeps a version immutable either way.
 
 *`release: true`* also creates the tag's GitLab release, tagging `$CI_COMMIT_SHA` or, outside CI, the checkout's `HEAD`, and links both files as packages.
@@ -932,7 +940,7 @@ channels:
 *The token* goes as a bearer token, `Authorization: Bearer <token>`, unless `tokenHeader` names another header, which then carries it as it is.
 GitLab's Maven registry takes a job token as `Job-Token`, a personal or project access token as `Private-Token`, and a deploy token as `Deploy-Token`; a GitLab Maven repository URL needs the project's numeric ID, since Gradle reads `%2F` in a path as `/`.
 
-*Every file is read back* before any is uploaded: identical is left alone, missing is uploaded, different fails `publish`, naming the file.
+*Every file is read back* before any is uploaded: the artifact and the manifest with the same documents are left alone, a missing file is uploaded, and other documents fail `publish`, naming the file; the POM carries no documents, and one already there is left alone.
 
 *`maven-metadata.xml`* lists an artifact's versions, which is how Gradle resolves a version range and how Renovate and Dependabot see a new version.
 Nexus, Artifactory and GitHub Packages keep it themselves; GitLab does not for files uploaded this way.
@@ -1309,7 +1317,7 @@ A service subscribes to its own contract to implement it, and to the contracts o
 
 * Versions are per target, so a change to one service's fragments releases only that service's contract.
 A change to a fragment several targets share changes all of them, and `changed` names which, as <<closure,Independent versioning, and the dependency closure §>> describes.
-* Publishing every target on every run is safe: a version that is already published, with the same bytes, is left alone (<<idempotent,Publishing the same version again §>>).
+* Publishing every target on every run is safe: a version that is already published, with the same documents, is left alone, whichever commit it was packed from (<<idempotent,Publishing the same version again §>>).
 What fails is a changed contract whose version was not changed, which is the mistake `changed` exists to catch first.
 * `landscape` is optional: a whole-landscape view for reading, generated on every build and never published, as <<aggregates,Aggregates §>> describes.
 
@@ -2035,7 +2043,7 @@ include::pipelines/github-actions.yml[]
 
 What the two steps lose, and how the pipeline makes up for it:
 
-* *Idempotence.* A channel's remote mode leaves a version the registry has alone when it is identical, and refuses it when it differs; `npm publish` or `dotnet nuget push` of an existing version fails instead.
+* *Idempotence.* A channel's remote mode leaves a version the registry has alone when it holds the same documents, and refuses it when it does not; `npm publish` or `dotnet nuget push` of an existing version fails instead.
 Each publishing step checks for the version first, compares the bytes, and publishes only what is missing, so a re-run is safe and a real conflict still fails.
 * *Maven checksums and metadata.* The local Maven layout holds the artifact, its POM and its manifest, and no `.md5`, `.sha1` or `maven-metadata.xml`.
 `mvn deploy:deploy-file` writes those when it uploads, so the repository ends up as a remote `maven` channel would leave it, and Gradle resolves it.

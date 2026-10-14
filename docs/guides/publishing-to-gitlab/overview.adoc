@@ -68,7 +68,7 @@ Its one job sets `API_ONLY_PUBLISHER_REMOTE: allow`: the image is sealed, and re
 
 . *Tag a release.*
 The pipeline runs on a tag starting with `v`, such as `v2.1.0`.
-A version is published once; a re-run finds it published, identical, and changes nothing.
+A version is published once; a re-run finds it published, with the same documents, and changes nothing.
 
 . *Check it.*
 The project's *Deploy › Package registry* lists a package per target, at its version, with both files.
@@ -135,7 +135,7 @@ A pipeline that ran on any tag would start again on that one, finding everything
 GitLab accepts, by default, a different file under a package version it already has, and serves that one from then on: a published contract can be replaced without anyone noticing.
 
 The Publisher never does that.
-It reads every file back before uploading any: an identical file is left alone, a different one fails the job, naming the version.
+It reads every file back before uploading any: a file with the same documents is left alone, one with other documents fails the job, naming the version.
 
 Turn it off for every other client too: in the group's *Settings › Packages and registries*, under *Duplicate packages*, turn off *Allow duplicates* for *Generic* and *Maven*.
 It takes a group Owner.

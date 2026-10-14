@@ -17,6 +17,7 @@ const { execFileSync } = require("child_process");
 
 const { isPrerelease } = require("./version-policy");
 const { ChannelError } = require("./channel-error");
+const { judgeHeld } = require("./held-documents");
 
 const GITLAB_COM = "https://gitlab.com/api/v4";
 const TOKEN_HEADERS = { private: "PRIVATE-TOKEN", deploy: "DEPLOY-TOKEN", job: "JOB-TOKEN" };
@@ -84,26 +85,33 @@ async function readBack(fileUrl, name, headers) {
     return Buffer.from(await response.arrayBuffer());
 }
 
-function notThisOne(name, manifest) {
-    return new ChannelError(`GitLab already has ${name} in ${manifest.target} ${manifest.version}, and it is not this one; ` +
+function refused(name, manifest, why) {
+    return new ChannelError(`GitLab already has ${name} in ${manifest.target} ${manifest.version}, and it ${why}; ` +
         "a published version is never replaced, so publish the change as a new version");
 }
 
-/** Uploads one file unless GitLab has it: true when it was already there, identical. */
-async function upload(fileUrl, name, bytes, manifest, headers) {
-    const held = await readBack(fileUrl, name, headers);
-    if (held) {
-        if (held.equals(bytes)) return true;
-        throw notThisOne(name, manifest);
-    }
-    const response = await fetch(fileUrl, { method: "PUT", headers, body: bytes });
-    if (response.ok) return false;
-    const refused = `${await answered(response)}`;
+/** The manifest in GitLab's copy of a file, which must describe the same documents as `manifest`. */
+function sameAs(held, file, manifest) {
+    const judged = judgeHeld(held, file.kind, manifest);
+    if (judged.verdict === "unreadable") throw refused(file.name, manifest, `cannot be compared: ${judged.reason}`);
+    if (judged.verdict === "different") throw refused(file.name, manifest, "is not this one");
+    return judged.held;
+}
+
+/**
+ * Uploads one file unless GitLab has it: GitLab's copy when it was already there with the
+ * same documents, or null when it was uploaded now.
+ */
+async function upload(file, manifest, headers) {
+    const held = await readBack(file.url, file.name, headers);
+    if (held) return { held, found: sameAs(held, file, manifest) };
+    const response = await fetch(file.url, { method: "PUT", headers, body: file.bytes });
+    if (response.ok) return null;
+    const answer = `${await answered(response)}`;
     // Refused, perhaps as a duplicate another run published meanwhile: compare that one.
-    const now = await readBack(fileUrl, name, headers).catch(() => null);
-    if (now && now.equals(bytes)) return true;
-    if (now) throw notThisOne(name, manifest);
-    throw new ChannelError(`GitLab refused ${name}: ${refused}.` +
+    const now = await readBack(file.url, file.name, headers).catch(() => null);
+    if (now) return { held: now, found: sameAs(now, file, manifest) };
+    throw new ChannelError(`GitLab refused ${file.name}: ${answer}.` +
         (response.status === 401 || response.status === 403 ? TOKEN_HINT : ""));
 }
 
@@ -159,18 +167,28 @@ function publishGitlabPackage(archive, manifest, options, log) {
     const base = `${settings.url}/projects/${encodeURIComponent(settings.project)}/packages/generic/` +
         `${encodeURIComponent(packageName)}/${encodeURIComponent(manifest.version)}`;
     const files = [
-        { name: path.basename(archive), bytes: require("fs").readFileSync(archive) },
-        { name: "manifest.json", bytes: Buffer.from(JSON.stringify(manifest, null, 2) + "\n") },
+        { name: path.basename(archive), bytes: require("fs").readFileSync(archive), kind: "tgz" },
+        { name: "manifest.json", bytes: Buffer.from(JSON.stringify(manifest, null, 2) + "\n"), kind: "json" },
     ].map((file) => ({ ...file, url: `${base}/${encodeURIComponent(file.name)}` }));
 
     return (async () => {
-        let identical = 0;
+        // Idempotent, by documents: a file GitLab has is left alone when it holds the same
+        // documents, and refused when it does not.
+        let held = 0;
+        let identical = true;
         for (const file of files) {
-            if (await upload(file.url, file.name, file.bytes, manifest, settings.headers)) identical += 1;
+            const copy = await upload(file, manifest, settings.headers);
+            if (!copy) continue;
+            held += 1;
+            identical = identical && copy.held.equals(file.bytes);
+            // A version completed beside an archive from another commit gets that archive's
+            // manifest, so the two agree on where the version came from.
+            if (file.kind === "tgz") files[1].bytes = copy.found.bytes;
         }
-        const alreadyPublished = identical === files.length;
+        const alreadyPublished = held === files.length;
         log(alreadyPublished
-            ? `-- ${packageName} ${manifest.version} is already in GitLab project ${settings.project}, identical; nothing to do`
+            ? `-- ${packageName} ${manifest.version} is already in GitLab project ${settings.project}, ` +
+              `${identical ? "identical" : "with the same documents"}; nothing to do`
             : `-- Published ${packageName} ${manifest.version} to GitLab project ${settings.project}`);
 
         if (options.release === true && !wantsRelease) {

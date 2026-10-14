@@ -63,4 +63,40 @@ function tgz(entries, mtime) {
     return gzipped;
 }
 
-module.exports = { tgz, TarError };
+function text(block, start, length) {
+    const end = block.indexOf(0, start);
+    return block.toString("utf8", start, end < 0 || end > start + length ? start + length : end);
+}
+
+/**
+ * The regular files in a gzipped tar archive, in order: what `tgz` writes, and what npm
+ * packs, with a ustar prefix joined to the name. Directories, links and pax headers are
+ * skipped.
+ *
+ * @param {Buffer} bytes
+ * @returns {Array<{name: string, data: Buffer}>}
+ */
+function untgz(bytes) {
+    let tar;
+    try {
+        tar = zlib.gunzipSync(bytes);
+    } catch (error) {
+        throw new TarError(`not a gzipped tar archive: ${error.message}`);
+    }
+    const entries = [];
+    for (let offset = 0; offset + BLOCK <= tar.length;) {
+        const block = tar.subarray(offset, offset + BLOCK);
+        if (block.every((byte) => byte === 0)) break;
+        const prefix = block.toString("ascii", 257, 262) === "ustar" ? text(block, 345, 155) : "";
+        const name = prefix ? `${prefix}/${text(block, 0, 100)}` : text(block, 0, 100);
+        const size = parseInt(text(block, 124, 12).trim() || "0", 8);
+        const start = offset + BLOCK;
+        if (start + size > tar.length) throw new TarError(`the archive ends inside ${name}`);
+        const type = String.fromCharCode(block[156]);
+        if (type === "0" || type === "\0") entries.push({ name, data: Buffer.from(tar.subarray(start, start + size)) });
+        offset = start + Math.ceil(size / BLOCK) * BLOCK;
+    }
+    return entries;
+}
+
+module.exports = { tgz, untgz, TarError };
