@@ -1,8 +1,10 @@
 "use strict";
 
-// Publishing a version the destination already has: success when it is the same bytes,
-// a failure naming the version when it is not. Every remote channel, with no registry and
-// no network -- HTTP stubs on localhost, and stand-in npm and gh executables on PATH.
+// Publishing a version the destination already has: success when it holds the same
+// documents, a failure naming the version when it does not. The documents decide, not the
+// bytes: the same documents packed from a later commit are another archive, and the same
+// contract. Every remote channel, with no registry and no network -- HTTP stubs on
+// localhost, and stand-in npm and gh executables on PATH.
 
 const test = require("node:test");
 const assert = require("node:assert");
@@ -16,15 +18,17 @@ const { pack } = require("../src/pack");
 const { publish, ChannelError } = require("../src/channels");
 const { tgz, TarError } = require("../src/tar");
 
-function packed(target = "orders", version = "1.0.0") {
+// `epoch` stands in for another commit: the manifest's producedAt, and so the archive's
+// bytes, change while the documents do not. `content` changes the documents themselves.
+function packed(target = "orders", version = "1.0.0", { epoch = "1767225600", content = "" } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aop-idem-"));
     fs.writeFileSync(path.join(dir, "apionly.yaml"),
         `schemaVersion: 1\nsources:\n  root: specs\n  openapi: openapi\ndefaults:\n  openapi:\n    outputName: openapi.yaml\n` +
         `targets:\n  ${target}:\n    openapi:\n      bundle: bundles/${target}.yaml\n`);
     const config = load(path.join(dir, "apionly.yaml"));
     fs.mkdirSync(config.distDir(target), { recursive: true });
-    fs.writeFileSync(path.join(config.distDir(target), "openapi.yaml"), `openapi: 3.1.1\ninfo:\n  version: ${version}\n`);
-    process.env.SOURCE_DATE_EPOCH = "1767225600";
+    fs.writeFileSync(path.join(config.distDir(target), "openapi.yaml"), `openapi: 3.1.1\ninfo:\n  version: ${version}\n${content}`);
+    process.env.SOURCE_DATE_EPOCH = epoch;
     try {
         return { config, ...pack(config, target, { version, closureSha256: "c", outDir: path.join(dir, "packages") }) };
     } finally {
@@ -38,7 +42,7 @@ async function serve(handler) {
         const chunks = [];
         request.on("data", (c) => chunks.push(c));
         request.on("end", () => {
-            requests.push({ method: request.method, url: request.url, headers: request.headers });
+            requests.push({ method: request.method, url: request.url, headers: request.headers, body: Buffer.concat(chunks) });
             handler(request, response, `http://127.0.0.1:${server.address().port}`);
         });
     });
@@ -66,26 +70,36 @@ test("the archive writer refuses a name that is not a plain file name", () => {
 
 // ------------------------------------------------------------------ maven
 
-test("maven: each file the repository already has is left alone when identical, uploaded when missing, and refused when not", async () => {
-    const { config, archive, manifest } = packed();
-    // The three files a version consists of, exactly as the channel writes them.
-    const local = publish(archive, manifest, "maven", { groupId: "com.example", repository: "m2", baseDir: config.root });
+/** The three files a version consists of in a Maven repository, exactly as the channel writes them. */
+function mavenFiles(pack) {
+    const local = publish(pack.archive, pack.manifest, "maven", { groupId: "com.example", repository: "m2", baseDir: pack.config.root });
     const dir = path.dirname(local.location);
-    const files = {
-        "orders-1.0.0.tgz": fs.readFileSync(path.join(dir, "orders-1.0.0.tgz")),
-        "orders-1.0.0.pom": fs.readFileSync(path.join(dir, "orders-1.0.0.pom")),
-        "orders-1.0.0-manifest.json": fs.readFileSync(path.join(dir, "orders-1.0.0-manifest.json")),
-    };
+    return Object.fromEntries(["orders-1.0.0.tgz", "orders-1.0.0.pom", "orders-1.0.0-manifest.json"]
+        .map((name) => [name, fs.readFileSync(path.join(dir, name))]));
+}
+
+test("maven: a version the repository already has is left alone with the same documents, completed when partial, and refused when not", async () => {
+    const { archive, manifest, ...mine } = packed();
+    const files = mavenFiles({ archive, manifest, ...mine });
+    const later = mavenFiles(packed("orders", "1.0.0", { epoch: "1767312000" }));
+    const changed = mavenFiles(packed("orders", "1.0.0", { content: "x-changed: true\n" }));
+    assert.ok(!later["orders-1.0.0.tgz"].equals(files["orders-1.0.0.tgz"]), "another commit packs to other bytes");
     const other = Buffer.from("something else");
     await withEnv({ M2_KEY: "t" }, async () => {
         for (const [label, held, expected, puts] of [
             ["nothing", {}, "published", Object.keys(files)],
             ["everything, identical", files, "same", []],
+            ["everything, from another commit", later, "same", []],
             // A run interrupted after the artifact: the next one completes the version.
             ["only the artifact", { "orders-1.0.0.tgz": files["orders-1.0.0.tgz"] }, "published", ["orders-1.0.0.pom", "orders-1.0.0-manifest.json"]],
-            ["another artifact", { ...files, "orders-1.0.0.tgz": other }, /already has com\.example:orders:1\.0\.0, and its orders-1\.0\.0\.tgz is not this one/, []],
-            ["another POM", { ...files, "orders-1.0.0.pom": other }, /its orders-1\.0\.0\.pom is not this one/, []],
-            ["another manifest", { "orders-1.0.0.tgz": files["orders-1.0.0.tgz"], "orders-1.0.0-manifest.json": other }, /its orders-1\.0\.0-manifest\.json is not this one/, []],
+            ["only another commit's artifact", { "orders-1.0.0.tgz": later["orders-1.0.0.tgz"] }, "published", ["orders-1.0.0.pom", "orders-1.0.0-manifest.json"]],
+            // A POM carries no documents, and is left as it is.
+            ["another POM", { ...files, "orders-1.0.0.pom": other }, "same", []],
+            ["other documents", changed, /already has com\.example:orders:1\.0\.0, and its orders-1\.0\.0\.tgz is not this one/, []],
+            ["another manifest", { "orders-1.0.0.tgz": files["orders-1.0.0.tgz"], "orders-1.0.0-manifest.json": changed["orders-1.0.0-manifest.json"] },
+                /its orders-1\.0\.0-manifest\.json is not this one/, []],
+            ["an artifact that cannot be read", { ...files, "orders-1.0.0.tgz": other },
+                /already has com\.example:orders:1\.0\.0, and its orders-1\.0\.0\.tgz cannot be compared: .*not a gzipped tar archive/, []],
         ]) {
             const { server, requests, base } = await serve((request, response) => {
                 const name = request.url.split("/").pop();
@@ -105,8 +119,14 @@ test("maven: each file the repository already has is left alone when identical, 
                     assert.strictEqual(result.alreadyPublished === true, expected === "same", label);
                 }
                 // The version's own files; maven-metadata.xml has tests of its own (maven-remote.test.js).
-                assert.deepStrictEqual(requests.filter((r) => r.method === "PUT").map((r) => r.url.split("/").pop())
-                    .filter((name) => name !== "maven-metadata.xml"), puts, label);
+                const sent = requests.filter((r) => r.method === "PUT" && !r.url.endsWith("/maven-metadata.xml"));
+                assert.deepStrictEqual(sent.map((r) => r.url.split("/").pop()), puts, label);
+                // A completed version keeps the provenance of the artifact it already has.
+                const manifestPut = sent.find((r) => r.url.endsWith("-manifest.json"));
+                if (manifestPut && held["orders-1.0.0.tgz"]) {
+                    const source = held["orders-1.0.0.tgz"] === later["orders-1.0.0.tgz"] ? later : files;
+                    assert.ok(manifestPut.body.equals(source["orders-1.0.0-manifest.json"]), label);
+                }
                 assert.strictEqual(requests[0].headers.authorization, "Bearer t");
             } finally {
                 server.close();
@@ -134,14 +154,23 @@ test("maven: a repository that cannot be read is reported rather than overwritte
 
 // ------------------------------------------------------------------ nuget
 
+/** The .nupkg the nuget channel builds from `pack`, as a feed would hold it. */
+function nupkgOf(pack) {
+    return fs.readFileSync(publish(pack.archive, pack.manifest, "nuget", { idPrefix: "Contoso", repository: "feed", baseDir: pack.config.root }).location);
+}
+
 test("nuget: a version the feed already has is success when identical, and refused when not or unreadable", async () => {
-    const { config, archive, manifest } = packed();
-    const local = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: "feed", baseDir: config.root });
-    const bytes = fs.readFileSync(local.location);
+    const mine = packed();
+    const { archive, manifest } = mine;
+    const bytes = nupkgOf(mine);
+    const later = nupkgOf(packed("orders", "1.0.0", { epoch: "1767312000" }));
+    const changed = nupkgOf(packed("orders", "1.0.0", { content: "x-changed: true\n" }));
     await withEnv({ NUGET_KEY: "k" }, async () => {
         for (const [held, contentResource, expected] of [
             [bytes, true, "same"],
-            [Buffer.from("other"), true, /already has Contoso\.Orders 1\.0\.0, and it is not this package/],
+            [later, true, "same"],
+            [changed, true, /already has Contoso\.Orders 1\.0\.0, and it is not this package/],
+            [Buffer.from("other"), true, /already has Contoso\.Orders 1\.0\.0, and it cannot be compared: .*not a ZIP archive/],
             [bytes, false, /cannot be read back to compare/],
         ]) {
             const { server, requests } = await serve((request, response, base) => {
@@ -177,14 +206,17 @@ test("nuget: a version the feed already has is success when identical, and refus
 test("nuget: a version the feed already has is read back before the push, on a feed that would accept a duplicate", async () => {
     // GitLab allows duplicate versions by default: a push of a different package under
     // an existing version answers 201, and the feed serves the new one from then on.
-    const { config, archive, manifest } = packed();
-    const local = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: "feed", baseDir: config.root });
-    const bytes = fs.readFileSync(local.location);
+    const mine = packed();
+    const { archive, manifest } = mine;
+    const bytes = nupkgOf(mine);
+    const later = nupkgOf(packed("orders", "1.0.0", { epoch: "1767312000" }));
+    const changed = nupkgOf(packed("orders", "1.0.0", { content: "x-changed: true\n" }));
     await withEnv({ NUGET_KEY: "k" }, async () => {
         for (const [held, expected, pushes] of [
             [null, "published", true],
             [bytes, "same", false],
-            [Buffer.from("other"), /already has Contoso\.Orders 1\.0\.0, and it is not this package/, false],
+            [later, "same", false],
+            [changed, /already has Contoso\.Orders 1\.0\.0, and it is not this package/, false],
             [500, /could not read Contoso\.Orders 1\.0\.0 back from .*\/flat\/.*: 500/, false],
         ]) {
             const { server, requests } = await serve((request, response, base) => {
@@ -225,13 +257,16 @@ test("nuget: a version the feed already has is read back before the push, on a f
 test("nuget: a version that appears between the read-back and the push is compared after the 409", async () => {
     // Another publisher pushing at the same moment, or a feed that serves a fresh push
     // only after a while, as GitLab's does: absent when read, there when pushed.
-    const { config, archive, manifest } = packed();
-    const local = publish(archive, manifest, "nuget", { idPrefix: "Contoso", repository: "feed", baseDir: config.root });
-    const bytes = fs.readFileSync(local.location);
+    const mine = packed();
+    const { archive, manifest } = mine;
+    const bytes = nupkgOf(mine);
+    const later = nupkgOf(packed("orders", "1.0.0", { epoch: "1767312000" }));
+    const changed = nupkgOf(packed("orders", "1.0.0", { content: "x-changed: true\n" }));
     await withEnv({ NUGET_KEY: "k" }, async () => {
         for (const [held, expected] of [
             [bytes, "same"],
-            [Buffer.from("other"), /already has Contoso\.Orders 1\.0\.0, and it is not this package/],
+            [later, "same"],
+            [changed, /already has Contoso\.Orders 1\.0\.0, and it is not this package/],
         ]) {
             let pushed = false;
             const { server } = await serve((request, response, base) => {
@@ -304,8 +339,15 @@ function standIn(name, script) {
 
 // `npm view <name>@<version> dist --json` prints the version's dist object, or nothing
 // when the package exists without that version; PUBLISHED is what the registry holds.
+// `npm pack <name>@<version>` downloads the package the registry holds, HELD_PACKAGE.
 const NPM = `
 const env = process.env;
+if (args[0] === "pack" && args[1] && args[1].includes("@")) {
+    if (env.HELD_PACKAGE === "BROKEN") { console.error("npm error code E401"); process.exit(1); }
+    const dir = args[args.indexOf("--pack-destination") + 1];
+    require("fs").copyFileSync(env.HELD_PACKAGE, require("path").join(dir, "orders-1.0.0.tgz"));
+    console.log(JSON.stringify([{ filename: "orders-1.0.0.tgz" }])); process.exit(0);
+}
 if (args[0] === "pack") { console.log(JSON.stringify([{ integrity: env.LOCAL_INTEGRITY, shasum: env.LOCAL_SHASUM }])); process.exit(0); }
 if (args[0] === "view") {
     if (env.PUBLISHED === "E404") { console.error("npm error code E404"); process.exit(1); }
@@ -314,33 +356,51 @@ if (args[0] === "view") {
 }
 process.exit(0);`;
 
-test("npm: a version the registry already has is left alone when identical, and refused when not", async () => {
+/** The package the npm channel builds from `pack`, as a registry would hold it. */
+function npmPackageOf(pack) {
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), "aop-npm-held-"));
+    return publish(pack.archive, pack.manifest, "npm", { publish: false, directory: out }).location;
+}
+
+test("npm: a version the registry already has is left alone with the same documents, and refused when not", async () => {
     const { archive, manifest } = packed();
+    const later = npmPackageOf(packed("orders", "1.0.0", { epoch: "1767312000" }));
+    const changed = npmPackageOf(packed("orders", "1.0.0", { content: "x-changed: true\n" }));
     const npm = standIn("npm", NPM);
     const dist = (fields) => JSON.stringify({ tarball: "http://registry.invalid/orders-1.0.0.tgz", ...fields });
-    for (const [published, expected, publishes] of [
-        ["E404", "published", true],
-        ["", "published", true],
-        [dist({ integrity: "sha512-same", shasum: "sha1-same" }), "same", false],
-        [dist({ integrity: "sha512-other", shasum: "sha1-same" }), /already has orders@1\.0\.0, and it is not this package/, false],
+    for (const [published, held, expected, publishes, downloads] of [
+        ["E404", null, "published", true, false],
+        ["", null, "published", true, false],
+        // The same package: its integrity says so, and nothing is downloaded.
+        [dist({ integrity: "sha512-same", shasum: "sha1-same" }), null, "same", false, false],
         // A registry whose metadata has no integrity, such as GitLab's: the SHA-1 decides.
-        [dist({ shasum: "sha1-same" }), "same", false],
-        [dist({ shasum: "sha1-other" }), /already has orders@1\.0\.0, and it is not this package/, false],
-        [dist({}), /already has orders@1\.0\.0, and it cannot be compared/, false],
-        ["BROKEN", /could not ask npm whether orders@1\.0\.0 is published: npm error code ECONNREFUSED/, false],
+        [dist({ shasum: "sha1-same" }), null, "same", false, false],
+        // Another package: the registry's copy is downloaded, and its documents decide.
+        [dist({ integrity: "sha512-other", shasum: "sha1-same" }), later, "same", false, true],
+        [dist({ integrity: "sha512-other", shasum: "sha1-same" }), changed, /already has orders@1\.0\.0, and it is not this package/, false, true],
+        [dist({ shasum: "sha1-other" }), later, "same", false, true],
+        [dist({ shasum: "sha1-other" }), changed, /already has orders@1\.0\.0, and it is not this package/, false, true],
+        // A registry that records neither: only the documents can tell.
+        [dist({}), later, "same", false, true],
+        [dist({}), changed, /already has orders@1\.0\.0, and it is not this package/, false, true],
+        [dist({ integrity: "sha512-other" }), "BROKEN", /could not read orders@1\.0\.0 back from npm to compare: npm error code E401/, false, true],
+        ["BROKEN", null, /could not ask npm whether orders@1\.0\.0 is published: npm error code ECONNREFUSED/, false, false],
     ]) {
+        const label = `${published} / ${held === later ? "later" : held === changed ? "changed" : held}`;
         fs.writeFileSync(npm.log, "");
         await withEnv({ PATH: `${npm.dir}${path.delimiter}${process.env.PATH}`, STANDIN_LOG: npm.log,
-            LOCAL_INTEGRITY: "sha512-same", LOCAL_SHASUM: "sha1-same", PUBLISHED: published }, async () => {
+            LOCAL_INTEGRITY: "sha512-same", LOCAL_SHASUM: "sha1-same", PUBLISHED: published, HELD_PACKAGE: held || "" }, async () => {
             const call = () => publish(archive, manifest, "npm", { registry: "http://registry.invalid" });
             if (expected instanceof RegExp) {
-                assert.throws(call, (e) => e instanceof ChannelError && expected.test(e.message), published);
+                assert.throws(call, (e) => e instanceof ChannelError && expected.test(e.message), label);
             } else {
-                assert.strictEqual(call().alreadyPublished === true, expected === "same", published);
+                assert.strictEqual(call().alreadyPublished === true, expected === "same", label);
             }
         });
         const calls = fs.readFileSync(npm.log, "utf8");
-        assert.strictEqual(/^npm publish --tag latest --registry http:\/\/registry\.invalid$/m.test(calls), publishes, calls);
+        assert.strictEqual(/^npm publish --tag latest --registry http:\/\/registry\.invalid$/m.test(calls), publishes, `${label}\n${calls}`);
+        assert.strictEqual(/^npm pack orders@1\.0\.0 --pack-destination \S+ --json --registry http:\/\/registry\.invalid$/m.test(calls),
+            downloads, `${label}\n${calls}`);
     }
 });
 
@@ -374,8 +434,10 @@ if (args[0] === "release" && args[1] === "download") {
 }
 process.exit(0);`;
 
-test("github-release: an asset the release already has is left alone when identical, and refused when not; never clobbered", async () => {
+test("github-release: an asset the release already has is left alone with the same documents, and refused when not; never clobbered", async () => {
     const { archive, manifest } = packed();
+    const later = packed("orders", "1.0.0", { epoch: "1767312000" }).archive;
+    const changed = packed("orders", "1.0.0", { content: "x-changed: true\n" }).archive;
     const other = path.join(os.tmpdir(), `aop-other-${process.pid}.tgz`);
     fs.writeFileSync(other, "different");
     const gh = standIn("gh", GH);
@@ -384,7 +446,9 @@ test("github-release: an asset the release already has is left alone when identi
         ["no", "", archive, "uploaded", true, true],
         ["yes", "other.tgz", archive, "uploaded", true, false],
         ["yes", `x.tgz\n${asset}`, archive, "same", false, false],
-        ["yes", asset, other, /already has orders-1\.0\.0\.tgz, and it is not this archive/, false, false],
+        ["yes", asset, later, "same", false, false],
+        ["yes", asset, changed, /already has orders-1\.0\.0\.tgz, and it is not this archive/, false, false],
+        ["yes", asset, other, /already has orders-1\.0\.0\.tgz, and it cannot be compared: .*not a gzipped tar archive/, false, false],
     ]) {
         fs.writeFileSync(gh.log, "");
         await withEnv({ PATH: `${gh.dir}${path.delimiter}${process.env.PATH}`, STANDIN_LOG: gh.log,

@@ -25,6 +25,7 @@ const { execFileSync } = require("child_process");
 const { parse, isPrerelease } = require("./version-policy");
 const { zip } = require("./zip");
 const { ChannelError } = require("./channel-error");
+const { judgeHeld } = require("./held-documents");
 
 /** Where the documents and manifest.json sit inside the package. */
 const CONTENT_FOLDER = "contracts";
@@ -191,15 +192,27 @@ function contentUrl(content, id, version) {
     return `${content.replace(/\/?$/, "/")}${lowerId}/${lowerVersion}/${lowerId}.${lowerVersion}.nupkg`;
 }
 
-/**
- * Whether the feed's copy of this version is these bytes: true or false, or null when the
- * feed offers no way to read it back.
- */
-async function sameAsPublished(content, id, version, bytes, key) {
+/** The feed's copy of this version, or null when the feed offers no way to read it back. */
+async function readableCopy(content, id, version, key) {
     if (!content) return null;
     const response = await fetch(contentUrl(content, id, version), { headers: { "X-NuGet-ApiKey": key } });
     if (!response.ok) return null;
-    return Buffer.from(await response.arrayBuffer()).equals(bytes);
+    return Buffer.from(await response.arrayBuffer());
+}
+
+/**
+ * Whether the feed's copy `held` is this version, by its documents: "identical" for the
+ * same bytes, "same" for the same documents in another package, as from another commit;
+ * anything else is refused, as a published version is never replaced.
+ */
+function judge(held, bytes, id, manifest) {
+    if (held.equals(bytes)) return "identical";
+    const refused = (why) => new ChannelError(`the NuGet feed already has ${id} ${manifest.version}, and it ${why}; ` +
+        "a published version is never replaced, so publish the change as a new version");
+    const judged = judgeHeld(held, "zip", manifest);
+    if (judged.verdict === "unreadable") throw refused(`cannot be compared: ${judged.reason}`);
+    if (judged.verdict === "different") throw refused("is not this package");
+    return "same";
 }
 
 /**
@@ -245,19 +258,17 @@ function publishRemote(archive, manifest, options, id, log) {
         // Idempotent before the push, not only after a 409: a feed that allows duplicate
         // versions -- GitLab's default -- accepts a different package under a version it
         // has, and serves that one from then on.
+        const already = (verdict) => {
+            log(`-- NuGet ${id} ${manifest.version} is already published, ` +
+                `${verdict === "identical" ? "identical" : "with the same documents"}; nothing to do`);
+            return {
+                location: endpoint, id, version: manifest.version, prerelease: isPrerelease(manifest.version),
+                alreadyPublished: true,
+            };
+        };
         if (content) {
             const held = await publishedCopy(content, id, manifest.version, key);
-            if (held && held.equals(bytes)) {
-                log(`-- NuGet ${id} ${manifest.version} is already published, identical; nothing to do`);
-                return {
-                    location: endpoint, id, version: manifest.version, prerelease: isPrerelease(manifest.version),
-                    alreadyPublished: true,
-                };
-            }
-            if (held) {
-                throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}, and it is not this package; ` +
-                    "a published version is never replaced, so publish the change as a new version");
-            }
+            if (held) return already(judge(held, bytes, id, manifest));
         }
         const boundary = `api-only-${crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 32)}`;
         const body = Buffer.concat([
@@ -276,18 +287,11 @@ function publishRemote(archive, manifest, options, id, log) {
             body,
         });
         if (response.status === 409) {
-            // Idempotent: the same package again is success, a different one is not.
-            const same = await sameAsPublished(content, id, manifest.version, bytes, key);
-            if (same) {
-                log(`-- NuGet ${id} ${manifest.version} is already published, identical; nothing to do`);
-                return {
-                    location: endpoint, id, version: manifest.version, prerelease: isPrerelease(manifest.version),
-                    alreadyPublished: true,
-                };
-            }
-            throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}` +
-                (same === false ? ", and it is not this package" : ", and it cannot be read back to compare") +
-                "; a published version is never replaced, so publish the change as a new version");
+            // Idempotent: the same documents again are success, others are not.
+            const held = await readableCopy(content, id, manifest.version, key);
+            if (held) return already(judge(held, bytes, id, manifest));
+            throw new ChannelError(`the NuGet feed already has ${id} ${manifest.version}, and it cannot be read back to compare; ` +
+                "a published version is never replaced, so publish the change as a new version");
         }
         if (!response.ok) {
             throw new ChannelError(`the NuGet feed refused the package: ${response.status} ${response.statusText}. ` +
