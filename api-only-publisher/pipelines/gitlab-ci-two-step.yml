@@ -11,6 +11,8 @@
 # GitLab pipeline has run it yet. Report what you find:
 # https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues
 #
+# 0. `check`, in a merge request, runs the image's `check`: a target changed without
+#    a new version fails the merge request, before anything is merged.
 # 1. `package` runs in the sealed api-only-publisher image, pinned by digest: it
 #    builds, lints and packages the targets into files, with the local channel
 #    modes apionly.yaml configures, and keeps them as artifacts. The image's
@@ -18,6 +20,9 @@
 # 2. The `publish:*` jobs check the files against the hand-off the image wrote, and
 #    publish exactly those bytes to this project's package registry with each
 #    registry's own client and CI_JOB_TOKEN.
+# 3. `release:tags` creates a GitLab release per target's release, and with it the
+#    tag <target>-v<version> that check and publish read. A pre-release gets none:
+#    GitLab would make it the latest release.
 #
 # apionly.yaml needs these local channel modes (names are examples):
 #
@@ -27,8 +32,11 @@
 #     nuget: { idPrefix: Example.Contracts, repository: build/nuget }
 #     npm:   { scope: "@your-group", publish: false, directory: build/npm }
 #
-# A re-run is safe: a version the registry already has is left alone when its
-# bytes are identical, and fails the job when they are not.
+# A re-run is safe: a version the registry already has is left alone when it holds
+# the same documents. One it holds with other documents is not replaced, and neither
+# is a registry that cannot be reached: each is a WARNING line in the job's log, never
+# a failed job, since a registry is an external party. A changed target without a
+# new version is what fails, in `package`, before anything is sent.
 
 variables:
   # The image, pinned by digest: https://hub.docker.com/r/arcetect/api-only-publisher/tags
@@ -38,19 +46,44 @@ variables:
   # The targets to package, as apionly.yaml names them.
   TARGETS: orders payments
   PACKAGES: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages
+  # Each target's release tag, as versioning.tagFormat in apionly.yaml names it.
+  TAG_FORMAT: "{target}-v{version}"
 
 stages:
+  - check
   - package
   - publish
+  - release
 
 workflow:
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# A target changed without a new version fails the merge request: compared with the
+# merge-base with the target branch, and exactly with a release tag where there is one.
+check:
+  stage: check
+  image: $PUBLISHER_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - git fetch --quiet origin "+refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - api-only-publisher check --since "$(git merge-base HEAD "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME")"
 
 package:
   stage: package
   image: $PUBLISHER_IMAGE
+  rules:
+    - if: $CI_COMMIT_TAG
+  variables:
+    # The history and release tags publish checks each target's version against.
+    GIT_DEPTH: "0"
   script:
+    # The default branch too, which a tag's pipeline does not fetch (versioning.mainBranch).
+    - git fetch --quiet origin "+refs/heads/$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH"
     - set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
     - api-only-publisher build "$@"
     - api-only-publisher lint
@@ -67,10 +100,14 @@ package:
     expire_in: 1 week
 
 # Every publishing job starts here: exactly the bytes the image produced. `listed`
-# prints the files the hand-off lists under one channel's directory.
+# prints the files the hand-off lists under one channel's directory; `documents`
+# prints what a manifest.json says a version is, its "files", whichever commit
+# packed it.
 .publish:
   stage: publish
   needs: [package]
+  rules:
+    - if: $CI_COMMIT_TAG
   before_script:
     - sha256sum -c build/packages/packages.sha256
     - listed() { awk '{ print $2 }' build/packages/packages.sha256 | grep "^$1/.*$2\$"; }
@@ -87,17 +124,23 @@ publish:npm:
       //${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}
       EOF
     - |
+      documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
       for tarball in $(listed build/npm .tgz); do
         name=$(tar -xOzf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).name')
         version=$(tar -xOzf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).version')
         local_integrity="sha512-$(node -p "require('crypto').createHash('sha512').update(require('fs').readFileSync('$tarball')).digest('base64')")"
         remote_integrity=$(npm view "$name@$version" dist.integrity 2>/dev/null || true)
-        if [ "$remote_integrity" = "$local_integrity" ]; then
+        rm -rf held && mkdir held
+        if [ -z "$remote_integrity" ]; then
+          npm publish "$tarball" || echo "WARNING: $name@$version was not published to npm"
+        elif [ "$remote_integrity" = "$local_integrity" ]; then
           echo "$name@$version is already published, identical"
-        elif [ -n "$remote_integrity" ]; then
-          echo "$name@$version is already published with other contents"; exit 1
+        elif ! file=$(npm pack "$name@$version" --pack-destination held --silent 2>/dev/null); then
+          echo "WARNING: $name@$version is already published, and could not be read back to compare"
+        elif [ "$(tar -xOzf "held/$file" package/manifest.json | documents)" = "$(tar -xOzf "$tarball" package/manifest.json | documents)" ]; then
+          echo "$name@$version is already published, with the same documents"
         else
-          npm publish "$tarball"
+          echo "WARNING: $name@$version is already published with other documents; publish the change as a new version"
         fi
       done
 
@@ -115,18 +158,25 @@ publish:maven:
       </property></httpHeaders></configuration></server></servers></settings>
       EOF
     - |
+      documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
       for pom in $(listed build/maven .pom); do
         base=${pom%.pom}
         artifact=$(listed build/maven '' | grep "^$base\." | grep -v '\.pom$')
         remote=${artifact#build/maven/}
-        status=$(curl -sS -L -o remote -w '%{http_code}' --header "Job-Token: $CI_JOB_TOKEN" "$PACKAGES/maven/$remote")
+        status=$(curl -sS -L -o remote -w '%{http_code}' --header "Job-Token: $CI_JOB_TOKEN" "$PACKAGES/maven/$remote" || true)
         if [ "$status" = 200 ]; then
-          if cmp -s remote "$artifact"; then echo "$remote is already published, identical"; continue; fi
-          echo "$remote is already published with other contents"; exit 1
+          if [ "$(tar -xOzf remote manifest.json | documents)" = "$(documents < "$base-manifest.json")" ]; then
+            echo "$remote is already published, with the same documents"
+          else
+            echo "WARNING: $remote is already published with other documents; publish the change as a new version"
+          fi
+          continue
         fi
+        if [ "$status" != 404 ]; then echo "WARNING: $remote was not published: the registry answered $status"; continue; fi
         mvn --batch-mode --no-transfer-progress --settings settings.xml deploy:deploy-file \
           -Durl="$PACKAGES/maven" -DrepositoryId=gitlab -DpomFile="$pom" -Dfile="$artifact" \
-          -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json
+          -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json ||
+          echo "WARNING: $remote was not published to the Maven registry"
       done
 
 publish:nuget:
@@ -139,18 +189,26 @@ publish:nuget:
     - echo '<configuration/>' > "$NUGET_CONFIG"
     - dotnet nuget add source "$PACKAGES/nuget/index.json" --name gitlab --configfile "$NUGET_CONFIG"
         --username gitlab-ci-token --password "$CI_JOB_TOKEN" --store-password-in-clear-text
+    - command -v unzip >/dev/null || (apt-get update -qq && apt-get install -yqq --no-install-recommends unzip >/dev/null)
     - |
+      documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
       for nupkg in $(listed build/nuget .nupkg); do
         file=$(basename "$nupkg")
         id=$(basename "$(dirname "$(dirname "$nupkg")")")
         version=$(basename "$(dirname "$nupkg")")
         status=$(curl -sS -L -o remote -w '%{http_code}' --user "gitlab-ci-token:$CI_JOB_TOKEN" \
-          "$PACKAGES/nuget/download/$id/$version/$file")
+          "$PACKAGES/nuget/download/$id/$version/$file" || true)
         if [ "$status" = 200 ]; then
-          if cmp -s remote "$nupkg"; then echo "$id $version is already published, identical"; continue; fi
-          echo "$id $version is already published with other contents"; exit 1
+          if [ "$(unzip -p remote contracts/manifest.json | documents)" = "$(documents < "$(dirname "$nupkg")/manifest.json")" ]; then
+            echo "$id $version is already published, with the same documents"
+          else
+            echo "WARNING: $id $version is already published with other documents; publish the change as a new version"
+          fi
+          continue
         fi
-        dotnet nuget push "$nupkg" --source gitlab --configfile "$NUGET_CONFIG"
+        if [ "$status" != 404 ]; then echo "WARNING: $id $version was not published: the feed answered $status"; continue; fi
+        dotnet nuget push "$nupkg" --source gitlab --configfile "$NUGET_CONFIG" ||
+          echo "WARNING: $id $version was not published to the NuGet registry"
       done
     - rm -f "$NUGET_CONFIG"
 
@@ -162,14 +220,51 @@ publish:generic:
     # as <target>/<version>/<archive>: GitLab's counterpart of release assets.
     - apk add --no-cache curl
     - |
+      documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
       for archive in $(listed build/publish .tgz); do
         target=$(basename "$(dirname "$(dirname "$archive")")")
         version=$(basename "$(dirname "$archive")")
         url="$PACKAGES/generic/$target/$version/$(basename "$archive")"
-        status=$(curl -sS -L -o remote -w '%{http_code}' --header "JOB-TOKEN: $CI_JOB_TOKEN" "$url")
+        status=$(curl -sS -L -o remote -w '%{http_code}' --header "JOB-TOKEN: $CI_JOB_TOKEN" "$url" || true)
         if [ "$status" = 200 ]; then
-          if cmp -s remote "$archive"; then echo "$url is already published, identical"; continue; fi
-          echo "$url is already published with other contents"; exit 1
+          if [ "$(tar -xOzf remote manifest.json | documents)" = "$(tar -xOzf "$archive" manifest.json | documents)" ]; then
+            echo "$url is already published, with the same documents"
+          else
+            echo "WARNING: $url is already published with other documents; publish the change as a new version"
+          fi
+          continue
         fi
-        curl --fail -sS --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$archive" "$url"
+        if [ "$status" != 404 ]; then echo "WARNING: $url was not published: the registry answered $status"; continue; fi
+        curl --fail -sS --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$archive" "$url" ||
+          echo "WARNING: $url was not published to the generic registry"
+      done
+
+# A GitLab release per target's release creates the tag <target>-v<version> that check
+# and publish read to tell a released version from a changed one. The job token may
+# create releases; a tag or release already there is left as it is. A pre-release
+# gets none: GitLab has no pre-release flag, and would make it the latest release.
+release:tags:
+  stage: release
+  image: alpine:3
+  needs: [package, "publish:npm", "publish:maven", "publish:nuget", "publish:generic"]
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - apk add --no-cache curl
+    - |
+      for pair in $(awk '{ print $2 }' build/packages/packages.sha256 | awk -F/ '$1 == "build" && $2 == "publish" { print $3 "=" $4 }' | sort -u); do
+        target=${pair%%=*}
+        version=${pair#*=}
+        tag=$(printf '%s' "$TAG_FORMAT" | sed "s/{target}/$target/g; s/{version}/$version/g")
+        case "$version" in *-*) echo "$tag: no release for a pre-release"; continue ;; esac
+        status=$(curl -sS -o /dev/null -w '%{http_code}' --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases/$tag" || true)
+        if [ "$status" = 200 ]; then echo "$tag is already released"; continue; fi
+        if curl --fail -sS -o /dev/null --header "JOB-TOKEN: $CI_JOB_TOKEN" --header "Content-Type: application/json" \
+          --data "{\"tag_name\": \"$tag\", \"ref\": \"$CI_COMMIT_SHA\", \"name\": \"$target $version\"}" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"; then
+          echo "Released $tag"
+        else
+          echo "WARNING: the release $tag could not be created"
+        fi
       done

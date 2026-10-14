@@ -2110,8 +2110,9 @@ package:
 [#docker-github-actions]
 ==== Reference pipeline: GitHub Actions
 
-Two jobs: `package` runs the image and hands the files on, `publish` checks them against the hand-off and publishes them to npm, Maven and NuGet on GitHub Packages, and to a GitHub Release, with the job's `GITHUB_TOKEN`.
-Copy it into `.github/workflows/`, then set the digest, the targets and the trigger.
+Two jobs on a tag: `package` runs the image and hands the files on, `publish` checks them against the hand-off, publishes them to npm, Maven and NuGet on GitHub Packages, and to a GitHub Release, with the job's `GITHUB_TOKEN`, and tags each target's release, `<target>-v<version>`.
+On a pull request, a third job, `check`, runs the image's `check` with no network, against the merge-base with the pull request's base branch (<<version-guard,A changed target needs a new version §>>).
+Copy it into `.github/workflows/`, then set the digest, the targets and the trigger, and `TAG_FORMAT` if `versioning.tagFormat` names the tags otherwise.
 The container-job variant above replaces its `package` job.
 
 It is exercised end to end, both variants, by a workflow in this repository that publishes to scratch packages and resolves each one with its ecosystem's own client and with the API-Only Subscriber.
@@ -2123,8 +2124,11 @@ include::pipelines/github-actions.yml[]
 
 What the two steps lose, and how the pipeline makes up for it:
 
-* *Idempotence.* A channel's remote mode leaves a version the registry has alone when it holds the same documents, and refuses it when it does not; `npm publish` or `dotnet nuget push` of an existing version fails instead.
-Each publishing step checks for the version first, compares the bytes, and publishes only what is missing, so a re-run is safe and a real conflict still fails.
+* *Idempotence.* A channel's remote mode leaves a version the registry has alone when it holds the same documents, and does not replace it when it holds others; `npm publish` or `dotnet nuget push` of an existing version fails instead.
+Each publishing step checks for the version first, compares the documents its `manifest.json` lists -- not the bytes, which differ by commit -- and publishes only what is missing, so a re-run is safe.
+A version held with other documents, or a registry that cannot be reached, is a `::warning` on the run, never a failed job, as for the Publisher's own channels (<<channel-problems,When a channel cannot take a version §>>).
+* *History.* Every job that runs the Publisher checks out the full history and the tags, `fetch-depth: 0`, which `check` and `publish` compare each target's version against.
+* *Release tags.* The last step creates each target's release tag at the commit it published, unless it exists; a tag it cannot create is a warning.
 * *Maven checksums and metadata.* The local Maven layout holds the artifact, its POM and its manifest, and no `.md5`, `.sha1` or `maven-metadata.xml`.
 `mvn deploy:deploy-file` writes those when it uploads, so the repository ends up as a remote `maven` channel would leave it, and Gradle resolves it.
 
@@ -2132,6 +2136,8 @@ Each publishing step checks for the version first, compares the bytes, and publi
 ==== Reference pipeline: GitLab CI
 
 One job, on a `v*` tag, as the GitHub Actions pipeline: the image builds, lints and publishes the targets to the project's Generic Package Registry with `gitlab-package`, and, where `apionly.yaml` configures it, to the project's Maven registry, both with the job's `CI_JOB_TOKEN`.
+In a merge request, a `check` job runs the image's `check` against the merge-base with the target branch; both jobs fetch the full history, `GIT_DEPTH: 0`, and the branch they compare with.
+`gitlab-package` with `release: true` creates each target's release, and with it the tag `<target>-v<version>` that `check` reads; without it, nothing creates that tag, and `check` compares with the merge-base alone.
 `apionly.yaml` needs no GitLab settings for it; the pipeline's header says what to add for the Maven registry.
 Copy it to `.gitlab-ci.yml`, then set the digest and the targets.
 The tag pattern keeps out the tag a GitLab release puts on the commit, `<target>-v<version>`, which would otherwise start the pipeline a second time; a library that tags its releases otherwise changes the rule, and keeps that one out.
@@ -2147,6 +2153,8 @@ include::pipelines/gitlab-ci.yml[]
 link:../docs/guides/publishing-to-gitlab/overview.adoc[Publishing to GitLab →] is the guide: tokens, a self-managed GitLab, and what consumers need.
 
 *The two-step variant*, link:pipelines/gitlab-ci-two-step.yml[`pipelines/gitlab-ci-two-step.yml` →], keeps the image sealed: `package` runs in the image, and one `publish:*` job per registry publishes to the project's package registry with that registry's own client and `CI_JOB_TOKEN`: npm, Maven and NuGet, and the archives to the generic package registry.
+As in the GitHub Actions pipeline, each compares documents and warns rather than fails, a merge request runs `check`, and a last job, `release:tags`, creates a GitLab release, and with it the tag, for each target's release; a pre-release gets none, as GitLab would make it the latest release.
+It runs on a `v*` tag, so the tags it creates do not start it again.
 It is validated against GitLab's published CI schema only; no GitLab pipeline has run it yet.
 
 [#docker-mirror-in-pipelines]

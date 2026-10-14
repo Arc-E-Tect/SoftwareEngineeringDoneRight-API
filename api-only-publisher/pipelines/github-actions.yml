@@ -1,12 +1,15 @@
 # Reference pipeline: publish API description bundles in two steps on GitHub Actions.
 # README.adoc#docker-github-actions explains it; copy it to .github/workflows/.
 #
+# 0. `check`, in a pull request, runs the image's `check` with no network: a target
+#    changed without a new version fails the pull request, before anything is merged.
 # 1. `package` runs the sealed api-only-publisher image, pinned by digest, with no
 #    network: it builds, lints and packages the targets into files, with the local
 #    channel modes apionly.yaml configures, and hands them on as an artifact.
-# 2. `publish` checks the files against the hand-off the image wrote, and publishes
-#    exactly those bytes with the registries' own tools and the job's GITHUB_TOKEN:
-#    npm, Maven and NuGet on GitHub Packages, and the archives to a GitHub Release.
+# 2. `publish` checks the files against the hand-off the image wrote, publishes
+#    exactly those bytes with the registries' own tools and the job's GITHUB_TOKEN --
+#    npm, Maven and NuGet on GitHub Packages, and the archives to a GitHub Release --
+#    and tags each target's release, <target>-v<version>, for `check` to read.
 #
 # apionly.yaml needs these local channel modes (names are examples; the npm scope
 # must be this repository's owner, lower-cased, as GitHub Packages requires):
@@ -17,14 +20,18 @@
 #     nuget: { idPrefix: Example.Contracts, repository: build/nuget }
 #     npm:   { scope: "@your-org", publish: false, directory: build/npm }
 #
-# A re-run is safe: a version a registry already has is left alone when its bytes
-# are identical, and fails the job when they are not.
+# A re-run is safe: a version a registry already has is left alone when it holds the
+# same documents. One it holds with other documents is not replaced, and neither is a
+# registry that cannot be reached: each is a warning on the run, never a failed job,
+# since a registry is an external party. A changed target without a new version is
+# what fails, in `package`, before anything is sent -- and in the pull request first.
 
 name: Publish API bundles
 
 on:
   push:
     tags: ['v*']
+  pull_request:
   workflow_dispatch:
 
 env:
@@ -39,12 +46,33 @@ permissions:
   contents: read
 
 jobs:
-  package:
+  check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          # The history, the base branch and the release tags `check` compares with.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Every changed target has a new version
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          docker run --rm --network none --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+            -v "$PWD:/work" "$PUBLISHER_IMAGE" check --since "$(git merge-base HEAD "origin/$BASE_REF")"
+
+  package:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # The history and release tags publish checks each target's version against.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Build, lint and package with the sealed image
@@ -88,6 +116,9 @@ jobs:
       OWNER: ${{ github.repository_owner }}
       # The release the archives go to: the pushed tag, or a new one per manual run.
       RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('bundles-{0}', github.run_number) }}
+      # Each target's release tag, as versioning.tagFormat in apionly.yaml names it;
+      # empty, no tags are created.
+      TAG_FORMAT: '{target}-v{version}'
     steps:
       - name: Receive the files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -112,17 +143,25 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # A version is its documents: the "files" of its manifest.json, whichever commit packed it.
+          documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
           for tarball in $(jq -r '.files[] | select(.channel == "npm") | .path' "$HANDOFF"); do
             name=$(tar -xOzf "$tarball" package/package.json | jq -r .name)
             version=$(tar -xOzf "$tarball" package/package.json | jq -r .version)
             local_integrity="sha512-$(openssl dgst -sha512 -binary "$tarball" | base64 -w0)"
             remote_integrity=$(npm view "$name@$version" dist.integrity 2>/dev/null || true)
-            if [ "$remote_integrity" = "$local_integrity" ]; then
+            held="$RUNNER_TEMP/held-npm"
+            rm -rf "$held" && mkdir "$held"
+            if [ -z "$remote_integrity" ]; then
+              npm publish "$tarball" || echo "::warning::$name@$version was not published to npm"
+            elif [ "$remote_integrity" = "$local_integrity" ]; then
               echo "$name@$version is already published, identical"
-            elif [ -n "$remote_integrity" ]; then
-              echo "::error::$name@$version is already published with other contents"; exit 1
+            elif ! file=$(npm pack "$name@$version" --pack-destination "$held" --silent 2>/dev/null); then
+              echo "::warning::$name@$version is already published, and could not be read back to compare"
+            elif [ "$(tar -xOzf "$held/$file" package/manifest.json | documents)" = "$(tar -xOzf "$tarball" package/manifest.json | documents)" ]; then
+              echo "$name@$version is already published, with the same documents"
             else
-              npm publish "$tarball"
+              echo "::warning::$name@$version is already published with other documents; publish the change as a new version"
             fi
           done
 
@@ -137,56 +176,98 @@ jobs:
             <username>${env.GITHUB_ACTOR}</username><password>${env.GITHUB_TOKEN}</password>
           </server></servers></settings>
           EOF
+          documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
           for pom in $(jq -r '.files[] | select(.channel == "maven") | .path | select(endswith(".pom"))' "$HANDOFF"); do
             base=${pom%.pom}
             artifact=$(jq -r --arg base "$base." '.files[] | select(.channel == "maven") | .path
               | select(startswith($base) and (endswith(".pom") | not))' "$HANDOFF")
             remote_path=${artifact#build/maven/}
-            status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$remote_path")
+            status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" "$url/$remote_path" || true)
             if [ "$status" = 200 ]; then
-              if cmp -s "$RUNNER_TEMP/remote" "$artifact"; then
-                echo "$remote_path is already published, identical"; continue
+              if [ "$(tar -xOzf "$RUNNER_TEMP/remote" manifest.json | documents)" = "$(documents < "$base-manifest.json")" ]; then
+                echo "$remote_path is already published, with the same documents"
+              else
+                echo "::warning::$remote_path is already published with other documents; publish the change as a new version"
               fi
-              echo "::error::$remote_path is already published with other contents"; exit 1
+              continue
+            fi
+            if [ "$status" != 404 ]; then
+              echo "::warning::$remote_path was not published: the repository answered $status"; continue
             fi
             mvn --batch-mode --no-transfer-progress --settings "$RUNNER_TEMP/settings.xml" deploy:deploy-file \
               -Durl="$url" -DrepositoryId=github -DpomFile="$pom" -Dfile="$artifact" \
-              -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json
+              -Dpackaging="${artifact##*.}" -Dfiles="$base-manifest.json" -Dclassifiers=manifest -Dtypes=json ||
+              echo "::warning::$remote_path was not published to GitHub Packages"
           done
 
       - name: Publish to GitHub Packages (NuGet)
         run: |
+          documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
           source="https://nuget.pkg.github.com/$OWNER/index.json"
           for nupkg in $(jq -r '.files[] | select(.channel == "nuget") | .path | select(endswith(".nupkg"))' "$HANDOFF"); do
             file=$(basename "$nupkg")
             id=$(basename "$(dirname "$(dirname "$nupkg")")")
             version=$(basename "$(dirname "$nupkg")")
             status=$(curl -sS -L -o "$RUNNER_TEMP/remote" -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" \
-              "https://nuget.pkg.github.com/$OWNER/download/$id/$version/$file")
+              "https://nuget.pkg.github.com/$OWNER/download/$id/$version/$file" || true)
             if [ "$status" = 200 ]; then
-              if cmp -s "$RUNNER_TEMP/remote" "$nupkg"; then
-                echo "$id $version is already published, identical"; continue
+              if [ "$(unzip -p "$RUNNER_TEMP/remote" contracts/manifest.json | documents)" = "$(documents < "$(dirname "$nupkg")/manifest.json")" ]; then
+                echo "$id $version is already published, with the same documents"
+              else
+                echo "::warning::$id $version is already published with other documents; publish the change as a new version"
               fi
-              echo "::error::$id $version is already published with other contents"; exit 1
+              continue
             fi
-            dotnet nuget push "$nupkg" --source "$source" --api-key "$GITHUB_TOKEN"
+            if [ "$status" != 404 ]; then
+              echo "::warning::$id $version was not published: the feed answered $status"; continue
+            fi
+            dotnet nuget push "$nupkg" --source "$source" --api-key "$GITHUB_TOKEN" ||
+              echo "::warning::$id $version was not published to GitHub Packages"
           done
 
       - name: Attach the archives to a GitHub Release
         run: |
+          documents() { sed -n '/^  "files": \[/,/^  \]/p'; }
           # The file channel's archives, one per target; each carries its manifest.
           gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 ||
             gh release create "$RELEASE_TAG" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
-              --title "$RELEASE_TAG" --notes "API description bundles."
+              --title "$RELEASE_TAG" --notes "API description bundles." ||
+            echo "::warning::the release $RELEASE_TAG could not be created"
           for archive in $(jq -r '.files[] | select(.channel == "file") | .path | select(endswith(".tgz"))' "$HANDOFF"); do
             name=$(basename "$archive")
+            held="$RUNNER_TEMP/held-release"
+            rm -rf "$held" && mkdir "$held"
             remote=$(gh api "repos/${{ github.repository }}/releases/tags/$RELEASE_TAG" \
-              --jq ".assets[] | select(.name == \"$name\") | .digest")
+              --jq ".assets[] | select(.name == \"$name\") | .digest" 2>/dev/null || true)
             if [ "$remote" = "sha256:$(sha256sum "$archive" | cut -d' ' -f1)" ]; then
               echo "$name is already attached, identical"
-            elif [ -n "$remote" ]; then
-              echo "::error::$name is already attached with other contents"; exit 1
+            elif [ -z "$remote" ]; then
+              gh release upload "$RELEASE_TAG" "$archive" --repo "${{ github.repository }}" ||
+                echo "::warning::$name was not attached to the release $RELEASE_TAG"
+            elif ! gh release download "$RELEASE_TAG" --repo "${{ github.repository }}" --pattern "$name" --dir "$held"; then
+              echo "::warning::$name is already attached, and could not be read back to compare"
+            elif [ "$(tar -xOzf "$held/$name" manifest.json | documents)" = "$(tar -xOzf "$archive" manifest.json | documents)" ]; then
+              echo "$name is already attached, with the same documents"
             else
-              gh release upload "$RELEASE_TAG" "$archive" --repo "${{ github.repository }}"
+              echo "::warning::$name is already attached with other documents; publish the change as a new version"
+            fi
+          done
+
+      - name: Tag each target's release
+        if: env.TAG_FORMAT != ''
+        run: |
+          # The tags check and publish read to tell a released version from a changed one.
+          # Created after publishing, by the pipeline: the Publisher only reads them. A tag
+          # already there is left where it is.
+          for pair in $(jq -r '[.files[] | "\(.target)=\(.version)"] | unique[]' "$HANDOFF"); do
+            target=${pair%%=*}
+            version=${pair#*=}
+            tag=$(printf '%s' "$TAG_FORMAT" | sed "s/{target}/$target/g; s/{version}/$version/g")
+            if gh api "repos/${{ github.repository }}/git/ref/tags/$tag" >/dev/null 2>&1; then
+              echo "$tag already exists"
+            elif gh api "repos/${{ github.repository }}/git/refs" -f ref="refs/tags/$tag" -f sha="${{ github.sha }}" >/dev/null; then
+              echo "Tagged $tag"
+            else
+              echo "::warning::the tag $tag could not be created"
             fi
           done
