@@ -1,3 +1,15 @@
+## [0.18.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.0...api-only-publisher-v0.18.1) (2026-10-14)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** with clean, the file channel replaces a version it holds with other documents ([#105](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/105)) ([de5a382](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/de5a3829ba55aaea350565a9b043a5813f06a0c1)), closes [#105](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/105)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.18.0 [skip ci] ([dba985d](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/dba985d4f921f41fc3b66d7cd3620732a8c150e0))
+
 # [0.18.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.17.0...api-only-publisher-v0.18.0) (2026-10-14)
 
 
