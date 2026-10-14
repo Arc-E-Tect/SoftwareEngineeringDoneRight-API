@@ -10,8 +10,10 @@ When we are done:
 
 - `apionly.yaml` configures the local channel modes the chosen registries need, and nothing else in it has changed;
 - the toolchain pins in `apionly.yaml` are the ones the image carries;
-- one pipeline file packages the chosen targets in the image, pinned by digest, and hands the files to a publishing job;
-- the publishing job verifies the files against the hand-off, publishes exactly the files it lists, and leaves a version that is already published alone when it is identical and fails when it is not;
+- one pipeline file packages the chosen targets in the image, pinned by digest, with the full git history and tags checked out, and hands the files to a publishing job;
+- the publishing job verifies the files against the hand-off, publishes exactly the files it lists, leaves a version that is already published alone when its manifest lists the same documents, and warns -- without failing the job -- when a registry holds the version with other documents or cannot be reached;
+- after publishing, the pipeline creates each target's release tag, `<target>-v<version>` unless `versioning.tagFormat` says otherwise;
+- in a pull or merge request, a job runs the image's `check` against the merge-base with the target branch;
 - no credential appears in any file: only the platform's job token, or a secret I name;
 - the pipeline file is validated;
 - I have the commands to try the packaging step locally, and a list of what to check after the first pipeline run.
@@ -143,7 +145,7 @@ Use only the platform's job token -- `GITHUB_TOKEN` with the permissions the ref
    sha256sum -c build/packages/packages.sha256
    ```
 
-2. Tell me what to check after the first pipeline run: that the publishing job's hand-off check passed; that each package is in the registry at the target's version; that a consumer resolves it with its own client; and that re-running the publishing job finds every version already published, identical.
+2. Tell me what to check after the first pipeline run: that the publishing job's hand-off check passed; that each package is in the registry at the target's version; that a consumer resolves it with its own client; and that re-running the publishing job finds every version already published, and the release tags already there.
 3. Tell me which files to commit, and which secrets, if any, to create.
 4. Offer to add a section like this to `CLAUDE.md`, and write it only if I agree:
 

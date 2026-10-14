@@ -15,7 +15,9 @@
 #
 #   channels:
 #     gitlab-package: {}
-#     # release: true also creates the tag's GitLab release, linking the package.
+#     # release: true also creates the GitLab release, and with it the tag
+#     # <target>-v<version> that check and publish read to tell a released version
+#     # from a changed one; without it, nothing creates that tag.
 #     # For Gradle and Maven consumers, this project's Maven registry as well
 #     # (GitLab takes the job token in the Job-Token header):
 #     # maven:
@@ -24,9 +26,12 @@
 #     #   tokenEnv: CI_JOB_TOKEN
 #     #   tokenHeader: Job-Token
 #
-# A re-run is safe: a version the registry already has is left alone when its
-# bytes are identical, and fails the job when they are not -- also where the
-# project allows duplicate packages, as GitLab does by default.
+# A re-run is safe: a version the registry already has is left alone when it holds
+# the same documents, and is never replaced -- also where the project allows
+# duplicate packages, as GitLab does by default. A registry that holds other
+# documents, or cannot be reached, is a warning in the job's log, never a failed
+# job. A changed target without a new version is what fails, before anything is
+# sent -- and in the merge request first, in `check`.
 
 variables:
   # The image, pinned by digest: https://hub.docker.com/r/arcetect/api-only-publisher/tags
@@ -37,6 +42,7 @@ variables:
   TARGETS: orders payments
 
 stages:
+  - check
   - publish
 
 workflow:
@@ -45,14 +51,37 @@ workflow:
     # release with release: true puts on the commit, <target>-v<version>, which
     # would start this pipeline again for nothing.
     - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# A target changed without a new version fails the merge request, before anything
+# is merged: compared with the merge-base with the target branch, and exactly with a
+# target's release tag where it has one. Sealed, as every job but `publish`.
+check:
+  stage: check
+  image: $PUBLISHER_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    # A merge request's pipeline fetches its own ref; the target branch is fetched for the merge-base.
+    - git fetch --quiet origin "+refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - api-only-publisher check --since "$(git merge-base HEAD "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME")"
 
 publish:
   stage: publish
   image: $PUBLISHER_IMAGE
+  rules:
+    - if: $CI_COMMIT_TAG
   variables:
     # The one job that may contact anything: the project's package registry.
     API_ONLY_PUBLISHER_REMOTE: allow
+    # The history and release tags publish checks each target's version against.
+    GIT_DEPTH: "0"
   script:
+    # The default branch too, which a tag's pipeline does not fetch: publish compares
+    # a target without a release tag with it (versioning.mainBranch names it).
+    - git fetch --quiet origin "+refs/heads/$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH"
     - set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
     - api-only-publisher build "$@"
     - api-only-publisher lint
