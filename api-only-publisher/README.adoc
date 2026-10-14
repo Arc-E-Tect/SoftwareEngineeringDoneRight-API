@@ -449,9 +449,10 @@ A pre-release follows the same rules, by its full version:
 * A pre-release that was released before -- a tag `orders-v2.1.0-rc.1` -- is refused when the target changed since, as a release is.
 * A pre-release of a version already released is refused: `2.1.0-rc.1` sorts before `2.1.0`, so it can never be the next version.
 
-Where the guard cannot decide, it says so.
-`check` outside a git repository fails; `publish` there warns that the versions were not checked, and publishes.
-In CI, fetch the full history and the tags -- `actions/checkout` with `fetch-depth: 0`, or `GIT_DEPTH: 0` on GitLab -- or the merge-base cannot be found, and both commands fail saying so.
+Where the guard cannot decide, it says so, and only `check` fails on it: `check` is the gate, while `publish` fails on a proven violation alone.
+Outside a git repository, `check` fails and `publish` warns that the versions were not checked.
+A target with no release tag, in a checkout that has no merge-base with the main branch -- a shallow clone, or no main branch at all -- is `undecided`: `check` fails naming it, and `publish` warns and publishes it; a target with a release tag is decided all the same.
+In CI, fetch the full history and the tags -- `actions/checkout` with `fetch-depth: 0`, or `GIT_DEPTH: 0` on GitLab -- so that nothing is left undecided.
 Without release tags, the check on the main branch itself compares the main branch with itself, so it is in the pull request that it catches a missing bump; the tags are what make it exact everywhere.
 
 To catch it before a push, call `check` from whatever runs the repository's git hooks -- a `pre-push` hook, or a hook manager such as husky or lefthook:
@@ -2241,7 +2242,7 @@ docker build -t api-only-publisher:local --build-arg VERSION=0.0.0-local .
 docker/smoke-test.sh api-only-publisher:local 0.0.0-local
 ----
 
-It runs every step with a read-only root and your own user, and all but the last with no network: the version, the help, the toolchain labels against what is installed and against `init`'s pins, a library with two targets built, linted and packaged to every local channel in one run, ownership, byte-identical packaging twice, the hand-off, a foreign toolchain pin failing at once, a remote channel refused while sealed, the shell mode, and a build as an arbitrary UID.
+It runs every step with a read-only root and your own user, and all but the last with no network: the version, the help, the toolchain labels against what is installed and against `init`'s pins, a library with two targets built, linted, checked -- a change without a new version refused -- and packaged to every local channel in one run, ownership, byte-identical packaging twice, the hand-off, a foreign toolchain pin failing at once, a remote channel refused while sealed, the shell mode, and a build as an arbitrary UID.
 The last step publishes with `gitlab-package` and `maven` to a GitLab stand-in, run from the same image, on a Docker network it creates with no route out (`docker network create --internal`) and removes afterwards; it checks every request went to the project's package registries with the job token, and that a re-run uploads nothing.
 
 link:../.github/workflows/api-only-publisher-image-e2e.yml[`api-only-publisher-image-e2e.yml` →] runs the GitHub Actions reference pipeline for real, by hand only.

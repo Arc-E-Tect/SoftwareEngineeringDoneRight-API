@@ -52,7 +52,10 @@ function releaseTags(config, target, repoRoot) {
     return tags;
 }
 
-/** The ref a target without release tags is compared with, and how to name it. */
+/**
+ * The ref a target without release tags is compared with, and how to name it; or, when
+ * there is no merge-base -- a shallow checkout, or no main branch -- why not.
+ */
 function fallbackBaseline(config, repoRoot, since) {
     if (since) {
         const commit = tryGit(["rev-parse", "--verify", "--quiet", `${since}^{commit}`], repoRoot);
@@ -65,10 +68,9 @@ function fallbackBaseline(config, repoRoot, since) {
         const base = tryGit(["merge-base", "HEAD", candidate], repoRoot);
         if (base) return { ref: base, label: `the merge-base with ${branch} (${base.slice(0, 12)})` };
     }
-    throw new GuardError(
-        `no merge-base with ${branch}, the branch versioning.mainBranch names, to compare targets without a release tag with. ` +
+    return { missing: `no merge-base with ${branch}, the branch versioning.mainBranch names, to compare a target without a release tag with. ` +
         "In CI, fetch the full history and the branch (actions/checkout with fetch-depth: 0, or GIT_DEPTH: 0 on GitLab), " +
-        "or name the ref to compare with: --since <ref>.");
+        "or name the ref to compare with: --since <ref>." };
 }
 
 /** The version a target's version file -- `rel`, from the repository root -- declared at `ref`, or null when it was not there. */
@@ -84,7 +86,9 @@ function versionAt(ref, rel, repoRoot) {
  * @param {object} config a loaded configuration
  * @param {string[]} targets the targets to judge; each needs a version file
  * @param {{preRelease?: string|null, since?: string|null}} options
- * @returns {Array<{target: string, version: string, verdict: "ok"|"violation", reason: string}>}
+ * A target the tags do not decide, with no merge-base to compare with, is `undecided`.
+ *
+ * @returns {Array<{target: string, version: string, verdict: "ok"|"violation"|"undecided", reason: string}>}
  */
 function guard(config, targets, { preRelease = null, since = null } = {}) {
     const top = tryGit(["rev-parse", "--show-toplevel"], config.root);
@@ -137,6 +141,7 @@ function guard(config, targets, { preRelease = null, since = null } = {}) {
 
         // Never released, as far as the tags tell: the merge-base, or --since, decides.
         fallback = fallback || fallbackBaseline(config, repoRoot, since);
+        if (fallback.missing) return { target, version, verdict: "undecided", reason: fallback.missing };
         const before = versionAt(fallback.ref, file, repoRoot);
         if (before === null) return ok(`new: no version file at ${fallback.label}`);
         if (compare(declared, before) < 0) {

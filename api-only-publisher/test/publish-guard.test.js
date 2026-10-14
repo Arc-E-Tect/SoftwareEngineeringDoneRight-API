@@ -129,6 +129,18 @@ test("check takes --pre-release, --since and --target", async () => {
     await assert.rejects(main(["check", "--target", "beta", "-C", dir]), /beta is not published, so it has no version to check/);
 });
 
+test("check fails on a target it cannot decide, and publish warns about it and publishes", async () => {
+    const dir = library();
+    git(dir, "branch", "-q", "-m", "main", "trunk"); // no main branch to compare with
+    await assert.rejects(main(["check", "-q", "-C", dir]),
+        /1 target\(s\) could not be checked:\n {2}alpha 1\.0\.0: no merge-base with main/);
+    built(dir, "1.0.0");
+    const { code, text } = await run(["publish", "-C", dir]);
+    assert.strictEqual(code, 0);
+    assert.match(text, /^warning: alpha 1\.0\.0: version not checked: no merge-base with main/m);
+    assert.ok(fs.existsSync(path.join(dir, "build", "publish", "alpha", "1.0.0", "alpha-1.0.0.tgz")));
+});
+
 test("check outside a git repository fails: it cannot decide", async () => {
     const dir = library({ inGit: false });
     await assert.rejects(main(["check", "-C", dir]), /not in a git repository/);

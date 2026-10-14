@@ -296,13 +296,18 @@ async function runConfig(options, positional, io, log) {
     return 0;
 }
 
-/** Fails with every target the guard refused, each with its reason. */
-function refuseViolations(results) {
-    const violations = results.filter((r) => r.verdict === "violation");
-    if (violations.length === 0) return;
-    throw new GuardError(`${violations.length} target(s) changed without a new version:\n` +
-        violations.map((r) => `  ${r.target} ${r.version}: ${r.reason}`).join("\n") +
-        "\nA published version is never replaced: a changed specification needs a changed version.");
+/** Fails with every target the guard refused -- and, with `undecided`, every one it could not decide -- each with its reason. */
+function refuseViolations(results, { undecided = false } = {}) {
+    const listed = (verdict) => results.filter((r) => r.verdict === verdict).map((r) => `  ${r.target} ${r.version}: ${r.reason}`);
+    const violations = listed("violation");
+    const unknown = undecided ? listed("undecided") : [];
+    const parts = [];
+    if (violations.length > 0) {
+        parts.push(`${violations.length} target(s) changed without a new version:\n${violations.join("\n")}\n` +
+            "A published version is never replaced: a changed specification needs a changed version.");
+    }
+    if (unknown.length > 0) parts.push(`${unknown.length} target(s) could not be checked:\n${unknown.join("\n")}`);
+    if (parts.length > 0) throw new GuardError(parts.join("\n\n"));
 }
 
 async function main(argv, io = {}) {
@@ -446,8 +451,9 @@ async function main(argv, io = {}) {
                 if (!config.isPublished(target)) throw new ConfigError(`${target} is not published, so it has no version to check`);
             }
             const results = guard(config, shippedTargets(config, targets), { preRelease: options.preRelease, since: options.since });
-            for (const r of results) log(`${r.target.padEnd(18)} ${r.version.padEnd(14)} ${r.verdict === "ok" ? "ok" : "VIOLATION"}  ${r.reason}`);
-            refuseViolations(results);
+            for (const r of results) log(`${r.target.padEnd(18)} ${r.version.padEnd(14)} ${r.verdict === "ok" ? "ok" : r.verdict.toUpperCase()}  ${r.reason}`);
+            // check is the gate: a target it cannot decide fails it too.
+            refuseViolations(results, { undecided: true });
             log(`\n${results.length} target(s) checked.`);
             return 0;
         }
@@ -511,7 +517,11 @@ async function main(argv, io = {}) {
             const versions = versionsOf(config, shipped, options.preRelease);
             // A changed target needs a new version: decided before anything is packed or sent.
             try {
-                refuseViolations(guard(config, shipped, { preRelease: options.preRelease, since: options.since }));
+                const checked = guard(config, shipped, { preRelease: options.preRelease, since: options.since });
+                refuseViolations(checked);
+                for (const r of checked.filter((c) => c.verdict === "undecided")) {
+                    log(`warning: ${r.target} ${r.version}: version not checked: ${r.reason}`);
+                }
             } catch (error) {
                 if (!(error instanceof GuardError && error.notARepository)) throw error;
                 log(`warning: versions not checked: ${error.message}`);

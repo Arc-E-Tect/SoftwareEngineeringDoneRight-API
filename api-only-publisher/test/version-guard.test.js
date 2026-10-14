@@ -144,11 +144,15 @@ test("versioning.mainBranch names the branch the merge-base is taken with, and o
     assert.strictEqual(verdicts(dir).alpha.verdict, "ok", "nothing changed since origin/trunk");
 });
 
-test("a merge-base that cannot be found is an error that says what to fetch", () => {
+test("without a release tag or a merge-base, a target is undecided, saying what to fetch; a tagged one is still decided", () => {
+    // A shallow checkout of a tag, as a release pipeline makes, has no main branch to compare with.
     const dir = repository("versioning:\n  mainBranch: nowhere\n");
-    const config = load(path.join(dir, "apionly.yaml"));
-    assert.throws(() => guard(config, ["alpha"]), (e) => e instanceof GuardError
-        && /no merge-base with nowhere/.test(e.message) && /fetch-depth: 0/.test(e.message));
+    git(dir, "tag", "beta-v2.0.0");
+    const result = verdicts(dir);
+    assert.strictEqual(result.alpha.verdict, "undecided");
+    assert.match(result.alpha.reason, /no merge-base with nowhere/);
+    assert.match(result.alpha.reason, /fetch-depth: 0/);
+    assert.strictEqual(result.beta.verdict, "ok", "its release tag decides");
 });
 
 // ------------------------------------------------------------------ release tags
