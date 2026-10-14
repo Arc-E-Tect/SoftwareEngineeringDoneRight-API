@@ -1,3 +1,15 @@
+# [0.17.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.16.2...api-only-publisher-v0.17.0) (2026-10-14)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** refuse a changed target without a new version, and report channel problems as warnings ([#103](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/103)) ([ebfedf0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ebfedf0b7b17ef1037499fd575fc0c974e3f11bc)), closes [#103](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/103) [#100](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/100) [#102](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/102)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.16.2 [skip ci] ([748870e](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/748870e3bbe20c5da0512a4366954ea89aed549f))
+
 ## [0.16.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.16.1...api-only-publisher-v0.16.2) (2026-10-14)
 
 
