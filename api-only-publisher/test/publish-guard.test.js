@@ -191,16 +191,31 @@ test("the file channel leaves a version with the same documents alone, and does 
     assert.ok(handoff(dir).files.every((f) => !f.path.startsWith("build/publish/")), "a channel that did not publish lists no files");
 });
 
-test("the file channel's clean keeps a version that conflicts, and removes the others", async () => {
+test("with clean, the file channel is a build output: it replaces a version with other documents, and removes the others", async () => {
+    // clean: true declares the directory a build output, not a record of releases, so the
+    // last build is what it holds; the git check is what guards a release.
     const dir = library({ inGit: false, channels: "  file:\n    directory: build/publish\n    clean: true\n" });
     write(dir, "build/publish/alpha/0.9.0/manifest.json", "{}");
     built(dir, "1.0.0");
     await run(["publish", "-C", dir]);
     assert.ok(!fs.existsSync(path.join(dir, "build", "publish", "alpha", "0.9.0")), "clean removes the others");
+    const archive = path.join(dir, "build", "publish", "alpha", "1.0.0", "alpha-1.0.0.tgz");
+    const before = fs.readFileSync(archive);
+
+    let { code, text } = await run(["publish", "-C", dir]);
+    assert.match(text, /already published, identical/, "the same documents are still left alone");
+
     built(dir, "1.0.0", "x-changed: true\n");
-    const { text } = await run(["publish", "-C", dir]);
-    assert.match(text, /not this one/);
-    assert.ok(fs.existsSync(path.join(dir, "build", "publish", "alpha", "1.0.0", "alpha-1.0.0.tgz")));
+    ({ code, text } = await run(["publish", "-C", dir]));
+    assert.strictEqual(code, 0);
+    assert.match(text, /^-- Replaced alpha 1\.0\.0 in .*build\/publish, which clean: true makes a build output: it held other documents$/m);
+    assert.doesNotMatch(text, /was not published/);
+    assert.ok(!fs.readFileSync(archive).equals(before), "the version now holds the last build");
+    assert.deepStrictEqual(handoff(dir).outcomes.map((o) => o.outcome), ["published"]);
+
+    write(dir, "build/publish/alpha/1.0.0/manifest.json", "not json");
+    ({ text } = await run(["publish", "-C", dir]));
+    assert.match(text, /^-- Replaced alpha 1\.0\.0 .*: it held a copy that cannot be compared/m);
 });
 
 test("a channel that cannot be reached, or has no credential, is a warning; the other channels still publish", async () => {

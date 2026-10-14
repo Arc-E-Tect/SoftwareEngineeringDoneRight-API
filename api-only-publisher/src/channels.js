@@ -34,7 +34,10 @@ function format(template, manifest) {
  * Not a real distribution mechanism. It exists so the pipeline is testable end
  * to end before any remote exists, and as a local-iteration escape hatch
  * afterwards. Like the registries, it never replaces a version: one it holds with
- * the same documents is left alone, and one with other documents is refused.
+ * the same documents is left alone, and one with other documents is refused --
+ * unless `clean: true` declares the directory a build output, not a record of
+ * releases, where the last build is what it holds. What guards a release is then
+ * the git check before `publish`, and a subscriber's lockfile after it.
  */
 function publishFile(archive, manifest, options, log) {
     // Relative to the library root, not to wherever the CLI happened to be run.
@@ -44,21 +47,29 @@ function publishFile(archive, manifest, options, log) {
     const manifestDest = path.join(targetDir, "manifest.json");
     const files = [archiveDest, manifestDest];
 
+    const buildOutput = options.clean === true;
     const held = fs.existsSync(manifestDest) ? judgeHeld(fs.readFileSync(manifestDest), "json", manifest) : null;
-    if (held && held.verdict !== "same") {
+    const replaced = held && held.verdict !== "same";
+    if (replaced && !buildOutput) {
         throw new ChannelConflict(`${dir} already has ${manifest.target} ${manifest.version}, and it ` +
             `${held.verdict === "different" ? "is not this one" : `cannot be compared: ${held.reason}`}; ` +
             "a published version is never replaced, so publish the change as a new version");
     }
-    // `clean: true` keeps only the version being published. Used where the
-    // directory is a build output rather than a record of releases: an older
-    // version is published again from the commit that declared it.
-    if (options.clean === true && fs.existsSync(path.join(dir, manifest.target))) {
+    // `clean: true` keeps only the version being published, and the last build of it.
+    // Used where the directory is a build output rather than a record of releases: an
+    // older version is published again from the commit that declared it.
+    if (buildOutput && fs.existsSync(path.join(dir, manifest.target))) {
         for (const version of fs.readdirSync(path.join(dir, manifest.target))) {
-            if (version !== manifest.version) fs.rmSync(path.join(dir, manifest.target, version), { recursive: true, force: true });
+            if (version !== manifest.version || replaced) {
+                fs.rmSync(path.join(dir, manifest.target, version), { recursive: true, force: true });
+            }
         }
     }
-    if (held && fs.existsSync(archiveDest)) {
+    if (replaced) {
+        log(`-- Replaced ${manifest.target} ${manifest.version} in ${dir}, which clean: true makes a build output: it held ` +
+            (held.verdict === "different" ? "other documents" : `a copy that cannot be compared (${held.reason})`));
+    }
+    if (held && !replaced && fs.existsSync(archiveDest)) {
         const identical = fs.readFileSync(archiveDest).equals(fs.readFileSync(archive));
         log(`-- ${manifest.target} ${manifest.version} is already published, ` +
             `${identical ? "identical" : "with the same documents"}, in ${dir}; nothing to do`);
@@ -68,7 +79,7 @@ function publishFile(archive, manifest, options, log) {
     fs.copyFileSync(archive, archiveDest);
     fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2) + "\n");
 
-    log(`-- Published ${manifest.target} ${manifest.version} to ${archiveDest}`);
+    if (!replaced) log(`-- Published ${manifest.target} ${manifest.version} to ${archiveDest}`);
     return { location: archiveDest, files };
 }
 
