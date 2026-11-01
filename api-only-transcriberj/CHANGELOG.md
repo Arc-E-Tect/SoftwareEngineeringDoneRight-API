@@ -1,3 +1,11 @@
+## [0.17.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.17.3...api-only-transcriberj-v0.17.4) (2026-11-01)
+
+
+### 🔧 Misc
+
+* dependency updates for API projects ([#108](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/108)) ([de86b22](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/de86b220bd92fe0eb44a86336b5667bb3a524ab9)), closes [#108](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/108)
+* **api-only-transcriberj:** update README version to 0.17.3 [skip ci] ([7e1accc](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/7e1accc8f193dbf134bea794bb18b2c4d2fdc967))
+
 ## [0.17.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.17.2...api-only-transcriberj-v0.17.3) (2026-11-01)
 
 
