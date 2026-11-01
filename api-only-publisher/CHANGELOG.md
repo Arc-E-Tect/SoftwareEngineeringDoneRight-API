@@ -1,3 +1,11 @@
+## [0.18.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.1...api-only-publisher-v0.18.2) (2026-11-01)
+
+
+### 🔧 Misc
+
+* dependency updates for API projects ([#106](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/106)) ([22f27bb](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/22f27bb630f89202f4fb904a04f9de6992c56f30)), closes [#106](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/106)
+* **api-only-publisher:** update README version to 0.18.1 [skip ci] ([c7b0f84](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/c7b0f8410ed4590b6532dd144d08c7526e984e7a))
+
 ## [0.18.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.0...api-only-publisher-v0.18.1) (2026-10-14)
 
 
