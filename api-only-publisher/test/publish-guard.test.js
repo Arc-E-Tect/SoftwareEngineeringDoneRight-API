@@ -84,7 +84,12 @@ function change(dir) {
     write(dir, "specs/openapi/paths/A.yaml", "get:\n  x: {}\n  y: {}\n");
 }
 
+// Outside git, pack stamps an archive with the current time unless SOURCE_DATE_EPOCH is set,
+// so two publishes a second apart would give different bytes; a fixed time keeps a re-run identical.
+const EPOCH = "1767225600"; // 2026-01-01T00:00:00Z
+
 async function run(argv, env = {}) {
+    env = { SOURCE_DATE_EPOCH: EPOCH, ...env };
     const printed = [];
     const saved = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
     Object.assign(process.env, env);
