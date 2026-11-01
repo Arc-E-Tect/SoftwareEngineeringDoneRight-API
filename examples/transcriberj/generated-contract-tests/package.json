@@ -5,6 +5,6 @@
     "apionly": "api-only-publisher"
   },
   "devDependencies": {
-    "@arc-e-tect/api-only-publisher": "0.14.1"
+    "@arc-e-tect/api-only-publisher": "0.18.1"
   }
 }
