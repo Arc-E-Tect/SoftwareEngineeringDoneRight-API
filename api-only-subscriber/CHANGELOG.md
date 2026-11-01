@@ -1,3 +1,11 @@
+## [0.4.5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.4.4...api-only-subscriber-v0.4.5) (2026-11-01)
+
+
+### 🔧 Misc
+
+* dependency updates for API projects ([#108](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/108)) ([de86b22](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/de86b220bd92fe0eb44a86336b5667bb3a524ab9)), closes [#108](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/108)
+* **api-only-subscriber:** update README version to 0.4.4 [skip ci] ([96e6f07](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/96e6f079495703cd13eeac20b02bb7728ea60c04))
+
 ## [0.4.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-subscriber-v0.4.3...api-only-subscriber-v0.4.4) (2026-11-01)
 
 
