@@ -1,3 +1,15 @@
+## [0.18.5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.4...api-only-publisher-v0.18.5) (2026-11-04)
+
+
+### 📝 Documentation
+
+* **api-only-publisher:** explain a GITLAB_TOKEN shadowing the job token ([#114](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/114)) ([ebe4e26](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ebe4e264b2c26568f1f066be3248aae0b75a9a4d)), closes [#114](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/114)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.18.4 [skip ci] ([7eb3a96](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/7eb3a964b657e30a1a6b4b6dc4f8ff000ff63c57))
+
 ## [0.18.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.3...api-only-publisher-v0.18.4) (2026-11-04)
 
 
