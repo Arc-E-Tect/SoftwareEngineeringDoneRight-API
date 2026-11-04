@@ -14,6 +14,8 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Java-21%2B-blue[Java 21+,link=https://adoptium.net]
 image:https://img.shields.io/badge/Gradle-8.x%2B-02303A?logo=gradle[Gradle 8+,link=https://gradle.org]
 
+Current release: *{api-only-subscriber-version}*, as link:CHANGELOG.md[the changelog →] records it.
+
 [NOTE]
 .Where the links in this document go
 ====

@@ -151,9 +151,11 @@ jobs:
     name: Update README version
     # After publishing, so the README never names a version the registry does not have
     # yet. Every snippet in the README uses the one version attribute, so that is the
-    # only line this changes. A README-only commit starts no release workflow, and the
-    # commit is typed chore, which no release rule counts: a docs commit releases a
-    # patch in this repository, so each release would otherwise cause the next one.
+    # only line this changes there; the repository README has the same attribute for
+    # each component, and this changes this component's. A README-only commit starts
+    # no release workflow, and the commit is typed chore, which no release rule counts:
+    # a docs commit releases a patch in this repository, so each release would
+    # otherwise cause the next one.
     needs: [Calculate-Version, Publish]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
@@ -172,23 +174,27 @@ jobs:
           ref: main
           token: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
 
-      - name: Update version in api-only-transcriberj README
+      - name: Update version in api-only-transcriberj README and the repository README
         run: |
           sed -i -E "s/^:api-only-transcriberj-version: .*/:api-only-transcriberj-version: ${{ env.VERSION }}/" api-only-transcriberj/README.adoc
+          sed -i -E "s/^:api-only-transcriberj-version: .*/:api-only-transcriberj-version: ${{ env.VERSION }}/" README.adoc
           grep -Fx ":api-only-transcriberj-version: ${{ env.VERSION }}" api-only-transcriberj/README.adoc
+          grep -Fx ":api-only-transcriberj-version: ${{ env.VERSION }}" README.adoc
           git rev-parse --verify "refs/tags/api-only-transcriberj-v${{ env.VERSION }}"
 
       - name: Upload updated api-only-transcriberj README
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: api-only-transcriberj-readme-${{ env.VERSION }}
-          path: api-only-transcriberj/README.adoc
+          path: |
+            api-only-transcriberj/README.adoc
+            README.adoc
 
       - name: Commit and push updated api-only-transcriberj README
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add api-only-transcriberj/README.adoc
+          git add api-only-transcriberj/README.adoc README.adoc
           git diff --cached --quiet || git commit -m "chore(api-only-transcriberj): update README version to ${{ env.VERSION }} [skip ci]"
           git push
 

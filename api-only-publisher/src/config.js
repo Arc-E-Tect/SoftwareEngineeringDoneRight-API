@@ -36,7 +36,7 @@ const TARGET_KEYS = ["openapi", "asyncapi", "publish", "versionFile", "channels"
 const TARGET_KIND_KEYS = ["bundle", "aggregate", "info"];
 const PORTFOLIO_KEYS = ["openapi", "security", "location"];
 const PORTFOLIO_OPENAPI_KEYS = ["paths", "operationIds", "tags"];
-const VERSIONING_KEYS = ["tagFormat", "mainBranch"];
+const VERSIONING_KEYS = ["tagFormat", "baseBranch"];
 
 // What every portfolio setting is when apionly.yaml says nothing: safe for the
 // ordinary case (a gateway routing /<target>/** to each service), and named rather
@@ -206,6 +206,9 @@ function load(configPath) {
     }
 
     const versioning = parsed.versioning || {};
+    if (versioning && typeof versioning === "object" && "mainBranch" in versioning) {
+        throw new ConfigError("versioning.mainBranch was renamed to versioning.baseBranch: rename the key, its value stays the same");
+    }
     checkKeys(versioning, VERSIONING_KEYS, "versioning");
     if (versioning.tagFormat !== undefined) {
         const format = requireString(versioning.tagFormat, "versioning.tagFormat");
@@ -213,7 +216,7 @@ function load(configPath) {
             throw new ConfigError(`versioning.tagFormat must contain {target} and {version}, not ${JSON.stringify(format)}`);
         }
     }
-    if (versioning.mainBranch !== undefined) requireString(versioning.mainBranch, "versioning.mainBranch");
+    if (versioning.baseBranch !== undefined) requireString(versioning.baseBranch, "versioning.baseBranch");
 
     const channels = parsed.channels || {};
     const types = channelTypes(channels);
@@ -347,8 +350,8 @@ function load(configPath) {
         tagFormat() {
             return this.versioning.tagFormat || "{target}-v{version}";
         },
-        mainBranch() {
-            return this.versioning.mainBranch || "main";
+        baseBranch() {
+            return this.versioning.baseBranch || "main";
         },
         // Where pack and publish write archives, and split its parts, unless --out says
         // otherwise; relative to this configuration, as every other path here is.

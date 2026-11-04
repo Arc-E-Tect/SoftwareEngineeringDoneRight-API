@@ -23,6 +23,8 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Node-22.14%2B-339933?logo=node.js[Node 22.14+,link=https://nodejs.org]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
+Current release: *{api-only-publisher-version}*, as link:CHANGELOG.md[the changelog →] records it.
+
 [NOTE]
 .Where the links in this document go
 ====
@@ -385,6 +387,19 @@ Only `build` does this; `lint` does not, and no report file is written.
 [#versions]
 == Versions
 
+[WARNING]
+.You maintain the version files yourself
+====
+The Publisher never writes a version file.
+It does not raise a version when it builds, packs or publishes, and it does not work one out from commit messages the way semantic-release does.
+The version it publishes is whatever the target's version file says.
+It only writes that version into the built document's `info.version`.
+
+So when you change a target's fragments, raise the version in that target's version file yourself, in the same commit.
+The Publisher checks that you did: `check` and `publish` refuse a target that changed without a new version (<<version-guard,A changed target needs a new version §>>).
+A `pre-push` git hook runs the same check on your own machine, before anything leaves it (<<version-hook,Checking versions before every push §>>).
+====
+
 Every published target has a version of its own, and it is kept in the library, beside the fragments it describes.
 
 .specs/openapi/bundles/orders.bundle.properties
@@ -434,34 +449,131 @@ Both read only git: the target's release tags, its history, and the working tree
 |A version above the latest release; one below it is refused.
 
 |No release tags at all
-|Compared with the merge-base with the main branch, or with the ref `--since` names: a target changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
+|Compared with the merge-base with the base branch, or with the ref `--since` names: a target changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
 A target whose version file was not there yet is new, and passes.
 |===
 
 Release tags are named by `versioning.tagFormat`, `{target}-v{version}` by default: `orders-v2.1.0`.
 The Publisher never creates them: the pipeline that publishes does, after it has published, because a tool that pushes to git needs write access to the repository it builds from.
 The reference pipelines show the step, and the `gitlab-package` channel's `release: true` creates the tag with the release.
-The main branch is `versioning.mainBranch`, `main` by default; its remote-tracking branch, `origin/main`, is preferred, as that is what a CI checkout has.
+The base branch is `versioning.baseBranch`, `main` by default; its remote-tracking branch, `origin/<base branch>`, is preferred, as that is what a CI checkout has.
+Set it to the branch that holds the release you validate against, which need not be `main`.
+A library whose default branch is `pre-prod` cuts a release there and deploys it to staging, and later merges `pre-prod` into `main` only to record that the production deployment was approved.
+For that library the last reviewed versions live on `pre-prod`, so that is the branch to compare with:
+
+[source,yaml]
+----
+versioning:
+  baseBranch: pre-prod   # compared with origin/pre-prod, or pre-prod when there is no remote copy
+----
+
 
 A pre-release follows the same rules, by its full version:
 
-* Its version file need not change: `--pre-release rc.2` already makes a new version, so a target changed since the main branch passes with an unchanged file.
+* Its version file need not change: `--pre-release rc.2` already makes a new version, so a target changed since the base branch passes with an unchanged file.
 * A pre-release that was released before -- a tag `orders-v2.1.0-rc.1` -- is refused when the target changed since, as a release is.
 * A pre-release of a version already released is refused: `2.1.0-rc.1` sorts before `2.1.0`, so it can never be the next version.
 
 Where the guard cannot decide, it says so, and only `check` fails on it: `check` is the gate, while `publish` fails on a proven violation alone.
 Outside a git repository, `check` fails and `publish` warns that the versions were not checked.
-A target with no release tag, in a checkout that has no merge-base with the main branch -- a shallow clone, or no main branch at all -- is `undecided`: `check` fails naming it, and `publish` warns and publishes it; a target with a release tag is decided all the same.
+A target with no release tag, in a checkout that has no merge-base with the base branch -- a shallow clone, or no such branch at all -- is `undecided`: `check` fails naming it, and `publish` warns and publishes it; a target with a release tag is decided all the same.
 In CI, fetch the full history and the tags -- `actions/checkout` with `fetch-depth: 0`, or `GIT_DEPTH: 0` on GitLab -- so that nothing is left undecided.
-Without release tags, the check on the main branch itself compares the main branch with itself, so it is in the pull request that it catches a missing bump; the tags are what make it exact everywhere.
+Without release tags, the check on the base branch itself compares the base branch with itself, so it is in the pull request that it catches a missing bump; the tags are what make it exact everywhere.
 
-To catch it before a push, call `check` from whatever runs the repository's git hooks -- a `pre-push` hook, or a hook manager such as husky or lefthook:
+[#version-hook]
+=== Checking versions before every push
 
+The pipeline catches a missing version bump, but only after you have pushed.
+A git hook catches it before then.
+A hook is a script that git runs on your machine at a fixed moment.
+A `pre-push` hook runs when you type `git push`, and if it fails, git sends nothing.
+The steps below set one up so that it runs `check`.
+They need no hook manager and nothing outside git and the Publisher.
+
+. *Create the hook* as `.githooks/pre-push` in the repository, the one that holds `apionly.yaml`.
+The file has no extension.
+Pick the variant for the way the library runs the Publisher (<<installation,Installation §>>):
++
+.`.githooks/pre-push`, with the Publisher in `package.json`
 [source,sh]
 ----
 #!/bin/sh
+# Refuse the push when a target changed without a new version in its version file.
+# The branch versioning.baseBranch names in apionly.yaml: main unless it says otherwise.
+BASE_BRANCH=main
+# The check compares with origin/$BASE_BRANCH and the release tags, so bring them up to date first.
+git fetch --quiet --tags origin "$BASE_BRANCH" || echo "pre-push: could not fetch origin/$BASE_BRANCH; checking against what is here" >&2
 exec npx --no-install api-only-publisher check
 ----
++
+.`.githooks/pre-push`, with the Docker image
+[source,sh,subs="attributes+"]
+----
+#!/bin/sh
+# Refuse the push when a target changed without a new version in its version file.
+# The branch versioning.baseBranch names in apionly.yaml: main unless it says otherwise.
+BASE_BRANCH=main
+# The check compares with origin/$BASE_BRANCH and the release tags, so bring them up to date first.
+git fetch --quiet --tags origin "$BASE_BRANCH" || echo "pre-push: could not fetch origin/$BASE_BRANCH; checking against what is here" >&2
+exec docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" \
+  arcetect/api-only-publisher:{api-only-publisher-version} check
+----
++
+Set `BASE_BRANCH` to the branch `versioning.baseBranch` names, `pre-prod` for the library above.
+The hook only fetches that branch; `check` reads which branch to compare with from `apionly.yaml`, so the two must name the same one.
++
+Git runs a hook from the top of the repository.
+When `apionly.yaml` is in a subdirectory, add `-C <that directory>` after `check`.
+
+. *Make it executable*, and commit it, so that everyone who clones the repository gets it:
++
+[source,sh]
+----
+chmod +x .githooks/pre-push
+git add .githooks/pre-push
+git commit -m "chore: check API versions before every push"
+----
++
+On Windows, `chmod` has no effect.
+Use `git update-index --chmod=+x .githooks/pre-push` before the commit instead.
+Git for Windows runs the hook with its own `sh`, so the script works there as it is.
+
+. *Tell git to use the directory.*
+Git only looks in `.git/hooks` by default, and that directory is never committed.
+Every clone has to run this once:
++
+[source,sh]
+----
+git config core.hooksPath .githooks
+----
++
+Put this line in the library's own README, or in its setup script, so nobody has to remember it.
+A hook manager such as husky or lefthook does this step for you when its dependencies are installed.
+If you already use one, call the same `check` command from its `pre-push` entry instead.
+
+. *Try it.*
+Change a fragment of a published target and commit it without changing its version file.
+`git push` should now stop, and the message names the target and its version file:
++
+[source,console]
+----
+$ git push
+orders             2.1.0          VIOLATION  orders changed since the merge-base with main (3f2a91c0d4e1), but its version is still 2.1.0: raise it in specs/openapi/bundles/orders.bundle.properties
+Error: 1 target(s) changed without a new version:
+  orders 2.1.0: orders changed since the merge-base with main (3f2a91c0d4e1), but its version is still 2.1.0: raise it in specs/openapi/bundles/orders.bundle.properties
+A published version is never replaced: a changed specification needs a changed version.
+error: failed to push some refs to 'origin'
+----
++
+Raise the version, commit, and push again.
+
+Some things to know about the hook:
+
+* `check` looks at the working tree, and that includes changes you have not committed yet.
+Commit or stash them before you push, so it checks what you are actually pushing.
+* It needs neither credentials nor a network beyond the `git fetch`, and it builds nothing, so it takes seconds.
+* `git push --no-verify` skips the hook.
+The pipeline still runs the same check, so skipping it only means you find out later.
 
 [#closure]
 == Independent versioning, and the dependency closure
@@ -1139,7 +1251,7 @@ portfolio:                # absent is fine; an aggregate builds on documented de
 
 versioning:               # absent is fine; see A changed target needs a new version §
   tagFormat: "{target}-v{version}"  # the release tags the pipeline creates; the default
-  mainBranch: main        # compared with when a target has no release tag; the default
+  baseBranch: main        # compared with when a target has no release tag; the default
 ----
 
 `targets` is the single source of truth for what gets built.
