@@ -6,7 +6,7 @@
 :source-highlighter: rouge
 // The released version of this component: its snippets use it. The release
 // workflow updates it; do not change it by hand.
-:api-only-publisher-version: 0.18.3
+:api-only-publisher-version: 0.18.4
 
 [NOTE]
 .About this documentation
@@ -1288,6 +1288,12 @@ They are starting points, not boundaries: the situations describe where each sha
 |Several
 |No
 |Parties that each use some of the backend services, with technologies of their own.
+
+|<<recipe-separate-homes,Separate homes §>>
+|Several
+|Several, of one type
+|No
+|One library whose contracts are each published to a GitLab project or GitHub repository of their own.
 |===
 
 [#recipes-two-facts]
@@ -1584,6 +1590,89 @@ In an eco-system, give every target a list: a new target then goes nowhere until
 * `--channel` publishes to one channel alone, say after its registry was unreachable: `npm run apionly -- publish --channel npm` sends `catalog` and `orders`, says that it skipped `customers` and `payments`, and fails if it would publish nothing at all.
 * The routing is checked when `apionly.yaml` is read: a target that lists a channel `apionly.yaml` does not configure is refused, naming both, before anything is built.
 * A third party that needs a registry of a type another party already uses -- a second Maven repository -- gets a channel of its own, with `type: maven` (<<recipes-two-facts,the two facts §>>).
+* Targets that each go to a project or repository of their own, all of one type, are the <<recipe-separate-homes,separate homes §>> recipe.
+
+[#recipe-separate-homes]
+=== Separate homes: several targets, each published to a project of its own
+
+*When.*
+One library holds the contracts of several products, and each product has a GitLab project or GitHub repository of its own, which is where its consumers look for it.
+The `book` contract belongs in the `Book` project and the `author` contract in the `Author` project, on the same server, and neither should turn up in the other.
+
+Each destination is a channel of its own: two channels of one type, with names of their own and `type` (<<recipes-two-facts,the two facts §>>).
+Each target lists the one channel it is published to.
+
+.apionly.yaml (excerpt), on GitLab
+[source,yaml]
+----
+channels:
+  book:
+    type: gitlab-package
+    url: https://gitlab.example.com/api/v4
+    project: example/Book             # an ID or a path
+    tokenEnv: BOOK_DEPLOY_TOKEN       # a deploy token of the Book project
+    tokenType: deploy
+  author:
+    type: gitlab-package
+    url: https://gitlab.example.com/api/v4
+    project: example/Author
+    tokenEnv: AUTHOR_DEPLOY_TOKEN     # a deploy token of the Author project
+    tokenType: deploy
+
+targets:
+  book:
+    channels: [book]
+    openapi:
+      bundle: bundles/book_api.yaml
+  author:
+    channels: [author]
+    openapi:
+      bundle: bundles/author_api.yaml
+----
+
+.apionly.yaml (excerpt), on GitHub
+[source,yaml]
+----
+channels:
+  book:
+    type: github-release
+    repository: example/Book
+  author:
+    type: github-release
+    repository: example/Author
+
+targets:
+  book:
+    channels: [book]
+    openapi:
+      bundle: bundles/book_api.yaml
+  author:
+    channels: [author]
+    openapi:
+      bundle: bundles/author_api.yaml
+----
+
+[source,console]
+----
+npm run apionly -- build
+npm run apionly -- publish
+----
+
+One run publishes the generic package `book` in the `Book` project and `author` in the `Author` project, or the releases `book-v<version>` in `example/Book` and `author-v<version>` in `example/Author`.
+
+*Worth knowing.*
+
+* Give every target a `channels` list.
+A target without one is published to every configured channel, so it would turn up in both projects.
+* On GitLab, the job token and `CI_PROJECT_ID` reach only the project the pipeline runs in, so publishing into other projects takes a deploy token of each, with `write_package_registry` and `read_package_registry`, in a masked CI/CD variable that the channel's `tokenEnv` names (link:../docs/guides/publishing-to-gitlab/overview.adoc#tokens[Publishing to GitLab: which token →]).
+A channel for the pipeline's own project needs none of `url`, `project` and the token settings.
+* A deploy token cannot create a release, so `release: true` on a channel with `tokenType: deploy` is refused; such a channel needs a project access token with the `api` scope instead (<<gitlab-package,The `gitlab-package` channel §>>).
+* On GitHub, a `github-release` channel has no `tokenEnv`: it publishes with the GitHub CLI's own credential, `GH_TOKEN` for instance, the same for every channel.
+That one credential has to be able to write releases in both repositories.
+A workflow's own `GITHUB_TOKEN` reaches only the repository it runs in, so publishing to two other repositories takes a fine-grained token or a GitHub App token that covers both (https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/111[issue #111 ↗] asks for a credential per channel).
+* On GitHub, a release whose tag does not exist yet is tagged on the head of the destination repository's default branch, not on the commit that was published (https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/112[issue #112 ↗]).
+* `--channel` publishes one destination on its own: `npm run apionly -- publish --channel author` sends `author`, and says that it skipped `book`.
+* Products that also need other channels list those too: `channels: [book, maven]` publishes `book` to its project and to the Maven repository.
 
 [#behaviour]
 == Behaviour worth knowing about

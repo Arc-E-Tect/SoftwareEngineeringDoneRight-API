@@ -7,6 +7,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
+const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
 
@@ -206,6 +207,74 @@ test("an unconfigured --channel named after a type still works with no settings,
     });
     await assert.rejects(main(["publish", "--channel", "partner-z", "-C", dir, "-q"]),
         /--channel 'partner-z' is not a configured channel; apionly\.yaml configures file/);
+});
+
+// ------------------------------------------------------------------ one destination per target
+
+// The "own destinations" recipe: two channels of one remote type, each with a destination
+// and a credential of its own, and each target routed to one of them.
+const OWN_DESTINATIONS = TARGETS
+    .replace("  orders:\n", "  orders:\n    channels: [orders-project]\n")
+    .replace("  payments:\n", "  payments:\n    channels: [payments-project]\n");
+
+test("two gitlab-package channels publish each target to its own project, each with its own token", async () => {
+    const requests = [];
+    const server = http.createServer((request, response) => {
+        request.resume();
+        request.on("end", () => {
+            requests.push({ method: request.method, url: request.url, token: request.headers["deploy-token"] });
+            response.writeHead(request.method === "PUT" ? 201 : 404, { "Content-Type": "application/json" });
+            response.end("{}");
+        });
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const api = `http://127.0.0.1:${server.address().port}/api/v4`;
+    try {
+        const dir = library("channels:\n" +
+            `  orders-project: { type: gitlab-package, url: ${api}, project: shop/orders, tokenEnv: ORDERS_TOKEN, tokenType: deploy }\n` +
+            `  payments-project: { type: gitlab-package, url: ${api}, project: shop/payments, tokenEnv: PAYMENTS_TOKEN, tokenType: deploy }\n`,
+            OWN_DESTINATIONS);
+        await withEnv({ ORDERS_TOKEN: "orders-secret", PAYMENTS_TOKEN: "payments-secret", GITLAB_TOKEN: undefined,
+            CI_JOB_TOKEN: undefined, CI_API_V4_URL: undefined, CI_PROJECT_ID: undefined, API_ONLY_PUBLISHER_REMOTE: undefined }, async () => {
+            assert.strictEqual((await quietly(["publish", "-C", dir, "-q"])).code, 0);
+        });
+        const puts = requests.filter((r) => r.method === "PUT").map((r) => `${r.url} ${r.token}`).sort();
+        assert.deepStrictEqual(puts, [
+            "/api/v4/projects/shop%2Forders/packages/generic/orders/1.0.0/manifest.json orders-secret",
+            "/api/v4/projects/shop%2Forders/packages/generic/orders/1.0.0/orders-1.0.0.tgz orders-secret",
+            "/api/v4/projects/shop%2Fpayments/packages/generic/payments/1.0.0/manifest.json payments-secret",
+            "/api/v4/projects/shop%2Fpayments/packages/generic/payments/1.0.0/payments-1.0.0.tgz payments-secret",
+        ]);
+    } finally {
+        server.close();
+    }
+});
+
+test("two github-release channels publish each target to its own repository", async () => {
+    // A stand-in gh on PATH: no release exists yet, and every other call succeeds.
+    const bin = fs.mkdtempSync(path.join(os.tmpdir(), "aop-gh-"));
+    const log = path.join(bin, "calls.log");
+    fs.writeFileSync(path.join(bin, "gh"), "#!/usr/bin/env node\nconst args = process.argv.slice(2);\n" +
+        "require(\"fs\").appendFileSync(process.env.STANDIN_LOG, \"gh \" + args.join(\" \") + \"\\n\");\n" +
+        "process.exit(args[1] === \"view\" && !args.includes(\"--json\") ? 1 : 0);\n");
+    fs.chmodSync(path.join(bin, "gh"), 0o755);
+    fs.writeFileSync(log, "");
+    const dir = library("channels:\n" +
+        "  orders-project: { type: github-release, repository: shop/orders }\n" +
+        "  payments-project: { type: github-release, repository: shop/payments }\n",
+        OWN_DESTINATIONS);
+    await withEnv({ PATH: `${bin}${path.delimiter}${process.env.PATH}`, STANDIN_LOG: log, API_ONLY_PUBLISHER_REMOTE: undefined }, async () => {
+        assert.strictEqual((await quietly(["publish", "-C", dir, "-q"])).code, 0);
+    });
+    const calls = fs.readFileSync(log, "utf8").trim().split("\n");
+    const writes = calls.filter((c) => / release (create|upload) /.test(c))
+        .map((c) => c.replace(/ --(title|notes) .*?(?= --|$)/g, "").replace(/ \S*\/(\S+\.tgz)/, " $1"));
+    assert.deepStrictEqual(writes, [
+        "gh release create orders-v1.0.0 --repo shop/orders",
+        "gh release upload orders-v1.0.0 orders-1.0.0.tgz --repo shop/orders",
+        "gh release create payments-v1.0.0 --repo shop/payments",
+        "gh release upload payments-v1.0.0 payments-1.0.0.tgz --repo shop/payments",
+    ], calls.join("\n"));
 });
 
 // ------------------------------------------------------------------ targets

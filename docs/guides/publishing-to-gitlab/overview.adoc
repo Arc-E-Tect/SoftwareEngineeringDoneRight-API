@@ -141,6 +141,7 @@ channels:
 ----
 
 The channel reads every file back before uploading it, so the token needs `read_package_registry` as well as `write_package_registry`.
+Several targets, each published to a project of its own, are several such channels, each with its own `project` and token: link:../../../api-only-publisher/README.adoc#recipe-separate-homes[the separate homes recipe →] shows the configuration.
 A variable that is also *protected* is available only to pipelines on protected branches and tags, so protect the tags the pipeline runs on.
 
 A personal access token is the last resort.

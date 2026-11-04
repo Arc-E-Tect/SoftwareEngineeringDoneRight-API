@@ -1,3 +1,20 @@
+## [0.18.4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.3...api-only-publisher-v0.18.4) (2026-11-04)
+
+
+### ✅ Tests
+
+* **api-only-publisher:** pin SOURCE_DATE_EPOCH so a re-publish outside git is identical ([#110](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/110)) ([509ac7c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/509ac7cc9c6ecfc6ae47d68a4b6762243c313d7b)), closes [#110](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/110)
+
+
+### 📝 Documentation
+
+* **api-only-publisher:** add the separate homes recipe ([#113](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/113)) ([a6f66d8](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a6f66d8859814e13c6239f7d94da741951bf3ec0)), closes [#113](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/113) [#111](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/111) [#112](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/112)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.18.3 [skip ci] ([4da18a5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/4da18a56bb696ce8713a8b5f7e43fbc66c655064))
+
 ## [0.18.3](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.2...api-only-publisher-v0.18.3) (2026-11-01)
 
 
