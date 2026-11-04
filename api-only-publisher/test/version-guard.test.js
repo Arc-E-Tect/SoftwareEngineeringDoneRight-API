@@ -134,8 +134,8 @@ test("--since names the ref to compare against instead of the merge-base", () =>
     assert.strictEqual(verdicts(dir, { since: "HEAD~1" }).alpha.verdict, "violation", "changed again since HEAD~1, still 1.1.0");
 });
 
-test("versioning.mainBranch names the branch the merge-base is taken with, and origin's copy is preferred", () => {
-    const dir = repository("versioning:\n  mainBranch: trunk\n");
+test("versioning.baseBranch names the branch the merge-base is taken with, and origin's copy is preferred", () => {
+    const dir = repository("versioning:\n  baseBranch: trunk\n");
     git(dir, "branch", "-q", "trunk", "main");
     commit(dir, CHANGE_A);
     assert.match(verdicts(dir).alpha.reason, /merge-base with trunk/);
@@ -146,7 +146,7 @@ test("versioning.mainBranch names the branch the merge-base is taken with, and o
 
 test("without a release tag or a merge-base, a target is undecided, saying what to fetch; a tagged one is still decided", () => {
     // A shallow checkout of a tag, as a release pipeline makes, has no main branch to compare with.
-    const dir = repository("versioning:\n  mainBranch: nowhere\n");
+    const dir = repository("versioning:\n  baseBranch: nowhere\n");
     git(dir, "tag", "beta-v2.0.0");
     const result = verdicts(dir);
     assert.strictEqual(result.alpha.verdict, "undecided");

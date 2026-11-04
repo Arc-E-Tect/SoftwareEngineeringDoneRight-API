@@ -202,3 +202,10 @@ test("a bundle path can be derived under another staging root", () => {
     assert.strictEqual(config.bundlePath("alpha", "openapi", "/elsewhere"), path.join("/elsewhere", "openapi", "bundles/alpha.yaml"));
     assert.strictEqual(config.bundlePath("alpha", "openapi"), path.join(config.stagingDir("openapi"), "bundles/alpha.yaml"));
 });
+
+test("versioning.baseBranch is the branch to compare with, main by default; the old mainBranch is refused, naming its new name", () => {
+    assert.strictEqual(load(write(MINIMAL)).baseBranch(), "main");
+    assert.strictEqual(load(write(MINIMAL + "versioning:\n  baseBranch: pre-prod\n")).baseBranch(), "pre-prod");
+    assert.throws(() => load(write(MINIMAL + "versioning:\n  mainBranch: pre-prod\n")),
+        (e) => e instanceof ConfigError && /versioning\.mainBranch was renamed to versioning\.baseBranch/.test(e.message));
+});

@@ -62,13 +62,13 @@ function fallbackBaseline(config, repoRoot, since) {
         if (!commit) throw new GuardError(`--since ${since} is not a commit in this repository`);
         return { ref: commit, label: `${since} (${commit.slice(0, 12)})` };
     }
-    const branch = config.mainBranch();
+    const branch = config.baseBranch();
     for (const candidate of [`origin/${branch}`, branch]) {
         if (!tryGit(["rev-parse", "--verify", "--quiet", `${candidate}^{commit}`], repoRoot)) continue;
         const base = tryGit(["merge-base", "HEAD", candidate], repoRoot);
         if (base) return { ref: base, label: `the merge-base with ${branch} (${base.slice(0, 12)})` };
     }
-    return { missing: `no merge-base with ${branch}, the branch versioning.mainBranch names, to compare a target without a release tag with. ` +
+    return { missing: `no merge-base with ${branch}, the branch versioning.baseBranch names, to compare a target without a release tag with. ` +
         "In CI, fetch the full history and the branch (actions/checkout with fetch-depth: 0, or GIT_DEPTH: 0 on GitLab), " +
         "or name the ref to compare with: --since <ref>." };
 }

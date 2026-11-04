@@ -80,7 +80,8 @@ publish:
     GIT_DEPTH: "0"
   script:
     # The default branch too, which a tag's pipeline does not fetch: publish compares
-    # a target without a release tag with it (versioning.mainBranch names it).
+    # a target without a release tag with it (versioning.baseBranch names it).
+    # When baseBranch is not the default branch, fetch that branch here instead.
     - git fetch --quiet origin "+refs/heads/$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH"
     - set -- $(for target in $TARGETS; do printf -- '--target %s ' "$target"; done)
     - api-only-publisher build "$@"

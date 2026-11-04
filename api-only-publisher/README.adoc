@@ -447,14 +447,14 @@ Both read only git: the target's release tags, its history, and the working tree
 |A version above the latest release; one below it is refused.
 
 |No release tags at all
-|Compared with the merge-base with the main branch, or with the ref `--since` names: a target changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
+|Compared with the merge-base with the base branch, or with the ref `--since` names: a target changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
 A target whose version file was not there yet is new, and passes.
 |===
 
 Release tags are named by `versioning.tagFormat`, `{target}-v{version}` by default: `orders-v2.1.0`.
 The Publisher never creates them: the pipeline that publishes does, after it has published, because a tool that pushes to git needs write access to the repository it builds from.
 The reference pipelines show the step, and the `gitlab-package` channel's `release: true` creates the tag with the release.
-The main branch is `versioning.mainBranch`, `main` by default; its remote-tracking branch, `origin/main`, is preferred, as that is what a CI checkout has.
+The base branch is `versioning.baseBranch`, `main` by default; its remote-tracking branch, `origin/<base branch>`, is preferred, as that is what a CI checkout has.
 Set it to the branch that holds the release you validate against, which need not be `main`.
 A library whose default branch is `pre-prod` cuts a release there and deploys it to staging, and later merges `pre-prod` into `main` only to record that the production deployment was approved.
 For that library the last reviewed versions live on `pre-prod`, so that is the branch to compare with:
@@ -462,21 +462,21 @@ For that library the last reviewed versions live on `pre-prod`, so that is the b
 [source,yaml]
 ----
 versioning:
-  mainBranch: pre-prod   # compared with origin/pre-prod, or pre-prod when there is no remote copy
+  baseBranch: pre-prod   # compared with origin/pre-prod, or pre-prod when there is no remote copy
 ----
 
 
 A pre-release follows the same rules, by its full version:
 
-* Its version file need not change: `--pre-release rc.2` already makes a new version, so a target changed since the main branch passes with an unchanged file.
+* Its version file need not change: `--pre-release rc.2` already makes a new version, so a target changed since the base branch passes with an unchanged file.
 * A pre-release that was released before -- a tag `orders-v2.1.0-rc.1` -- is refused when the target changed since, as a release is.
 * A pre-release of a version already released is refused: `2.1.0-rc.1` sorts before `2.1.0`, so it can never be the next version.
 
 Where the guard cannot decide, it says so, and only `check` fails on it: `check` is the gate, while `publish` fails on a proven violation alone.
 Outside a git repository, `check` fails and `publish` warns that the versions were not checked.
-A target with no release tag, in a checkout that has no merge-base with the main branch -- a shallow clone, or no main branch at all -- is `undecided`: `check` fails naming it, and `publish` warns and publishes it; a target with a release tag is decided all the same.
+A target with no release tag, in a checkout that has no merge-base with the base branch -- a shallow clone, or no such branch at all -- is `undecided`: `check` fails naming it, and `publish` warns and publishes it; a target with a release tag is decided all the same.
 In CI, fetch the full history and the tags -- `actions/checkout` with `fetch-depth: 0`, or `GIT_DEPTH: 0` on GitLab -- so that nothing is left undecided.
-Without release tags, the check on the main branch itself compares the main branch with itself, so it is in the pull request that it catches a missing bump; the tags are what make it exact everywhere.
+Without release tags, the check on the base branch itself compares the base branch with itself, so it is in the pull request that it catches a missing bump; the tags are what make it exact everywhere.
 
 [#version-hook]
 === Checking versions before every push
@@ -497,7 +497,7 @@ Pick the variant for the way the library runs the Publisher (<<installation,Inst
 ----
 #!/bin/sh
 # Refuse the push when a target changed without a new version in its version file.
-# The branch versioning.mainBranch names in apionly.yaml: main unless it says otherwise.
+# The branch versioning.baseBranch names in apionly.yaml: main unless it says otherwise.
 BASE_BRANCH=main
 # The check compares with origin/$BASE_BRANCH and the release tags, so bring them up to date first.
 git fetch --quiet --tags origin "$BASE_BRANCH" || echo "pre-push: could not fetch origin/$BASE_BRANCH; checking against what is here" >&2
@@ -509,7 +509,7 @@ exec npx --no-install api-only-publisher check
 ----
 #!/bin/sh
 # Refuse the push when a target changed without a new version in its version file.
-# The branch versioning.mainBranch names in apionly.yaml: main unless it says otherwise.
+# The branch versioning.baseBranch names in apionly.yaml: main unless it says otherwise.
 BASE_BRANCH=main
 # The check compares with origin/$BASE_BRANCH and the release tags, so bring them up to date first.
 git fetch --quiet --tags origin "$BASE_BRANCH" || echo "pre-push: could not fetch origin/$BASE_BRANCH; checking against what is here" >&2
@@ -517,7 +517,7 @@ exec docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" \
   arcetect/api-only-publisher:{api-only-publisher-version} check
 ----
 +
-Set `BASE_BRANCH` to the branch `versioning.mainBranch` names, `pre-prod` for the library above.
+Set `BASE_BRANCH` to the branch `versioning.baseBranch` names, `pre-prod` for the library above.
 The hook only fetches that branch; `check` reads which branch to compare with from `apionly.yaml`, so the two must name the same one.
 +
 Git runs a hook from the top of the repository.
@@ -1249,7 +1249,7 @@ portfolio:                # absent is fine; an aggregate builds on documented de
 
 versioning:               # absent is fine; see A changed target needs a new version §
   tagFormat: "{target}-v{version}"  # the release tags the pipeline creates; the default
-  mainBranch: main        # compared with when a target has no release tag; the default
+  baseBranch: main        # compared with when a target has no release tag; the default
 ----
 
 `targets` is the single source of truth for what gets built.
