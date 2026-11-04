@@ -22,6 +22,8 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Java-21%2B-blue[Java 21+,link=https://adoptium.net]
 image:https://img.shields.io/badge/Gradle-9.7-02303A?logo=gradle[Gradle 9.7,link=https://gradle.org]
 
+Current release: *{api-only-transcriberj-version}*, as link:CHANGELOG.md[the changelog →] records it.
+
 [NOTE]
 .Where the links in this document go
 ====

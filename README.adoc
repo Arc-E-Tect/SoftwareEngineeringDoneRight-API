@@ -4,10 +4,16 @@
 :toclevels: 2
 :icons: font
 :source-highlighter: rouge
+// The released version of each component. Each component's release workflow
+// updates its own line; do not change them by hand.
+:api-only-publisher-version: 0.18.4
+:api-only-subscriber-version: 0.4.5
+:api-only-transcriberj-version: 0.17.5
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher?label=publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
 image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-subscriber?label=subscriber[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber]
+image:https://img.shields.io/gradle-plugin-portal/v/com.arc-e-tect.api-only-transcriberj?label=transcriberj[Gradle Plugin Portal,link=https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
 [NOTE]
@@ -23,21 +29,24 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 
 Tooling for treating an API description as a published artifact rather than a file someone copies around.
 
-[cols="1,3", options="header"]
+[cols="2,1,5", options="header"]
 |===
-|Component |What it is
+|Component |Current version |What it is
 
 |link:api-only-publisher/README.adoc[API-Only Publisher →]
+|link:api-only-publisher/CHANGELOG.md[`{api-only-publisher-version}` →]
 |A Node.js command-line tool.
 Builds one self-contained, linted document per contract from a library of reusable fragments, stamps it with that contract's own version, and publishes it: to a directory, a Maven repository, npm, or a GitHub release.
 Published as https://www.npmjs.com/package/@arc-e-tect/api-only-publisher[`@arc-e-tect/api-only-publisher` ↗], and as a sealed, signed Docker image for vetted CI pipelines, https://hub.docker.com/r/arcetect/api-only-publisher[`arcetect/api-only-publisher` ↗], also at `ghcr.io/arc-e-tect/api-only-publisher`: link:api-only-publisher/README.adoc#docker[The Docker image →].
 
 |link:api-only-subscriber/README.adoc[API-Only Subscriber →]
+|link:api-only-subscriber/CHANGELOG.md[`{api-only-subscriber-version}` →]
 |A Gradle plugin.
 Fetches a published contract into a build at the version the build declares, verifies it against a committed lockfile, and fails when the contract has drifted.
 Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-subscriber[Gradle Plugin Portal ↗].
 
 |link:api-only-transcriberj/README.adoc[API-Only TranscriberJ →]
+|link:api-only-transcriberj/CHANGELOG.md[`{api-only-transcriberj-version}` →]
 |A Gradle plugin, building on the Subscriber.
 Generates a Java class tree from a subscribed contract: bodies, field descriptions and constants for contract tests and stubs, with room for dialects as separate emitter libraries: Spring REST Docs descriptors, and Microcks conformance tests for a contract's events.
 Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-transcriberj[Gradle Plugin Portal ↗].

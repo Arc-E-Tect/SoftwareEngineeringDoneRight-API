@@ -23,6 +23,8 @@ image:https://img.shields.io/github/v/release/Arc-E-Tect/SoftwareEngineeringDone
 image:https://img.shields.io/badge/Node-22.14%2B-339933?logo=node.js[Node 22.14+,link=https://nodejs.org]
 image:https://img.shields.io/badge/License-MIT-blue[MIT,link=LICENSE]
 
+Current release: *{api-only-publisher-version}*, as link:CHANGELOG.md[the changelog →] records it.
+
 [NOTE]
 .Where the links in this document go
 ====
