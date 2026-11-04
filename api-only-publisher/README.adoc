@@ -952,7 +952,7 @@ It publishes each target to a GitLab project's Generic Package Registry, on gitl
 [source,yaml]
 ----
 channels:
-  gitlab-package:                          # in a GitLab CI job, nothing below is needed
+  gitlab-package:                          # in a GitLab CI job, nothing below is needed, unless it inherits a GITLAB_TOKEN
     # url: https://gitlab.example.com/api/v4  # default: $CI_API_V4_URL, else https://gitlab.com/api/v4
     # project: group/subgroup/api-library     # an ID or a path; default: $CI_PROJECT_ID
     # tokenEnv: GITLAB_TOKEN                  # default; when unset, $CI_JOB_TOKEN is used
@@ -985,6 +985,10 @@ link:pipelines/gitlab-ci.yml[The reference pipeline →] publishes this way, fro
 |===
 
 Without either, nothing is sent to GitLab, and `publish` warns, naming both (<<channel-problems,When a channel cannot take a version §>>).
+
+*A `GITLAB_TOKEN` the job inherits wins over `CI_JOB_TOKEN`*, whether it comes from the project, a parent group or the instance, and is sent as a personal or project access token.
+When it is expired or lacks the `api` scope, the read-back fails with `401 Unauthorized` or `403 insufficient_scope`, although the job token itself would have worked.
+Set `tokenEnv: CI_JOB_TOKEN` and `tokenType: job` on the channel to use the job token regardless (link:../docs/guides/publishing-to-gitlab/overview.adoc#token-shadowed[When the job fails with 401 or 403 →]).
 A deploy token is the least privilege for packages alone: it reaches one project's package registry and nothing else.
 
 *The same version again.*
