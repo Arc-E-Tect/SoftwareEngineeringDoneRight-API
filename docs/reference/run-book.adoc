@@ -20,29 +20,64 @@ This run-book says how to invoke both tools in normal operation, once a setup fr
 It describes the Publisher and the Subscriber as they are on this repository's main branch; the badges at the top of link:../../api-only-publisher/README.adoc[the Publisher's README →] and link:../../api-only-subscriber/README.adoc[the Subscriber's README →] show each one's latest release.
 link:how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains the mechanism behind every step.
 
-[#roles]
-== Who does what
+Two tools are involved, and every step below names the one it uses:
 
 [cols="1,3", options="header"]
 |===
-|Role |Does
+|Tool |What it is, and how you run it
+
+|*Publisher*
+|The API-Only Publisher, a Node.js command-line tool on the producer's side.
+It builds, lints and publishes contracts from the fragments in a specification library.
+You run it as `npm run apionly -- <command>`, in the directory that holds `apionly.yaml`.
+
+|*Subscriber*
+|The API-Only Subscriber, a Gradle plugin on the side of a project that implements or calls a contract.
+It fetches a published contract, verifies it, and records it in `apionly.lock`.
+You configure it in `build.gradle`, in the `apiOnlySubscriber { }` block, and run it through Gradle: `./gradlew <task>`.
+|===
+
+[NOTE]
+.The `build.gradle` snippets use the Groovy DSL
+====
+Every Subscriber snippet here is Groovy, for `build.gradle`.
+In `build.gradle.kts` the blocks, property names and structure stay the same; what changes is the Kotlin syntax around them:
+
+* strings take `"`, never `'`: `subscribe("orders")`, `type = "file"`;
+* a plugin is `id("com.arc-e-tect.api-only-subscriber") version "<version>"`, and `java` stands without `id`;
+* a credentials type is a class reference: `credentials(PasswordCredentials::class)`.
+
+link:../../api-only-subscriber/README.adoc#configuration[The Subscriber's README →] shows every snippet in both DSLs.
+====
+
+[#roles]
+== Who does what
+
+[cols="2,1,4", options="header"]
+|===
+|Role |Tool |Does
 
 |Contract author
-|Changes fragments, raises the contract's version, and runs the Publisher's `build` and `lint` locally.
+|Publisher
+|Changes fragments, raises the contract's version in its version file by hand, and runs `build` and `lint` locally.
 
 |Implementer or consumer
+|Subscriber
 |Declares the contract version a project builds against, runs `./gradlew check`, and commits `apionly.lock`.
 
 |The build
+|Both
 |In provider and client use cases 1 and 2, and the combined use case, runs the Publisher and the Subscriber in one Gradle build.
 
 |The release job
+|Publisher
 |In provider use case 3, publishes every contract whose version is new, and tags it.
 |===
 
 [#commands]
 == The commands you run
 
+[#publisher-commands]
 === Publisher
 
 Run in the directory that holds `apionly.yaml` and the Publisher's `package.json`, always through the npm script.
@@ -87,15 +122,18 @@ Run in the directory that holds `apionly.yaml` and the Publisher's `package.json
 
 Never run `npx api-only-publisher`: that unscoped name is not this package.
 
-=== Gradle
+[#subscriber-commands]
+=== Subscriber
+
+Run in the Gradle project that applies the Subscriber.
 
 [cols="2,3", options="header"]
 |===
 |Task |What it does
 
 |`./gradlew check`
-|In provider and client use cases 1 and 2, and the combined use case: builds, publishes and lints the contracts, fetches and verifies them, and runs the tests.
-In provider use case 4, and client use cases 3 and 4: fetches, verifies and tests.
+|In provider and client use cases 1 and 2, and the combined use case: the build runs the Publisher to build, publish and lint the contracts, then the Subscriber fetches and verifies them, and the tests run.
+In provider use case 4, and client use cases 3 and 4: the Subscriber fetches and verifies, and the tests run; the Publisher is not involved.
 
 |`./gradlew fetchApiSpec`
 |Fetches every subscribed contract, and updates `apionly.lock` when a version changed.
@@ -107,62 +145,138 @@ In provider use case 4, and client use cases 3 and 4: fetches, verifies and test
 |After upgrading the Subscriber: adds new defaulted properties to the `apiOnlySubscriber { }` block, keeping `build.gradle.bak`.
 |===
 
+The Subscriber does nothing until `build.gradle` applies it and subscribes to a contract:
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'java'
+    id 'com.arc-e-tect.api-only-subscriber' version '<version>'   // <1>
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'file'                                              // <2>
+        directory = "$rootDir/contracts/build/publish"
+    }
+    subscribe('orders')                                            // <3>
+}
+----
+<1> The Subscriber's current release is on the badge at the top of link:../../api-only-subscriber/README.adoc[its README →].
+<2> Where the Publisher published the contract: here the `file` channel of a library in `contracts/`, in the same repository; `type = 'maven'` with a `groupId` for a Maven repository, as <<ci,What CI runs §>> shows.
+<3> The contract this project implements, at the version `apiContractVersion` in `gradle.properties` declares.
+
 [#procedures]
 == Routine procedures
 
 [#changing-a-contract]
 === Changing a contract
 
-. Edit the fragments.
-. Raise `version` in the contract's `<target>.bundle.properties`: major for a breaking change, minor for an additive one, patch for anything else.
-. In provider use cases 1 and 2, raise `apiContractVersion` in the implementing project's `gradle.properties` to the same version, and run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
+. *Publisher:* edit the fragments.
+. *Publisher:* raise `version` in the contract's `<target>.bundle.properties` yourself: major for a breaking change, minor for an additive one, patch for anything else.
+The Publisher never raises it; `check` and `publish` only refuse a changed contract whose version did not move.
+. *Subscriber:* in provider use cases 1 and 2, raise `apiContractVersion` in the implementing project's `gradle.properties` to the same version, and run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
++
+.gradle.properties
+[source,properties]
+----
+apiContractVersion=2.2.0
+----
 . Commit the fragments, the version changes and the updated `apionly.lock` together.
 
-In provider use case 3, the pull request changes the fragments and the version file; consumers adopt the release afterwards, as in <<adopting-a-version,Taking a new version §>>.
+In provider use case 3, the pull request changes the fragments and the version file, which is Publisher work only; consumers adopt the release afterwards with the Subscriber, as in <<adopting-a-version,Taking a new version §>>.
 
 [#changing-a-shared-fragment]
 === Changing a shared fragment
 
 A shared fragment changes every contract that reaches it.
 
-. Edit the fragment.
-. List the contracts it reaches: `npm run apionly -- changed --since HEAD --quiet`.
-. Raise the version of each of those contracts, and, in provider use cases 1 and 2, the `apiContractVersion` of each implementing project.
-. Run `./gradlew check`, or the release check in provider use case 3, and commit everything together.
+. *Publisher:* edit the fragment.
+. *Publisher:* list the contracts it reaches: `npm run apionly -- changed --since HEAD --quiet`.
+. *Publisher:* raise the version file of each of those contracts.
+. *Subscriber:* in provider use cases 1 and 2, raise the `apiContractVersion` of each implementing project to match.
+. Run `./gradlew check`, or the Publisher's release check in provider use case 3, and commit everything together.
 
 [#adding-a-contract]
 === Adding a contract
 
-. Add a bundle root and its `<target>.bundle.properties` to the library.
-. Add the target to `targets:` in `apionly.yaml`.
-. In provider use case 2, add a project named after the target, with `apiContractVersion`; in provider use cases 3 and 4, and client use cases 3 and 4, subscribe from the projects that implement or call it after the first release.
-. Run `npm run apionly -- build` and `npm run apionly -- lint`.
+. *Publisher:* add a bundle root and its `<target>.bundle.properties` to the library.
+. *Publisher:* add the target to `targets:` in `apionly.yaml`.
+. *Publisher:* run `npm run apionly -- build` and `npm run apionly -- lint`.
+. *Subscriber:* in provider use case 2, add a project named after the target, with `apiContractVersion` in its `gradle.properties`; in provider use cases 3 and 4, and client use cases 3 and 4, subscribe from the projects that implement or call it after the first release:
++
+.build.gradle of the project that implements it
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribe('invoices')
+}
+----
++
+.build.gradle of a project that calls it
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribeAsClient('invoices') {
+        apiContractVersion = '1.0.0'
+    }
+}
+----
 
 [#removing-a-fragment]
 === Removing a fragment
 
-Remove every `$ref` to it, then delete the file.
+*Publisher.* Remove every `$ref` to it, then delete the file.
 A fragment that stays behind unreferenced fails `lint`.
 
 [#adopting-a-version]
 === Taking a new version
 
-. Change `apiContractVersion` in the project's `gradle.properties`, or on the subscription; for an API the project calls, the `apiContractVersion` of its `subscribeAsClient` block.
-  To build against another version once, without changing anything, pass `-PapiContractVersion=<version>`; it overrides every other setting, but not a called API's.
+*Subscriber.* Taking a new version of a contract is a change to the consuming project only.
+
+. Change the version the project builds against.
+For the contract it implements, that is `apiContractVersion` in its `gradle.properties`, or on the subscription; for an API it calls, the `apiContractVersion` of its `subscribeAsClient` block:
++
+.build.gradle
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribe('orders') {
+        apiContractVersion = '2.2.0'     // or apiContractVersion=2.2.0 in gradle.properties
+    }
+    subscribeAsClient('payments') {
+        apiContractVersion = '1.5.0'     // a called API always sets its own
+    }
+}
+----
++
+To build against another version once, without changing anything, pass `-PapiContractVersion=<version>`; it overrides every other setting, but not a called API's.
 . Run `./gradlew check`; it prints `Updated <target> from <old> to <new>`.
 . Commit the version change and `apionly.lock` together.
 
 [#pre-releases]
 === Working against an unfinished contract
 
-. Producer: `build` and `publish` with `--pre-release rc.1`, which publishes `<version>-rc.1` for the version in the contract's version file.
-. Consumer: subscribe to that version, with `allowPrerelease = true` on the subscription.
-. At the release: the consumer takes the released version and removes `allowPrerelease`.
+. *Publisher*, at the producer: `build` and `publish` with `--pre-release rc.1`, which publishes `<version>-rc.1` for the version in the contract's version file.
+. *Subscriber*, at the consumer: subscribe to that version, with `allowPrerelease = true` on the subscription:
++
+.build.gradle
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribe('orders') {
+        apiContractVersion = '2.2.0-rc.1'
+        allowPrerelease = true           // remove it again at the release
+    }
+}
+----
+. *Subscriber*, at the release: the consumer takes the released version and removes `allowPrerelease`.
 
 [#releasing]
 === Releasing, in provider use case 3
 
-On the main branch, the release job runs `npm ci`, `build`, `lint`, and a script that publishes every contract whose version has no `<target>-v<version>` tag, then tags it and pushes the tags.
+*Publisher.* On the main branch, the release job runs `npm ci`, `build`, `lint`, and a script that publishes every contract whose version has no `<target>-v<version>` tag, then tags it and pushes the tags.
 A pull request runs a script that fails when a changed contract's version is already tagged.
 Both scripts are in link:../use-cases/provider/3-specification-library-in-its-own-repository/tutorial.adoc#step-7[provider use case 3's tutorial →].
 
@@ -188,11 +302,22 @@ Never delete or move a release tag, and never republish a released version.
 |Change the version
 
 |API-Only Subscriber
-|The `plugins { }` block, or the version catalogue
+|The `plugins { }` block of `build.gradle`, or the version catalogue
 |Change the version, then run `./gradlew updateApiOnlySubscriberDSL`
 |===
 
-A Publisher, bundler or Node.js upgrade can change the published documents without any fragment changing.
+The Publisher's rows are its own: upgrading them never touches a consuming project's build.
+The Subscriber is pinned where any Gradle plugin is:
+
+.build.gradle
+[source,groovy]
+----
+plugins {
+    id 'com.arc-e-tect.api-only-subscriber' version '<new version>'
+}
+----
+
+*Publisher.* A Publisher, bundler or Node.js upgrade can change the published documents without any fragment changing.
 Find out before committing the upgrade:
 
 . Build with the versions in force now, and set `build/dist/` (or your `build.dist`) aside.
@@ -206,25 +331,52 @@ That is an addition to the contract: raise the minor version of each of those co
 From Publisher 0.4.x or earlier, every AsyncAPI document gains an `x-fragment-path` on each fragment the bundler inlined, likewise: raise the minor version of each contract with an AsyncAPI document, or set `defaults.asyncapi.fragmentPaths: false` until you do.
 link:../../api-only-publisher/README.adoc#fragment-path-versions[What a change to `x-fragment-path` means for a contract's version →] explains why.
 
-A Subscriber upgrade does not change the contracts, so `apionly.lock` should not change; if it does, read the Subscriber's release notes before committing it.
+*Subscriber.* A Subscriber upgrade does not change the contracts, so `apionly.lock` should not change; if it does, read the Subscriber's release notes before committing it.
 
 [#ci]
 === What CI runs
 
-[cols="1,3", options="header"]
+[cols="2,1,4", options="header"]
 |===
-|Setup |CI
+|Setup |Tool |CI
 
 |Provider and client use cases 1 and 2, and the combined use case
-|Node.js and Java; `./gradlew check`; fail when an `apionly.lock` changed during the build; keep the lint reports.
+|Both
+|Node.js and Java; `./gradlew check`; fail when an `apionly.lock` changed during the build; keep the Publisher's lint reports.
 
 |Provider use case 3, contracts repository
+|Publisher
 |Pull requests: `npm ci`, `build`, `lint`, the version check.
 The main branch: the same, then the release script and `git push --tags`, with the Maven token.
 
 |Provider use cases 3 and 4, and client use cases 3 and 4
+|Subscriber
 |Java; `./gradlew check` with the repository credentials in `ORG_GRADLE_PROJECT_*`; fail when `apionly.lock` changed during the build.
 |===
+
+Where the Subscriber reads from a Maven repository, the repository is an ordinary entry in `build.gradle`, and its credentials never are:
+
+.build.gradle
+[source,groovy]
+----
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'                                      // <1>
+        url = uri('https://maven.pkg.github.com/example/contracts')
+        credentials(PasswordCredentials)
+    }
+}
+
+apiOnlySubscriber {
+    channel {
+        type = 'maven'
+        groupId = 'com.example.contracts'
+    }
+    subscribe('orders')
+}
+----
+<1> Gradle reads `apiContractsUsername` and `apiContractsPassword` from `~/.gradle/gradle.properties` on a workstation, and from `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword` in CI.
 
 [#situations]
 == Situations worth knowing
@@ -232,9 +384,26 @@ The main branch: the same, then the release script and `git push --tags`, with t
 [#one-contract-per-project]
 === One implemented contract per project
 
-A project implements at most one contract, at the version its `apiContractVersion` declares.
+*Subscriber.* A project implements at most one contract, at the version its `apiContractVersion` declares.
 Two implemented contracts in one project would share one version, one classpath root and one release, so neither could change without the other.
 Put each in a project of its own, in a multi-project build: each project applies the Subscriber, subscribes to its contract, and declares `apiContractVersion` in its own `gradle.properties`.
+
+.orders/build.gradle, with `apiContractVersion=2.1.0` in orders/gradle.properties
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribe('orders')
+}
+----
+
+.billing/build.gradle, with `apiContractVersion=1.3.0` in billing/gradle.properties
+[source,groovy]
+----
+apiOnlySubscriber {
+    subscribe('billing')
+}
+----
+
 link:../../api-only-subscriber/README.adoc#one-contract-per-project[The Subscriber's README →] shows the setup.
 
 A second `subscribe` to a different contract fails the build, and the message suggests `subscribeAsClient` for a contract the project calls instead.
@@ -242,27 +411,50 @@ A second `subscribe` to a different contract fails the build, and the message su
 [#calling-apis]
 === Calling other APIs
 
-A project may call any number of APIs, next to the contract it implements.
+*Subscriber.* A project may call any number of APIs, next to the contract it implements.
 It declares each with `subscribeAsClient('<target>') { apiContractVersion = '<version>' }`.
 Each gets every check the implemented contract gets: the manifest check, its own entry in `apionly.lock`, the refusal of changed bytes under a locked version, and `verifyApiSpec` as part of `check`.
 Its documents are on the classpath under `contracts/<target>/`, and it sets its own version, because `apiContractVersion` is the implemented contract's.
 When its provider publishes somewhere else than the project's other contracts, it sets a `channel { }` of its own; every setting it leaves out comes from the project's channel.
+
+.build.gradle: implements `billing` from a library in this repository, calls `orders` from a Maven repository
+[source,groovy]
+----
+apiOnlySubscriber {
+    channel {
+        type = 'file'
+        directory = "$rootDir/contracts/build/publish"
+    }
+    subscribe('billing')
+    subscribeAsClient('orders') {
+        apiContractVersion = '2.1.0'
+        channel {                        // only what differs from the project's channel
+            type = 'maven'
+            groupId = 'com.example.contracts'
+        }
+    }
+}
+----
+
 link:../../api-only-subscriber/README.adoc#api-clients[The Subscriber's README →] has the details.
 
 [#hand-edits]
 === A hand-edited fetched document
 
-In a build that fetches before verifying, such as `./gradlew check`, the fetch restores the published document and the edit disappears.
+*Subscriber.* In a build that fetches before verifying, such as `./gradlew check`, the fetch restores the published document and the edit disappears.
 `./gradlew verifyApiSpec` on its own reports the edit.
 Change the contract in the library, never the fetched document.
 
 [#lint-config]
 === The lint configuration inside the fragments' root
 
-The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml` and `.spectral.yml`, and the lint configuration `apionly.yaml` names, whatever it is called.
+*Publisher.* The lint skips lint tools' configuration files wherever they sit, `redocly.yaml`, `.redocly.yaml`, `.redocly.lint-ignore.yaml`, `.spectral.yaml` and `.spectral.yml`, and the lint configuration `apionly.yaml` names, whatever it is called.
 
 [#failures]
 == When something fails
+
+The messages are grouped by the tool that prints them: a message from `npm run apionly` is the Publisher's, and one from a `./gradlew` task is the Subscriber's.
+In the builds of provider and client use cases 1 and 2, `./gradlew` runs both, so look for the message in both tables.
 
 === Publisher
 

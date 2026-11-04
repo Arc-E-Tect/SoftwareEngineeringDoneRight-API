@@ -58,28 +58,47 @@ Published to the https://plugins.gradle.org/plugin/com.arc-e-tect.api-only-trans
 Start at link:docs/README.adoc[the documentation →].
 It helps you pick the use case that fits your situation, and gives each an overview, a step-by-step tutorial, and prompts that have Claude Code or Codex build it in your project, test first.
 
+[#tutorials]
+=== Tutorials
+
+To learn the tools by using them, go straight to the tutorial for your situation in the table below: each one builds a working setup step by step.
+The overview beside it says what the setup is and when it fits, if you are not sure yet which one you need.
+
 [cols="2,2,2", options="header"]
 |===
 |The contract comes from |Your project implements it |Your project calls it
 
 |Your own project
-|link:docs/use-cases/provider/1-contract-in-the-implementing-project/overview.adoc[Provider use case 1 →]
-|link:docs/use-cases/client/1-contract-in-the-calling-project/overview.adoc[Client use case 1 →]
+|link:docs/use-cases/provider/1-contract-in-the-implementing-project/overview.adoc[Provider use case 1 →]: link:docs/use-cases/provider/1-contract-in-the-implementing-project/tutorial.adoc[tutorial →]
+|link:docs/use-cases/client/1-contract-in-the-calling-project/overview.adoc[Client use case 1 →]: link:docs/use-cases/client/1-contract-in-the-calling-project/tutorial.adoc[tutorial →]
 
 |A specification library in the same repository
-|link:docs/use-cases/provider/2-specification-library-in-the-same-repository/overview.adoc[Provider use case 2 →]
-|link:docs/use-cases/client/2-specification-library-in-the-same-repository/overview.adoc[Client use case 2 →]
+|link:docs/use-cases/provider/2-specification-library-in-the-same-repository/overview.adoc[Provider use case 2 →]: link:docs/use-cases/provider/2-specification-library-in-the-same-repository/tutorial.adoc[tutorial →]
+|link:docs/use-cases/client/2-specification-library-in-the-same-repository/overview.adoc[Client use case 2 →]: link:docs/use-cases/client/2-specification-library-in-the-same-repository/tutorial.adoc[tutorial →]
 
 |A specification library in another repository
-|link:docs/use-cases/provider/3-specification-library-in-its-own-repository/overview.adoc[Provider use case 3 →]
-|link:docs/use-cases/client/3-specification-library-in-another-repository/overview.adoc[Client use case 3 →]
+|link:docs/use-cases/provider/3-specification-library-in-its-own-repository/overview.adoc[Provider use case 3 →]: link:docs/use-cases/provider/3-specification-library-in-its-own-repository/tutorial.adoc[tutorial →]
+|link:docs/use-cases/client/3-specification-library-in-another-repository/overview.adoc[Client use case 3 →]: link:docs/use-cases/client/3-specification-library-in-another-repository/tutorial.adoc[tutorial →]
 
 |A published release, and nothing more
-|link:docs/use-cases/provider/4-implementing-a-published-contract/overview.adoc[Provider use case 4 →]
-|link:docs/use-cases/client/4-calling-a-published-api/overview.adoc[Client use case 4 →]
+|link:docs/use-cases/provider/4-implementing-a-published-contract/overview.adoc[Provider use case 4 →]: link:docs/use-cases/provider/4-implementing-a-published-contract/tutorial.adoc[tutorial →]
+|link:docs/use-cases/client/4-calling-a-published-api/overview.adoc[Client use case 4 →]: link:docs/use-cases/client/4-calling-a-published-api/tutorial.adoc[tutorial →]
 |===
 
-A project that implements one contract and calls others combines both columns, as link:docs/use-cases/both/implementing-and-calling/overview.adoc[implementing one contract and calling others →] describes.
+A project that implements one contract and calls others combines both columns, as link:docs/use-cases/both/implementing-and-calling/overview.adoc[implementing one contract and calling others →] describes, with link:docs/use-cases/both/implementing-and-calling/tutorial.adoc[its own tutorial →].
+
+The other tutorials each take one task further, once a setup works:
+
+* link:docs/guides/generated-contract-tests/tutorial.adoc[Generated contract tests, for a catalogue of books →]
+* link:docs/guides/hand-written-contract-tests/tutorial.adoc[Contract tests the generator cannot write, for a refunds service →]
+* link:docs/guides/documentation-tests/tutorial.adoc[Documenting the books API with Spring REST Docs and the generated classes →]
+* link:docs/guides/description-bundles/tutorial.adoc[Descriptions a project owns, in English and Dutch →]
+* link:docs/migration/from-a-checked-in-document/tutorial.adoc[Migrating a checked-in document to a generated one →]
+* link:docs/migration/to-per-emitter-configuration/tutorial.adoc[Migrating to per-emitter configuration →]
+
+[#reference]
+=== Reference
+
 
 link:docs/reference/how-publisher-and-subscriber-work-together.adoc[How the Publisher and the Subscriber work together →] explains how the two tools correspond, and where each part lives in the code.
 link:docs/reference/run-book.adoc[The run-book →] says how to operate them, and what to do when something fails.
