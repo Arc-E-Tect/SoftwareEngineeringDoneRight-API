@@ -25,6 +25,7 @@ Every file, command and script below was run exactly as shown, with API-Only Pub
 Those are the versions it was verified with; a newer release works the same unless its changelog says otherwise, and the README of link:../../../../api-only-publisher/README.adoc[the Publisher →] and link:../../../../api-only-subscriber/README.adoc[the Subscriber →] says which release is the latest.
 What was not run is the part a remote Maven repository adds: the upload with a token in step 8, and resolving with credentials in step 12.
 Step 8 says what to check there.
+<<gitlab,On GitLab §>> does the same with GitLab's package registry instead; it was not run as part of this tutorial either.
 
 It assumes you know how to design an API in OpenAPI, how a bundler such as https://redocly.com/docs/cli/[Redocly CLI ↗] resolves `$ref`s into one document, and how a Gradle project resolves dependencies.
 
@@ -570,8 +571,8 @@ repositories {
     maven {
         name = 'apiContracts'
         url = uri('https://maven.example.com/repository/contracts')
-        // Gradle reads apiContractsUsername and apiContractsPassword from
-        // gradle.properties outside this project, or from the environment.
+        // The user name and password come from the Gradle properties
+        // apiContractsUsername and apiContractsPassword: see below.
         credentials(PasswordCredentials)
     }
 }
@@ -586,7 +587,27 @@ apiOnlySubscriber {
 }
 ----
 
-Put `apiContractsUsername` and `apiContractsPassword` in `~/.gradle/gradle.properties`, never in the project, and run `./gradlew check`:
+`credentials(PasswordCredentials)` without a block tells Gradle to take the user name and password from two Gradle properties.
+It names them after the repository: `<name>Username` and `<name>Password`.
+With `name = 'apiContracts'`, those are `apiContractsUsername` and `apiContractsPassword`.
+The build file names only the repository, so the credential never ends up in a commit.
+
+Put the two properties in the `gradle.properties` in your Gradle user home, `~/.gradle/gradle.properties` (`%USERPROFILE%\.gradle\gradle.properties` on Windows, or wherever `GRADLE_USER_HOME` points).
+Never put them in the project's own `gradle.properties`, beside `apiContractVersion`: that one is committed.
+
+.~/.gradle/gradle.properties
+[source,properties]
+----
+# Read access to the contracts' Maven repository. Personal: never commit this file.
+apiContractsUsername=<your user name in the Maven repository>
+apiContractsPassword=<a token with read access to it>
+----
+
+The values are whatever your Maven repository accepts for reading: usually your user name and an access token, never your login password.
+<<gitlab-consumer,On GitLab §>> says what they are for GitLab.
+When either property is missing, Gradle stops before the build runs, naming the properties it could not find.
+
+Then run `./gradlew check`:
 
 [source]
 ----
@@ -615,7 +636,9 @@ channel maven
 sha256 ab7b2899eed2ec77158f50da8775f0264f8048c03e014cffe1bd1c9a292eeb01 openapi.yaml
 ----
 
-In CI, the credentials come from the environment, as `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.
+In CI there is no `~/.gradle/gradle.properties`, so set the same two properties as environment variables, with the prefix `ORG_GRADLE_PROJECT_`: `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.
+Gradle reads an environment variable with that prefix as the property after it, so `build.gradle` stays the same everywhere.
+Store both as secret, masked variables of the CI system.
 link:../4-implementing-a-published-contract/tutorial.adoc[Provider use case 4's tutorial →] covers the implementing side in full, and link:../../client/3-specification-library-in-another-repository/tutorial.adoc[client use case 3's tutorial →] the calling side: CI, pre-releases, taking a new version, and each guard.
 
 [#step-13]
@@ -675,6 +698,234 @@ In the contracts repository, remove the `file` channel again, or the release job
 .Considerations
 * **This works only while both repositories are checked out side by side.**
 CI has neither your checkout nor your pre-releases, so release early and switch.
+
+[#gitlab]
+== On GitLab: publishing to the project's package registry
+
+Everything above works with any Maven repository.
+When the contracts repository is a GitLab project, its own package registry can be that repository, and GitLab CI can run the release.
+This section changes steps 8, 9 and 12 for that.
+Steps 1 to 7, 10, 11 and 13 stay as they are.
+
+[NOTE]
+.What was checked
+====
+This section was not run as part of this tutorial.
+The channel settings, tokens and headers are the ones link:../../../guides/publishing-to-gitlab/overview.adoc[the guide to publishing to GitLab →] describes, and the guide's reference pipeline ran on gitlab.com with them.
+The Gradle side follows https://docs.gitlab.com/user/packages/maven_repository/[GitLab's Maven repository documentation ↗].
+====
+
+The values used below:
+
+[cols="1,2", options="header"]
+|===
+|What |Example
+
+|GitLab
+|`https://gitlab.example.com`
+
+|The contracts project, and its numeric ID
+|`example/contracts`, `1234`, as the project's overview page shows
+
+|Maven repository URL
+|`https://gitlab.example.com/api/v4/projects/1234/packages/maven`
+|===
+
+[#gitlab-channel]
+=== Which channel: `maven`
+
+GitLab has several package registries, and the Publisher can publish to more than one, but only one of them is something the Subscriber can read:
+
+[cols="1,2,1,3", options="header"]
+|===
+|Publisher channel |GitLab registry |The Subscriber reads it |Use it for
+
+|`maven`
+|Maven registry
+|Yes
+|Every Gradle or Maven build that implements or calls the contract.
+*This is the one to use with the Subscriber.*
+
+|`gitlab-package`
+|Generic Package Registry
+|No
+|Builds that are not Gradle, which download the archive with `curl` and check it against its `manifest.json`.
+Also what creates the GitLab release, and with it the release tag (<<gitlab-ci,Step 9 on GitLab §>>).
+
+|`npm`
+|npm registry
+|No
+|JavaScript consumers only.
+The Subscriber reads only its `maven` and `file` channels.
+|===
+
+So publish with the `maven` channel, aimed at the project's Maven registry, and add `gitlab-package` beside it for the release tags.
+
+[#gitlab-step-8]
+=== Step 8 on GitLab: point the channels at the project
+
+The channels below need the Publisher at 0.15.0 or later.
+Pin a current release, as step 1 does:
+
+[source,console]
+----
+npm install --save-dev --save-exact @arc-e-tect/api-only-publisher@<version>
+----
+
+.apionly.yaml (channels)
+[source,yaml]
+----
+channels:
+  maven:
+    groupId: com.example.contracts
+    repository: https://gitlab.example.com/api/v4/projects/1234/packages/maven
+    tokenEnv: CI_JOB_TOKEN
+    tokenHeader: Job-Token
+  gitlab-package:
+    tokenEnv: CI_JOB_TOKEN
+    tokenType: job
+    release: true
+----
+
+.Considerations
+* **The URL needs the project's numeric ID**, not its path: Gradle reads `%2F` in a URL path as `/`, so `example%2Fcontracts` would not resolve.
+* **The job token, `CI_JOB_TOKEN`**, exists in every GitLab CI job, only while the job runs, and reaches the pipeline's own project.
+There is nothing to store or rotate.
+GitLab's Maven registry takes it in the `Job-Token` header, which `tokenHeader` names; without `tokenHeader`, the Publisher sends any token as a bearer token.
+* **`tokenEnv` and `tokenType` on `gitlab-package`** make it use the job token even when the job inherits a `GITLAB_TOKEN` variable from the group or the instance, which it would otherwise prefer (link:../../../guides/publishing-to-gitlab/overview.adoc#token-shadowed[When the job fails with 401 or 403 →]).
+* **`release: true`** creates a GitLab release per published contract version, tagged `<target>-v<version>`: the same tags step 7 creates with `git tag`.
+* **Turn off _Allow duplicates_** for Maven and Generic packages, in the group's *Settings › Packages and registries*.
+GitLab otherwise accepts a different file under a released version.
+The Publisher never replaces one, but other clients might (link:../../../guides/publishing-to-gitlab/overview.adoc#duplicates[Turn off "Allow duplicates" →]).
+
+[#gitlab-ci]
+=== Step 9 on GitLab: run it in GitLab CI
+
+The two scripts from step 7 work in GitLab CI too, except for one step: a job token cannot `git push` the release tags by default.
+The Publisher has both checks built in, so on GitLab it does without the scripts:
+
+* `check` fails on a changed contract whose version was not raised, as `check-versions.sh` does, against the release tags.
+* `publish` checks the same before it sends anything, publishes each contract version that is not published yet, and leaves the ones that are alone, as `release.sh` does.
+`gitlab-package` then creates the release tag through GitLab's API, with the job token.
+
+link:../../../../api-only-publisher/README.adoc#version-guard[A changed target needs a new version →] describes both.
+
+..gitlab-ci.yml
+[source,yaml]
+----
+default:
+  image: node:24
+  before_script:
+    - npm ci
+    # The release tags and the default branch, which check and publish compare with.
+    - git fetch --quiet --tags origin "+refs/heads/$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH"
+
+variables:
+  # The full history: the version check reads it.
+  GIT_DEPTH: "0"
+
+check:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - npm run apionly -- build
+    - npm run apionly -- lint
+    - npm run apionly -- check
+  artifacts:
+    when: always
+    paths:
+      - build/reports/lint/
+
+release:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - npm run apionly -- build
+    - npm run apionly -- lint
+    - |
+      status=0
+      npm run apionly -- publish > publish.log 2>&1 || status=$?
+      cat publish.log
+      # publish exits 0 when a registry did not take a version; fail the job on that too.
+      if [ "$status" -ne 0 ] || grep -q 'Channel problems:' publish.log; then
+        echo "Not every contract version was published; run the pipeline again." >&2
+        exit 1
+      fi
+----
+
+.Considerations
+* **The merge request is where a missing version bump is caught.**
+`check` runs there; `publish` on the default branch refuses it again, before anything is sent.
+* **A failed release run is completed by the next one.**
+`publish` reads back what each registry has, and uploads only what is missing, so run the pipeline again.
+* **The default branch is `main` here.**
+When it is not, set `versioning` in `apionly.yaml` to name it, as link:../../../../api-only-publisher/README.adoc#version-guard[the Publisher's README →] describes.
+
+[#gitlab-consumer]
+=== Step 12 on GitLab: subscribe from the project's Maven registry
+
+The Subscriber needs nothing specific to GitLab: `type = 'maven'` and the `groupId` stay exactly as in step 12.
+What changes is Gradle's `repositories` entry: the URL, and that Gradle sends the credentials with its first request:
+
+.build.gradle (repositories)
+[source,groovy]
+----
+repositories {
+    mavenCentral()
+    maven {
+        name = 'apiContracts'
+        url = uri('https://gitlab.example.com/api/v4/projects/1234/packages/maven')
+        credentials(PasswordCredentials)       // apiContractsUsername, apiContractsPassword
+        authentication {
+            basic(BasicAuthentication)         // send them up front, as GitLab's documentation does
+        }
+    }
+}
+----
+
+Without `authentication`, Gradle sends credentials only after the server asks for them with a `401`.
+A private GitLab project may answer an anonymous request with `404` instead, and then Gradle never sends them.
+
+`apiContractsUsername` and `apiContractsPassword` are set as step 12 describes; for GitLab they hold:
+
+[cols="2,2,2,3", options="header"]
+|===
+|Where the build runs |`apiContractsUsername` |`apiContractsPassword` |Notes
+
+|A workstation, in `~/.gradle/gradle.properties`
+|The deploy token's user name, such as `gitlab+deploy-token-42`
+|The deploy token
+|A deploy token of the contracts project, with the `read_package_registry` scope only, created in its *Settings › Repository › Deploy tokens*.
+A personal access token works too, with your GitLab user name; https://docs.gitlab.com/user/packages/maven_repository/[GitLab's Maven documentation ↗] says which scope it needs.
+
+|A GitLab CI job of the implementing project
+|`gitlab-ci-token`
+|`$CI_JOB_TOKEN`
+|The contracts project must admit the implementing project, in its *Settings › CI/CD › Job token permissions*.
+
+|Any other CI
+|The deploy token's user name
+|The deploy token
+|As masked secrets, in `ORG_GRADLE_PROJECT_apiContractsUsername` and `ORG_GRADLE_PROJECT_apiContractsPassword`.
+|===
+
+Give each consuming team a deploy token of its own, so one can be revoked without the others.
+
+In the implementing project's own GitLab CI, the job token needs no secret at all:
+
+..gitlab-ci.yml of the implementing project
+[source,yaml]
+----
+check:
+  image: eclipse-temurin:21
+  variables:
+    ORG_GRADLE_PROJECT_apiContractsUsername: gitlab-ci-token
+    ORG_GRADLE_PROJECT_apiContractsPassword: $CI_JOB_TOKEN
+  script:
+    - ./gradlew check
+    # The build must not have changed what the project is locked to.
+    - git diff --exit-code apionly.lock
+----
 
 [#what-you-have]
 == What you have now
