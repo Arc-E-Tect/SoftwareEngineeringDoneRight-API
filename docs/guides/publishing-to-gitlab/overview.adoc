@@ -30,7 +30,7 @@ Every link ends with a marker saying where it leads, so you can tell before you 
 A specification library hosted on GitLab, on gitlab.com or a self-managed instance, publishes its API bundles to its own project's package registries, from a GitLab CI pipeline, in one job:
 
 * the job runs the sealed API-Only Publisher image, pinned by digest, and nothing else;
-* the `gitlab-package` channel publishes each target to the project's Generic Package Registry, and needs no settings: GitLab's CI variables give it the API, the project and the job's token;
+* the `gitlab-package` channel publishes each target to the project's Generic Package Registry, and needs no settings: GitLab's CI variables give it the API, the project and the job's token, unless the job inherits a `GITLAB_TOKEN` variable, which is used instead (<<token-shadowed,When the job fails with 401 or 403 §>>);
 * where Gradle or Maven builds consume the contracts, the `maven` channel publishes them to the project's Maven registry too.
 
 This guide covers what is particular to GitLab.
@@ -92,6 +92,42 @@ The channel uses the first of these its environment holds:
 |===
 
 The job token is the one to use: it exists only while the job runs, so there is nothing to store, rotate or leak.
+
+[#token-shadowed]
+=== When the job fails with 401 or 403 on a token that should work
+
+The first row of the table wins.
+A CI/CD variable named `GITLAB_TOKEN` that the job inherits -- from the project, a parent group, or the instance, often set for some other purpose -- is used instead of `CI_JOB_TOKEN`, and the Publisher sends it as a personal or project access token.
+If it is expired, or lacks the `api` scope, the channel cannot read the package back, and `publish` warns:
+
+----
+warning: orders 2.1.0 was not published to gitlab-package: could not read orders-2.1.0.tgz back from https://gitlab.example.com/api/v4/projects/group%2Fproject/packages/generic/orders/2.1.0/orders-2.1.0.tgz: 403 insufficient_scope. Check the token, and that it may read and write this project's package registry.
+----
+
+A `401 Unauthorized` points the same way for an invalid or expired token.
+This is easy to mistake for a missing job-token permission, because a job that sends the job token itself, `curl --header "JOB-TOKEN: $CI_JOB_TOKEN"` for instance, can read the same registry.
+A pipeline on gitlab.com, which usually has no such variable, publishes with the job token and works; the same pipeline on a self-managed instance with a group-level `GITLAB_TOKEN` fails.
+
+To see whether a job inherits one, without printing it:
+
+[source,shell]
+----
+if [ -n "${GITLAB_TOKEN:-}" ]; then echo "GITLAB_TOKEN is set"; else echo "GITLAB_TOKEN is not set"; fi
+----
+
+To publish to the job's own project whatever the variables hold, name the job token on the channel:
+
+[source,yaml]
+----
+channels:
+  gitlab-package:
+    tokenEnv: CI_JOB_TOKEN
+    tokenType: job
+----
+
+`tokenEnv` makes the channel read `CI_JOB_TOKEN` and ignore `GITLAB_TOKEN`; `tokenType: job` sends it as `JOB-TOKEN`.
+Set both: `tokenEnv` alone would send the job token as a `PRIVATE-TOKEN`, which GitLab refuses.
+Publishing to another project works the same way, with the target project's own `tokenEnv` and `tokenType` (<<tokens,Which token §>>).
 
 *Publishing to another project* -- a library in one project, its packages in another -- takes a deploy token of the target project, with `write_package_registry` and `read_package_registry`, as a masked CI/CD variable:
 
