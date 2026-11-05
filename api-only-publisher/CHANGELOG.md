@@ -1,6 +1,17 @@
 ## [0.18.5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.4...api-only-publisher-v0.18.5) (2026-11-04)
 
 
+### ✨ New and updated features
+
+* **api-only-publisher:** `versioning.mainBranch` is renamed to `versioning.baseBranch`, the branch `check` and `publish` compare a target without a release tag with; it still defaults to `main` ([#115](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/115)) ([ed32590](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ed325908cbc1b83af64fef42d8f3c9ce5e60af4b))
+* **api-only-publisher:** the README says who maintains the version files, and how to check versions before every push with a `pre-push` hook ([#115](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/115)) ([ed32590](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ed325908cbc1b83af64fef42d8f3c9ce5e60af4b))
+
+
+### ⚠ Incompatible changes
+
+* **api-only-publisher:** an `apionly.yaml` that still uses `versioning.mainBranch` is refused, with a message naming `baseBranch`: rename the key, its value stays the same. This shipped as a patch because the change's commit subject was not a Conventional Commit ([#115](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/115)) ([ed32590](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ed325908cbc1b83af64fef42d8f3c9ce5e60af4b))
+
+
 ### 📝 Documentation
 
 * **api-only-publisher:** explain a GITLAB_TOKEN shadowing the job token ([#114](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/114)) ([ebe4e26](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/ebe4e264b2c26568f1f066be3248aae0b75a9a4d)), closes [#114](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/114)
