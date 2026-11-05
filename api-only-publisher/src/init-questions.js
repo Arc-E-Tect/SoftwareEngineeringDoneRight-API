@@ -100,6 +100,14 @@ const QUESTIONS = [
     },
     { key: "serverUrl", flag: "--server-url", text: "Production server URL", check: checkUrl, when: hasOpenapi },
     { key: "brokerHost", flag: "--broker-host", text: "Broker host, with its port", check: checkHost, when: hasAsyncapi, name: "a broker host" },
+    {
+        // How the pre-push hook runs check: through the library's own npm install, or the image.
+        key: "runner", flag: "--runner", text: "Run the Publisher with: npm or docker",
+        read: (text) => {
+            const runner = text.trim().toLowerCase();
+            return ["npm", "docker"].includes(runner) ? { value: runner } : { problem: `'${text}' is not npm or docker` };
+        },
+    },
 ];
 
 /** Reads an answer to a question: the value, or what is wrong with it. */

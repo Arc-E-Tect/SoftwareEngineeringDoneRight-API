@@ -60,6 +60,7 @@ test("at the prompt, Enter takes each default, and each question shows it", asyn
         "Contact URL [https://example.invalid]: ",
         "Licence, as an SPDX identifier [Apache-2.0]: ",
         "Production server URL [https://api.example.invalid]: ",
+        "Run the Publisher with: npm or docker [npm]: ",
     ]);
 });
 

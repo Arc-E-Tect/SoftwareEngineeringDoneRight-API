@@ -9,6 +9,7 @@ const { loadFrom, ConfigError } = require("./config");
 const { build, prepare, BuildError } = require("./pipeline");
 const { init, scaffold, plan } = require("./init");
 const { resolveValues } = require("./init-questions");
+const { planHook, setHooksPath, HOOKS_DIR } = require("./init-hook");
 const { resolvePortfolioValues, writePortfolioSection } = require("./config-command");
 const { PlaceholderError } = require("./placeholders");
 const { VersionError } = require("./version");
@@ -34,7 +35,7 @@ Usage:
                           [--title <text>] [--contract-version <version>]
                           [--contact-name <text>] [--contact-url <url>]
                           [--license <spdx-id>] [--license-url <url>]
-                          [--server-url <url>] [--broker-host <host[:port]>]
+                          [--server-url <url>] [--broker-host <host[:port]>] [--runner <npm|docker>]
   api-only-publisher config [section] [--yes] [--portfolio-paths <target-prefix|none>]
                             [--portfolio-location <dir>]
   api-only-publisher build [--target <name>]... [--pre-release <ids>] [--openapi|--asyncapi]
@@ -64,6 +65,9 @@ Options:
   --title, --contract-version, --contact-name, --contact-url, --license,
   --license-url, --server-url, --broker-host
                     init only: the value of that question; a flag always wins.
+  --runner <npm|docker>
+                    init only: how the pre-push hook init writes runs check.
+                    Default: npm.
   --portfolio-paths <target-prefix|none>, --portfolio-location <dir>
                     config only: the value of that question; a flag always wins.
   --since <ref>     changed: the git ref to compare the working tree against.
@@ -94,7 +98,7 @@ function parseArgs(argv) {
     const INIT_VALUES = {
         "--title": "title", "--contract-version": "contractVersion", "--contact-name": "contactName",
         "--contact-url": "contactUrl", "--license": "license", "--license-url": "licenseUrl",
-        "--server-url": "serverUrl", "--broker-host": "brokerHost",
+        "--server-url": "serverUrl", "--broker-host": "brokerHost", "--runner": "runner",
     };
     const CONFIG_VALUES = { "--portfolio-paths": "paths", "--portfolio-location": "location" };
     const positional = [];
@@ -232,24 +236,50 @@ async function runInit(options, positional, io, log) {
         }
 
         log(`Scaffolding a specification library in ${dir}`);
+        const hook = planHook(dir, values.runner, require("../package.json").version);
+        const scaffolded = { ...scaffold(values), ...hook.files };
         let force = options.force;
         if (terminal && force) {
             // Asked, --force means "after showing me": it overwrites what differs only
             // once the list has been seen and agreed to.
-            const differing = plan(dir, scaffold(values), values, portfolio).filter((entry) => entry.status === "differs");
+            const differing = plan(dir, scaffolded, values, portfolio).filter((entry) => entry.status === "differs");
             if (differing.length > 0) {
                 output.write(`These files differ from the scaffold:\n${differing.map((d) => `  ${d.rel}\n`).join("")}`);
                 const answer = await terminal.question(`Overwrite these ${differing.length} file(s)? [y/N] `);
                 force = /^y(es)?$/i.test(answer.trim());
             }
         }
-        init(dir, { values, force, log, portfolio });
+        init(dir, { values, force, log, portfolio, extra: hook.files, executable: hook.executable });
         if (portfolioStatusThisRun === "present") log("  present    portfolio (already configured; init never changes it)");
+        const next = reportHook(hook, log);
         log(`\nNext: api-only-publisher build -C ${dir}`);
+        for (const line of next) log(line);
     } finally {
         if (terminal) terminal.close();
     }
     return 0;
+}
+
+/**
+ * Reports what init did about the pre-push hook beyond writing its file, and does
+ * the one thing left: pointing this clone's git at .githooks, when nothing else
+ * already decides where its hooks are. README.adoc#version-hook.
+ *
+ * @returns {string[]} the lines to print after "Next:", for what init could not do itself
+ */
+function reportHook(hook, log) {
+    if (hook.manager) {
+        log(`  skipped    ${HOOKS_DIR}/pre-push (${hook.manager} runs this repository's hooks)`);
+        return [`Add to its pre-push hook: ${hook.command}`];
+    }
+    if (!hook.repository) {
+        return [`Once this is a git repository, run the pre-push hook: git config core.hooksPath ${HOOKS_DIR}`];
+    }
+    if (hook.hooksPath === "unset") {
+        setHooksPath(hook.repository);
+        log(`  configured core.hooksPath=${HOOKS_DIR} (this clone runs the pre-push hook)`);
+    }
+    return [`Every other clone runs the pre-push hook after: git config core.hooksPath ${HOOKS_DIR}`];
 }
 
 const CONFIGURABLE_SECTIONS = ["portfolio"];
