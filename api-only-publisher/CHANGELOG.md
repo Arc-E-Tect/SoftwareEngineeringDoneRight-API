@@ -1,3 +1,20 @@
+## [0.18.6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.5...api-only-publisher-v0.18.6) (2026-11-05)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** add [#115](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/115)'s changes to the 0.18.5 changelog ([#119](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/119)) ([8e182b5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/8e182b5abf3c09a765445c6094a94eaa214b8cd3)), closes [#119](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/119) [#115](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/115) [#115](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/115) [#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.18.5 [skip ci] ([c36fd18](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/c36fd188864c682216aecafdde4c27f183369f78))
+
+
+### Publisher
+
+* init writes a pre-push hook that runs check ([#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118)) ([542b0f4](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/542b0f4704de0d70e4ce71e9d2c15c3c5a0fd302)), closes [#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118) [#102](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/102) [#102](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/102)
+
 ## [0.18.5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.4...api-only-publisher-v0.18.5) (2026-11-04)
 
 
