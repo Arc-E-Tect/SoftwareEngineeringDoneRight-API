@@ -311,13 +311,13 @@ test("init --force at a terminal lists what differs and asks once before overwri
     const config = path.join(parent, "lib", "apionly.yaml");
     fs.writeFileSync(config, "# edited by hand\n");
 
-    const declined = terminal("", "", "", "", "", "", "", "", "n");
+    const declined = terminal("", "", "", "", "", "", "", "", "", "n");
     await runWith(["init", "lib", "-C", parent, "--force"], declined.io);
     assert.strictEqual(fs.readFileSync(config, "utf8"), "# edited by hand\n");
     assert.ok(declined.shown.some((text) => text.includes("apionly.yaml")));
     assert.ok(declined.shown.some((text) => text.startsWith("Overwrite these 1 file(s)? [y/N] ")));
 
-    const accepted = terminal("", "", "", "", "", "", "", "", "y");
+    const accepted = terminal("", "", "", "", "", "", "", "", "", "y");
     const { printed } = await runWith(["init", "lib", "-C", parent, "--force"], accepted.io);
     assert.notStrictEqual(fs.readFileSync(config, "utf8"), "# edited by hand\n");
     assert.ok(printed.includes("  overwrote  apionly.yaml"));

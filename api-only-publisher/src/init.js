@@ -29,6 +29,7 @@ const DEFAULTS = Object.freeze({
     licenseUrl: "https://www.apache.org/licenses/LICENSE-2.0.html",
     serverUrl: "https://api.example.invalid",
     brokerHost: "kafka:9092",
+    runner: "npm",
 });
 
 /** A value as a YAML scalar: plain where YAML reads it back unchanged, quoted where it would not. */
@@ -362,9 +363,15 @@ function plan(targetDir, files, values, portfolio) {
  * `portfolio`, given, is added the same way, as one more slot: whether the
  * library is about to have more than one target -- and so whether this is worth
  * asking about at all -- is decided before init is called, not here.
+ *
+ * `extra` are files beyond the scaffold, keyed as it is -- the pre-push hook, whose
+ * place depends on the repository, which init-hook.js reads -- and written by the
+ * same rules; those `executable` names are made executable whenever they are written.
  */
-function init(targetDir, { values = DEFAULTS, force = false, log = () => {}, portfolio = null } = {}) {
-    const files = scaffold(values);
+function init(targetDir, {
+    values = DEFAULTS, force = false, log = () => {}, portfolio = null, extra = {}, executable = [],
+} = {}) {
+    const files = { ...scaffold(values), ...extra };
     const report = { created: [], overwritten: [], identical: [], differing: [], updated: [] };
     const updates = [];
 
@@ -386,6 +393,7 @@ function init(targetDir, { values = DEFAULTS, force = false, log = () => {}, por
         const file = path.join(targetDir, rel);
         fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, files[rel]);
+        if (executable.includes(rel)) fs.chmodSync(file, 0o755);
         (status === "missing" ? report.created : report.overwritten).push(rel);
     }
 

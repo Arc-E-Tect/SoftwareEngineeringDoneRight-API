@@ -293,6 +293,10 @@ The name becomes file names, a properties key, a Maven artifactId, a git tag and
 |Broker host
 |`--broker-host <host[:port]>`
 |`kafka:9092`. Asked only for a library with AsyncAPI.
+
+|Run the Publisher with
+|`--runner <npm\|docker>`
+|`npm`. How the pre-push hook runs `check`: `npx`, from the library's own `package.json`, or the Docker image of this Publisher's version (<<installation,Installation §>>).
 |===
 
 A flag always wins: its question is not asked, and an invalid value, or a flag for a kind the library does not hold, stops `init` before it writes anything.
@@ -305,6 +309,13 @@ What each kind of library gets::
 * *Both*: both trees, one target building both documents, and one schema they share: `specs/openapi/components/common/schemas/ExampleIdV1.yaml`, which the HTTP response and the event payload both refer to.
 That is the library's convention in miniature -- a definition used by both protocols is one fragment -- and why the whole source root is staged together (<<what-build-does,What `build` does §>>).
 
+What every library gets as well::
+A `pre-push` git hook, `.githooks/pre-push` at the top of the repository, that runs `check` before every push (<<version-hook,Checking versions before every push §>>).
+Inside a git repository, `init` also points this clone's git at it, with `git config core.hooksPath .githooks`, unless `core.hooksPath` is already set.
+When the repository's hooks are run by a hook manager -- a `.husky` directory, a `lefthook.yml`, a `.pre-commit-config.yaml`, or a `core.hooksPath` that points somewhere else -- `init` writes no hook, which would compete with it, and prints the command to add to the manager's `pre-push` entry instead.
+A `core.hooksPath` in your global git configuration counts as well, deliberately: setting one for this repository would quietly switch off the hooks you run everywhere else, such as a company-wide secret scanner.
+Add the command to those hooks, or set `core.hooksPath` for this repository yourself if that is what you want.
+
 What it reports::
 `init` never overwrites what is there unless told to, and says for every file what it did:
 +
@@ -316,6 +327,8 @@ The message names every slot added -- see <<init-additive,Adding a kind to an ex
 `differs`:: The file was there, and does not match: where the library has diverged from the scaffold, usually on purpose.
 It is left alone.
 `overwrote`:: The file differed, and `--force` replaced it.
+`skipped`:: The pre-push hook was not written, because a hook manager runs the repository's hooks.
+`configured`:: `core.hooksPath` was not set, and now points at `.githooks`.
 +
 At a terminal, `--force` first lists the files that still differ -- after any additive update apionly.yaml already got -- and asks once whether to overwrite them; without a terminal, or with `--yes`, it overwrites them without asking.
 
@@ -487,8 +500,15 @@ The pipeline catches a missing version bump, but only after you have pushed.
 A git hook catches it before then.
 A hook is a script that git runs on your machine at a fixed moment.
 A `pre-push` hook runs when you type `git push`, and if it fails, git sends nothing.
-The steps below set one up so that it runs `check`.
-They need no hook manager and nothing outside git and the Publisher.
+The hook below runs `check`.
+It needs no hook manager and nothing outside git and the Publisher.
+
+`init` writes it, as `.githooks/pre-push` at the top of the repository (<<init,Scaffolding a library §>>).
+`--runner` picks the variant: `npm`, the default, or `docker`.
+When the library is in a subdirectory, the hook goes to the top all the same, because that is where git runs hooks from, and runs `check` in the library's directory.
+A second library in the same repository finds the hook there already and reports it as `differs`: add its `check` to the hook by hand.
+
+For a library that already exists, write the hook yourself:
 
 . *Create the hook* as `.githooks/pre-push` in the repository, the one that holds `apionly.yaml`.
 The file has no extension.
@@ -498,11 +518,9 @@ Pick the variant for the way the library runs the Publisher (<<installation,Inst
 [source,sh]
 ----
 #!/bin/sh
-# Refuse the push when a target changed without a new version in its version file.
-# The branch versioning.baseBranch names in apionly.yaml: main unless it says otherwise.
-BASE_BRANCH=main
-# The check compares with origin/$BASE_BRANCH and the release tags, so bring them up to date first.
-git fetch --quiet --tags origin "$BASE_BRANCH" || echo "pre-push: could not fetch origin/$BASE_BRANCH; checking against what is here" >&2
+# Refuses the push when a published target changed without a new version in its version file.
+# check compares with origin's base branch and the release tags: bring them up to date.
+git fetch --quiet --tags origin || echo "pre-push: could not fetch origin; checking against what is here" >&2
 exec npx --no-install api-only-publisher check
 ----
 +
@@ -510,20 +528,18 @@ exec npx --no-install api-only-publisher check
 [source,sh,subs="attributes+"]
 ----
 #!/bin/sh
-# Refuse the push when a target changed without a new version in its version file.
-# The branch versioning.baseBranch names in apionly.yaml: main unless it says otherwise.
-BASE_BRANCH=main
-# The check compares with origin/$BASE_BRANCH and the release tags, so bring them up to date first.
-git fetch --quiet --tags origin "$BASE_BRANCH" || echo "pre-push: could not fetch origin/$BASE_BRANCH; checking against what is here" >&2
+# Refuses the push when a published target changed without a new version in its version file.
+# check compares with origin's base branch and the release tags: bring them up to date.
+git fetch --quiet --tags origin || echo "pre-push: could not fetch origin; checking against what is here" >&2
 exec docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" \
   arcetect/api-only-publisher:{api-only-publisher-version} check
 ----
 +
-Set `BASE_BRANCH` to the branch `versioning.baseBranch` names, `pre-prod` for the library above.
-The hook only fetches that branch; `check` reads which branch to compare with from `apionly.yaml`, so the two must name the same one.
+The hook fetches every branch of `origin`, so it never needs to know which one `versioning.baseBranch` names, and changing that setting needs no change to the hook.
+It fetches on your machine, not in the container: the image has no ssh client and none of your credentials.
 +
 Git runs a hook from the top of the repository.
-When `apionly.yaml` is in a subdirectory, add `-C <that directory>` after `check`.
+When `apionly.yaml` is in a subdirectory, add `cd <that directory> || exit 1` before the `npx` line, or `-C <that directory>` after `check` in the Docker variant, which needs the whole repository mounted to read its history.
 
 . *Make it executable*, and commit it, so that everyone who clones the repository gets it:
 +
@@ -534,13 +550,13 @@ git add .githooks/pre-push
 git commit -m "chore: check API versions before every push"
 ----
 +
-On Windows, `chmod` has no effect.
+On Windows, `chmod` has no effect, and neither does the executable bit `init` sets.
 Use `git update-index --chmod=+x .githooks/pre-push` before the commit instead.
 Git for Windows runs the hook with its own `sh`, so the script works there as it is.
 
 . *Tell git to use the directory.*
 Git only looks in `.git/hooks` by default, and that directory is never committed.
-Every clone has to run this once:
+Every clone has to run this once; `init` runs it for the clone it scaffolds in:
 +
 [source,sh]
 ----
@@ -549,7 +565,7 @@ git config core.hooksPath .githooks
 +
 Put this line in the library's own README, or in its setup script, so nobody has to remember it.
 A hook manager such as husky or lefthook does this step for you when its dependencies are installed.
-If you already use one, call the same `check` command from its `pre-push` entry instead.
+If you already use one, call the same `check` command from its `pre-push` entry instead; `init` prints that command when it finds one.
 
 . *Try it.*
 Change a fragment of a published target and commit it without changing its version file.
@@ -569,9 +585,10 @@ Raise the version, commit, and push again.
 
 Some things to know about the hook:
 
+* It checks every published target, not only those the pushed commits touch: a target that did not change passes, and the whole check takes seconds.
 * `check` looks at the working tree, and that includes changes you have not committed yet.
 Commit or stash them before you push, so it checks what you are actually pushing.
-* It needs neither credentials nor a network beyond the `git fetch`, and it builds nothing, so it takes seconds.
+* It needs neither credentials nor a network beyond the `git fetch`, and it builds nothing.
 * `git push --no-verify` skips the hook.
 The pipeline still runs the same check, so skipping it only means you find out later.
 
