@@ -1,3 +1,15 @@
+## [0.18.7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.6...api-only-publisher-v0.18.7) (2026-11-05)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** list [#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118) and the 0.18.5 rename in the 0.18.6 changelog ([#120](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/120)) ([57d58ce](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/57d58ce2ed606b40e3d5b170e8c4d518aa89aeb7)), closes [#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118) [#120](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/120) [#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118) [#118](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/118)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.18.6 [skip ci] ([6533f36](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/6533f364804fe7ea5d1c37737ee3441e05032fb2))
+
 ## [0.18.6](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.5...api-only-publisher-v0.18.6) (2026-11-05)
 
 
