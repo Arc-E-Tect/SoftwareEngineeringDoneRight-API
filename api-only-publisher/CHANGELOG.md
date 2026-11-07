@@ -1,3 +1,15 @@
+## [0.19.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.19.1...api-only-publisher-v0.19.2) (2026-11-07)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** run git without the hook's GIT_DIR, so a hook checks the library's repository ([#126](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/126)) ([68045f7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/68045f77b4963cebc402fede493b08bde3e3f5e1)), closes [#126](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/126) [#125](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/125)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.19.1 [skip ci] ([a8cd59a](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a8cd59a57ce80191376d2f3edaa13e772d00d1f1))
+
 ## [0.19.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.19.0...api-only-publisher-v0.19.1) (2026-11-07)
 
 
