@@ -490,6 +490,7 @@ Below 1.0 each moves one place down: a major becomes a minor, a minor a patch.
 It is a hint, not a compatibility analysis: it may call a compatible change a major, and the version you choose is yours.
 
 The baseline is built with its own `apionly.yaml` and its own toolchain pin, so it is the document that was released.
+Its `versioning` section is not read: it does not shape a document, the guard takes it from today's `apionly.yaml`, and a key renamed since -- `mainBranch`, now `baseBranch` -- would otherwise stop the baseline from being read at all.
 When that pin cannot be had -- a sealed image carries only today's bundler, and downloading is off -- the baseline is built with today's pin instead, and the reason says so.
 A baseline that cannot be built at all leaves the target `undecided`, saying why.
 

@@ -73,6 +73,21 @@ function exportRef(repoRoot, ref, libRel, into) {
 }
 
 /**
+ * Drop the `versioning` section from a baseline's copy of apionly.yaml.
+ *
+ * It does not shape a document: it only tells the guard where to look, and the guard
+ * reads it from today's configuration. A baseline from before a key in it was renamed
+ * -- `mainBranch`, `baseBranch` since 0.18.5 -- could otherwise not be read at all, and
+ * every target would be left undecided (#123).
+ */
+function withoutVersioning(file) {
+    const document = YAML.parseDocument(fs.readFileSync(file, "utf8"));
+    if (!YAML.isMap(document.contents) || !document.contents.has("versioning")) return;
+    document.contents.delete("versioning");
+    fs.writeFileSync(file, document.toString());
+}
+
+/**
  * Pin each tool of the copy's configuration to what this installation can run: its own
  * pin when that can be had, otherwise the one `current` pins. A baseline released with an
  * older bundler than the sealed image carries is still compared, and the reason says how.
@@ -121,7 +136,9 @@ function targetDocuments(config, targets, { ref = null, repoRoot }) {
         try {
             if (ref === null) exportWorkingTree(repoRoot, libRel, scratch);
             else exportRef(repoRoot, ref, libRel, scratch);
-            copy = load(path.join(scratch, libRel, configRel));
+            const configFile = path.join(scratch, libRel, configRel);
+            if (ref !== null) withoutVersioning(configFile);
+            copy = load(configFile);
             notes = usableToolchain(copy, config, ["openapi", "asyncapi"]);
         } catch (error) {
             for (const target of targets) documents.set(target, { error });
