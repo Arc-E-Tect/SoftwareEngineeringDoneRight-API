@@ -115,16 +115,20 @@ sealed lib build -q || fail "build failed"
 sealed lib lint -q || fail "lint failed"
 pass "build and lint succeed for $TARGETS"
 
-step "4a. check decides from git in the image: a change without a new version fails"
+step "4a. check decides from the built documents in the image: a change without a new version fails"
 sealed lib sh -c 'git branch -q -m main' || fail "renaming the branch failed"
 sealed lib check -q || fail "check failed on an unchanged library"
-sealed lib sh -c 'git checkout -q -b topic && echo "# changed" >> specs/openapi/bundles/example-service_openapi_structure.yaml'
+# A comment does not reach the built document, so it needs no new version.
+sealed lib sh -c 'git checkout -q -b topic && echo "# a comment" >> specs/openapi/bundles/example-service_openapi_structure.yaml'
+sealed lib check -q >"$WORK/check.txt" 2>&1 || fail "check refused a comment-only edit: $(cat "$WORK/check.txt")"
+sealed lib sh -c 'echo "x-changed: true" >> specs/openapi/bundles/example-service_openapi_structure.yaml'
 if sealed lib check -q >"$WORK/check.txt" 2>&1; then
     fail "check passed a change without a new version"
 fi
 grep -q "changed without a new version" "$WORK/check.txt" || fail "check did not say why: $(cat "$WORK/check.txt")"
+grep -q "hint: " "$WORK/check.txt" || fail "check gave no version hint: $(cat "$WORK/check.txt")"
 sealed lib sh -c 'git checkout -q -- . && git checkout -q main && git branch -q -D topic' || fail "restoring the library failed"
-pass "check passes the library as committed, and refuses a change without a new version"
+pass "check passes the library as committed and a comment-only edit, and refuses a change without a new version, with a hint"
 
 step "5. Package two bundles to every local channel in one run"
 sealed lib publish -q --target example-service --target second-service || fail "publish failed"
