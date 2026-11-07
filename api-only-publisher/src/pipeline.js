@@ -301,11 +301,15 @@ function prepare(config, { kinds = ["openapi", "asyncapi"], log = () => {} } = {
  * Build every requested target.
  *
  * `versionOf(target)` names the version to stamp on a target's documents; a target
- * it returns nothing for keeps the version its source declares.
+ * it returns nothing for keeps the version its source declares. Without `verify`, the
+ * documents are not linted and their examples not checked; without `distribute`, they
+ * are copied nowhere -- which is how the version guard builds a document only to read it.
  *
  * @returns {Array<{target, kind, file, distributed}>}
  */
-function build(config, { targets, versionOf = () => null, kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
+function build(config, {
+    targets, versionOf = () => null, kinds = ["openapi", "asyncapi"], log = () => {}, verify = true, distribute: copy = true,
+} = {}) {
     // Every tool this build needs is found before anything is staged, so a toolchain
     // the installation cannot run fails the build before it has done any work.
     const needed = kinds.filter((kind) => config.targetsFor(kind).some((t) => !targets || targets.includes(t)));
@@ -355,13 +359,15 @@ function build(config, { targets, versionOf = () => null, kinds = ["openapi", "a
                 log(`-- Stamping version '${version}'`);
                 stampFile(outFile, version);
             }
-            lint(config, kind, outFile, log);
-            checkExamples(config, kind, outFile, log);
+            if (verify) {
+                lint(config, kind, outFile, log);
+                checkExamples(config, kind, outFile, log);
+            }
 
             let distributed = null;
-            if (config.isPublished(target)) {
+            if (copy && config.isPublished(target)) {
                 distributed = distribute(config, target, kind, outFile, log);
-            } else {
+            } else if (copy) {
                 log("-- Not distributed (publish: false)");
             }
             results.push({ target, kind, file: outFile, distributed });

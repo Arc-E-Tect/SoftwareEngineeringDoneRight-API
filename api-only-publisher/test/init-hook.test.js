@@ -7,6 +7,8 @@
 // git runs the hook init wrote, exactly as it would for a developer. The hook calls
 // npx or docker; a stand-in for each, first on PATH, runs this Publisher's own CLI
 // (npx) or records how it was called (docker), so nothing is installed or pulled.
+// The check builds each target's document, so the npx stand-in runs a stand-in
+// bundler for the pinned @redocly/cli.
 
 const test = require("node:test");
 const assert = require("node:assert");
@@ -17,6 +19,7 @@ const { spawnSync } = require("node:child_process");
 
 const { main } = require("../src/cli");
 const { imageTag } = require("../src/init-hook");
+const { fakeBundlerDir } = require("./fake-bundler");
 
 // Nobody's own git configuration -- a global core.hooksPath, signing, a default
 // branch -- may change what these tests see.
@@ -35,8 +38,10 @@ const FRAGMENT = "specs/openapi/paths/example/ExamplesV1.yaml";
 /** A directory with stand-ins for npx and docker, put first on PATH for every push. */
 const BIN = (() => {
     const bin = fs.mkdtempSync(path.join(os.tmpdir(), "aop-hook-bin-"));
+    const bundler = path.join(fakeBundlerDir(), "node_modules", "@redocly", "cli", "bin", "cli.js");
     fs.writeFileSync(path.join(bin, "npx"),
-        `#!/bin/sh\n[ "$1" = --no-install ] && shift\nshift\nexec "${process.execPath}" "${CLI}" "$@"\n`, { mode: 0o755 });
+        `#!/bin/sh\ncase "$2" in @redocly/cli@*) shift 2; exec "${bundler}" "$@";; esac\n` +
+        `[ "$1" = --no-install ] && shift\nshift\nexec "${process.execPath}" "${CLI}" "$@"\n`, { mode: 0o755 });
     fs.writeFileSync(path.join(bin, "docker"),
         `#!/bin/sh\nprintf '%s\\n' "$PWD" "$@" > "${path.join(bin, "docker-called")}"\n`, { mode: 0o755 });
     return bin;

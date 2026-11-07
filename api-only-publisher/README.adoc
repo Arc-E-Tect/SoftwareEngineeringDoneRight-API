@@ -190,12 +190,12 @@ Without `--target`, it also fails on a fragment no target reaches, as <<unrefere
 |Show each target's dependency closure: how many files it reaches, and the hash of their content.
 
 |`changed --since <ref>`
-|Report which targets' closures changed between a git ref and the working tree.
-A target whose closure is untouched needs no new version, however much else in the repository moved.
+|Report which targets' documents changed between a git ref and the working tree.
+A target whose documents are the same needs no new version, however much else in the repository moved.
 
 |`check [--target <t>]... [--pre-release <ids>] [--since <ref>]`
-|Fail on every published target that changed without a new version, from git alone, as <<version-guard,A changed target needs a new version §>> describes.
-Made for a pull request's pipeline: no network, no credentials, nothing built.
+|Fail on every published target that changed without a new version, as <<version-guard,A changed target needs a new version §>> describes.
+Made for a pull request's pipeline: no credentials, and no network when the bundler is carried, as in the Publisher's image; it builds each target's documents in a temporary copy, and leaves the library's own build output alone.
 
 |`pack [--pre-release <ids>] [--target <t>]... [--out <dir>]`
 |Archive each built, published target with a `manifest.json`, at the version its version file declares.
@@ -449,22 +449,49 @@ Change the version in the same commit as the fragments instead; `check` and `pub
 
 `check` decides, for every published target, whether its version may be published, and fails naming each one that may not.
 `publish` decides the same before it packs or sends anything, so a target that fails it is never published anywhere.
-Both read only git: the target's release tags, its history, and the working tree, changes not yet committed included.
+Both decide from git: the target's release tags, its history, and the working tree, changes not yet committed included.
+
+A target's version is the version of its documents, so a target has changed when its documents have: what a consumer receives, not the files it is built from.
+`check` builds the target twice, in a temporary copy of the library: as the baseline below has it, and as the working tree has it.
+It compares the two documents as canonical JSON, without the version stamped on them, so the order of keys does not count either.
+
+* An edit that does not reach the documents is no change: a YAML comment, quoting or layout, a part of a shared file the target does not use, or a file that only such a part refers to.
+* An edit that does reach them is a change, wherever it was made: a Markdown snippet a placeholder substitutes, which no `$ref` reaches, counts.
+* Moving a fragment to another directory changes its `x-fragment-path`, so with `fragmentPaths` on it is a change; with it off, and the file name kept, it is not.
+The TranscriberJ names generated classes after that path, so what a consumer gets does differ.
 
 [cols="1,3", options="header"]
 |===
 |What git tells |What `check` requires
 
 |A release tag for this exact version
-|The target unchanged since that tag: the version was released from what the tag points at, and publishing it again is safe only with the same specifications.
+|The documents unchanged since that tag: the version was released from what the tag points at, and publishing it again is safe only with the same documents.
 
 |Release tags, but none for this version
 |A version above the latest release; one below it is refused.
 
 |No release tags at all
-|Compared with the merge-base with the base branch, or with the ref `--since` names: a target changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
+|Compared with the merge-base with the base branch, or with the ref `--since` names: a target whose documents changed since then needs a higher version than its version file declared there, and a version lower than it was there is refused.
 A target whose version file was not there yet is new, and passes.
 |===
+
+A version raised over documents that did not change is a warning, not a failure: it announces a change there is not, and consumers will look for one.
+A release can be cut again on purpose, so `check` passes it with `WARNING`, and `publish` logs it and publishes.
+
+A refused target comes with a hint at the version it needs:
+
+[source,console]
+----
+orders             2.1.0          VIOLATION  orders changed since the merge-base with main (3f2a91c0d4e1), but its version is still 2.1.0: raise it in specs/openapi/bundles/orders.bundle.properties; hint: 2.2.0, a minor bump: something was added at /components/schemas/Refund
+----
+
+The hint sorts each difference between the two documents and takes the largest: documentation only -- a description, summary, title or example, or a fragment moved under the same file name -- is a patch; something added is a minor; something removed or changed, or a constraint such as `required`, `pattern` or `maxLength` added, is a major.
+Below 1.0 each moves one place down: a major becomes a minor, a minor a patch.
+It is a hint, not a compatibility analysis: it may call a compatible change a major, and the version you choose is yours.
+
+The baseline is built with its own `apionly.yaml` and its own toolchain pin, so it is the document that was released.
+When that pin cannot be had -- a sealed image carries only today's bundler, and downloading is off -- the baseline is built with today's pin instead, and the reason says so.
+A baseline that cannot be built at all leaves the target `undecided`, saying why.
 
 Release tags are named by `versioning.tagFormat`, `{target}-v{version}` by default: `orders-v2.1.0`.
 The Publisher never creates them: the pipeline that publishes does, after it has published, because a tool that pushes to git needs write access to the repository it builds from.
@@ -585,10 +612,12 @@ Raise the version, commit, and push again.
 
 Some things to know about the hook:
 
-* It checks every published target, not only those the pushed commits touch: a target that did not change passes, and the whole check takes seconds.
+* It checks every published target, not only those the pushed commits touch: a target that did not change passes.
+The check builds each target twice, so it takes about as long as two builds.
 * `check` looks at the working tree, and that includes changes you have not committed yet.
 Commit or stash them before you push, so it checks what you are actually pushing.
-* It needs neither credentials nor a network beyond the `git fetch`, and it builds nothing.
+* It needs no credentials, and no network beyond the `git fetch` once the pinned bundler is on your machine.
+It builds in a temporary copy of the library, and leaves your own build output alone.
 * `git push --no-verify` skips the hook.
 The pipeline still runs the same check, so skipping it only means you find out later.
 
@@ -602,16 +631,16 @@ A change under one target's own fragments affects only that one.
 Under repository-wide versioning the distinction is invisible, because everything bumps together; under per-target versioning a release has to know the difference, or one target's edit releases every other target and the version numbers stop meaning anything.
 
 A target's *closure* is every file reachable from its bundle root by following `$ref`s transitively.
-`changed --since <ref>` resolves each closure and reports which targets a change actually touched:
+`changed --since <ref>` reports which targets a change actually reached:
 
 [source,console]
 ----
 npm run apionly -- changed --since origin/main
 ----
 
-Two things make this correct rather than approximate.
-The closure is computed over the *staged, substituted* tree, so a change to a Markdown snippet, which genuinely changes the published document, counts.
-And a change to the *shape* of a closure always means editing a file already inside it, so a bundle gaining or losing a `$ref` is caught without diffing membership separately.
+It decides as `check` does, by building each target as the ref has it and as the working tree has it, and comparing the documents (<<version-guard,A changed target needs a new version §>>).
+A closure is coarser than that: a file is in it as soon as any part of it is reached, so an edit to a part of a shared file a target does not use touches its closure, but not its documents.
+`changed` therefore names a target only when its documents differ, and still reports the files of its closure that git saw change.
 
 The closure hash is recorded in each release's manifest as `closureSha256`, which is what lets a later commit compare against what was actually published.
 
@@ -1984,7 +2013,7 @@ Choosing the next version is the API designer's responsibility, and this table i
 The policy is the same for both kinds: an AsyncAPI document gains the key exactly as an OpenAPI one does, and the version follows the table above.
 
 Upgrading to a Publisher that stamps the key changes every OpenAPI document that has components built from fragments, and every AsyncAPI document that has fragments at all.
-`changed` does not see that, because a target's closure hash covers the fragments, not the Publisher.
+`changed` and `check` do not see that, because they build both sides of the comparison with the Publisher that runs them.
 Bump each such target's MINOR version in the upgrade's commit, or set `fragmentPaths: false` for the kind until you do: publishing a changed document under a version already published is refused by every Subscriber that locked it (see <<versions,Versions §>>).
 
 [#distribution]

@@ -570,10 +570,19 @@ test("changed names only the targets an edit reaches, bare when quiet", async ()
     fs.writeFileSync(path.join(dir, "specs/openapi/components/common/Shared.yaml"), "type: integer\n");
 
     await assert.rejects(() => main(["changed", "-C", dir]), /changed requires --since <ref>/);
-    const { printed: quiet } = await run(["changed", "--since", "HEAD", "-q", "-C", dir]);
-    assert.deepStrictEqual(quiet, ["alpha"]);
-    const { printed: verbose } = await run(["changed", "--since", "HEAD", "-C", dir]);
-    assert.ok(verbose.includes("\n1 of 2 target(s) changed since HEAD."));
+    // changed builds each target's document, here with a stand-in for the bundler.
+    const { fakeBundlerDir } = require("./fake-bundler");
+    const saved = process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DIR;
+    process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DIR = fakeBundlerDir();
+    try {
+        const { printed: quiet } = await run(["changed", "--since", "HEAD", "-q", "-C", dir]);
+        assert.deepStrictEqual(quiet, ["alpha"]);
+        const { printed: verbose } = await run(["changed", "--since", "HEAD", "-C", dir]);
+        assert.ok(verbose.includes("\n1 of 2 target(s) changed since HEAD."));
+    } finally {
+        if (saved === undefined) delete process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DIR;
+        else process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DIR = saved;
+    }
 });
 
 test("pack archives each published target at its declared version, and skips documentation views", async () => {

@@ -6,12 +6,17 @@
 // everything bumps together. Under per-target versioning the release job has to
 // answer it, or a change to one service's context releases every other service
 // too, and the version numbers stop meaning anything.
+//
+// A target changed when its documents did (#121): it is built as `since` has it and
+// as the working tree has it, and the two are compared, as the version guard does.
+// The files git saw change in its closure are reported alongside, for the reader.
 
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
 const { forTargets } = require("./closure");
+const { targetDocuments, sameDocuments } = require("./documents");
 
 class ChangedError extends Error {}
 
@@ -61,7 +66,8 @@ function toSource(config, stagedFile, kinds) {
 }
 
 /**
- * @returns {Array<{target, changed: boolean, files: string[], closureSha256: string}>}
+ * @returns {Array<{target, changed: boolean, files: string[], closureSha256: string}>} `changed` when the
+ *     target's documents differ; `files`, the files in its closure git saw change, whether they did or not
  */
 function changedSince(config, since, { kinds = ["openapi", "asyncapi"], log = () => {} } = {}) {
     const repoRoot = real(git(["rev-parse", "--show-toplevel"], config.root).trim());
@@ -75,6 +81,9 @@ function changedSince(config, since, { kinds = ["openapi", "asyncapi"], log = ()
     );
 
     const closures = forTargets(config, kinds);
+    const targets = [...closures.keys()];
+    const now = targetDocuments(config, targets, { repoRoot }).documents;
+    const then = targetDocuments(config, targets, { ref: since, repoRoot }).documents;
     const results = [];
 
     for (const [target, entry] of closures) {
@@ -82,17 +91,20 @@ function changedSince(config, since, { kinds = ["openapi", "asyncapi"], log = ()
             .map((f) => toSource(config, f, kinds))
             .filter(Boolean)
             .map(real);
-        // A change to the *shape* of a closure -- a bundle gaining or losing a
-        // $ref -- always means editing a file that is already in the closure, so
-        // membership changes are caught without diffing membership itself.
         const touched = [...new Set(sources.filter((f) => diff.has(f)))].sort();
+        const mine = now.get(target);
+        if (mine.error) throw new ChangedError(`${target} could not be built from the working tree: ${mine.error.message}`);
+        const theirs = then.get(target);
+        // A target that does not build as `since` has it cannot be shown unchanged.
+        if (theirs.error) log(`${target}: could not be built at ${since}, so counted as changed: ${theirs.error.message}`);
+        const changed = Boolean(theirs.error) || !sameDocuments(theirs.documents, mine.documents);
         results.push({
             target,
-            changed: touched.length > 0,
+            changed,
             files: touched.map((f) => path.relative(repoRoot, f)),
             closureSha256: entry.sha256,
         });
-        log(`${target.padEnd(18)} ${touched.length > 0 ? "changed" : "unchanged"}  ${entry.sha256.slice(0, 12)}`);
+        log(`${target.padEnd(18)} ${changed ? "changed" : "unchanged"}  ${entry.sha256.slice(0, 12)}`);
     }
     return results;
 }

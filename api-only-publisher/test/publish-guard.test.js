@@ -16,6 +16,9 @@ const { main } = require("../src/cli");
 const { loadFrom } = require("../src/config");
 const { prepare } = require("../src/pipeline");
 const { HANDOFF_JSON } = require("../src/handoff");
+const { useFakeBundler, REDOCLY_PIN } = require("./fake-bundler");
+
+useFakeBundler();
 
 const CONFIG = (channels) => `schemaVersion: 1
 sources:
@@ -27,6 +30,8 @@ defaults:
 build:
   staging: build/staging
   dist: dist
+toolchain:
+  redocly: "${REDOCLY_PIN}"
 channels:
 ${channels}targets:
   alpha:
@@ -144,6 +149,27 @@ test("check fails on a target it cannot decide, and publish warns about it and p
     assert.strictEqual(code, 0);
     assert.match(text, /^warning: alpha 1\.0\.0: version not checked: no merge-base with main/m);
     assert.ok(fs.existsSync(path.join(dir, "build", "publish", "alpha", "1.0.0", "alpha-1.0.0.tgz")));
+});
+
+test("a version raised over the same documents is a warning: check passes, and publish says so and publishes", async () => {
+    const dir = library();
+    write(dir, "specs/openapi/paths/A.yaml", "# Only a comment.\nget:\n  x: {}\n");
+    write(dir, "specs/openapi/bundles/alpha.bundle.properties", "version=1.1.0\n");
+    const checked = await run(["check", "-C", dir]);
+    assert.strictEqual(checked.code, 0);
+    assert.match(checked.text, /^alpha +1\.1\.0 +WARNING +1\.1\.0 is above 1\.0\.0 at the merge-base with main .*documents are unchanged/m);
+
+    built(dir, "1.1.0");
+    const { code, text } = await run(["publish", "-C", dir]);
+    assert.strictEqual(code, 0);
+    assert.match(text, /^warning: alpha 1\.1\.0: 1\.1\.0 is above 1\.0\.0/m);
+    assert.ok(fs.existsSync(path.join(dir, "build", "publish", "alpha", "1.1.0", "alpha-1.1.0.tgz")));
+});
+
+test("a refused target names the version it likely needs", async () => {
+    const dir = library();
+    change(dir);
+    await assert.rejects(main(["check", "-q", "-C", dir]), /hint: 1\.1\.0, a minor bump: something was added at \/paths\/~1a\/get\/y/);
 });
 
 test("check outside a git repository fails: it cannot decide", async () => {
