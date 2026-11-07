@@ -13,6 +13,9 @@ const { execFileSync } = require("node:child_process");
 const { load } = require("../src/config");
 const { prepare } = require("../src/pipeline");
 const { changedSince, ChangedError } = require("../src/changed");
+const { useFakeBundler, REDOCLY_PIN } = require("./fake-bundler");
+
+useFakeBundler();
 
 const CONFIG = `schemaVersion: 1
 sources:
@@ -23,6 +26,8 @@ defaults:
     outputName: openapi.yaml
 build:
   staging: build/staging
+toolchain:
+  redocly: "${REDOCLY_PIN}"
 targets:
   alpha:
     openapi:
@@ -99,6 +104,15 @@ test("an edit inside one target's own context changes only that target", () => {
     assert.strictEqual(results.get("alpha").changed, false);
 });
 
+test("an edit that does not reach the built document is no change: a comment, or quoting", () => {
+    const { dir, config } = repository();
+    fs.writeFileSync(path.join(dir, "specs/openapi/components/common/Shared.yaml"), "# Kept short.\ntype: \"string\"\n");
+
+    const results = report(config, "HEAD");
+
+    assert.strictEqual(results.get("alpha").changed, false);
+});
+
 test("names the files that changed, relative to the repository", () => {
     const { dir, config } = repository();
     fs.writeFileSync(path.join(dir, "specs/openapi/paths/B.yaml"), "get:\n  y:\n    summary: changed\n");
@@ -132,6 +146,28 @@ test("every report carries the closure hash that would be released", () => {
     for (const result of report(config, "HEAD").values()) {
         assert.match(result.closureSha256, /^[0-9a-f]{64}$/);
     }
+});
+
+test("a target that does not build as the ref has it counts as changed, and the log says why", () => {
+    const { dir, config } = repository();
+    fs.writeFileSync(path.join(dir, "specs/openapi/paths/B.yaml"), "get:\n  y:\n    $ref: './Missing.yaml'\n");
+    execFileSync("git", ["commit", "-qam", "broken"], { cwd: dir });
+    fs.writeFileSync(path.join(dir, "specs/openapi/paths/B.yaml"), "get:\n  y: {}\n");
+    prepare(config, { kinds: ["openapi"] });
+    const logged = [];
+
+    const results = changedSince(config, "HEAD", { kinds: ["openapi"], log: (line) => logged.push(line) });
+
+    assert.strictEqual(results.find((r) => r.target === "beta").changed, true);
+    assert.ok(logged.some((line) => /^beta: could not be built at HEAD, so counted as changed: /.test(line)), logged.join("\n"));
+});
+
+test("a target that does not build from the working tree fails: that is the library's to fix", () => {
+    const { dir, config } = repository();
+    fs.writeFileSync(path.join(dir, "specs/openapi/paths/B.yaml"), "get:\n  y:\n    $ref: './Missing.yaml'\n");
+
+    assert.throws(() => report(config, "HEAD"),
+        (error) => error instanceof ChangedError && /beta could not be built from the working tree/.test(error.message));
 });
 
 test("an unknown ref fails with git's own complaint rather than silently reporting nothing", () => {

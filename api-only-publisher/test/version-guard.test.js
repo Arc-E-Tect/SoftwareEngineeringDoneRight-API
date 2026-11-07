@@ -13,6 +13,9 @@ const { execFileSync } = require("node:child_process");
 
 const { load, ConfigError } = require("../src/config");
 const { guard, GuardError } = require("../src/version-guard");
+const { useFakeBundler, REDOCLY_PIN } = require("./fake-bundler");
+
+useFakeBundler();
 
 const CONFIG = (extra = "") => `schemaVersion: 1
 sources:
@@ -23,6 +26,9 @@ defaults:
     outputName: openapi.yaml
 build:
   staging: build/staging
+  dist: dist
+toolchain:
+  redocly: "${REDOCLY_PIN}"
 ${extra}targets:
   alpha:
     openapi:
@@ -33,7 +39,7 @@ ${extra}targets:
 `;
 
 const FILES = {
-    ".gitignore": "build/\n",
+    ".gitignore": "build/\ndist/\n",
     "specs/openapi/bundles/alpha.yaml": "openapi: 3.1.1\npaths:\n  /a:\n    $ref: '../paths/A.yaml'\n",
     "specs/openapi/bundles/beta.yaml": "openapi: 3.1.1\npaths:\n  /b:\n    $ref: '../paths/B.yaml'\n",
     "specs/openapi/bundles/alpha.bundle.properties": "version=1.0.0\n",
@@ -129,7 +135,7 @@ test("--since names the ref to compare against instead of the merge-base", () =>
     commit(dir, CHANGE_A);
     commit(dir, { "specs/openapi/bundles/alpha.bundle.properties": "version=1.1.0\n" });
     assert.strictEqual(verdicts(dir).alpha.verdict, "ok");
-    assert.strictEqual(verdicts(dir, { since: "HEAD~1" }).alpha.verdict, "ok", "the bump is the only change since HEAD~1");
+    assert.strictEqual(verdicts(dir, { since: "HEAD~1" }).alpha.verdict, "warning", "the bump is the only change since HEAD~1");
     commit(dir, { "specs/openapi/paths/A.yaml": "get:\n  x: {}\n  zz: {}\n" });
     assert.strictEqual(verdicts(dir, { since: "HEAD~1" }).alpha.verdict, "violation", "changed again since HEAD~1, still 1.1.0");
 });
@@ -231,6 +237,104 @@ test("without tags, a pre-release needs no new version in the file: its identifi
     const result = verdicts(dir, { preRelease: "rc.1" });
     assert.strictEqual(result.alpha.verdict, "ok");
     assert.match(result.alpha.reason, /pre-release 1\.0\.0-rc\.1/);
+});
+
+// ------------------------------------------------------------------ the documents decide
+
+test("a refused target carries a hint at the version it needs", () => {
+    const dir = repository();
+    git(dir, "tag", "alpha-v1.0.0");
+    commit(dir, CHANGE_A);
+    const { alpha } = verdicts(dir);
+    assert.strictEqual(alpha.verdict, "violation");
+    assert.deepStrictEqual({ bump: alpha.hint.bump, version: alpha.hint.version }, { bump: "minor", version: "1.1.0" });
+    assert.match(alpha.reason, /hint: 1\.1\.0, a minor bump: something was added at \/paths\/~1a\/get\/z/);
+});
+
+test("the documents are built away from the library: its own build output is left alone", () => {
+    const dir = repository();
+    write(dir, "dist/alpha/openapi.yaml", "built: by the library\n");
+    commit(dir, CHANGE_A);
+    verdicts(dir);
+    assert.strictEqual(fs.readFileSync(path.join(dir, "dist/alpha/openapi.yaml"), "utf8"), "built: by the library\n");
+    assert.ok(!fs.existsSync(path.join(dir, "build")), "nothing staged in the library");
+});
+
+test("a file not yet known to git counts: it is part of the working tree", () => {
+    const dir = repository();
+    git(dir, "tag", "alpha-v1.0.0");
+    write(dir, "specs/openapi/paths/A.yaml", "get:\n  x:\n    $ref: './X.yaml'\n");
+    write(dir, "specs/openapi/paths/X.yaml", "type: string\n");
+    assert.strictEqual(verdicts(dir).alpha.verdict, "violation");
+});
+
+test("a fragment deleted from the working tree counts, though git still tracks it", () => {
+    const dir = repository();
+    git(dir, "tag", "alpha-v1.0.0");
+    write(dir, "specs/openapi/bundles/alpha.yaml", "openapi: 3.1.1\npaths: {}\n");
+    fs.rmSync(path.join(dir, "specs/openapi/paths/A.yaml"));
+    const { alpha } = verdicts(dir);
+    assert.strictEqual(alpha.verdict, "violation");
+    assert.strictEqual(alpha.hint.bump, "major", "an operation was removed");
+});
+
+test("a baseline whose apionly.yaml cannot be read leaves the target undecided", () => {
+    const dir = repository();
+    git(dir, "checkout", "-q", "main");
+    commit(dir, { "apionly.yaml": CONFIG("unknown: 1\n") });
+    git(dir, "tag", "alpha-v1.0.0");
+    git(dir, "checkout", "-q", "topic");
+    git(dir, "reset", "-q", "--hard", "main");
+    commit(dir, { "apionly.yaml": CONFIG() });
+    const { alpha } = verdicts(dir);
+    assert.strictEqual(alpha.verdict, "undecided");
+    assert.match(alpha.reason, /could not be built at its release tag alpha-v1\.0\.0: .*unknown/);
+});
+
+test("a target its baseline did not build has changed, though its version file was there", () => {
+    const dir = repository();
+    git(dir, "checkout", "-q", "main");
+    commit(dir, { "apionly.yaml": CONFIG().replace(/  beta:\n    openapi:\n      bundle: bundles\/beta\.yaml\n/, "") });
+    git(dir, "checkout", "-q", "topic");
+    git(dir, "reset", "-q", "--hard", "main");
+    commit(dir, { "apionly.yaml": CONFIG() });
+    const { beta } = verdicts(dir);
+    assert.strictEqual(beta.verdict, "violation");
+    assert.deepStrictEqual([beta.hint.bump, beta.hint.version], ["minor", "2.1.0"]);
+});
+
+test("a baseline whose bundler cannot be had is built with today's, and the reason says so", () => {
+    const dir = repository();
+    // The baseline pins a version this installation does not carry, and downloading is off.
+    git(dir, "checkout", "-q", "main");
+    commit(dir, { "apionly.yaml": CONFIG().replace(REDOCLY_PIN, "@redocly/cli@2.40.0") });
+    git(dir, "tag", "alpha-v1.0.0");
+    git(dir, "checkout", "-q", "topic");
+    git(dir, "reset", "-q", "--hard", "main");
+    commit(dir, { "apionly.yaml": CONFIG() });
+    const saved = process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD;
+    process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD = "never";
+    try {
+        const { alpha } = verdicts(dir);
+        assert.strictEqual(alpha.verdict, "ok", alpha.reason);
+        assert.match(alpha.reason, /built with @redocly\/cli@2\.52\.0, as @redocly\/cli@2\.40\.0 cannot be had/);
+    } finally {
+        if (saved === undefined) delete process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD;
+        else process.env.API_ONLY_PUBLISHER_TOOLCHAIN_DOWNLOAD = saved;
+    }
+});
+
+test("a baseline that does not build leaves the target undecided, saying why", () => {
+    const dir = repository();
+    git(dir, "checkout", "-q", "main");
+    commit(dir, { "specs/openapi/bundles/alpha.yaml": "openapi: 3.1.1\npaths:\n  /a:\n    $ref: '../paths/Missing.yaml'\n" });
+    git(dir, "tag", "alpha-v1.0.0");
+    git(dir, "checkout", "-q", "topic");
+    git(dir, "reset", "-q", "--hard", "main");
+    commit(dir, { "specs/openapi/bundles/alpha.yaml": FILES["specs/openapi/bundles/alpha.yaml"] });
+    const { alpha } = verdicts(dir);
+    assert.strictEqual(alpha.verdict, "undecided");
+    assert.match(alpha.reason, /alpha could not be built at its release tag alpha-v1\.0\.0/);
 });
 
 // ------------------------------------------------------------------ where it cannot run

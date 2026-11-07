@@ -552,6 +552,9 @@ async function main(argv, io = {}) {
                 for (const r of checked.filter((c) => c.verdict === "undecided")) {
                     log(`warning: ${r.target} ${r.version}: version not checked: ${r.reason}`);
                 }
+                for (const r of checked.filter((c) => c.verdict === "warning")) {
+                    log(`warning: ${r.target} ${r.version}: ${r.reason}`);
+                }
             } catch (error) {
                 if (!(error instanceof GuardError && error.notARepository)) throw error;
                 log(`warning: versions not checked: ${error.message}`);
