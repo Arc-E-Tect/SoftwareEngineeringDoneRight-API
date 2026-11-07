@@ -17,13 +17,14 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { gitEnv } = require("./git-env");
 
 const HOOKS_DIR = ".githooks";
 const IMAGE = "arcetect/api-only-publisher";
 
 function tryGit(args, cwd) {
     try {
-        return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+        return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: gitEnv() }).trim();
     } catch {
         return null;
     }
@@ -129,7 +130,7 @@ function planHook(dir, runner, version) {
 
 /** Points git at .githooks in this clone. */
 function setHooksPath(repository) {
-    execFileSync("git", ["config", "core.hooksPath", HOOKS_DIR], { cwd: repository, stdio: "ignore" });
+    execFileSync("git", ["config", "core.hooksPath", HOOKS_DIR], { cwd: repository, stdio: "ignore", env: gitEnv() });
 }
 
 module.exports = { planHook, setHooksPath, imageTag, HOOKS_DIR };

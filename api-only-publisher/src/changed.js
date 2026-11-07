@@ -14,6 +14,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { gitEnv } = require("./git-env");
 
 const { forTargets } = require("./closure");
 const { targetDocuments, sameDocuments } = require("./documents");
@@ -22,7 +23,7 @@ class ChangedError extends Error {}
 
 function git(args, cwd) {
     try {
-        return execFileSync("git", args, { cwd, encoding: "utf8" });
+        return execFileSync("git", args, { cwd, encoding: "utf8", env: gitEnv() });
     } catch (error) {
         throw new ChangedError(`git ${args.join(" ")} failed: ${(error.stderr || error.message).trim()}`);
     }

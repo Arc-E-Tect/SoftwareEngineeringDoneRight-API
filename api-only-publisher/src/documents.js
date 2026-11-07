@@ -16,6 +16,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { gitEnv } = require("./git-env");
 const YAML = require("yaml");
 
 const { load } = require("./config");
@@ -44,7 +45,7 @@ function sameDocuments(a, b) {
 }
 
 function git(args, cwd, options = {}) {
-    return execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1 << 30, ...options });
+    return execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1 << 30, env: gitEnv(), ...options });
 }
 
 /** Copy the library as the working tree has it: tracked and untracked files git does not ignore. */
