@@ -14,6 +14,7 @@
 
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { gitEnv } = require("./git-env");
 
 const { isPrerelease } = require("./version-policy");
 const { ChannelError, ChannelConflict, ChannelUnavailable } = require("./channel-error");
@@ -53,7 +54,7 @@ function releaseRef(options, env = process.env) {
     if (env.CI_COMMIT_SHA) return env.CI_COMMIT_SHA;
     try {
         return execFileSync("git", ["-C", path.resolve(options.baseDir || "."), "rev-parse", "HEAD"],
-            { encoding: "utf8", stdio: "pipe" }).trim();
+            { encoding: "utf8", stdio: "pipe", env: gitEnv() }).trim();
     } catch {
         throw new ChannelError("release: true needs the commit to tag: $CI_COMMIT_SHA, or a git checkout to read HEAD from");
     }

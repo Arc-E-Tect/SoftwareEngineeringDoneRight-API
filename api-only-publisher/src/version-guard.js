@@ -22,6 +22,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { gitEnv } = require("./git-env");
 
 const { targetDocuments, sameDocuments } = require("./documents");
 const { bumpHint } = require("./bump-hint");
@@ -31,7 +32,7 @@ const { compare, isPrerelease, SEMVER } = require("./version-policy");
 class GuardError extends Error {}
 
 function git(args, cwd) {
-    return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+    return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: gitEnv() }).trim();
 }
 
 function tryGit(args, cwd) {

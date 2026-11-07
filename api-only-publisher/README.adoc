@@ -619,6 +619,7 @@ The check builds each target twice, so it takes about as long as two builds.
 Commit or stash them before you push, so it checks what you are actually pushing.
 * It needs no credentials, and no network beyond the `git fetch` once the pinned bundler is on your machine.
 It builds in a temporary copy of the library, and leaves your own build output alone.
+* Git runs the hook with `GIT_DIR` set; the Publisher ignores it, and every other variable that tells git where the repository is, and finds the repository from the library's directory, so the hook checks the same in a linked worktree as in the main checkout.
 * `git push --no-verify` skips the hook.
 The pipeline still runs the same check, so skipping it only means you find out later.
 

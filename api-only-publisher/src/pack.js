@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { execFileSync } = require("child_process");
+const { gitEnv } = require("./git-env");
 const YAML = require("yaml");
 
 const { tgz } = require("./tar");
@@ -40,7 +41,7 @@ function publicUrl(url) {
 function gitInfo(cwd) {
     const git = (args) => {
         try {
-            return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+            return execFileSync("git", args, { cwd, encoding: "utf8", env: gitEnv() }).trim();
         } catch {
             return null;
         }
@@ -75,7 +76,7 @@ function producedAtFor(cwd) {
         return new Date(Number(epoch) * 1000);
     }
     try {
-        const seconds = execFileSync("git", ["log", "-1", "--format=%ct"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+        const seconds = execFileSync("git", ["log", "-1", "--format=%ct"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: gitEnv() }).trim();
         if (/^\d+$/.test(seconds)) return new Date(Number(seconds) * 1000);
     } catch {
         // Not a git repository, or one with no commits yet.
