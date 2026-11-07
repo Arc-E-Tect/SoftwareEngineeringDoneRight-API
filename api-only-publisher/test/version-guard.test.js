@@ -291,6 +291,25 @@ test("a baseline whose apionly.yaml cannot be read leaves the target undecided",
     assert.match(alpha.reason, /could not be built at its release tag alpha-v1\.0\.0: .*unknown/);
 });
 
+test("a baseline's versioning section is not read: a key renamed since does not stop it building", () => {
+    // versioning.mainBranch was renamed to baseBranch in 0.18.5; a library that upgrades
+    // past that compares with a baseline that still has the old key.
+    const dir = repository("versioning:\n  baseBranch: main\n");
+    git(dir, "checkout", "-q", "main");
+    commit(dir, { "apionly.yaml": CONFIG("versioning:\n  mainBranch: main\n") });
+    git(dir, "tag", "alpha-v1.0.0");
+    git(dir, "checkout", "-q", "topic");
+    git(dir, "reset", "-q", "--hard", "main");
+    commit(dir, { "apionly.yaml": CONFIG("versioning:\n  baseBranch: main\n") });
+    let { alpha } = verdicts(dir);
+    assert.strictEqual(alpha.verdict, "ok", alpha.reason);
+    assert.match(alpha.reason, /unchanged since its release tag alpha-v1\.0\.0/);
+
+    commit(dir, CHANGE_A);
+    ({ alpha } = verdicts(dir));
+    assert.strictEqual(alpha.verdict, "violation", "the baseline is still compared");
+});
+
 test("a target its baseline did not build has changed, though its version file was there", () => {
     const dir = repository();
     git(dir, "checkout", "-q", "main");
