@@ -1,3 +1,15 @@
+# [0.19.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.7...api-only-publisher-v0.19.0) (2026-11-07)
+
+
+### ✨ New and updated features
+
+* **api-only-publisher:** decide whether a target changed from its built documents, with a bump hint ([#122](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/122)) ([80475d1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/80475d139f1db108ae8128a405f19b261d861a40)), closes [#122](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/122) [#121](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/121)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.18.7 [skip ci] ([3512f29](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3512f294625a21eaa7fd56397677798d19f67fc1))
+
 ## [0.18.7](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.6...api-only-publisher-v0.18.7) (2026-11-05)
 
 
