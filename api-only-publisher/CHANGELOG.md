@@ -1,3 +1,15 @@
+## [0.19.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.19.0...api-only-publisher-v0.19.1) (2026-11-07)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-publisher:** read a baseline without its versioning section ([#124](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/124)) ([3c4dac1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/3c4dac145a1dc1276da4573ea9f4b058f6e02ffd)), closes [#124](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/124) [#123](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/123)
+
+
+### 🔧 Misc
+
+* **api-only-publisher:** update README version to 0.19.0 [skip ci] ([fe997a5](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/fe997a567c5da4798a5568a791bd4189f450b9d2))
+
 # [0.19.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-publisher-v0.18.7...api-only-publisher-v0.19.0) (2026-11-07)
 
 
