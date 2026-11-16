@@ -24,7 +24,7 @@ Reporters are credited in the release notes unless they prefer to remain anonymo
 ### Credentials
 
 - No credentials of any kind are committed to this repository, test credentials included; see [ZERO_CREDENTIALS_POLICY.md](ZERO_CREDENTIALS_POLICY.md).
-- GitHub secret scanning, including generic patterns and validity checks, and push protection guard the repository server-side.
+- GitHub secret scanning and push protection guard the repository server-side.
 - Contributors install the repository's Git hooks with `./scripts/setup-hooks.sh`; they reject keystores and likely hardcoded secrets before a commit is made.
 
 ### Changes to the default branch
