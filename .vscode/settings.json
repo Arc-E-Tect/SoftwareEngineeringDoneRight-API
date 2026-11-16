@@ -1,0 +1,10 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.exclusions": [
+        "**/.gradle/**",
+        "**/build/**",
+        "**/node_modules/**"
+    ],
+    "java.debug.settings.onBuildFailureProceed": true
+}
