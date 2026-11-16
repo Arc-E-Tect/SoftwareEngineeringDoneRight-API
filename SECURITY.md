@@ -30,6 +30,7 @@ Reporters are credited in the release notes unless they prefer to remain anonymo
 ### Changes to the default branch
 
 - Every change reaches `main` through a pull request that needs an approving review from a code owner.
+  The only exception is the release automation, which commits changelogs and version numbers directly with the maintainer's administrator rights.
 - Commits must be signed, and the history of `main` is linear.
 - Release tags cannot be deleted or moved.
 
