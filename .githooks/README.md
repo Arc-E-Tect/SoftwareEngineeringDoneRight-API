@@ -19,8 +19,9 @@ This sets the repository-local `core.hooksPath` to `.githooks` and verifies the 
 - Blocks keystore files (`.p12`, `.pfx`, `.jks`, and `.keystore`).
 - Checks staged text files for likely hardcoded secret assignments.
 - Runs `actionlint` on staged GitHub Actions workflow files.
+- Rejects a `package.json` or `package-lock.json` that starts with a UTF-8 byte order mark.
 
-The secret check allows documentation in `SECURITY`, `POLICY`, and `SECRET` files, sanitized example/template files, the hook source, and the Copilot instructions. It is not a substitute for GitHub secret scanning.
+The secret check allows documentation in `SECURITY`, `POLICY`, and `SECRET` files, sanitized example/template files, the hook source, and the Copilot instructions. It ignores values read at run time, such as `System.getenv(...)` and `providers.gradleProperty(...)`. It is not a substitute for GitHub secret scanning.
 
 ### pre-push
 

@@ -4,9 +4,11 @@ set -euo pipefail
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-staged_keystores=$(git diff --cached --name-only --diff-filter=ACM | grep -Ei '\.(p12|pfx|jks|keystore)$' || true)
-staged_files=$(git diff --cached --name-only --diff-filter=ACM | grep -Ev '\.(min\.js|lock|sum|jar|class|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|pdf|zip|tar|gz|bz2|xz|7z|rar|exe|dll|so|dylib)$' || true)
-changed_workflows=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\.github/workflows/.*\.ya?ml$' || true)
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+staged_keystores=$(printf '%s\n' "$staged" | grep -Ei '\.(p12|pfx|jks|keystore)$' || true)
+staged_files=$(printf '%s\n' "$staged" | grep -Ev '\.(min\.js|lock|sum|jar|class|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|pdf|zip|tar|gz|bz2|xz|7z|rar|exe|dll|so|dylib)$' || true)
+changed_workflows=$(printf '%s\n' "$staged" | grep -E '^\.github/workflows/.*\.ya?ml$' || true)
+changed_manifests=$(printf '%s\n' "$staged" | grep -E '(^|/)package(-lock)?\.json$' || true)
 failed=0
 
 if [[ -n "$staged_keystores" ]]; then
@@ -17,6 +19,8 @@ fi
 
 if [[ -n "$staged_files" ]]; then
   secret_pattern='(password|passwd|pwd|secret|api[-_]?key|auth[-_]?token|access[-_]?token|private[-_]?key|client[-_]?secret|api[-_]?secret|bearer[-_]?token|oauth[-_]?token|session[-_]?secret|encryption[-_]?key|signing[-_]?key|jwt[-_]?secret)[[:space:]]*[:=][[:space:]]*[^<$#][^$#]{2,}'
+  # A value read at run time from the environment or a Gradle property is not a hardcoded secret.
+  runtime_lookup='(System\.getenv|System\.getProperty|project\.findProperty|providers\.(environmentVariable|gradleProperty))'
 
   while IFS= read -r file; do
     [[ -z "$file" ]] && continue
@@ -25,7 +29,7 @@ if [[ -n "$staged_files" ]]; then
     [[ "$file" =~ (SECURITY|POLICY|SECRET).*\.(md|adoc)$ ]] && continue
     [[ "$file" =~ \.(example|sample|template)$ ]] && continue
 
-    matched_secrets=$(git show ":$file" | grep -E "$secret_pattern" || true)
+    matched_secrets=$(git show ":$file" | grep -E "$secret_pattern" | grep -Ev "$runtime_lookup" || true)
     if [[ -n "$matched_secrets" ]]; then
       printf 'Error: potential hardcoded secret detected in %s\n' "$file" >&2
       printf '%s\n' "$matched_secrets" | head -5 >&2
@@ -47,6 +51,18 @@ if [[ -n "$changed_workflows" ]]; then
       failed=1
     fi
   done <<< "$changed_workflows"
+fi
+
+if [[ -n "$changed_manifests" ]]; then
+  # npm writes a UTF-8 byte order mark into neither file, but some editors do, and npm then fails to parse it.
+  while IFS= read -r manifest; do
+    [[ -z "$manifest" ]] && continue
+    first_bytes=$(git show ":$manifest" | head -c 3 | od -An -tx1 | tr -d ' \n' || true)
+    if [[ "$first_bytes" == "efbbbf" ]]; then
+      printf 'Error: %s starts with a UTF-8 byte order mark. Remove it before committing.\n' "$manifest" >&2
+      failed=1
+    fi
+  done <<< "$changed_manifests"
 fi
 
 if [[ "$failed" -ne 0 ]]; then
