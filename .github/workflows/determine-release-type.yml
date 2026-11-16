@@ -7,16 +7,21 @@ on:
         description: 'The user-friendly release type based on the commit message'
         value: ${{ jobs.Determine-Release-Type.outputs.release_type }}
 
+permissions:
+  contents: read
+
 jobs:
   Determine-Release-Type:
     name: Determine Release Type
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     outputs:
       release_type: ${{ steps.get-type.outputs.release_type }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Get commit type and map to release type

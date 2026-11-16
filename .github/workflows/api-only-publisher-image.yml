@@ -89,6 +89,7 @@ jobs:
   Plan:
     name: Plan the image tags
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: read
@@ -137,6 +138,7 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -232,6 +234,7 @@ jobs:
     # A version GHCR already has skips Build, and is neither re-tagged nor re-signed.
     if: ${{ !cancelled() && needs.Plan.result == 'success' && (needs.Build.result == 'success' || needs.Plan.outputs.build == 'false') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -307,6 +310,7 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
@@ -335,6 +339,7 @@ jobs:
     needs: Manifest
     if: ${{ !cancelled() && needs.Manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
@@ -384,6 +389,7 @@ jobs:
     needs: [Plan, Manifest, Smoke-Test, Scan]
     if: ${{ !cancelled() && needs.Smoke-Test.result == 'success' && needs.Scan.result == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -478,6 +484,7 @@ jobs:
     # dry run, which moves no floating tag, describes its scratch repository.
     if: ${{ !cancelled() && needs.Promote.result == 'success' && (needs.Plan.outputs.floating != '' || inputs.from_source) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -504,6 +511,7 @@ jobs:
     needs: [Manifest, Promote]
     if: ${{ !cancelled() && needs.Promote.result == 'success' && inputs.release_tag != '' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
     env:
@@ -545,6 +553,7 @@ jobs:
     needs: [Plan, Build, Manifest, Smoke-Test, Scan, Promote, Description, Release-Assets]
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Summarize
         env:

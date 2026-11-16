@@ -9,10 +9,18 @@ on:
       - '.github/workflows/semantic-version-calculate.yml'
       - '.github/workflows/determine-release-type.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   Detect-Changes:
     name: Detect Relevant Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     outputs:
       changed: ${{ steps.decide.outputs.changed }}
     steps:
@@ -70,11 +78,10 @@ jobs:
     needs: [Detect-Changes, Calculate-Version]
     if: needs.Detect-Changes.outputs.changed == 'true'
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: read
 
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       GRADLE_PROPERTIES_FILE: ./api-only-subscriber/gradle.properties
@@ -128,6 +135,7 @@ jobs:
     needs: [Detect-Changes, Build-Plugin, Determine-Release-Type]
     if: always() && needs.Detect-Changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Output build completion
         run: |

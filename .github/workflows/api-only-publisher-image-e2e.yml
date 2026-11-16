@@ -37,10 +37,15 @@ env:
   MAVEN_GROUP: com.arc-e-tect.apionly.e2e
   NUGET_PREFIX: ArcETect.ApiOnlyE2e
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   library:
     name: Scaffold a library with two targets
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Scaffold
         run: |
@@ -91,6 +96,7 @@ jobs:
     name: Package with docker run
     needs: library
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Receive the library
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -130,6 +136,7 @@ jobs:
     name: Package in a container job
     needs: library
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     container:
       image: ${{ inputs.image }}
       options: --user 1001
@@ -166,6 +173,7 @@ jobs:
     name: Both ways give the same bytes
     needs: [package, package-in-container]
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Receive both
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -188,6 +196,7 @@ jobs:
       matrix:
         pass: [first, second]
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write   # the GitHub Release
       packages: write   # npm, Maven and NuGet on GitHub Packages
@@ -356,6 +365,7 @@ jobs:
     name: Resolve every package with its own client
     needs: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: read
@@ -503,6 +513,7 @@ jobs:
     name: Publish to GitLab from the image, in one job, and resolve it
     needs: library
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       # The test project on gitlab.com, and a deploy token of it with
       # read_package_registry and write_package_registry, and nothing else.
@@ -636,6 +647,7 @@ jobs:
     needs: [publish, consume]
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
       packages: write

@@ -37,6 +37,9 @@ concurrency:
   group: api-only-publisher-release-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   Calculate-Version:
     # A re-publish has nothing to calculate: the version is given, the tag exists.
@@ -59,6 +62,7 @@ jobs:
     name: Build API-Only Publisher
     needs: Calculate-Version
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -99,7 +103,7 @@ jobs:
     # "there is nothing new to release", not a string-emptiness check on next_version.
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
-      contents: write
+      contents: read
     uses: ./.github/workflows/semantic-version-apply.yml
     with:
       project_dir: api-only-publisher
@@ -121,6 +125,7 @@ jobs:
                 && needs.Calculate-Version.outputs.next_version_empty == 'false')
           ) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     permissions:
       contents: read
@@ -239,9 +244,10 @@ jobs:
     needs: [Calculate-Version, Publish]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
-      contents: write
+      contents: read
 
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
@@ -249,6 +255,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Credentials stay persisted on purpose: a later step in this job pushes with git.
         with:
           fetch-depth: 0
           ref: main
@@ -285,6 +292,7 @@ jobs:
     needs: [Build, Publish, Image, Update-README, Release-Package, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Report the Docker image
         if: ${{ needs.Image.result != 'success' && needs.Publish.result == 'success' }}
