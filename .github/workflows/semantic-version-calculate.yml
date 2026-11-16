@@ -36,11 +36,15 @@ on:
         description: 'Whether no new version was actually calculated - "true" even though next_version itself is never empty (it falls back to the current version for callers that just need a displayable/buildable value).'
         value: ${{ jobs.calculate_version.outputs.next_version_empty }}
 
+permissions:
+  contents: read
+
 jobs:
   calculate_version:
     name: Calculate Version
 
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     outputs:
       next_version: ${{ steps.calculate_semantic_version.outputs.next_version }}

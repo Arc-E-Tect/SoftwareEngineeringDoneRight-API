@@ -25,6 +25,9 @@ concurrency:
   group: api-only-subscriber-release-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   Calculate-Version:
     uses: ./.github/workflows/semantic-version-calculate.yml
@@ -43,6 +46,7 @@ jobs:
     name: Build API-Only Subscriber Plugin
     needs: Calculate-Version
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       GRADLE_PROPERTIES_FILE: ./api-only-subscriber/gradle.properties
@@ -93,7 +97,7 @@ jobs:
     # "there is nothing new to release", not a string-emptiness check on next_version.
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
-      contents: write
+      contents: read
     uses: ./.github/workflows/semantic-version-apply.yml
     with:
       project_dir: api-only-subscriber
@@ -107,7 +111,9 @@ jobs:
     # at -- and the Portal does not allow a version to be replaced.
     needs: [Calculate-Version, Release-Plugin]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
+    environment: release
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       GRADLE_PROPERTIES_FILE: ./api-only-subscriber/gradle.properties
@@ -118,6 +124,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
@@ -157,9 +164,10 @@ jobs:
     needs: [Calculate-Version, Publish]
     if: ${{ needs.Calculate-Version.outputs.next_version_empty == 'false' }}
     permissions:
-      contents: write
+      contents: read
 
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
@@ -167,6 +175,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Credentials stay persisted on purpose: a later step in this job pushes with git.
         with:
           fetch-depth: 0
           ref: main
@@ -208,6 +217,7 @@ jobs:
       contents: read
 
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     env:
       VERSION: ${{ needs.Calculate-Version.outputs.next_version }}
@@ -218,6 +228,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Credentials stay persisted on purpose: a later step in this job pushes with git.
         with:
           ref: main
           token: ${{ secrets.SEDR_AUTOMATION_TOKEN }}
@@ -258,6 +269,7 @@ jobs:
     needs: [Build, Publish, Update-README, Update-TranscriberJ, Release-Plugin, Determine-Release-Type]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Output release completion
         run: |
