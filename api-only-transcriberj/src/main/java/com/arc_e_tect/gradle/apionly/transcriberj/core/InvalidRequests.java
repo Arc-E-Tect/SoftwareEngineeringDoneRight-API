@@ -100,6 +100,10 @@ final class InvalidRequests {
         Constraint sharing;
         Node node;
         Schema declaring;
+        /** For a header a selection requires: the selection; else null. */
+        SelectedResponses.Selection selection;
+        /** For a header a selection requires: how the selected response's request treats the selecting headers. */
+        ValidRequests.Headers selectionHeaders;
 
         Constraint(String in, String name, String mediaType, String pointer, String keyword, String schemaLocation) {
             this.in = in;
@@ -309,6 +313,16 @@ final class InvalidRequests {
         List<Constraint> constraints = new ArrayList<>();
         for (ValidRequests.Located located : requests.parameters(operation)) {
             parameter(located, constraints);
+        }
+        SelectedResponses selected = SelectedResponses.of(operation, requests, values);
+        for (SelectedResponses.Selection s : selected.selections()) {
+            for (int i = 0; i < s.requires().size(); i++) {
+                Constraint c = new Constraint(HEADER, s.requires().get(i), null, "", "required", location + "/"
+                        + SelectedResponses.EXTENSION + "/" + Shapes.escape(s.status()) + "/requires/" + i);
+                c.selection = s;
+                c.selectionHeaders = selected.headers(s.status());
+                constraints.add(c);
+            }
         }
         List<MediaType> json = new ArrayList<>();
         RequestBody body = operation.requestBody();
@@ -763,6 +777,10 @@ final class InvalidRequests {
                     "required", noBody, withBody, expected));
             return;
         }
+        if (c.selection != null) {
+            selectionRequired(operation, c, expected, cases);
+            return;
+        }
         if (!c.in.equals(BODY) && c.node == null) {
             parameterRequired(operation, c, expected, cases);
             return;
@@ -858,6 +876,29 @@ final class InvalidRequests {
         ValidRequests.Request without = withParameter(operation, baseline, c.in, c.name, null);
         cases.add(newCase(c, c.in + "-" + c.name + "-required", c.in + " parameter `" + c.name
                 + "` missing, though it is required", c.in, c.name, null, "required", without, baseline, expected));
+    }
+
+    /**
+     * A header a selection requires, left out of the selected response's required request: the
+     * selecting value without what it requires.
+     */
+    private void selectionRequired(Operation operation, Constraint c, Expected expected, List<Draft> cases) {
+        ValidRequests.Request baseline;
+        try {
+            baseline = requests.request(operation, ValidRequests.Kind.REQUIRED, null, Map.of(), c.selectionHeaders);
+        } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
+            c.uncovered(Reason.NO_VALID_BASELINE, why(e));
+            return;
+        }
+        String unsure = unverifiable(operation, baseline);
+        if (unsure != null) {
+            c.uncovered(Reason.NO_VALID_BASELINE, unsure);
+            return;
+        }
+        ValidRequests.Request without = withParameter(operation, baseline, c.in, c.name, null);
+        cases.add(newCase(c, c.in + "-" + c.name + "-required", c.in + " parameter `" + c.name + "` missing, though `"
+                + c.selection.name() + ": " + c.selection.value() + "` requires it", c.in, c.name, null, "required",
+                without, baseline, expected));
     }
 
     private void parameterValue(Operation operation, Constraint c, ValidRequests.Request baseline, Expected expected,

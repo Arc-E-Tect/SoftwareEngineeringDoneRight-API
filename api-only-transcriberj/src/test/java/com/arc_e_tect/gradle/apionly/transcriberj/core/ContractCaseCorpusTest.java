@@ -68,6 +68,22 @@ class ContractCaseCorpusTest {
                 "PostJobContractCases success-200-required SUCCESS 200 path[] - []",
                 "PostJobContractCases success-201-required SUCCESS 201 path[] - [Wait=true]",
                 "PostJobContractCases success-202-required SUCCESS 202 path[] - [Prefer=respond-async]",
+                "PostTransferContractCases success-200-required SUCCESS 200 path[] application/json []",
+                "PostTransferContractCases success-200-full SUCCESS 200 path[] application/json [Idempotency-Key=aaaaaaaa]",
+                "PostTransferContractCases success-202-required SUCCESS 202 path[] application/json [Prefer=respond-async, Idempotency-Key=aaaaaaaa]",
+                "PostTransferContractCases success-202-full SUCCESS 202 path[] application/json [Prefer=respond-async, Idempotency-Key=aaaaaaaa]",
+                "PostTransferContractCases header-Idempotency-Key-required INVALID_REQUEST 400 path[] application/json [Prefer=respond-async]",
+                "PostTransferContractCases header-Prefer-minLength INVALID_REQUEST 400 path[] application/json [Prefer=]",
+                "PostTransferContractCases header-Idempotency-Key-pattern INVALID_REQUEST 400 path[] application/json [Idempotency-Key=%%%%%%%%]",
+                "PostTransferContractCases body-required INVALID_REQUEST 400 path[] - []",
+                "PostTransferContractCases body-text-required INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-type INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-tag-type INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-text-type INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-tag-null INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-text-null INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-text-minLength INVALID_REQUEST 400 path[] application/json []",
+                "PostTransferContractCases body-unknown-member INVALID_REQUEST 400 path[] application/json []",
                 "PostValidationContractCases success-200-required SUCCESS 200 path[] application/json [Accept=application/json]",
                 "PostValidationContractCases success-200-full SUCCESS 200 path[] application/json "
                         + "[Idempotency-Key=aaaaaaaa, Accept=application/json]",
@@ -81,7 +97,12 @@ class ContractCaseCorpusTest {
                 "PostDraftContractCases 202 [success-202-required, success-202-full, success-202-no-body]",
                 "PostJobContractCases 200 [success-200-required]",
                 "PostJobContractCases 201 [success-201-required]",
-                "PostJobContractCases 202 [success-202-required]"));
+                "PostJobContractCases 202 [success-202-required]",
+                "PostTransferContractCases 200 [success-200-required, success-200-full]",
+                "PostTransferContractCases 202 [success-202-required, success-202-full]",
+                "PostTransferContractCases 400 [header-Idempotency-Key-required, header-Prefer-minLength, "
+                        + "header-Idempotency-Key-pattern, body-required, body-text-required, body-type, body-tag-type, "
+                        + "body-text-type, body-tag-null, body-text-null, body-text-minLength, body-unknown-member]"));
     }
 
     @Test

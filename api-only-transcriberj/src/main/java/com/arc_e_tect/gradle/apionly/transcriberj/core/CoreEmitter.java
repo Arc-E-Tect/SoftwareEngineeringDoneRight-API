@@ -741,6 +741,7 @@ final class CoreEmitter implements Emitter {
         out.put("name", selection.name());
         out.put("value", selection.value());
         out.put("with", selection.with());
+        out.put("requires", selection.requires());
         return out;
     }
 

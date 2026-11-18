@@ -1253,7 +1253,7 @@ The unsupported-media-type case sends the normal `Accept`, so that the only thin
 ==== Responses a request header selects
 
 A request header can decide which success response an operation answers with: `Prefer: respond-async` (RFC 7240) asks for `202 Accepted` where the operation answers `200` otherwise.
-No fixture state can make one request answer both, so the operation names, in `x-transcriberj-selected-responses`, each success status a header selects, how, and the headers that go with it:
+No fixture state can make one request answer both, so the operation names, in `x-transcriberj-selected-responses`, each success status a header selects, how, and the headers that go with it or that it requires:
 
 [source,yaml]
 ----
@@ -1263,7 +1263,7 @@ post:
       in: header
       name: Prefer
       value: respond-async
-      with: [Idempotency-Key]
+      requires: [Idempotency-Key]
   parameters:
     - {name: Prefer, in: header, schema: {type: string}}
     - {name: Idempotency-Key, in: header, schema: {type: string, format: uuid}}
@@ -1272,7 +1272,11 @@ post:
     '202': ...
 ----
 
-* Every success case of a selected status -- `required`, `full`, `noBody` and each `oneOf` branch -- sends the header at `value`, and every header `with` names at its valid value, whatever the variant.
+* Every success case of a selected status -- `required`, `full`, `noBody` and each `oneOf` branch -- sends the header at `value`, and every header `with` and `requires` name at its valid value, whatever the variant.
+* `with` is a hint: its headers are sent, and nothing more is derived from them.
+`requires` is a rule: the service must refuse the selecting value without its headers.
+So each header `requires` names also gets an invalid-request case: the selected status's required request with that header left out, `header-Idempotency-Key-required`, "header parameter `Idempotency-Key` missing, though `Prefer: respond-async` requires it".
+Its constraint is listed in the constraint coverage where the marker names it, `.../x-transcriberj-selected-responses/202/requires/0`.
 * Every success case of another status leaves the selecting header out; its `full` case still sends every other parameter.
 An operation that selects two statuses by two headers leaves each status's selecting header out of the other's cases.
 * Every case of another kind is built from the request that selects nothing, as before.
@@ -1281,7 +1285,7 @@ An operation that selects two statuses by two headers leaves each status's selec
 The marker is the operation's, not the response's: whether a header selects a response is what the operation does with the request, and a response may be shared, through a `$ref`, by operations that do not.
 
 Only a header selects yet: `in` is `header`.
-The generation fails, naming the operation, when the marker selects a status that is not an exact `2xx` or that the operation does not declare; names a header, in `name` or `with`, that is not one of the operation's header parameters, or one no value is generated for; gives a `value` the header's schema does not allow; selects by a header the operation requires, as no request of another status could leave it out; selects two statuses the same way; has a key other than `in`, `name`, `value` and `with`, or misses one of the first three; or is not a map of statuses.
+The generation fails, naming the operation, when the marker selects a status that is not an exact `2xx` or that the operation does not declare; names a header, in `name`, `with` or `requires`, that is not one of the operation's header parameters, or one no value is generated for; names a header in both `with` and `requires`; requires the selecting header itself, or a header the operation requires anyway; gives a `value` the header's schema does not allow; selects by a header the operation requires, as no request of another status could leave it out; selects two statuses the same way; has a key other than `in`, `name`, `value`, `with` and `requires`, or misses one of the first three; or is not a map of statuses.
 A marker that does nothing is never silently ignored.
 
 [#unvouched-values]
@@ -1418,7 +1422,7 @@ The order the kinds are written in does not matter, and a name that is not a kin
 [#contract-cases-report]
 ==== The cases in the machine-readable report
 
-In the machine-readable report, `contractCases` lists every operation, with its class, `location`, `method`, `pathTemplate`, whether it `declaresInvalidRequestStatus`, and its cases in canonical order, each with the fields of `ContractCase`, for an invalid request the valid `baseline` request it differs from in the one place the fault is, for a success case of a status a request header selects the `selectedBy` it is selected by -- `in`, `name`, `value` and `with`, null for every other case -- and the `source` of the valid request it is built on, as <<example-data,Example data §>> describes.
+In the machine-readable report, `contractCases` lists every operation, with its class, `location`, `method`, `pathTemplate`, whether it `declaresInvalidRequestStatus`, and its cases in canonical order, each with the fields of `ContractCase`, for an invalid request the valid `baseline` request it differs from in the one place the fault is, for a success case of a status a request header selects the `selectedBy` it is selected by -- `in`, `name`, `value`, `with` and `requires`, null for every other case -- and the `source` of the valid request it is built on, as <<example-data,Example data §>> describes.
 `responseCoverage` lists every declared response, as the text report does, with `cases` or `uncovered`, a `code`, a `label` and a `detail`.
 `constraintCoverage`, `gaps` and `formatRecommendations` are the invalid requests', in <<constraint-coverage,Constraint coverage and gaps §>>.
 
