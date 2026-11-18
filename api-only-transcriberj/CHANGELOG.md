@@ -1,3 +1,15 @@
+# [0.19.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.18.2...api-only-transcriberj-v0.19.0) (2026-11-18)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** a selection that requires headers, and the invalid request without them ([#135](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/135)) ([213ddcb](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/213ddcbc57756aee19e8c383ce7ee99f8e53adf3)), closes [#135](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/135) [#134](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/134)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.18.2 [skip ci] ([b86446c](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/b86446c1e270fc5a5bc4252807b0c8eeeef898df))
+
 ## [0.18.2](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.18.1...api-only-transcriberj-v0.18.2) (2026-11-18)
 
 
