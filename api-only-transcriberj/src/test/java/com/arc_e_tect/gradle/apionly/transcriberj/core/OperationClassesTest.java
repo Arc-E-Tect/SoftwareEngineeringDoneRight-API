@@ -62,7 +62,7 @@ class OperationClassesTest {
         // A path without placeholders has only its PATH.
         assertThat(Arrays.stream(g.type("GetRootOperation").getDeclaredMethods()).map(m -> m.getName()))
                 .doesNotContain("path");
-        assertThat((List<?>) g.constant("ContractManifest", "ENTRIES")).hasSize(25);
+        assertThat((List<?>) g.constant("ContractManifest", "ENTRIES")).hasSize(26);
     }
 
     @Test
