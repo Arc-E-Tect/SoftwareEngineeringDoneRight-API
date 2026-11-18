@@ -7,7 +7,7 @@
 // The released version of each component. Each component's release workflow
 // updates its own line; do not change them by hand.
 :api-only-publisher-version: 0.19.2
-:api-only-subscriber-version: 0.4.5
+:api-only-subscriber-version: 0.4.6
 :api-only-transcriberj-version: 0.18.0
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
