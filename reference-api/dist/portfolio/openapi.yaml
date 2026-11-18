@@ -192,6 +192,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/UsernameAlreadyRegisteredProblemV1'
+        '415':
+          description: The request has a body, but its Content-Type is not application/json.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnsupportedMediaTypeProblemV1'
         '422':
           description: A registration request that is syntactically valid but semantically
             invalid and cannot be processed for that reason.
@@ -245,6 +251,12 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/RegistrationNotFoundProblemV1'
+        '415':
+          description: The request has a body, but its Content-Type is not application/json.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnsupportedMediaTypeProblemV1'
         '500':
           description: An unexpected server-side error occurred.
           content:
@@ -573,6 +585,38 @@ components:
               examples:
                 - A pending or active user account with the given username
                   already exists.
+    UnsupportedMediaTypeProblemV1:
+      x-fragment-path: openapi/components/common/responses/errors/UnsupportedMediaTypeProblemV1.yaml
+      title: Unsupported Media Type Problem
+      description: The request has a body of a media type the operation does not accept.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetailsV1'
+        - type: object
+          required:
+            - type
+            - title
+            - status
+            - detail
+          properties:
+            type:
+              type: string
+              const: about:blank
+              examples:
+                - about:blank
+            title:
+              type: string
+              const: Unsupported Media Type
+              examples:
+                - Unsupported Media Type
+            status:
+              type: integer
+              const: 415
+              examples:
+                - 415
+            detail:
+              type: string
+              examples:
+                - Content-Type 'text/plain' is not supported.
     RegisteredRequestCannotBeProcessedProblemV1:
       x-fragment-path: openapi/components/common/responses/errors/RegisteredRequestCannotBeProcessedProblemV1.yaml
       title: Registration request cannot be processed

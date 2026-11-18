@@ -1,0 +1,30 @@
+title: Unsupported Media Type Problem
+description: The request has a body of a media type the operation does not accept.
+allOf:
+  - $ref: ./ProblemDetailsV1.yaml
+  - type: object
+    required:
+      - type
+      - title
+      - status
+      - detail
+    properties:
+      type:
+        type: string
+        const: about:blank
+        examples:
+          - about:blank
+      title:
+        type: string
+        const: Unsupported Media Type
+        examples:
+          - Unsupported Media Type
+      status:
+        type: integer
+        const: 415
+        examples:
+          - 415
+      detail:
+        type: string
+        examples:
+          - Content-Type 'text/plain' is not supported.

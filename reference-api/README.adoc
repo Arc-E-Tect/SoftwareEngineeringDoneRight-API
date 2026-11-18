@@ -169,6 +169,9 @@ Every document is linted when it is built: an OpenAPI document with link:.redocl
 `apionly.yaml` sets `lint.examples.asyncapi: error`: contract tests generated from an AsyncAPI document are built from each message's `examples`, so an event without one stops the build.
 OpenAPI examples are at the default, `warn`, and the build logs each missing one.
 
+An operation under `paths` with a request body declares `415 Unsupported Media Type`, as its server answers it for a `Content-Type` the operation does not accept; the rule `rule/request-body-declares-415` warns for each one that does not.
+A webhook is not held to it, as its responses are its subscribers'.
+
 [#changing-it]
 == Changing it
 

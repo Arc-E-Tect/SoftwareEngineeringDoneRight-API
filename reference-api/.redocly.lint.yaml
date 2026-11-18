@@ -45,3 +45,29 @@ rules:
   operation-tag-defined: warn
   required-string-property-missing-min-length: warn
   no-server-example.com: off
+
+  # An operation with a request body declares 415 Unsupported Media Type, which
+  # its server answers for a Content-Type the operation does not accept; a
+  # status the contract does not declare is one no client is generated to
+  # handle. Only operations under paths: a webhook's responses are its
+  # subscribers', not this API's.
+  rule/request-body-declares-415:
+    subject:
+      type: Responses
+    where:
+      - subject:
+          type: Paths
+        assertions:
+          defined: true
+      - subject:
+          type: Operation
+          property: requestBody
+        assertions:
+          defined: true
+    assertions:
+      required:
+        - '415'
+    message: >-
+      An operation with a request body declares 415 Unsupported Media Type,
+      which its server answers for a Content-Type the operation does not accept.
+    severity: warn
