@@ -18,6 +18,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * selecting value and the headers that go with it; every success case of another response
  * leaves the selecting header out. Every other case is derived as before. A marker that names
  * what the operation does not declare, or that no request could honour, fails the generation.
+ *
+ * <p>{@code with} is a hint: its headers are sent, and nothing more. {@code requires} is a rule:
+ * its headers are sent too, and each gets an invalid-request case that leaves it out.
  */
 class SelectedResponsesTest {
 
@@ -25,6 +28,13 @@ class SelectedResponsesTest {
                   x-transcriberj-selected-responses:
                     '202': {in: header, name: Prefer, value: respond-async, with: [Idempotency-Key]}
             """;
+
+    private static final String REQUIRES = """
+                  x-transcriberj-selected-responses:
+                    '202': {in: header, name: Prefer, value: respond-async, requires: [Idempotency-Key]}
+            """;
+
+    private static final String IDEMPOTENCY_KEY = "{name: Idempotency-Key, in: header, schema: {type: string, pattern: '^[0-9a-f]{8}$'}}";
 
     @TempDir
     Path directory;
@@ -34,6 +44,11 @@ class SelectedResponsesTest {
      * an asynchronous answer, with the marker and the {@code Prefer} parameter given.
      */
     private static String contract(String marker, String prefer) {
+        return contract(marker, prefer, IDEMPOTENCY_KEY);
+    }
+
+    /** The contract, with the {@code Idempotency-Key} parameter given too. */
+    private static String contract(String marker, String prefer, String idempotencyKey) {
         return """
                 openapi: 3.1.0
                 info: {title: Validations, version: 1.0.0}
@@ -43,7 +58,7 @@ class SelectedResponsesTest {
                       operationId: Validate
                 %s      parameters:
                         - %s
-                        - {name: Idempotency-Key, in: header, schema: {type: string, pattern: '^[0-9a-f]{8}$'}}
+                        - %s
                         - {name: Trace, in: header, schema: {type: string, minLength: 1}}
                       requestBody:
                         required: true
@@ -74,7 +89,7 @@ class SelectedResponsesTest {
                       type: object
                       properties:
                         valid: {type: boolean}
-                """.formatted(marker == null ? "" : marker, prefer);
+                """.formatted(marker == null ? "" : marker, prefer, idempotencyKey);
     }
 
     private static final String PREFER = "{name: Prefer, in: header, schema: {type: string, minLength: 1}}";
@@ -195,6 +210,81 @@ class SelectedResponsesTest {
         assertThat(headerNames(find(report, "success-202-full"))).containsExactly("Prefer", "Idempotency-Key",
                 "Trace", "Accept");
         assertThat(find(report, "success-202-full").get("selectedBy").isNull()).isTrue();
+    }
+
+    // --------------------------------------------- what the selection requires
+
+    @Test
+    void aRequiredHeaderIsSentByEverySuccessCaseOfTheSelectedResponse() {
+        JsonNode report = report(generate(contract(REQUIRES, PREFER)));
+
+        assertThat(headerNames(find(report, "success-202-required"))).containsExactly("Prefer", "Idempotency-Key", "Accept");
+        assertThat(headerNames(find(report, "success-200-required"))).containsExactly("Accept");
+        JsonNode selectedBy = find(report, "success-202-required").get("selectedBy");
+        assertThat(selectedBy.get("requires").get(0).stringValue()).isEqualTo("Idempotency-Key");
+        assertThat(selectedBy.get("with")).isEmpty();
+    }
+
+    @Test
+    void aRequiredHeaderLeftOutIsAnInvalidRequest() {
+        JsonNode report = report(generate(contract(REQUIRES, PREFER)));
+        JsonNode c = find(report, "header-Idempotency-Key-required");
+
+        assertThat(c.get("kind").stringValue()).isEqualTo("INVALID_REQUEST");
+        assertThat(c.get("description").stringValue())
+                .isEqualTo("header parameter `Idempotency-Key` missing, though `Prefer: respond-async` requires it");
+        assertThat(List.of(c.get("in").stringValue(), c.get("name").stringValue(), c.get("keyword").stringValue()))
+                .containsExactly("header", "Idempotency-Key", "required");
+        assertThat(headers(c)).containsExactly("Prefer=respond-async", "Accept=application/json");
+        assertThat(c.get("baseline"))
+                .isEqualTo(ContractCaseFixtures.withoutAccept(find(report, "success-202-required").get("request")));
+        assertThat(c.get("expectedStatus").intValue()).isEqualTo(400);
+    }
+
+    @Test
+    void theRequiredHeaderIsAConstraintAtTheMarkerThatItsCaseCovers() {
+        JsonNode report = report(generate(contract(REQUIRES, PREFER)));
+        List<JsonNode> entries = new ArrayList<>();
+        report.get("constraintCoverage").forEach(e -> {
+            if (e.get("schemaLocation").stringValue().contains("x-transcriberj-selected-responses")) entries.add(e);
+        });
+
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).get("schemaLocation").stringValue())
+                .isEqualTo("/paths/~1validations/post/x-transcriberj-selected-responses/202/requires/0");
+        assertThat(entries.get(0).get("cases").get(0).stringValue()).isEqualTo("header-Idempotency-Key-required");
+    }
+
+    @Test
+    void aHeaderThatOnlyGoesWithItIsNoRule() {
+        assertThat(ids(report(generate(contract(MARKER, PREFER))))).doesNotContain("header-Idempotency-Key-required");
+    }
+
+    @Test
+    void aHeaderBothRequiredAndGoingWithItFails() {
+        failsWith(marked("'202': {in: header, name: Prefer, value: respond-async, with: [Idempotency-Key], "
+                + "requires: [Idempotency-Key]}"), PREFER, "Idempotency-Key", "with", "requires");
+    }
+
+    @Test
+    void aRequiredHeaderTheOperationDoesNotDeclareFails() {
+        failsWith(marked("'202': {in: header, name: Prefer, value: respond-async, requires: [Wait]}"), PREFER,
+                "Wait", "header parameter");
+    }
+
+    @Test
+    void requiringTheSelectingHeaderItselfFails() {
+        failsWith(marked("'202': {in: header, name: Prefer, value: respond-async, requires: [Prefer]}"), PREFER,
+                "Prefer", "selects");
+    }
+
+    @Test
+    void requiringAHeaderTheOperationRequiresAnywayFails() {
+        assertThatThrownBy(() -> generate(contract(REQUIRES, PREFER,
+                "{name: Idempotency-Key, in: header, required: true, schema: {type: string, pattern: '^[0-9a-f]{8}$'}}")))
+                .isInstanceOf(GenerationException.class)
+                .hasMessageContaining("Idempotency-Key")
+                .hasMessageContaining("requires it already");
     }
 
     // --------------------------------------------------- a malformed marker

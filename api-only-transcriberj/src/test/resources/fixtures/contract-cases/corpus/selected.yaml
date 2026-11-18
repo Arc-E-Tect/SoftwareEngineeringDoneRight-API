@@ -1,7 +1,9 @@
 # Responses a request header selects (x-transcriberj-selected-responses): Prefer: respond-async
 # selects 202, with an Idempotency-Key going with it, and every success case of 200 leaves Prefer
 # out; an optional body's noBody case honours the selection; and an operation that selects two
-# responses by two headers leaves each other's selecting header out.
+# responses by two headers leaves each other's selecting header out. Where the selection requires
+# a header rather than sending it with the selecting value, the request without it is an invalid
+# request.
 openapi: 3.1.0
 info:
   title: Contract-case corpus, selected responses
@@ -63,6 +65,26 @@ paths:
           description: Done, as the client waited.
         '202':
           description: Accepted.
+  /transfers:
+    post:
+      operationId: postTransfer
+      x-transcriberj-selected-responses:
+        '202': {in: header, name: Prefer, value: respond-async, requires: [Idempotency-Key]}
+      parameters:
+        - {name: Prefer, in: header, schema: {type: string, minLength: 1}}
+        - {name: Idempotency-Key, in: header, schema: {type: string, pattern: '^[0-9a-f]{8}$'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteV1'}
+      responses:
+        '200':
+          description: Transferred.
+        '202':
+          description: Accepted.
+        '400':
+          description: Invalid.
 components:
   schemas:
     NoteV1:

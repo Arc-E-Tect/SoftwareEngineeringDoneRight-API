@@ -18,6 +18,10 @@ import java.util.regex.Pattern;
  * {@code x-transcriberj-selected-responses}: {@code Prefer: respond-async} selecting {@code 202},
  * with an {@code Idempotency-Key} going with it.
  *
+ * <p>{@code with} is a hint: the headers it names are sent with the selecting value, and nothing
+ * more. {@code requires} is a rule: the headers it names are sent too, and the service must refuse
+ * the selecting value without them, which an invalid-request case for each tests.
+ *
  * <p>The marker is the operation's, not the response's: whether a header selects a response is
  * what the operation does with the request, and a response may be shared by operations that do
  * not. A marker that names what the operation does not declare, or that no request could honour,
@@ -28,7 +32,7 @@ final class SelectedResponses {
     /** The extension, on an operation. */
     static final String EXTENSION = "x-transcriberj-selected-responses";
 
-    private static final List<String> KEYS = List.of("in", "name", "value", "with");
+    private static final List<String> KEYS = List.of("in", "name", "value", "with", "requires");
     private static final Pattern SUCCESS = Pattern.compile("2[0-9][0-9]");
 
     /**
@@ -38,9 +42,11 @@ final class SelectedResponses {
      * @param in     where the selecting parameter is: {@code header}
      * @param name   the selecting header, as the operation declares it
      * @param value  the value that selects the response
-     * @param with   the headers sent with it, as the operation declares them
+     * @param with     the headers sent with it, as the operation declares them: a hint
+     * @param requires the headers the service requires with it, as the operation declares them: sent
+     *                 too, and each left out by an invalid-request case
      */
-    record Selection(String status, String in, String name, String value, List<String> with) {
+    record Selection(String status, String in, String name, String value, List<String> with, List<String> requires) {
     }
 
     /** No response selected: an operation without the marker. */
@@ -97,7 +103,7 @@ final class SelectedResponses {
             for (Object key : how.keySet()) {
                 if (!KEYS.contains(String.valueOf(key))) {
                     throw new InvalidSelection(operation, at + " with the key " + key + ", which it does not know; its "
-                            + "keys are in, name, value and with");
+                            + "keys are in, name, value, with and requires");
                 }
             }
             String in = text(operation, how, "in", at);
@@ -116,17 +122,24 @@ final class SelectedResponses {
                 throw new InvalidSelection(operation, at + " by " + name + ": " + value + ", a value the schema of "
                         + "header parameter " + name + " at " + selecting.location() + "/schema does not allow");
             }
-            List<String> with = new ArrayList<>();
-            Object rawWith = how.get("with");
-            if (rawWith != null) {
-                if (!(rawWith instanceof List<?> list)) {
-                    throw new InvalidSelection(operation, at + " with " + rawWith + ", but with must list header names");
+            List<String> with = headers(operation, how, "with", headers, requests, at);
+            List<String> requires = headers(operation, how, "requires", headers, requests, at);
+            for (String required : requires) {
+                if (required.equalsIgnoreCase(selecting.parameter().name())) {
+                    throw new InvalidSelection(operation, at + " by " + name + ", which requires " + required
+                            + " itself: the header that selects is sent anyway");
                 }
-                for (Object item : list) {
-                    with.add(header(operation, headers, requests, String.valueOf(item), at).parameter().name());
+                if (with.stream().anyMatch(required::equalsIgnoreCase)) {
+                    throw new InvalidSelection(operation, at + " with " + required + " both in with and in requires: "
+                            + "requires already sends it, and says the service needs it");
+                }
+                if (Boolean.TRUE.equals(headers.get(required.toLowerCase(Locale.ROOT)).parameter().required())) {
+                    throw new InvalidSelection(operation, at + " and requires " + required + ", but the operation "
+                            + "requires it already, whatever selects the response");
                 }
             }
-            Selection selection = new Selection(status, in, selecting.parameter().name(), value, List.copyOf(with));
+            Selection selection = new Selection(status, in, selecting.parameter().name(), value, List.copyOf(with),
+                    List.copyOf(requires));
             for (Selection earlier : out.values()) {
                 if (earlier.name().equalsIgnoreCase(selection.name()) && earlier.value().equals(selection.value())) {
                     throw new InvalidSelection(operation, "selects " + earlier.status() + " and " + status + " the same "
@@ -136,6 +149,19 @@ final class SelectedResponses {
             out.put(status, selection);
         }
         return new SelectedResponses(java.util.Collections.unmodifiableMap(out));
+    }
+
+    /** The header parameters a list of the marker names, as the operation declares them. */
+    private static List<String> headers(Operation operation, Map<?, ?> how, String key,
+                                        Map<String, ValidRequests.Located> headers, ValidRequests requests, String at) {
+        Object raw = how.get(key);
+        if (raw == null) return List.of();
+        if (!(raw instanceof List<?> list)) {
+            throw new InvalidSelection(operation, at + " with " + raw + ", but " + key + " must list header names");
+        }
+        List<String> out = new ArrayList<>();
+        for (Object item : list) out.add(header(operation, headers, requests, String.valueOf(item), at).parameter().name());
+        return out;
     }
 
     private static String text(Operation operation, Map<?, ?> how, String key, String at) {
@@ -175,6 +201,11 @@ final class SelectedResponses {
         }
     }
 
+    /** Every selection, in the order the marker gives them. */
+    java.util.Collection<Selection> selections() {
+        return byStatus.values();
+    }
+
     /** Whether the operation selects no response. */
     boolean isEmpty() {
         return byStatus.isEmpty();
@@ -197,6 +228,7 @@ final class SelectedResponses {
         if (selection != null) {
             fixed.put(selection.name().toLowerCase(Locale.ROOT), selection.value());
             selection.with().forEach(w -> forced.add(w.toLowerCase(Locale.ROOT)));
+            selection.requires().forEach(r -> forced.add(r.toLowerCase(Locale.ROOT)));
         }
         Set<String> omitted = new LinkedHashSet<>();
         for (Selection s : byStatus.values()) {

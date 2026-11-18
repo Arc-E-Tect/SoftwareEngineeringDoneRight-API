@@ -91,6 +91,7 @@ class SuccessVariantsTest {
             if (!other.get("class").equals(c.get("class")) || by.isNull()) continue;
             out.add(by.get("name").stringValue().toLowerCase(Locale.ROOT));
             by.get("with").forEach(w -> out.add(w.stringValue().toLowerCase(Locale.ROOT)));
+            by.get("requires").forEach(r -> out.add(r.stringValue().toLowerCase(Locale.ROOT)));
         }
         return out;
     }
@@ -116,10 +117,12 @@ class SuccessVariantsTest {
             String name = by.get("name").stringValue().toLowerCase(Locale.ROOT);
             assertThat(sent).containsEntry(name, by.get("value").stringValue());
             mine.add(name);
-            by.get("with").forEach(w -> {
-                assertThat(sent).containsKey(w.stringValue().toLowerCase(Locale.ROOT));
-                mine.add(w.stringValue().toLowerCase(Locale.ROOT));
-            });
+            for (String list : List.of("with", "requires")) {
+                by.get(list).forEach(w -> {
+                    assertThat(sent).containsKey(w.stringValue().toLowerCase(Locale.ROOT));
+                    mine.add(w.stringValue().toLowerCase(Locale.ROOT));
+                });
+            }
         }
         for (JsonNode other : ContractCaseFixtures.cases(report, "SUCCESS")) {
             JsonNode otherBy = other.get("selectedBy");
