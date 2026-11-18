@@ -55,6 +55,11 @@ public class JdbcBookStore implements BookStore {
     }
 
     @Override
+    public boolean existsByIsbn(String isbn) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM book WHERE isbn = :isbn", Map.of("isbn", isbn), Long.class) > 0;
+    }
+
+    @Override
     public Optional<Book> findById(UUID id) {
         return jdbc.query("SELECT * FROM book WHERE id = :id", Map.of("id", id), BOOK).stream().findFirst();
     }

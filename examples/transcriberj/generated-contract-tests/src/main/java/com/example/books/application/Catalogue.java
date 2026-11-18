@@ -22,6 +22,16 @@ public interface Catalogue {
     AddOutcome add(NewBook newBook);
 
     /**
+     * Adds a book in the background, unless one with its ISBN is in the catalogue already.
+     * The book may still be missing when this returns; it is there once the background has
+     * added it.
+     *
+     * @param newBook the book
+     * @return the book as it will be added, or that its ISBN is taken
+     */
+    AddOutcome addLater(NewBook newBook);
+
+    /**
      * Finds a book.
      *
      * @param id its identifier
