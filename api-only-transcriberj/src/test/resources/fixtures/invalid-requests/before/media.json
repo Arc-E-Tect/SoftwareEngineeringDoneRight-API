@@ -32,7 +32,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -64,7 +65,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -96,7 +98,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -128,7 +131,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -160,7 +164,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -194,7 +199,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -228,7 +234,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -262,7 +269,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -296,7 +304,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -330,7 +339,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -364,7 +374,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -399,7 +410,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -434,7 +446,8 @@
             "pathTemplate": "/media",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         }
       ],
       "class": "PatchMediaContractCases",

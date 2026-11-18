@@ -76,6 +76,10 @@ This guide builds on link:{example-dir}/README.adoc[the generated contract tests
 A case is derived only for a status the operation declares exactly.
 link:../../../api-only-transcriberj/README.adoc#contract-cases[Contract cases →], in the TranscriberJ's README, says how each is derived.
 
+Where the operation declares several `2xx` statuses, the same request gets a success case for each, and `arrangeState` sets the state that makes each case's status the right one.
+Where a request header decides instead -- `Prefer: respond-async` asking for `202` -- no state can, so the contract says so on the operation, in `x-transcriberj-selected-responses`: each status's cases then send the request that selects it, and need no state to tell them apart.
+link:../../../api-only-transcriberj/README.adoc#selected-responses[Responses a request header selects →] has the details.
+
 [#response-coverage]
 === Response coverage
 

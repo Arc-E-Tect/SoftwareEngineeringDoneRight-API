@@ -82,7 +82,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -116,7 +117,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -150,7 +152,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -186,7 +189,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -222,7 +226,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -258,7 +263,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -295,7 +301,8 @@
             "pathTemplate": "/unprocessable",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         }
       ],
       "class": "PostUnprocessableContractCases",

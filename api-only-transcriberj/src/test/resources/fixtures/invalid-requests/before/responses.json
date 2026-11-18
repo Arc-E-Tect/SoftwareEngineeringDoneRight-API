@@ -40,7 +40,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -72,7 +73,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -104,7 +106,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -138,7 +141,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -172,7 +176,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -206,7 +211,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -241,7 +247,8 @@
             "pathTemplate": "/bare",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         }
       ],
       "class": "PostBareContractCases",
@@ -284,7 +291,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -318,7 +326,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -352,7 +361,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -388,7 +398,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -424,7 +435,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -460,7 +472,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -497,7 +510,8 @@
             "pathTemplate": "/declared",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         }
       ],
       "class": "PostDeclaredContractCases",
@@ -540,7 +554,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -574,7 +589,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -608,7 +624,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -644,7 +661,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -680,7 +698,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -716,7 +735,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -753,7 +773,8 @@
             "pathTemplate": "/referenced",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         }
       ],
       "class": "PostReferencedContractCases",
@@ -797,7 +818,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -832,7 +854,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -867,7 +890,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -904,7 +928,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -941,7 +966,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -978,7 +1004,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1016,7 +1043,8 @@
             "pathTemplate": "/several",
             "query": []
           },
-          "responseBodyClass": "ProblemV1"
+          "responseBodyClass": "ProblemV1",
+          "selectedBy": null
         }
       ],
       "class": "PostSeveralContractCases",

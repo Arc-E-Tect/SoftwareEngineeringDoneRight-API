@@ -10,8 +10,12 @@ import tools.jackson.databind.JsonNode;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,7 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * T19.4: each success case sends its variant's valid request, with the {@code Accept} every case
  * sends; the full variant only where it differs from the required one, with the reason recorded
  * where it does not; every exact 2xx declared; a noBody variant where the body is optional; and
- * nothing, with the reason, where there is no valid value.
+ * nothing, with the reason, where there is no valid value. Where a request header selects a
+ * response, its cases send the selecting value and the headers that go with it, and every other
+ * success case of the operation leaves the selecting header out; apart from those headers, each
+ * still sends its variant's request.
  */
 @DisplayName("T19.4 Success variants")
 class SuccessVariantsTest {
@@ -63,14 +70,63 @@ class SuccessVariantsTest {
                     assertThat(c.get("id").stringValue()).isEqualTo("success-" + status + "-"
                             + (variant.equals("noBody") ? "no-body" : variant));
                     JsonNode expected = ContractCaseFixtures.request(f.report(), c, REQUESTS.get(variant));
-                    assertThat(ContractCaseFixtures.withoutAccept(c.get("request"))).isEqualTo(expected);
-                    if (variant.equals("full")) {
+                    Set<String> selecting = selectingHeaders(f.report(), c);
+                    assertThat(without(ContractCaseFixtures.withoutAccept(c.get("request")), selecting))
+                            .isEqualTo(without(expected, selecting));
+                    assertSelection(f.report(), c);
+                    if (variant.equals("full") && selecting.isEmpty()) {
                         assertThat(expected).isNotEqualTo(ContractCaseFixtures.request(f.report(), c, "requiredRequest"));
                     }
                 }));
             }
         }
         return tests.stream();
+    }
+
+    /** The headers that select a response of a case's operation, and those that go with them, lower case. */
+    private static Set<String> selectingHeaders(JsonNode report, JsonNode c) {
+        Set<String> out = new HashSet<>();
+        for (JsonNode other : ContractCaseFixtures.cases(report, "SUCCESS")) {
+            JsonNode by = other.get("selectedBy");
+            if (!other.get("class").equals(c.get("class")) || by.isNull()) continue;
+            out.add(by.get("name").stringValue().toLowerCase(Locale.ROOT));
+            by.get("with").forEach(w -> out.add(w.stringValue().toLowerCase(Locale.ROOT)));
+        }
+        return out;
+    }
+
+    /** A request without the given headers. */
+    private static JsonNode without(JsonNode request, Set<String> headers) {
+        tools.jackson.databind.node.ObjectNode out = (tools.jackson.databind.node.ObjectNode) request.deepCopy();
+        tools.jackson.databind.node.ArrayNode list = (tools.jackson.databind.node.ArrayNode) out.get("headers");
+        for (int i = list.size() - 1; i >= 0; i--) {
+            if (headers.contains(list.get(i).get("name").stringValue().toLowerCase(Locale.ROOT))) list.remove(i);
+        }
+        return out;
+    }
+
+    /** A selected case sends its selecting value and what goes with it; any other leaves every selecting header out. */
+    private static void assertSelection(JsonNode report, JsonNode c) {
+        Map<String, String> sent = new HashMap<>();
+        c.get("request").get("headers").forEach(h -> sent.put(h.get("name").stringValue().toLowerCase(Locale.ROOT),
+                h.get("value").stringValue()));
+        JsonNode by = c.get("selectedBy");
+        Set<String> mine = new HashSet<>();
+        if (!by.isNull()) {
+            String name = by.get("name").stringValue().toLowerCase(Locale.ROOT);
+            assertThat(sent).containsEntry(name, by.get("value").stringValue());
+            mine.add(name);
+            by.get("with").forEach(w -> {
+                assertThat(sent).containsKey(w.stringValue().toLowerCase(Locale.ROOT));
+                mine.add(w.stringValue().toLowerCase(Locale.ROOT));
+            });
+        }
+        for (JsonNode other : ContractCaseFixtures.cases(report, "SUCCESS")) {
+            JsonNode otherBy = other.get("selectedBy");
+            if (!other.get("class").equals(c.get("class")) || otherBy.isNull()) continue;
+            String name = otherBy.get("name").stringValue().toLowerCase(Locale.ROOT);
+            if (!mine.contains(name)) assertThat(sent).doesNotContainKey(name);
+        }
     }
 
     private static List<String> ids(String className) {

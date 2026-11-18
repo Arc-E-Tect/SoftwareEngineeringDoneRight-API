@@ -58,7 +58,7 @@ Re-record with `./gradlew recordInvalidRequestsGolden`, and review the diff.
 
 |`before/*.json`
 |The invalid-request cases of every fixture contract: what `InvalidRequestsUnchangedTest` holds them to.
-First recorded from 0.11.0; re-recorded at 0.17.0, when the rules inside the branches of a `oneOf` got cases and every case its `branch`.
+First recorded from 0.11.0; re-recorded at 0.17.0, when the rules inside the branches of a `oneOf` got cases and every case its `branch`, and at 0.18.0, when every case got its `selectedBy`.
 `valid-values-keywords.json` is the valid-value corpus's `keywords` contract, which shares its name with this corpus's.
 Re-record with `./gradlew recordInvalidRequestsBefore` only when derivation changes on purpose, and review the diff.
 |===
