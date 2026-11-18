@@ -16,6 +16,14 @@ public sealed interface AddOutcome {
     }
 
     /**
+     * The book is being added in the background.
+     *
+     * @param book the book, with the identifier it will have
+     */
+    record Accepted(Book book) implements AddOutcome {
+    }
+
+    /**
      * A book with this ISBN is in the catalogue already.
      *
      * @param isbn the ISBN

@@ -62,7 +62,7 @@ cd SoftwareEngineeringDoneRight-API/examples/transcriberj/generated-contract-tes
 == Step 1: The contract, and a clean generation report
 
 The service adds a book, reads one, and lists the catalogue.
-Its contract declares every response it wants tested: `POST /books` declares `201`, `400`, `409` and `415`:
+Its contract declares every response it wants tested: `POST /books` declares `201`, `202`, `400`, `409` and `415`, and says, in `x-transcriberj-selected-responses`, that `Prefer: respond-async` selects the `202`:
 
 [source,yaml]
 ----
@@ -81,16 +81,16 @@ Its first lines, from a run of the example:
 
 [source,text]
 ----
-API-Only TranscriberJ: books 1.0.1
+API-Only TranscriberJ: books 1.1.0
 0 degraded method(s), 0 recommendation(s), 0 undecided construct(s), 0 warning(s), 0 method(s) without a valid value, 0 parameter(s) not supported yet
-Invalid requests: 30 case(s) derived, 26 constraint(s) covered, 3 uncovered (not isolatable: 1, changes the route: 1, not expressible in a parameter: 1), 0 gap(s)
-Contract cases: 5 success, 1 not found, 1 not acceptable, 1 unsupported media type, 30 invalid request; 1 declared response(s) not covered (depends on behaviour or state the contract does not describe: 1)
+Invalid requests: 31 case(s) derived, 27 constraint(s) covered, 4 uncovered (not expressible in a parameter: 2, not isolatable: 1, changes the route: 1), 0 gap(s)
+Contract cases: 7 success, 1 not found, 1 not acceptable, 1 unsupported media type, 31 invalid request; 1 declared response(s) not covered (depends on behaviour or state the contract does not describe: 1)
 ----
 
 Nothing is degraded, nothing is recommended, and there is no gap: every operation that constrains its input declares `400`.
-Three constraints have no case, each for a reason no contract can avoid: a path parameter's `required` changes the route, its `type` cannot be broken since every parameter travels as a string, and every value that breaks the `type` of the `format` enum breaks the enum too.
+Four constraints have no case, each for a reason no contract can avoid: a path parameter's `required` changes the route, its `type` and the `Prefer` header's cannot be broken since every parameter travels as a string, and every value that breaks the `type` of the `format` enum breaks the enum too.
 
-Its response coverage lists 38 cases, and one response with none:
+Its response coverage lists 41 cases, and one response with none:
 
 [source,text]
 ----
@@ -125,7 +125,7 @@ include::{example-dir}/build.gradle[tag=transcriberj]
 
 * The schema classes go to every suite that exercises the API, compiled once in `transcriberjBooks`.
 * The REST Docs output goes to `contractTestCommon`, where both contract suites find the interfaces, and to `documentationTest`, which needs the descriptors.
-* The WireMock stubs go on no source set; `packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.1.zip`, and `priority: '2'` leaves WireMock's highest priority to hand-written stubs.
+* The WireMock stubs go on no source set; `packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.1.0.zip`, and `priority: '2'` leaves WireMock's highest priority to hand-written stubs.
 
 The two contract suites differ only in their target:
 
@@ -246,7 +246,7 @@ Its `arrangeState` does nothing, since every case already has its exact stub:
 include::{example-dir}/src/contractTestWireMock/java/com/example/books/contracttest/stubs/GetBookStubsContractTest.java[tag=leaf]
 ----
 
-All 39 tests pass: the 38 generated ones, and the hand-written `409`.
+All 42 tests pass: the 41 generated ones, and the hand-written `409`.
 Every test passing here proves the stubs a consumer gets answer every case as the contract declares.
 
 Delete one mapping file, and exactly its test fails, answered by the valid fallback in its place:
@@ -268,7 +268,7 @@ include::{example-dir}/README.adoc[tag=try-it-6]
 ./gradlew contractTest
 ----
 
-All 39 tests pass.
+All 42 tests pass.
 Run them twice on the same database, and they pass both times: each fixture sets exactly the state its case needs, whatever an earlier run left behind.
 
 [source,console]

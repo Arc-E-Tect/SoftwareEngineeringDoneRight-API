@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -76,6 +78,63 @@ class BookControllerTest {
 
         verify(catalogue).add(new NewBook("9780201633610", "Design Patterns",
                 "Elements of Reusable Object-Oriented Software", 395, BookFormat.HARDCOVER));
+    }
+
+    @Test
+    void aClientThatPrefersAnAsynchronousAnswerIsAnsweredWith202AndWhereTheBookWillBe() throws Exception {
+        when(catalogue.addLater(any())).thenReturn(new AddOutcome.Accepted(BOOK));
+
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .header("Prefer", "respond-async")
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_202))
+                .andExpect(header().string("Location", "http://localhost/books/" + ID))
+                .andExpect(header().string("Preference-Applied", "respond-async"))
+                .andExpect(content().string(""));
+
+        verify(catalogue).addLater(new NewBook("9780201633610", "Design Patterns", null, 395, BookFormat.HARDCOVER));
+    }
+
+    @Test
+    void aBookWhoseIsbnIsTakenIsAnsweredWith409AlsoWhenAnAsynchronousAnswerIsPreferred() throws Exception {
+        when(catalogue.addLater(any())).thenReturn(new AddOutcome.IsbnTaken("9780201633610"));
+
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .header("Prefer", "respond-async")
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_409));
+    }
+
+    @Test
+    void anotherPreferenceIsAnsweredWith201() throws Exception {
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .header("Prefer", "return=minimal")
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_201));
+
+        verify(catalogue).add(any());
+    }
+
+    @Test
+    void respondAsyncIsFoundAmongOtherPreferences() {
+        assertThat(BookController.prefersAsynchronous("return=minimal, Respond-Async; x=1")).isTrue();
+        assertThat(BookController.prefersAsynchronous("wait=10")).isFalse();
+        assertThat(BookController.prefersAsynchronous(null)).isFalse();
+    }
+
+    @Test
+    void anEmptyPreferIsRefusedBeforeTheCatalogueIsCalled() throws Exception {
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .header("Prefer", "")
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_400))
+                .andExpect(jsonPath("$.errors[0].field").value("Prefer"));
+
+        verifyNoInteractions(catalogue);
     }
 
     @Test

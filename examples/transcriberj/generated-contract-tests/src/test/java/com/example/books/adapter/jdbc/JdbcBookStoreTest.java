@@ -61,6 +61,20 @@ class JdbcBookStoreTest {
     }
 
     @Test
+    void aStoredIsbnExists() {
+        when(jdbc.queryForObject(anyString(), eq(Map.of("isbn", "9780201633610")), eq(Long.class))).thenReturn(1L);
+
+        assertThat(store.existsByIsbn("9780201633610")).isTrue();
+    }
+
+    @Test
+    void anIsbnNoBookHasDoesNotExist() {
+        when(jdbc.queryForObject(anyString(), eq(Map.of("isbn", "9780201633610")), eq(Long.class))).thenReturn(0L);
+
+        assertThat(store.existsByIsbn("9780201633610")).isFalse();
+    }
+
+    @Test
     void aBookIsFoundByItsIdentifier() {
         when(jdbc.query(anyString(), eq(Map.of("id", ID)), any())).thenReturn(List.of(BOOK));
 

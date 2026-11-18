@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,9 +14,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -33,6 +37,7 @@ import java.util.UUID;
 public class BookController {
 
     private static final String ID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+    private static final String RESPOND_ASYNC = "respond-async";
 
     private final Catalogue catalogue;
 
@@ -46,20 +51,39 @@ public class BookController {
     }
 
     /**
-     * Adds a book.
+     * Adds a book: at once, or in the background when the client prefers an asynchronous answer.
      *
+     * @param prefer  the client's preferences (RFC 7240), or null; {@code respond-async} asks for 202
      * @param request the book
-     * @return 201 with the book, or 409 when its ISBN is taken
+     * @return 201 with the book, 202 with where it will be, or 409 when its ISBN is taken
      */
     @PostMapping(path = "/books", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_PROBLEM_JSON_VALUE})
-    public ResponseEntity<?> createBook(@Valid @RequestBody BookRequest request) {
-        return switch (catalogue.add(request.toNewBook())) {
+    public ResponseEntity<?> createBook(@RequestHeader(name = "Prefer", required = false) @Size(min = 1) String prefer,
+                                        @Valid @RequestBody BookRequest request) {
+        AddOutcome outcome = prefersAsynchronous(prefer) ? catalogue.addLater(request.toNewBook())
+                : catalogue.add(request.toNewBook());
+        return switch (outcome) {
             case AddOutcome.Added added -> ResponseEntity.status(HttpStatus.CREATED)
                     .contentType(MediaType.APPLICATION_JSON).body(BookResource.of(added.book()));
+            case AddOutcome.Accepted accepted -> ResponseEntity.accepted()
+                    .location(ServletUriComponentsBuilder.fromCurrentRequestUri().path("/{id}")
+                            .buildAndExpand(accepted.book().id()).toUri())
+                    .header("Preference-Applied", RESPOND_ASYNC)
+                    .build();
             case AddOutcome.IsbnTaken taken -> ProblemAdvice.problem(HttpStatus.CONFLICT,
                     "A book with this ISBN is already in the catalogue.",
                     "The catalogue already holds a book with ISBN " + taken.isbn() + ".", null);
         };
+    }
+
+    /**
+     * Whether the preferences (RFC 7240) hold {@code respond-async}: each preference is a token,
+     * with an optional value and parameters, and they are separated by commas.
+     */
+    static boolean prefersAsynchronous(String prefer) {
+        return prefer != null && Arrays.stream(prefer.split(","))
+                .map(preference -> preference.split(";", 2)[0].split("=", 2)[0].strip())
+                .anyMatch(RESPOND_ASYNC::equalsIgnoreCase);
     }
 
     /**

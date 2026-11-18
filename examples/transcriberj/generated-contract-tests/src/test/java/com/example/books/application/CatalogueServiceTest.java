@@ -6,12 +6,15 @@ import com.example.books.domain.BookPage;
 import com.example.books.domain.NewBook;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,7 +29,9 @@ class CatalogueServiceTest {
     private static final Book BOOK = NEW_BOOK.withId(ID);
 
     private final BookStore store = mock(BookStore.class);
-    private final CatalogueService catalogue = new CatalogueService(store, () -> ID);
+    /** Runs nothing until a test says so, so that it sees what is added before and after. */
+    private final List<Runnable> background = new ArrayList<>();
+    private final CatalogueService catalogue = new CatalogueService(store, () -> ID, background::add);
 
     @Test
     void aNewBookIsStoredUnderANewIdentifier() {
@@ -41,6 +46,36 @@ class CatalogueServiceTest {
         when(store.insert(BOOK)).thenReturn(false);
 
         assertThat(catalogue.add(NEW_BOOK)).isEqualTo(new AddOutcome.IsbnTaken("9780201633610"));
+    }
+
+    @Test
+    void aBookAddedLaterIsAcceptedUnderItsNewIdentifierAndStoredInTheBackground() {
+        when(store.insert(BOOK)).thenReturn(true);
+
+        assertThat(catalogue.addLater(NEW_BOOK)).isEqualTo(new AddOutcome.Accepted(BOOK));
+        verify(store, never()).insert(any());
+
+        background.forEach(Runnable::run);
+
+        verify(store).insert(BOOK);
+    }
+
+    @Test
+    void aBookAddedLaterWhoseIsbnIsTakenIsRefusedAtOnce() {
+        when(store.existsByIsbn("9780201633610")).thenReturn(true);
+
+        assertThat(catalogue.addLater(NEW_BOOK)).isEqualTo(new AddOutcome.IsbnTaken("9780201633610"));
+        assertThat(background).isEmpty();
+    }
+
+    @Test
+    void aBookAddedLaterWhoseIsbnIsTakenWhileItWaitsIsLeftOutWithoutFailing() {
+        when(store.insert(BOOK)).thenReturn(false);
+        catalogue.addLater(NEW_BOOK);
+
+        background.forEach(Runnable::run);
+
+        verify(store).insert(BOOK);
     }
 
     @Test

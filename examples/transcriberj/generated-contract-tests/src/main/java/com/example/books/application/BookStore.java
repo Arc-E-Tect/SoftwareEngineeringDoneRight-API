@@ -20,6 +20,14 @@ public interface BookStore {
     boolean insert(Book book);
 
     /**
+     * Whether a book with this ISBN is stored.
+     *
+     * @param isbn the ISBN
+     * @return true when one is
+     */
+    boolean existsByIsbn(String isbn);
+
+    /**
      * Finds a book.
      *
      * @param id its identifier

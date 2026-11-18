@@ -1,13 +1,16 @@
 package com.example.books.adapter.web;
 
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.method.ParameterErrors;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -41,7 +44,9 @@ public class ProblemAdvice {
     }
 
     /**
-     * A path or query parameter breaks a constraint.
+     * A path, query or header parameter breaks a constraint; or a body member does, where a
+     * constraint on a parameter has method validation check the whole method, the body too.
+     * A parameter is named as the contract names it, a body member by its field.
      *
      * @param exception what method validation found
      * @return 400
@@ -49,10 +54,18 @@ public class ProblemAdvice {
     @ExceptionHandler
     public ResponseEntity<Problem> invalidParameter(HandlerMethodValidationException exception) {
         return invalid(exception.getParameterValidationResults().stream()
-                .flatMap(result -> result.getResolvableErrors().stream()
-                        .map(error -> new FieldError(result.getMethodParameter().getParameterName(),
-                                error.getDefaultMessage())))
+                .flatMap(result -> result instanceof ParameterErrors body
+                        ? body.getFieldErrors().stream()
+                                .map(error -> new FieldError(error.getField(), error.getDefaultMessage()))
+                        : result.getResolvableErrors().stream()
+                                .map(error -> new FieldError(name(result.getMethodParameter()), error.getDefaultMessage())))
                 .toList());
+    }
+
+    /** A parameter's name as the contract gives it: a header's as it travels, any other's as declared. */
+    private static String name(MethodParameter parameter) {
+        RequestHeader header = parameter.getParameterAnnotation(RequestHeader.class);
+        return header != null && !header.name().isEmpty() ? header.name() : parameter.getParameterName();
     }
 
     /**

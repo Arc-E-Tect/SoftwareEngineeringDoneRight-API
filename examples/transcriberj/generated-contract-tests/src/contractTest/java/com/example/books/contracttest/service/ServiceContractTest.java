@@ -4,11 +4,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.test.web.reactive.server.WebTestClient;
+
+import java.util.concurrent.Executor;
 
 import static org.springframework.restdocs.webtestclient.WebTestClientRestDocumentation.documentationConfiguration;
 
@@ -19,11 +25,28 @@ import static org.springframework.restdocs.webtestclient.WebTestClientRestDocume
  *
  * <p>The fixtures below reach into the database, and nothing else does: a contract test
  * arranges state, then asks the service.
+ *
+ * <p>A book added later, for {@code Prefer: respond-async}, is added on the request's own
+ * thread here, before the service answers {@code 202}: in the running service it is added in
+ * the background, and a case that arranged its state while an earlier case's book was still
+ * being added would find it there.
  */
 // tag::target[]
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ExtendWith(RestDocumentationExtension.class)
+@Import(ServiceContractTest.AddedAtOnce.class)
 abstract class ServiceContractTest {
+
+    /** Adds a book added later on the request's thread, so that no case's book is added during another case. */
+    @TestConfiguration
+    static class AddedAtOnce {
+
+        @Bean
+        @Primary
+        Executor addedAtOnce() {
+            return Runnable::run;
+        }
+    }
 
     @LocalServerPort
     private int port;

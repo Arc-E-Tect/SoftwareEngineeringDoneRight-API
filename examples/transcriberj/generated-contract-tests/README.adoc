@@ -101,12 +101,12 @@ The database is H2, through Spring JDBC, with a real table: a fixture that inser
 === The contract
 
 The request body is closed, and has a handful of constraints: a pattern on `isbn`, a length on `title` and `subtitle`, a range on `pages`, an enum on `format`, four required members and one optional one.
-The TranscriberJ derives 38 cases from it, and its report lists:
+The TranscriberJ derives 41 cases from it, and its report lists:
 
 * no degraded method, no gap and no format recommendation;
-* three constraints no case can cover, each for a reason no contract can avoid:
+* four constraints no case can cover, each for a reason no contract can avoid:
 ** the `id` path parameter's `required`, since a path without it is another route;
-** its `type`, since every parameter travels as a string;
+** its `type`, and the `Prefer` header's, since every parameter travels as a string;
 ** the `type` of `format`, since every value that is not a string also breaks the enum;
 * one response no case can cover: the `409`, which depends on state the contract does not describe.
 
@@ -123,6 +123,18 @@ x-transcriberj-examples:
 ----
 
 So the success cases add _Design Patterns_ and _Refactoring_ rather than a book titled `a`, and every invalid request changes one thing about _Design Patterns_.
+
+`POST /books` answers `202` rather than `201` when the client sends `Prefer: respond-async`: the service accepts the book, adds it in the background, and answers with the `Location` it will have.
+No state tells a `201` from a `202`, the request does, so the operation says so:
+
+[source,yaml]
+----
+x-transcriberj-selected-responses:
+  '202': {in: header, name: Prefer, value: respond-async}
+----
+
+So the `202` cases send `Prefer: respond-async`, and the `201` cases leave `Prefer` out.
+`ServiceContractTest` has the service add a book on the request's own thread, so that no case's book is still being added while the next case arranges its state.
 The report says, under _Example data_, which example each case is built on (link:../../../api-only-transcriberj/README.adoc#example-data[Example data in the TranscriberJ's README →]).
 
 [#configuration]
@@ -169,7 +181,7 @@ It implements none of them, so none of them runs there.
 
 WireMock::
 Mapping files, on no source set: stubs are not test code.
-`packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.0.1.zip`.
+`packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.1.0.zip`.
 `priority: '2'` leaves WireMock's highest priority, `1`, to hand-written stubs, such as the `409`'s.
 
 == The test suites
@@ -249,6 +261,10 @@ On the real service, `arrangeState` works in the database, and only there:
 |`201`
 |*Deletes* any book with the request's ISBN, so the service must answer `201` -- on every run, not just the first.
 
+|`POST /books`
+|`202`
+|*Deletes* any book with the request's ISBN, so the service must accept it, with `202` and its `Location`.
+
 |`GET /books`
 |`200`
 |*Inserts* a book, so the page holds at least one, whose fields are checked against the contract.
@@ -306,7 +322,7 @@ The mapping files are the stubs the team hands to the developers of the API's co
 ./gradlew packageBooksWiremock
 ----
 
-`build/distributions/books-wiremock-1.0.1.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
+`build/distributions/books-wiremock-1.1.0.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
 
 `src/docker/stubs/Dockerfile` builds an image of the official WireMock image with the stubs in it, and `booksStubsImage` builds it from the archive.
 It needs Docker, so it is not part of `check`:
@@ -315,7 +331,7 @@ It needs Docker, so it is not part of `check`:
 [source,console]
 ----
 ./gradlew booksStubsImage
-docker run --rm -p 8080:8080 example/books-stubs:1.0.1
+docker run --rm -p 8080:8080 example/books-stubs:1.1.0
 ----
 // end::stubs-image[]
 
@@ -340,7 +356,7 @@ A team whose implementation is in Go or Python uses the same image as the double
 
 [source,python]
 ----
-with DockerContainer("example/books-stubs:1.0.1").with_exposed_ports(8080) as stubs:
+with DockerContainer("example/books-stubs:1.1.0").with_exposed_ports(8080) as stubs:
     base_url = f"http://{stubs.get_container_host_ip()}:{stubs.get_exposed_port(8080)}"
 ----
 
@@ -369,7 +385,7 @@ The same, machine-readable: every case in `contractCases`, with its request, in 
 `build/generated/sources/transcriberj/books/restdocs/com/example/books/contract/restdocs/`::
 The generated `<Operation>ContractTests` interfaces: one test per case, and the hooks, whose Javadoc shows the suggested `arrangeState`.
 
-`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-1.0.1.zip`::
+`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-1.1.0.zip`::
 The mapping files, one exact stub per case and the fallbacks, and the archive that ships them.
 
 `build/generated-snippets/generated-service/`, `generated-stubs/`::
@@ -403,8 +419,8 @@ rm -rf build/database && ./gradlew test contractTest --continue
 // tag::try-it-1[]
 [source,text]
 ----
-test: 35 tests, 0 failed
-contractTest: 39 tests, 1 failed
+test: 45 tests, 0 failed
+contractTest: 42 tests, 1 failed
   CreateBookServiceContractTest > POST /books: the body with a member it does not declare, `unexpectedMember` returns 400
     java.lang.AssertionError: body-unknown-member (INVALID_REQUEST: the body with a member it does not declare, `unexpectedMember`, at body /unexpectedMember additionalProperties): expected 400, received 201. The implementation accepted a request the contract declares invalid: `additionalProperties` at body /unexpectedMember is not enforced.
 ----
@@ -419,12 +435,12 @@ In `BookRequest`, change `title`'s `@Size(min = 1, max = 120)` to `@Size(min = 1
 // tag::try-it-2[]
 [source,text]
 ----
-test: 35 tests, 2 failed
+test: 45 tests, 2 failed
   BookControllerTest > moreThan5000PagesAreRefusedBeforeTheCatalogueIsCalled()
     java.lang.AssertionError: Response status expected:<400> but was:<201>
   BookControllerTest > aTitleLongerThan120IsRefusedBeforeTheCatalogueIsCalled()
     java.lang.AssertionError: Response status expected:<400> but was:<201>
-contractTest: 39 tests, 2 failed
+contractTest: 42 tests, 2 failed
   CreateBookServiceContractTest > POST /books: `pages` above its maximum of 5000 returns 400
     java.lang.AssertionError: body-pages-maximum (INVALID_REQUEST: `pages` above its maximum of 5000, at body /pages maximum): expected 400, received 201. The implementation accepted a request the contract declares invalid: `maximum` at body /pages is not enforced.
   CreateBookServiceContractTest > POST /books: `title` longer than its maxLength of 120 returns 400
@@ -445,7 +461,7 @@ Put `@Max(5000)` back, and run again on a fresh database: the `title` case's fai
 // tag::try-it-2b[]
 [source,text]
 ----
-contractTest: 39 tests, 1 failed
+contractTest: 42 tests, 1 failed
   CreateBookServiceContractTest > POST /books: `title` longer than its maxLength of 120 returns 400
     java.lang.AssertionError: body-title-maxLength (INVALID_REQUEST: `title` longer than its maxLength of 120, at body /title maxLength): expected 400, received 201. The implementation accepted a request the contract declares invalid: `maxLength` at body /title is not enforced.
 ----
@@ -465,7 +481,7 @@ rm -rf build/database && ./gradlew contractTest --continue
 // tag::try-it-3[]
 [source,text]
 ----
-contractTest: 39 tests, 1 failed
+contractTest: 42 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: a valid request with the required parameters and body members only returns 200
     java.lang.AssertionError: success-200-required (SUCCESS: a valid request with the required parameters and body members only): expected 200, received 404. The fixture did not create the resource, or the implementation looks for it somewhere else. Check arrangeState for this case.
 ----
@@ -499,10 +515,10 @@ Run `rm -rf build/database && ./gradlew test contractTest --continue`:
 // tag::try-it-4[]
 [source,text]
 ----
-test: 35 tests, 1 failed
+test: 45 tests, 1 failed
   BookControllerTest > aMalformedIdentifierIsRefusedBeforeTheCatalogueIsCalled()
     java.lang.AssertionError: Response status expected:<400> but was:<404>
-contractTest: 39 tests, 1 failed
+contractTest: 42 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: `id` not matching its pattern ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ returns 400
     java.lang.AssertionError: path-id-pattern (INVALID_REQUEST: `id` not matching its pattern ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$, at path id pattern): expected 400, received 404. The implementation looked the resource up before validating the request. The inbound adapter should reject contract violations before the port is called.
 ----
@@ -517,10 +533,10 @@ In `BookController`, remove `produces = {...}` from `getBook`'s `@GetMapping`, a
 // tag::try-it-5[]
 [source,text]
 ----
-test: 35 tests, 1 failed
+test: 45 tests, 1 failed
   BookControllerTest > aBookIsNotGivenInAMediaTypeTheRequestDoesNotAccept()
     java.lang.AssertionError: Response status expected:<406> but was:<404>
-contractTest: 39 tests, 1 failed
+contractTest: 42 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers returns 406
     java.lang.AssertionError: not-acceptable (NOT_ACCEPTABLE: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers): expected 406, received 404.
 ----
@@ -532,7 +548,7 @@ Run `./gradlew contractTest` again, on the same database: the `GET` success fixt
 // tag::try-it-5b[]
 [source,text]
 ----
-contractTest: 39 tests, 1 failed
+contractTest: 42 tests, 1 failed
   GetBookServiceContractTest > GET /books/{id}: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers returns 406
     java.lang.AssertionError: not-acceptable (NOT_ACCEPTABLE: a valid request accepting only application/vnd.apionly.not-acceptable, which no response offers): expected 406, received 200. Content negotiation is not enforced: the implementation ignores Accept.
 ----
@@ -558,7 +574,7 @@ Exactly that case's test fails; the valid fallback answered in its place:
 // tag::try-it-6[]
 [source,text]
 ----
-contractTestWireMock: 39 tests, 1 failed
+contractTestWireMock: 42 tests, 1 failed
   GetBookStubsContractTest > GET /books/{id}: a valid request naming a resource that does not exist returns 404
     java.lang.AssertionError: not-found (NOT_FOUND: a valid request naming a resource that does not exist): expected 404, received 200. The fixture did not remove the resource, or the implementation answers for any identifier. Check arrangeState for this case.
 ----
@@ -608,8 +624,8 @@ rm -rf build/database && ./gradlew contractTest && ./gradlew contractTest --reru
 // tag::try-it-8[]
 [source,text]
 ----
-contractTest: 39 tests, 0 failed
-contractTest: 39 tests, 0 failed
+contractTest: 42 tests, 0 failed
+contractTest: 42 tests, 0 failed
 ----
 // end::try-it-8[]
 
