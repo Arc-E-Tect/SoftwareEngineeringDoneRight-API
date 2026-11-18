@@ -19,6 +19,7 @@ final class ContractCaseFixtures {
     /** The contract-case corpus: each contract with every kind, and some with kinds switched off. */
     static final List<InvalidRequestFixtures.Variant> CORPUS = List.of(
             new InvalidRequestFixtures.Variant("success", "success", settings("success", null)),
+            new InvalidRequestFixtures.Variant("selected", "selected", settings("selected", null)),
             new InvalidRequestFixtures.Variant("not-found", "not-found", settings("not-found", null)),
             new InvalidRequestFixtures.Variant("negotiation", "negotiation", settings("negotiation", null)),
             new InvalidRequestFixtures.Variant("coverage", "coverage", settings("coverage", null)),

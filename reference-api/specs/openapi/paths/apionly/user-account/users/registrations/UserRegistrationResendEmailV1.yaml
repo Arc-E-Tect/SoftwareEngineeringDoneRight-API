@@ -36,6 +36,12 @@ post:
         application/problem+json:
           schema:
             $ref: '../../../../../components/common/responses/errors/RegistrationNotFoundProblemV1.yaml'
+    '415':
+      description: The request has a body, but its Content-Type is not application/json.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../../../../../components/common/responses/errors/UnsupportedMediaTypeProblemV1.yaml'
     '500':
       description: An unexpected server-side error occurred.
       content:

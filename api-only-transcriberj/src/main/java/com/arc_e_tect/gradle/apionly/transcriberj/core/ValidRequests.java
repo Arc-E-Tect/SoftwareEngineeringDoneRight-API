@@ -75,6 +75,19 @@ final class ValidRequests {
     record Located(Parameter parameter, String location) {
     }
 
+    /**
+     * How a request treats the headers a response is selected by: each name lower case.
+     *
+     * @param fixed   the headers sent with this value, whatever the variant
+     * @param forced  the headers sent whatever the variant, at their valid value
+     * @param omitted the headers never sent
+     */
+    record Headers(Map<String, String> fixed, Set<String> forced, Set<String> omitted) {
+
+        /** No header treated otherwise than its variant says. */
+        static final Headers NONE = new Headers(Map.of(), Set.of(), Set.of());
+    }
+
     private static final Set<String> IGNORED_HEADERS = Set.of("accept", "content-type", "authorization");
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{([^}]+)}");
     private static final Map<String, String> DEFAULT_STYLE = Map.of("path", "simple", "header", "simple",
@@ -141,6 +154,18 @@ final class ValidRequests {
      * @throws Shapes.Unrepresentable    when a value reaches a construct no rule represents
      */
     Request request(Operation operation, Kind kind, MediaType json, Map<String, Integer> pins) {
+        return request(operation, kind, json, pins, Headers.NONE);
+    }
+
+    /**
+     * A valid request that sends, leaves out or fixes the headers a response is selected by, as
+     * the {@code selection} says, and is otherwise the one {@link #request(Operation, Kind, MediaType, Map)} gives.
+     *
+     * @throws ValidValues.Unsatisfiable when a parameter or the body has no valid value, or
+     *                                   a parameter the request needs is not supported yet
+     * @throws Shapes.Unrepresentable    when a value reaches a construct no rule represents
+     */
+    Request request(Operation operation, Kind kind, MediaType json, Map<String, Integer> pins, Headers selection) {
         ValidValues.Variant variant = kind == Kind.FULL ? ValidValues.Variant.FULL : ValidValues.Variant.REQUIRED;
         Map<String, String> path = new java.util.HashMap<>();
         List<Pair> query = new ArrayList<>();
@@ -148,7 +173,11 @@ final class ValidRequests {
         Set<String> examples = new LinkedHashSet<>();
         for (Located located : parameters(operation)) {
             Parameter p = located.parameter();
-            boolean needed = "path".equals(p.in()) || Boolean.TRUE.equals(p.required());
+            String header = "header".equals(p.in()) && p.name() != null ? p.name().toLowerCase(Locale.ROOT) : null;
+            if (header != null && selection.omitted().contains(header)) continue;
+            boolean selecting = header != null && (selection.fixed().containsKey(header)
+                    || selection.forced().contains(header));
+            boolean needed = "path".equals(p.in()) || Boolean.TRUE.equals(p.required()) || selecting;
             if (!needed && kind != Kind.FULL) continue;
             String reason = unsupported(p);
             if (reason != null) {
@@ -158,16 +187,21 @@ final class ValidRequests {
                 }
                 continue;
             }
-            Object own = parameterExample(located);
-            Object chosenValue;
-            if (own != NONE) {
-                chosenValue = own;
-                examples.add(located.location());
+            String value;
+            if (header != null && selection.fixed().containsKey(header)) {
+                value = selection.fixed().get(header);
             } else {
-                chosenValue = values.value(p.schema(), located.location() + "/schema", variant);
-                examples.addAll(values.exampleLocations(chosenValue, p.schema(), located.location() + "/schema"));
+                Object own = parameterExample(located);
+                Object chosenValue;
+                if (own != NONE) {
+                    chosenValue = own;
+                    examples.add(located.location());
+                } else {
+                    chosenValue = values.value(p.schema(), located.location() + "/schema", variant);
+                    examples.addAll(values.exampleLocations(chosenValue, p.schema(), located.location() + "/schema"));
+                }
+                value = wire(chosenValue, located);
             }
-            String value = wire(chosenValue, located);
             switch (p.in()) {
                 case "path" -> path.put(p.name(), value);
                 case "query" -> query.add(new Pair(p.name(), value));

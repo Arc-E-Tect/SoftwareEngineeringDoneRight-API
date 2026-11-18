@@ -353,6 +353,27 @@
       }
     },
     {
+      "class": "UnsupportedMediaTypeProblemV1",
+      "fullBody": {
+        "value": {
+          "detail": "An unexpected error occurred while processing the request.",
+          "instance": "https://api.apionly.arc-e-tect.com/v1/users/registrations",
+          "status": 415,
+          "title": "Unsupported Media Type",
+          "type": "about:blank"
+        }
+      },
+      "location": "/components/schemas/UnsupportedMediaTypeProblemV1",
+      "requiredBody": {
+        "value": {
+          "detail": "An unexpected error occurred while processing the request.",
+          "status": 415,
+          "title": "Unsupported Media Type",
+          "type": "about:blank"
+        }
+      }
+    },
+    {
       "class": "UserAccountCreatedEventV1",
       "fullBody": {
         "value": {
@@ -758,5 +779,5 @@
   ],
   "schemaVersion": 3,
   "unsupportedParameters": [],
-  "version": "1.0.1"
+  "version": "1.1.0"
 }

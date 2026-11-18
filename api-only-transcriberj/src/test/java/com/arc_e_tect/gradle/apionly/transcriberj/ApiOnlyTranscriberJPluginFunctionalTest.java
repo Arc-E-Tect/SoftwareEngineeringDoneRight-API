@@ -181,7 +181,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
                 .contains("BODY {\"username\":\"alice\",\"emailAddress\":\"a@example.com\"}")
                 .contains("COUNT 2")
                 .contains("VERSION 1.0.0")
-                .contains("API-Only TranscriberJ: user-account 1.0.0: 17 degraded method(s), 2 recommendation(s), "
+                .contains("API-Only TranscriberJ: user-account 1.0.0: 18 degraded method(s), 2 recommendation(s), "
                         + "2 undecided construct(s), 0 warning(s)");
         assertThat(first.task(":generateContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(first.task(":verifyContractSourcesUserAccount").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);

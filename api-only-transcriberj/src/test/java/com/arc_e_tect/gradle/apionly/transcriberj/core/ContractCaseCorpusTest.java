@@ -57,6 +57,34 @@ class ContractCaseCorpusTest {
     }
 
     @Test
+    void selected() {
+        assertCorpus("selected", List.of(
+                "PostDraftContractCases success-202-required SUCCESS 202 path[] application/json [Prefer=respond-async]",
+                "PostDraftContractCases success-202-full SUCCESS 202 path[] application/json [Prefer=respond-async]",
+                "PostDraftContractCases success-202-no-body SUCCESS 202 path[] - [Prefer=respond-async]",
+                "PostDraftContractCases success-204-required SUCCESS 204 path[] application/json []",
+                "PostDraftContractCases success-204-full SUCCESS 204 path[] application/json []",
+                "PostDraftContractCases success-204-no-body SUCCESS 204 path[] - []",
+                "PostJobContractCases success-200-required SUCCESS 200 path[] - []",
+                "PostJobContractCases success-201-required SUCCESS 201 path[] - [Wait=true]",
+                "PostJobContractCases success-202-required SUCCESS 202 path[] - [Prefer=respond-async]",
+                "PostValidationContractCases success-200-required SUCCESS 200 path[] application/json [Accept=application/json]",
+                "PostValidationContractCases success-200-full SUCCESS 200 path[] application/json "
+                        + "[Idempotency-Key=aaaaaaaa, Accept=application/json]",
+                "PostValidationContractCases success-202-required SUCCESS 202 path[] application/json "
+                        + "[Prefer=respond-async, Idempotency-Key=aaaaaaaa, Accept=application/json]",
+                "PostValidationContractCases success-202-full SUCCESS 202 path[] application/json "
+                        + "[Prefer=respond-async, Idempotency-Key=aaaaaaaa, Accept=application/json]"), List.of(
+                "PostValidationContractCases 200 [success-200-required, success-200-full]",
+                "PostValidationContractCases 202 [success-202-required, success-202-full]",
+                "PostDraftContractCases 204 [success-204-required, success-204-full, success-204-no-body]",
+                "PostDraftContractCases 202 [success-202-required, success-202-full, success-202-no-body]",
+                "PostJobContractCases 200 [success-200-required]",
+                "PostJobContractCases 201 [success-201-required]",
+                "PostJobContractCases 202 [success-202-required]"));
+    }
+
+    @Test
     void notFound() {
         assertCorpus("not-found", List.of(
                 "GetCollectionContractCases success-200-required SUCCESS 200 path[] - []",

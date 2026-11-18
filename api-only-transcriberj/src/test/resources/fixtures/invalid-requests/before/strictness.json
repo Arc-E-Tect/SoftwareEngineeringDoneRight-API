@@ -47,7 +47,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -108,7 +109,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -170,7 +172,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -230,7 +233,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -293,7 +297,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -356,7 +361,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -417,7 +423,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -479,7 +486,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -540,7 +548,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -602,7 +611,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -663,7 +673,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -725,7 +736,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -772,7 +784,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -834,7 +847,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -898,7 +912,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -964,7 +979,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1034,7 +1050,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1104,7 +1121,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1168,7 +1186,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1232,7 +1251,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1294,7 +1314,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1358,7 +1379,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1420,7 +1442,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1484,7 +1507,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1550,7 +1574,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1612,7 +1637,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1676,7 +1702,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1742,7 +1769,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1804,7 +1832,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1868,7 +1897,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -1934,7 +1964,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2004,7 +2035,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2074,7 +2106,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2138,7 +2171,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2202,7 +2236,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2264,7 +2299,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2328,7 +2364,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2390,7 +2427,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2454,7 +2492,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2520,7 +2559,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2582,7 +2622,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2646,7 +2687,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2712,7 +2754,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2777,7 +2820,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2845,7 +2889,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2910,7 +2955,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -2975,7 +3021,8 @@
             "pathTemplate": "/strict",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         }
       ],
       "class": "PostStrictContractCases",

@@ -75,13 +75,13 @@ class ReferenceContractsTest {
     }
 
     @Test
-    void theUserAccountContractHasItsSeventeenComponentsInBundleOrder() throws IOException {
+    void theUserAccountContractHasItsEighteenComponentsInBundleOrder() throws IOException {
         ContractModel model = model("user-account");
 
         assertThat(model.components()).extracting(Component::name).containsExactly(
                 "ProblemDetailsV1", "InternalServerProblemV1", "UsernameV1", "UserV1", "UserNotFoundProblemV1",
                 "UserRegistrationRequestV1", "UserRegistrationResponseV1", "ErrorDetailV1",
-                "InvalidRequestProblemV1", "UsernameAlreadyRegisteredProblemV1",
+                "InvalidRequestProblemV1", "UsernameAlreadyRegisteredProblemV1", "UnsupportedMediaTypeProblemV1",
                 "RegisteredRequestCannotBeProcessedProblemV1", "UserRegistrationResendEmailRequestV1",
                 "RegistrationNotFoundProblemV1", "UserAccountV1", "VerificationLinkSupersededProblemV1",
                 "VerificationLinkExpiredProblemV1", "RegistrationProcessExpiredProblemV1");

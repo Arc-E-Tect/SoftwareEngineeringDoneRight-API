@@ -32,7 +32,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -64,7 +65,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -96,7 +98,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -130,7 +133,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -164,7 +168,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -198,7 +203,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -233,7 +239,8 @@
             "pathTemplate": "/shapes",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         }
       ],
       "class": "PostShapeContractCases",

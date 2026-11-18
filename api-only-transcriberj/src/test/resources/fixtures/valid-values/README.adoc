@@ -27,6 +27,7 @@ Re-record with `./gradlew recordValidValuesGolden`.
 
 |`baseline-sources.sha256`
 |The hash of every source generated before valid values were, from `main` at 1172661: the reference API's contracts, with and without `generateDocs` and a description bundle, and the corpus.
+Re-recorded at 0.18.0, when the reference API's `user-account` 1.1.0 declared `415` on its two registration operations: every `user-account` source changed by the contract version it is stamped with, and only the two operations, the manifest, the descriptions and the new `UnsupportedMediaTypeProblemV1` by the `415` itself.
 Each source generated now, with the valid-value members stripped, must hash the same: every existing member stays byte for byte what it was.
 Re-record with `./gradlew recordBaselineSources`, for a deliberate change to existing members only.
 |===

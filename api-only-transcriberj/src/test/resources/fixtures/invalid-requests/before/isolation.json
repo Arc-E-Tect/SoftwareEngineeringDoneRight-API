@@ -38,7 +38,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -83,7 +84,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -128,7 +130,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -170,7 +173,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -215,7 +219,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -253,7 +258,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -299,7 +305,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -342,7 +349,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -388,7 +396,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -431,7 +440,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -477,7 +487,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -523,7 +534,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -569,7 +581,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -615,7 +628,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -660,7 +674,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -706,7 +721,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         },
         {
           "baseline": {
@@ -753,7 +769,8 @@
             "pathTemplate": "/isolation",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         }
       ],
       "class": "PostIsolationContractCases",

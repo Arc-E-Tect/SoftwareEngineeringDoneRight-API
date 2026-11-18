@@ -1,0 +1,74 @@
+# Responses a request header selects (x-transcriberj-selected-responses): Prefer: respond-async
+# selects 202, with an Idempotency-Key going with it, and every success case of 200 leaves Prefer
+# out; an optional body's noBody case honours the selection; and an operation that selects two
+# responses by two headers leaves each other's selecting header out.
+openapi: 3.1.0
+info:
+  title: Contract-case corpus, selected responses
+  version: 1.0.0
+paths:
+  /validations:
+    post:
+      operationId: postValidation
+      x-transcriberj-selected-responses:
+        '202': {in: header, name: Prefer, value: respond-async, with: [Idempotency-Key]}
+      parameters:
+        - {name: Prefer, in: header, schema: {type: string, minLength: 1}}
+        - {name: Idempotency-Key, in: header, schema: {type: string, pattern: '^[0-9a-f]{8}$'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteV1'}
+      responses:
+        '200':
+          description: Validated.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NoteV1'}
+        '202':
+          description: Accepted.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NoteV1'}
+  /drafts:
+    post:
+      operationId: postDraft
+      x-transcriberj-selected-responses:
+        '202': {in: header, name: Prefer, value: respond-async}
+      parameters:
+        - {name: Prefer, in: header, schema: {type: string, minLength: 1}}
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteV1'}
+      responses:
+        '204':
+          description: Saved.
+        '202':
+          description: Accepted.
+  /jobs:
+    post:
+      operationId: postJob
+      x-transcriberj-selected-responses:
+        '201': {in: header, name: Wait, value: 'true'}
+        '202': {in: header, name: Prefer, value: respond-async}
+      parameters:
+        - {name: Prefer, in: header, schema: {type: string, minLength: 1}}
+        - {name: Wait, in: header, schema: {type: boolean}}
+      responses:
+        '200':
+          description: Queued.
+        '201':
+          description: Done, as the client waited.
+        '202':
+          description: Accepted.
+components:
+  schemas:
+    NoteV1:
+      x-fragment-path: openapi/components/NoteV1.yaml
+      type: object
+      required: [text]
+      properties:
+        text: {type: string, minLength: 1}
+        tag: {type: string}

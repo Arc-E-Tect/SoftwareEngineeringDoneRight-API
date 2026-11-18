@@ -36,7 +36,8 @@
             "pathTemplate": "/things/{name}/{slug}",
             "query": []
           },
-          "responseBodyClass": null
+          "responseBodyClass": null,
+          "selectedBy": null
         }
       ],
       "class": "GetThingContractCases",

@@ -714,6 +714,7 @@ final class CoreEmitter implements Emitter {
         out.put("requiresState", c.kind().requiresState());
         out.put("variant", c.variant());
         out.put("branch", c.branch());
+        out.put("selectedBy", selectedBy(c.selectedBy()));
         out.put("description", c.description());
         out.put("in", c.in());
         out.put("name", c.name());
@@ -729,6 +730,17 @@ final class CoreEmitter implements Emitter {
         source.put("namedExample", basis.namedExample());
         source.put("examples", basis.examples());
         out.put("source", source);
+        return out;
+    }
+
+    /** How a request header selects a case's response, as the report records it; null when nothing does. */
+    private static Map<String, Object> selectedBy(SelectedResponses.Selection selection) {
+        if (selection == null) return null;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("in", selection.in());
+        out.put("name", selection.name());
+        out.put("value", selection.value());
+        out.put("with", selection.with());
         return out;
     }
 

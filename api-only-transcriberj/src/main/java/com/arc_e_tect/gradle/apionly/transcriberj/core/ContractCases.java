@@ -78,10 +78,12 @@ final class ContractCases {
      * @param bodyClass    the simple name of the class of that response's body, or null
      * @param branch       for a success case that sends a {@code oneOf} branch other than the first,
      *                     that branch's component name; else null
+     * @param selectedBy   for a success case of a response a request header selects, how; else null
      */
     record Case(String id, CaseKind kind, String variant, String description, String in, String name,
                 String pointer, String keyword, ValidRequests.Request request, ValidRequests.Request baseline,
-                int status, List<String> contentTypes, String bodyClass, String branch) {
+                int status, List<String> contentTypes, String bodyClass, String branch,
+                SelectedResponses.Selection selectedBy) {
     }
 
     /**
@@ -142,6 +144,7 @@ final class ContractCases {
      * @return the cases and the coverage
      */
     Result derive(Operation operation, InvalidRequests.Result invalid) {
+        SelectedResponses selected = SelectedResponses.of(operation, requests, values);
         String accept = accept(operation);
         List<Case> cases = new ArrayList<>();
         Map<String, Coverage> coverage = new LinkedHashMap<>();
@@ -154,7 +157,7 @@ final class ContractCases {
             if (!EXACT.matcher(status).matches()) {
                 coverage.put(status, uncovered(status, Reason.RANGE_OR_DEFAULT, status + " is not one status"));
             } else if (SUCCESS.matcher(status).matches()) {
-                success(operation, response, accept, cases, coverage, notes);
+                success(operation, response, selected, accept, cases, coverage, notes);
             } else if (status.equals("404")) {
                 notFound(operation, response, accept, cases, coverage);
             } else if (status.equals("406")) {
@@ -188,7 +191,7 @@ final class ContractCases {
         for (InvalidRequests.Case c : invalid.cases()) {
             invalidCases.add(new Case(c.id(), CaseKind.INVALID_REQUEST, null, c.description(), c.in(), c.name(),
                     c.pointer(), c.keyword(), withAccept(c.request(), accept), c.baseline(), c.status(),
-                    c.contentTypes(), c.bodyClass(), null));
+                    c.contentTypes(), c.bodyClass(), null, null));
         }
         if (invalid.declared()) {
             String status = settings.invalidRequestStatus();
@@ -213,18 +216,21 @@ final class ContractCases {
 
     // ------------------------------------------------------------- success
 
-    private void success(Operation operation, Response response, String accept, List<Case> cases,
-                         Map<String, Coverage> coverage, List<String> notes) {
+    private void success(Operation operation, Response response, SelectedResponses selected, String accept,
+                         List<Case> cases, Map<String, Coverage> coverage, List<String> notes) {
         String status = response.status();
-        ValidRequests.Request required = required(operation, status, coverage);
+        ValidRequests.Headers headers = selected.headers(status);
+        SelectedResponses.Selection selection = selected.selection(status);
+        ValidRequests.Request required = required(operation, status, coverage, headers);
         if (required == null) return;
         InvalidRequests.Expected expected = InvalidRequests.expected(names, operation, response);
         List<Case> derived = new ArrayList<>();
         derived.add(successCase(status, "required", "a valid request with the required parameters and body members "
-                + "only", required, accept, expected));
-        branches(operation, status, required, accept, expected, derived, notes);
+                + "only" + selected.describe(status, false), required, accept, expected, selection));
+        branches(operation, status, required, headers, selected.describe(status, false), selection, accept, expected,
+                derived, notes);
         try {
-            ValidRequests.Request full = requests.request(operation, ValidRequests.Kind.FULL);
+            ValidRequests.Request full = requests.request(operation, ValidRequests.Kind.FULL, null, Map.of(), headers);
             String unverifiable = invalid.unverifiable(operation, full);
             if (sameShape(full, required)) {
                 notes.add("success-" + status + "-full is not derived: the full request is the required one, as "
@@ -235,14 +241,15 @@ final class ContractCases {
                 notes.add("success-" + status + "-full is not derived: " + unverifiable);
             } else {
                 derived.add(successCase(status, "full", "a valid request with every parameter and body member the "
-                        + "contract declares", full, accept, expected));
+                        + "contract declares" + selected.describe(status, true), full, accept, expected, selection));
             }
         } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
             notes.add("success-" + status + "-full is not derived: " + e.getMessage());
         }
         if (ValidRequests.bodyOptional(operation)) {
-            derived.add(successCase(status, "noBody", "a valid request without the optional body",
-                    requests.request(operation, ValidRequests.Kind.NO_BODY), accept, expected));
+            derived.add(successCase(status, "noBody", "a valid request without the optional body"
+                    + selected.describe(status, false), requests.request(operation, ValidRequests.Kind.NO_BODY, null,
+                    Map.of(), headers), accept, expected, selection));
         }
         cases.addAll(derived);
         coverage.put(status, new Coverage(status, derived.stream().map(Case::id).toList(), null, null));
@@ -252,8 +259,9 @@ final class ContractCases {
      * A success case for every branch of each {@code oneOf} the required request's body passes
      * through, other than the branch it takes: each sends the required members of its branch.
      */
-    private void branches(Operation operation, String status, ValidRequests.Request required, String accept,
-                          InvalidRequests.Expected expected, List<Case> derived, List<String> notes) {
+    private void branches(Operation operation, String status, ValidRequests.Request required,
+                          ValidRequests.Headers headers, String described, SelectedResponses.Selection selection,
+                          String accept, InvalidRequests.Expected expected, List<Case> derived, List<String> notes) {
         MediaType media = operation.requestBody() == null || required.contentType() == null ? null
                 : operation.requestBody().content().stream()
                 .filter(m -> m.contentType().equals(required.contentType())).findFirst().orElse(null);
@@ -264,16 +272,16 @@ final class ContractCases {
                 String id = "success-" + status + "-" + InvalidRequests.kebab(branch);
                 try {
                     ValidRequests.Request request = requests.request(operation, ValidRequests.Kind.REQUIRED, media,
-                            Map.of(oneOf.location(), i));
+                            Map.of(oneOf.location(), i), headers);
                     String unverifiable = invalid.unverifiable(operation, request);
                     if (unverifiable != null) {
                         notes.add(id + " is not derived: " + unverifiable);
                         continue;
                     }
                     derived.add(new Case(id, CaseKind.SUCCESS, "required", "a valid request with the required "
-                            + "parameters and body members of the branch " + branch + " only", null, null, null, null,
-                            withAccept(request, accept), null, Integer.parseInt(status), expected.contentTypes(),
-                            expected.bodyClass(), branch));
+                            + "parameters and body members of the branch " + branch + " only" + described, null, null,
+                            null, null, withAccept(request, accept), null, Integer.parseInt(status),
+                            expected.contentTypes(), expected.bodyClass(), branch, selection));
                 } catch (ValidValues.Unsatisfiable | Shapes.Unrepresentable e) {
                     notes.add(id + " is not derived: " + e.getMessage());
                 }
@@ -282,11 +290,11 @@ final class ContractCases {
     }
 
     private Case successCase(String status, String variant, String description, ValidRequests.Request request,
-                             String accept, InvalidRequests.Expected expected) {
+                             String accept, InvalidRequests.Expected expected, SelectedResponses.Selection selection) {
         String id = "success-" + status + "-" + (variant.equals("noBody") ? "no-body" : variant);
         return new Case(id, CaseKind.SUCCESS, variant, description, null, null, null, null,
                 withAccept(request, accept), null, Integer.parseInt(status), expected.contentTypes(),
-                expected.bodyClass(), null);
+                expected.bodyClass(), null, selection);
     }
 
     // ----------------------------------------------------------- not found
@@ -337,7 +345,7 @@ final class ContractCases {
         InvalidRequests.Expected expected = InvalidRequests.expected(names, operation, response);
         Case c = new Case("not-found", CaseKind.NOT_FOUND, null, "a valid request naming a resource that does not "
                 + "exist", null, null, null, null, withAccept(request, accept), null, 404, expected.contentTypes(),
-                expected.bodyClass(), null);
+                expected.bodyClass(), null, null);
         cases.add(c);
         coverage.put(status, new Coverage(status, List.of(c.id()), null, null));
     }
@@ -364,7 +372,7 @@ final class ContractCases {
         InvalidRequests.Expected expected = InvalidRequests.expected(names, operation, response);
         Case c = new Case("not-acceptable", CaseKind.NOT_ACCEPTABLE, null, "a valid request accepting only "
                 + chosen + ", which no response offers", null, null, null, null, withAccept(required, chosen), null,
-                406, expected.contentTypes(), expected.bodyClass(), null);
+                406, expected.contentTypes(), expected.bodyClass(), null, null);
         cases.add(c);
         coverage.put(status, new Coverage(status, List.of(c.id()), null, null));
     }
@@ -395,7 +403,7 @@ final class ContractCases {
         InvalidRequests.Expected expected = InvalidRequests.expected(names, operation, response);
         Case c = new Case("unsupported-media-type", CaseKind.UNSUPPORTED_MEDIA_TYPE, null, "the valid body sent as "
                 + chosen + ", which the operation does not accept", null, null, null, null,
-                withAccept(request, accept), null, 415, expected.contentTypes(), expected.bodyClass(), null);
+                withAccept(request, accept), null, 415, expected.contentTypes(), expected.bodyClass(), null, null);
         cases.add(c);
         coverage.put(status, new Coverage(status, List.of(c.id()), null, null));
     }
@@ -405,8 +413,15 @@ final class ContractCases {
      * null, with the reason in the coverage, when there is none, or none that can be vouched for.
      */
     private ValidRequests.Request required(Operation operation, String status, Map<String, Coverage> coverage) {
+        return required(operation, status, coverage, ValidRequests.Headers.NONE);
+    }
+
+    /** The required request of a success case, which sends or leaves out the selecting headers as given. */
+    private ValidRequests.Request required(Operation operation, String status, Map<String, Coverage> coverage,
+                                           ValidRequests.Headers headers) {
         try {
-            ValidRequests.Request required = requests.request(operation, ValidRequests.Kind.REQUIRED);
+            ValidRequests.Request required = requests.request(operation, ValidRequests.Kind.REQUIRED, null, Map.of(),
+                    headers);
             String unverifiable = invalid.unverifiable(operation, required);
             if (unverifiable == null) return required;
             coverage.put(status, uncovered(status, Reason.NO_VALID_VALUE, unverifiable));

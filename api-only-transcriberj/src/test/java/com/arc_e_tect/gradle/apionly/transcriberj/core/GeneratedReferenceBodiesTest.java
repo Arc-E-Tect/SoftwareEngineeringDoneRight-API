@@ -37,7 +37,8 @@ class GeneratedReferenceBodiesTest {
                 "GetRootContractCases", "GetRootOperation", "GetRootResponse200", "GetUserContractCases",
                 "GetUserOperation", "InitiateUserRegistrationContractCases", "InitiateUserRegistrationOperation", "InternalServerProblemV1",
                 "InvalidRequestProblemV1", "ProblemDetailsV1", "RegisteredRequestCannotBeProcessedProblemV1", "RegistrationNotFoundProblemV1",
-                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailContractCases", "ResendVerificationEmailOperation", "UserAccountV1",
+                "RegistrationProcessExpiredProblemV1", "ResendVerificationEmailContractCases", "ResendVerificationEmailOperation",
+                "UnsupportedMediaTypeProblemV1", "UserAccountV1",
                 "UserNotFoundProblemV1", "UserRegistrationRequestV1", "UserRegistrationResendEmailRequestV1", "UserRegistrationResponseV1",
                 "UserV1", "UsernameAlreadyRegisteredProblemV1", "UsernameV1", "VerificationLinkExpiredProblemV1",
                 "VerificationLinkSupersededProblemV1");
@@ -70,7 +71,7 @@ class GeneratedReferenceBodiesTest {
         assertThat(generated.constant("GetRootResponse200", "OPERATION_ID")).isEqualTo("GetRoot");
         assertThat(generated.constant("ContractManifest", "CONTRACT")).isEqualTo("user-account");
         assertThat(generated.constant("ContractManifest", "CONTRACT_VERSION")).isEqualTo(GeneratedSources.version(GeneratedSources.CONTRACTS.resolve("user-account/openapi.yaml")));
-        assertThat((List<?>) generated.constant("ContractManifest", "ENTRIES")).hasSize(25);
+        assertThat((List<?>) generated.constant("ContractManifest", "ENTRIES")).hasSize(26);
     }
 
     @Test

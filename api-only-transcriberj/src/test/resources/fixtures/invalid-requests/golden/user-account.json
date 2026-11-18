@@ -421,6 +421,7 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserAccountV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/paths/~1v1~1users~1registrations~1completion~1{verificationLink}/get/parameters/0/schema"
@@ -468,6 +469,7 @@
           },
           "requiresState": true,
           "responseBodyClass": "GetHealthResponse200",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": null
@@ -513,6 +515,7 @@
           },
           "requiresState": true,
           "responseBodyClass": "GetRootResponse200",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": null
@@ -560,6 +563,7 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -600,6 +604,7 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserNotFoundProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -650,11 +655,52 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserRegistrationResponseV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
           },
           "variant": "required"
+        },
+        {
+          "baseline": null,
+          "branch": null,
+          "description": "the valid body sent as text/plain, which the operation does not accept",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 415,
+          "id": "unsupported-media-type",
+          "in": null,
+          "keyword": null,
+          "kind": "UNSUPPORTED_MEDIA_TYPE",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": {
+              "emailAddress": "alice@wonderland.com",
+              "username": "alice"
+            },
+            "contentType": "text/plain",
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations",
+            "query": []
+          },
+          "requiresState": false,
+          "responseBodyClass": "UnsupportedMediaTypeProblemV1",
+          "selectedBy": null,
+          "source": {
+            "examples": [],
+            "namedExample": "Alice"
+          },
+          "variant": null
         },
         {
           "baseline": {
@@ -697,6 +743,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -746,6 +793,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -795,6 +843,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -842,6 +891,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -892,6 +942,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -942,6 +993,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -992,6 +1044,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1042,6 +1095,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1092,6 +1146,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1142,6 +1197,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1192,6 +1248,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1242,6 +1299,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1293,6 +1351,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [],
             "namedExample": "Alice"
@@ -1340,6 +1399,7 @@
           },
           "requiresState": true,
           "responseBodyClass": "UserRegistrationResponseV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1347,6 +1407,47 @@
             "namedExample": null
           },
           "variant": "required"
+        },
+        {
+          "baseline": null,
+          "branch": null,
+          "description": "the valid body sent as text/plain, which the operation does not accept",
+          "expectedContentTypes": [
+            "application/problem+json"
+          ],
+          "expectedStatus": 415,
+          "id": "unsupported-media-type",
+          "in": null,
+          "keyword": null,
+          "kind": "UNSUPPORTED_MEDIA_TYPE",
+          "name": null,
+          "pointer": null,
+          "request": {
+            "body": {
+              "username": "alice_1"
+            },
+            "contentType": "text/plain",
+            "headers": [
+              {
+                "name": "Accept",
+                "value": "application/json, application/problem+json"
+              }
+            ],
+            "method": "POST",
+            "pathParameters": [],
+            "pathTemplate": "/v1/users/registrations/verification-email",
+            "query": []
+          },
+          "requiresState": false,
+          "responseBodyClass": "UnsupportedMediaTypeProblemV1",
+          "selectedBy": null,
+          "source": {
+            "examples": [
+              "/components/schemas/UsernameV1"
+            ],
+            "namedExample": null
+          },
+          "variant": null
         },
         {
           "baseline": {
@@ -1388,6 +1489,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1436,6 +1538,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1484,6 +1587,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1534,6 +1638,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1584,6 +1689,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1634,6 +1740,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1684,6 +1791,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1734,6 +1842,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1785,6 +1894,7 @@
           },
           "requiresState": false,
           "responseBodyClass": "InvalidRequestProblemV1",
+          "selectedBy": null,
           "source": {
             "examples": [
               "/components/schemas/UsernameV1"
@@ -1922,6 +2032,14 @@
       }
     },
     {
+      "cases": [
+        "unsupported-media-type"
+      ],
+      "class": "InitiateUserRegistrationContractCases",
+      "operation": "/paths/~1v1~1users~1registrations/post",
+      "status": "415"
+    },
+    {
       "class": "InitiateUserRegistrationContractCases",
       "operation": "/paths/~1v1~1users~1registrations/post",
       "status": "422",
@@ -1974,6 +2092,14 @@
         "detail": "/v1/users/registrations/verification-email names no resource by a path parameter",
         "label": "404 without a path parameter"
       }
+    },
+    {
+      "cases": [
+        "unsupported-media-type"
+      ],
+      "class": "ResendVerificationEmailContractCases",
+      "operation": "/paths/~1v1~1users~1registrations~1verification-email/post",
+      "status": "415"
     },
     {
       "class": "ResendVerificationEmailContractCases",
