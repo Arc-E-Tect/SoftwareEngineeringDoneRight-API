@@ -1,3 +1,15 @@
+# [0.20.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.19.0...api-only-transcriberj-v0.20.0) (2026-11-22)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** document the fields of a property that is one of several objects ([#139](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/139)) ([854a171](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/854a1712f80cc3a30f395c631137473ed96cd0f5)), closes [#139](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/139)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.19.0 [skip ci] ([8683150](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/8683150b4bb968c3c8fe5bf2216c837535baa927))
+
 # [0.19.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.18.2...api-only-transcriberj-v0.19.0) (2026-11-18)
 
 
