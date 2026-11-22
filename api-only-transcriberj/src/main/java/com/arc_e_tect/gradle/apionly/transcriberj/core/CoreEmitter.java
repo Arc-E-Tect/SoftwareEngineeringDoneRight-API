@@ -1402,10 +1402,22 @@ final class CoreEmitter implements Emitter {
                     }
                     return;
                 }
+                List<String> referredBranches = objectBranches(target);
+                if (referredBranches != null) {
+                    lines.add(field(path, key, "object", opt, description, false, false));
+                    branchFields(referredBranches, location, path, lines);
+                    return;
+                }
                 lines.add(field(path, key, shapes.fieldType(target), opt, description, false, false));
                 return;
             }
             description = describe(s.description(), location);
+            List<String> branches = s.types() == null && s.properties() == null ? objectBranches(s) : null;
+            if (branches != null) {
+                lines.add(field(path, key, "object", opt, description, false, false));
+                branchFields(branches, location, path, lines);
+                return;
+            }
             if (shapes.isArray(s)) {
                 lines.add(field(path, key, "array", opt, description, false, false));
                 if (s.items() != null) itemFields(s.items(), location + "/items", path, key, opt, lines);
@@ -1419,6 +1431,44 @@ final class CoreEmitter implements Emitter {
                 return;
             }
             lines.add(field(path, key, shapes.fieldType(s), opt, description, false, false));
+        }
+
+        /**
+         * The classes of the branches of a {@code oneOf} or {@code anyOf} that are all references
+         * to object components, or {@code null} when the schema has no such choice, or a branch is
+         * inline or not an object.
+         */
+        private List<String> objectBranches(Schema s) {
+            List<Schema> choice = s.oneOf() != null ? s.oneOf() : s.anyOf();
+            if (choice == null || choice.isEmpty()) return null;
+            List<String> classes = new ArrayList<>();
+            for (Schema branch : choice) {
+                if (branch.ref() == null || branch.types() != null || branch.properties() != null) return null;
+                Schema target = shapes.component(branch.ref()).orElse(null);
+                if (target == null || !shapes.isObject(target)) return null;
+                classes.add(names.component(Origin.SCHEMA, branch.ref()).orElseThrow().simpleName());
+            }
+            return classes;
+        }
+
+        /**
+         * The fields of every branch beneath a property that is one of several objects. Only one
+         * branch is present in a body, so each branch's fields are optional, and a member that
+         * several branches share is listed once, as the first branch that has it describes it.
+         */
+        private void branchFields(List<String> branches, String location, String path, List<String> lines) {
+            boolean cycle = shapes.closesCycle(location);
+            String depth = cycle ? "depth + 1" : "depth";
+            if (cycle) lines.add("if (depth < ContractField.MAX_DEPTH) {");
+            String indent = cycle ? INDENT : "";
+            for (String branch : branches) {
+                lines.add(indent + "for (ContractField branchField : " + branch + ".fields(" + path + " + \".\", true, "
+                        + depth + localeArgument() + ")) {");
+                lines.add(indent + INDENT + "if (fields.stream().noneMatch(known -> known.path().equals(branchField.path()))) "
+                        + "fields.add(branchField);");
+                lines.add(indent + "}");
+            }
+            if (cycle) lines.add("}");
         }
 
         private void itemFields(Schema items, String location, String path, String key, String opt,
