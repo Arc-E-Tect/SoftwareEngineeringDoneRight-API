@@ -859,6 +859,42 @@ A dialect turns these into its own descriptors: Spring REST Docs' `FieldDescript
 A field is optional when the contract does not require it, or when an object it is inside is optional.
 A `$ref` to another object delegates to that class; a recursive one is followed `recursionDepth` times and then described as a subsection.
 A map, an object with `additionalProperties` and no properties of its own, is a subsection.
+A property that is one of several objects is described in <<one-of-several-objects,A property that is one of several objects §>>.
+
+[#one-of-several-objects]
+==== A property that is one of several objects
+
+A property can hold one of several objects: an order is shipped either to an address or to a pick-up point, a payment is either a card or a bank transfer.
+The contract says so with a `oneOf` (or `anyOf`) on the property, or on a component the property refers to, whose branches are references to object components:
+
+[source,yaml]
+----
+OrderV1:
+  type: object
+  required: [id, delivery]
+  properties:
+    id: {type: string}
+    delivery:
+      oneOf:
+        - $ref: '#/components/schemas/HomeDeliveryV1'      # { street, city, since }
+        - $ref: '#/components/schemas/PickUpPointV1'       # { pointId, since }
+----
+
+`OrderV1.fields("")` describes `delivery` as an object, followed by the fields of every branch:
+
+[source,java]
+----
+fields.add(new ContractField(prefix + "id", "string", optional, ...));
+fields.add(new ContractField(prefix + "delivery", "object", optional, ...));
+// HomeDeliveryV1's fields, then PickUpPointV1's: delivery.street, delivery.city, delivery.since, delivery.pointId
+----
+
+Every branch's field is optional, because a body holds only one branch, and a member that several branches share, such as `since`, is listed once, as the first branch that has it describes it.
+
+Why it matters: a documentation or contract test that documents the response with these fields passes for whichever branch the service returns, and fails when the service returns a member that no branch declares.
+Without it, `delivery` would be one field of no single type, and Spring REST Docs would reject every response that carries it, because the members inside it are undocumented; the only way out would be to reshape the contract to suit the tool, for example by moving the `oneOf` to the root of the body.
+
+A `oneOf` or `anyOf` with a branch that is not an object, such as a string or an array, cannot be described member by member, and stays one field of type `varies`.
 
 [#manifest]
 === The manifest

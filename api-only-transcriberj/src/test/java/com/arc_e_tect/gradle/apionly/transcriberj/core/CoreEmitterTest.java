@@ -261,6 +261,89 @@ class CoreEmitterTest {
     // -------------------------------------------------------------- bodies
 
     @Test
+    void aPropertyWhoseOneOfBranchesAreObjectsIsDocumentedByTheFieldsOfEveryBranch() throws Throwable {
+        GeneratedSources g = generate(contract("""
+                /x:
+                  get:
+                    responses:
+                      '200':
+                        description: ok
+                        content:
+                          application/json:
+                            schema: {$ref: '#/components/schemas/Holder'}
+                """, "schemas:\n" + (schema("Holder", "openapi/Holder.yaml", """
+                type: object
+                required: [recipient]
+                properties:
+                  recipient:
+                    description: Whom it is for.
+                    oneOf:
+                      - $ref: '#/components/schemas/ByName'
+                      - $ref: '#/components/schemas/ByMail'
+                  either:
+                    anyOf:
+                      - $ref: '#/components/schemas/ByName'
+                      - $ref: '#/components/schemas/ByMail'
+                  referred: {$ref: '#/components/schemas/Recipient'}
+                  mixed:
+                    oneOf:
+                      - $ref: '#/components/schemas/ByName'
+                      - $ref: '#/components/schemas/Label'
+                """) + schema("ByName", "openapi/ByName.yaml", """
+                type: object
+                additionalProperties: false
+                required: [username]
+                properties:
+                  username: {type: string}
+                  since: {type: string}
+                """) + schema("ByMail", "openapi/ByMail.yaml", """
+                type: object
+                additionalProperties: false
+                required: [emailAddress]
+                properties:
+                  emailAddress: {type: string}
+                  since: {type: string}
+                """) + schema("Label", "openapi/Label.yaml", "type: string") + schema("Recipient", "openapi/Recipient.yaml", """
+                oneOf:
+                  - $ref: '#/components/schemas/ByName'
+                  - $ref: '#/components/schemas/ByMail'
+                """)).indent(2)));
+
+        List<?> fields = (List<?>) g.call("Holder", "fields", new Class<?>[]{String.class}, "");
+
+        // Only one branch is present in a body, so every branch's members are optional, and a
+        // member that several branches share is listed once.
+        assertThat(fields).extracting(Object::toString).containsExactly(
+                "ContractField[path=recipient, type=object, optional=false, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=recipient.username, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=recipient.since, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=recipient.emailAddress, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=either, type=object, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=either.username, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=either.since, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=either.emailAddress, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=referred, type=object, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=referred.username, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=referred.since, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=referred.emailAddress, type=string, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                // A branch that is not an object keeps the property one leaf of no single type.
+                "ContractField[path=mixed, type=varies, optional=true, description=, "
+                        + "subsection=false, open=false]");
+    }
+
+    @Test
     void everyKindOfValueIsPassedAndWritten() throws Throwable {
         GeneratedSources g = generate(contract("""
                 /x:
@@ -334,7 +417,9 @@ class CoreEmitterTest {
                         + "subsection=false, open=false]",
                 "ContractField[path=p.anything, type=varies, optional=true, description=, "
                         + "subsection=false, open=false]",
-                "ContractField[path=p.either, type=varies, optional=true, description=, "
+                "ContractField[path=p.either, type=object, optional=true, description=, "
+                        + "subsection=false, open=false]",
+                "ContractField[path=p.either.id, type=string, optional=true, description=, "
                         + "subsection=false, open=false]",
                 "ContractField[path=p.raw, type=array, optional=true, description=, "
                         + "subsection=false, open=false]",
