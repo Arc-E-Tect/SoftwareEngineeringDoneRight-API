@@ -86,7 +86,8 @@ The generated `<Operation>ContractTests` interfaces are compiled here too.
 === The service
 
 `POST /books` adds a book, `GET /books/{id}` reads one, and `GET /books` lists the catalogue a page at a time.
-A book has an ISBN-13, a title, an optional subtitle, a number of pages and a format; the ISBN is its natural key.
+A book has an ISBN-13, a title, an optional subtitle, an author, a number of pages and a format; the ISBN is its natural key.
+The author is a person or an organisation.
 
 The HTTP adapter checks every request against the contract *before the port is called*, and answers a violation with `400` and the contract's problem body:
 
@@ -100,10 +101,11 @@ The database is H2, through Spring JDBC, with a real table: a fixture that inser
 
 === The contract
 
-The request body is closed, and has a handful of constraints: a pattern on `isbn`, a length on `title` and `subtitle`, a range on `pages`, an enum on `format`, four required members and one optional one.
-The TranscriberJ derives 41 cases from it, and its report lists:
+The request body is closed, and has a handful of constraints: a pattern on `isbn`, a length on `title`, `subtitle` and the author's name, a range on `pages`, an enum on `format`, a `oneOf` on `author`, five required members and one optional one.
+The TranscriberJ derives 46 invalid-request cases from it, and its report lists:
 
-* no degraded method, no gap and no format recommendation;
+* no gap and no format recommendation;
+* one degraded method, a stub left out on purpose (see <<the-author,The author: one of two objects, in this document>>);
 * four constraints no case can cover, each for a reason no contract can avoid:
 ** the `id` path parameter's `required`, since a path without it is another route;
 ** its `type`, and the `Prefer` header's, since every parameter travels as a string;
@@ -136,6 +138,42 @@ x-transcriberj-selected-responses:
 So the `202` cases send `Prefer: respond-async`, and the `201` cases leave `Prefer` out.
 `ServiceContractTest` has the service add a book on the request's own thread, so that no case's book is still being added while the next case arranges its state.
 The report says, under _Example data_, which example each case is built on (link:../../../api-only-transcriberj/README.adoc#example-data[Example data in the TranscriberJ's README →]).
+
+[#the-author]
+=== The author: one of two objects
+
+A book's author is a person or an organisation, and the contract says so with a `oneOf` of two closed objects, each with its own required member:
+
+[source,yaml]
+----
+# AuthorV1.yaml
+oneOf:
+  - $ref: PersonAuthorV1.yaml        # { name }, additionalProperties: false
+  - $ref: OrganisationAuthorV1.yaml  # { organisationName }, additionalProperties: false
+----
+
+There is no discriminator: a value matches one branch by the member it has.
+The TranscriberJ generates a class per branch, and `BookRequestV1.body(...)` takes the author as JSON one of them wrote:
+
+[source,java]
+----
+BookRequestV1.body("9780226287058", "The Chicago Manual of Style",
+        OrganisationAuthorV1.body("University of Chicago Press"), 1144, "hardcover");
+----
+
+From the `oneOf`, the TranscriberJ derives cases no hand-written suite would think of all of:
+
+* `success-201-organisation-author-v1` and `success-202-organisation-author-v1`: the required request, with the other branch taken;
+* every rule of each branch, broken in a request of that branch: `body-author-name-maxLength`, `body-author-organisationName-required`, and so on;
+* `body-author-oneOf-person-author-v1-organisation-author-v1`: a `name` and an `organisationName` together, which match neither closed branch.
+
+`body-author-name-required` and `body-author-organisationName-required` send the same request, `"author": {}`, so the WireMock emitter leaves the second one's stub out and the first one's answers both; the report lists it as the one degraded method.
+
+The service reads the author with Jackson's deduction (`AuthorRequest`): the members a value has pick its branch, as they pick it in the contract.
+The strict mapper refuses the merged body as a member its branch does not declare, which is why only a test of the running service, the contract tests, sees that case answered with `400`.
+The table keeps the author as `author_kind`, `person` or `organisation`, and `author_name`.
+
+The author was added as a required member, so a request that was valid before is not any more: the contract went from 1.1.0 to 2.0.0.
 
 [#configuration]
 == The configuration
@@ -181,7 +219,7 @@ It implements none of them, so none of them runs there.
 
 WireMock::
 Mapping files, on no source set: stubs are not test code.
-`packageBooksWiremock` packages them as `build/distributions/books-wiremock-1.1.0.zip`.
+`packageBooksWiremock` packages them as `build/distributions/books-wiremock-2.0.0.zip`.
 `priority: '2'` leaves WireMock's highest priority, `1`, to hand-written stubs, such as the `409`'s.
 
 == The test suites
@@ -322,7 +360,7 @@ The mapping files are the stubs the team hands to the developers of the API's co
 ./gradlew packageBooksWiremock
 ----
 
-`build/distributions/books-wiremock-1.1.0.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
+`build/distributions/books-wiremock-2.0.0.zip` holds `mappings/`, `__files/` and `apionly-provenance.json`: the contract, its version and hash, and the TranscriberJ's and the emitter's versions and options.
 
 `src/docker/stubs/Dockerfile` builds an image of the official WireMock image with the stubs in it, and `booksStubsImage` builds it from the archive.
 It needs Docker, so it is not part of `check`:
@@ -331,7 +369,7 @@ It needs Docker, so it is not part of `check`:
 [source,console]
 ----
 ./gradlew booksStubsImage
-docker run --rm -p 8080:8080 example/books-stubs:1.1.0
+docker run --rm -p 8080:8080 example/books-stubs:2.0.0
 ----
 // end::stubs-image[]
 
@@ -341,11 +379,11 @@ A consumer calls it as it would call the service:
 [source,console]
 ----
 $ curl -i -X POST localhost:8080/books -H 'Content-Type: application/json' \
-       -d '{"isbn":"9780321125217","title":"Domain-Driven Design","pages":560,"format":"hardcover"}'
+       -d '{"isbn":"9780321125217","title":"Domain-Driven Design","author":{"name":"Eric Evans"},"pages":560,"format":"hardcover"}'
 HTTP/1.1 201 Created
 Matched-Stub-Name: createBook/fallback-valid
 
-{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","isbn":"9780000000000","title":"a","subtitle":"a","pages":1,"format":"hardcover"}
+{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","isbn":"9780000000000","title":"a","subtitle":"a","author":{"name":"a"},"pages":1,"format":"hardcover"}
 ----
 // end::stubs-curl[]
 
@@ -356,7 +394,7 @@ A team whose implementation is in Go or Python uses the same image as the double
 
 [source,python]
 ----
-with DockerContainer("example/books-stubs:1.1.0").with_exposed_ports(8080) as stubs:
+with DockerContainer("example/books-stubs:2.0.0").with_exposed_ports(8080) as stubs:
     base_url = f"http://{stubs.get_container_host_ip()}:{stubs.get_exposed_port(8080)}"
 ----
 
@@ -385,7 +423,7 @@ The same, machine-readable: every case in `contractCases`, with its request, in 
 `build/generated/sources/transcriberj/books/restdocs/com/example/books/contract/restdocs/`::
 The generated `<Operation>ContractTests` interfaces: one test per case, and the hooks, whose Javadoc shows the suggested `arrangeState`.
 
-`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-1.1.0.zip`::
+`build/generated/files/transcriberj/books/wiremock/`, `build/distributions/books-wiremock-2.0.0.zip`::
 The mapping files, one exact stub per case and the fallbacks, and the archive that ships them.
 
 `build/generated-snippets/generated-service/`, `generated-stubs/`::

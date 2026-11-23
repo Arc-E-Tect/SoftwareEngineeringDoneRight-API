@@ -1,6 +1,7 @@
 package com.example.books.contracttest;
 
 import com.example.books.contract.BookRequestV1;
+import com.example.books.contract.PersonAuthorV1;
 import com.example.books.contract.CreateBookOperation;
 import com.example.books.contract.restdocs.ContractTestSupport;
 import com.example.books.contract.restdocs.ProblemV1Docs;
@@ -31,7 +32,7 @@ public interface CreateBookConflictContractTests {
     /**
      * The request: a valid book, with {@link #TAKEN_ISBN}.
      */
-    String REQUEST = BookRequestV1.body(TAKEN_ISBN, "a", 1, "hardcover");
+    String REQUEST = BookRequestV1.body(TAKEN_ISBN, "a", PersonAuthorV1.body("Erich Gamma"), 1, "hardcover");
 
     /**
      * The client, bound to the implementation under test and configured for Spring REST Docs.

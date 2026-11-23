@@ -1,0 +1,8 @@
+type: object
+description: A book's author that is a person.
+additionalProperties: false
+required:
+  - name
+properties:
+  name:
+    $ref: PersonNameV1.yaml

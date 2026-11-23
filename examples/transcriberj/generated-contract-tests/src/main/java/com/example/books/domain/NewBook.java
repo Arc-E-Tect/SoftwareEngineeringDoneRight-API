@@ -8,10 +8,11 @@ import java.util.UUID;
  * @param isbn     its ISBN-13
  * @param title    its title
  * @param subtitle its subtitle, or null when it has none
+ * @param author   who wrote it
  * @param pages    its number of pages
  * @param format   how it is published
  */
-public record NewBook(String isbn, String title, String subtitle, int pages, BookFormat format) {
+public record NewBook(String isbn, String title, String subtitle, Author author, int pages, BookFormat format) {
 
     /**
      * This book, under an identifier.
@@ -20,6 +21,6 @@ public record NewBook(String isbn, String title, String subtitle, int pages, Boo
      * @return the book
      */
     public Book withId(UUID id) {
-        return new Book(id, isbn, title, subtitle, pages, format);
+        return new Book(id, isbn, title, subtitle, author, pages, format);
     }
 }

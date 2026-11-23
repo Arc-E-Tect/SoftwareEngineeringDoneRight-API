@@ -1,5 +1,6 @@
 package com.example.books.application;
 
+import com.example.books.domain.Author;
 import com.example.books.domain.Book;
 import com.example.books.domain.BookFormat;
 import com.example.books.domain.BookPage;
@@ -24,7 +25,7 @@ import static org.mockito.Mockito.when;
 class CatalogueServiceTest {
 
     private static final UUID ID = UUID.fromString("3f2b9c1e-8d4a-4b6e-9f10-2a7c5d8e1b34");
-    private static final NewBook NEW_BOOK = new NewBook("9780201633610", "Design Patterns", null, 395,
+    private static final NewBook NEW_BOOK = new NewBook("9780201633610", "Design Patterns", null, new Author.Person("Erich Gamma"), 395,
             BookFormat.HARDCOVER);
     private static final Book BOOK = NEW_BOOK.withId(ID);
 

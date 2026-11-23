@@ -1,5 +1,6 @@
 package com.example.books.adapter.jdbc;
 
+import com.example.books.domain.Author;
 import com.example.books.domain.Book;
 import com.example.books.domain.BookFormat;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,7 +32,7 @@ class JdbcBookStoreTest {
 
     private static final UUID ID = UUID.fromString("3f2b9c1e-8d4a-4b6e-9f10-2a7c5d8e1b34");
     private static final Book BOOK = new Book(ID, "9780201633610", "Design Patterns",
-            "Elements of Reusable Object-Oriented Software", 395, BookFormat.HARDCOVER);
+            "Elements of Reusable Object-Oriented Software", new Author.Person("Erich Gamma"), 395, BookFormat.HARDCOVER);
 
     private final NamedParameterJdbcOperations jdbc = mock(NamedParameterJdbcOperations.class);
     private final JdbcBookStore store = new JdbcBookStore(jdbc);
@@ -40,12 +42,26 @@ class JdbcBookStoreTest {
         assertThat(store.insert(BOOK)).isTrue();
 
         verify(jdbc).update(anyString(), eq(Map.of("id", ID, "isbn", "9780201633610", "title", "Design Patterns",
-                "subtitle", "Elements of Reusable Object-Oriented Software", "pages", 395, "format", "hardcover")));
+                "subtitle", "Elements of Reusable Object-Oriented Software", "author_kind", "person",
+                "author_name", "Erich Gamma", "pages", 395, "format", "hardcover")));
+    }
+
+    @Test
+    void anOrganisationAsAuthorIsInsertedAsOne() {
+        store.insert(new Book(ID, "9780226287058", "The Chicago Manual of Style", null,
+                new Author.Organisation("University of Chicago Press"), 1144, BookFormat.HARDCOVER));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> parameters = ArgumentCaptor.forClass(Map.class);
+        verify(jdbc).update(anyString(), parameters.capture());
+        assertThat(parameters.getValue())
+                .containsEntry("author_kind", "organisation")
+                .containsEntry("author_name", "University of Chicago Press");
     }
 
     @Test
     void aBookWithoutASubtitleIsInsertedWithANullSubtitle() {
-        store.insert(new Book(ID, "9780201633610", "Design Patterns", null, 395, BookFormat.HARDCOVER));
+        store.insert(new Book(ID, "9780201633610", "Design Patterns", null, new Author.Person("Erich Gamma"), 395, BookFormat.HARDCOVER));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, Object>> parameters = ArgumentCaptor.forClass(Map.class);
@@ -102,10 +118,33 @@ class JdbcBookStoreTest {
         when(row.getString("isbn")).thenReturn("9780201633610");
         when(row.getString("title")).thenReturn("Design Patterns");
         when(row.getString("subtitle")).thenReturn("Elements of Reusable Object-Oriented Software");
+        when(row.getString("author_kind")).thenReturn("person");
+        when(row.getString("author_name")).thenReturn("Erich Gamma");
         when(row.getInt("pages")).thenReturn(395);
         when(row.getString("format")).thenReturn("hardcover");
 
         assertThat(rowMapper().mapRow(row, 0)).isEqualTo(BOOK);
+    }
+
+    @Test
+    void aRowWhoseAuthorIsAnOrganisationBecomesABookAnOrganisationWrote() throws Exception {
+        ResultSet row = mock(ResultSet.class);
+        when(row.getString("author_kind")).thenReturn("organisation");
+        when(row.getString("author_name")).thenReturn("University of Chicago Press");
+        when(row.getString("format")).thenReturn("hardcover");
+
+        assertThat(rowMapper().mapRow(row, 0).author()).isEqualTo(new Author.Organisation("University of Chicago Press"));
+    }
+
+    @Test
+    void aRowWithAnAuthorKindTheStoreNeverWritesIsNotABook() throws Exception {
+        ResultSet row = mock(ResultSet.class);
+        when(row.getString("author_kind")).thenReturn("robot");
+        RowMapper<Book> mapper = rowMapper();
+
+        assertThatThrownBy(() -> mapper.mapRow(row, 0))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("robot");
     }
 
     private RowMapper<Book> rowMapper() {

@@ -95,7 +95,8 @@ abstract class ServiceContractTest {
     void ensureBookExists(String id, String isbn) {
         ensureNoBook(id);
         ensureNoBookWithIsbn(isbn);
-        database.sql("INSERT INTO book (id, isbn, title, pages, format) VALUES (:id, :isbn, 'a', 1, 'hardcover')")
+        database.sql("INSERT INTO book (id, isbn, title, author_kind, author_name, pages, format)"
+                        + " VALUES (:id, :isbn, 'a', 'person', 'a', 1, 'hardcover')")
                 .param("id", java.util.UUID.fromString(id))
                 .param("isbn", isbn)
                 .update();
