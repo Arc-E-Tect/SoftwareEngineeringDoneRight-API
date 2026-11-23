@@ -4,6 +4,7 @@ additionalProperties: false
 required:
   - isbn
   - title
+  - author
   - pages
   - format
 properties:
@@ -13,6 +14,8 @@ properties:
     $ref: TitleV1.yaml
   subtitle:
     $ref: SubtitleV1.yaml
+  author:
+    $ref: AuthorV1.yaml
   pages:
     $ref: PagesV1.yaml
   format:

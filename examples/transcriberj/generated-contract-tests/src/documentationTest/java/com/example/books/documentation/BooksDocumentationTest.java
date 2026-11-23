@@ -1,6 +1,8 @@
 package com.example.books.documentation;
 
 import com.example.books.contract.BookRequestV1;
+import com.example.books.contract.OrganisationAuthorV1;
+import com.example.books.contract.PersonAuthorV1;
 import com.example.books.contract.CreateBookOperation;
 import com.example.books.contract.GetBookOperation;
 import com.example.books.contract.ListBooksOperation;
@@ -45,6 +47,7 @@ class BooksDocumentationTest {
     private static final String DESIGN_PATTERNS = "9780201633610";
     private static final String REFACTORING_ID = "5d1c7e2a-3b4f-4a6d-8e9c-0f1a2b3c4d5e";
     private static final String REFACTORING = "9780134757599";
+    private static final String CHICAGO_MANUAL_OF_STYLE = "9780226287058";
 
     @LocalServerPort
     private int port;
@@ -77,7 +80,7 @@ class BooksDocumentationTest {
         client.post().uri(CreateBookOperation.PATH)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
-                .bodyValue(BookRequestV1.body(DESIGN_PATTERNS, "Design Patterns", 395, "hardcover",
+                .bodyValue(BookRequestV1.body(DESIGN_PATTERNS, "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover",
                         "Elements of Reusable Object-Oriented Software"))
                 .exchange()
                 .expectStatus().isEqualTo(CreateBookOperation.STATUS_201)
@@ -86,13 +89,31 @@ class BooksDocumentationTest {
     }
     // end::create-book[]
 
+    // tag::create-book-by-organisation[]
+    @Test
+    void addingABookAnOrganisationWrote() {
+        deleteBookWithIsbn(CHICAGO_MANUAL_OF_STYLE);
+
+        client.post().uri(CreateBookOperation.PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .bodyValue(BookRequestV1.body(CHICAGO_MANUAL_OF_STYLE, "The Chicago Manual of Style",
+                        OrganisationAuthorV1.body("University of Chicago Press"), 1144, "hardcover"))
+                .exchange()
+                .expectStatus().isEqualTo(CreateBookOperation.STATUS_201)
+                .expectBody()
+                .consumeWith(document("create-book-by-organisation", BookRequestV1Docs.requestFields(),
+                        BookV1Docs.responseFields()));
+    }
+    // end::create-book-by-organisation[]
+
     // tag::create-book-invalid[]
     @Test
     void addingABookWithAnIsbn10() {
         client.post().uri(CreateBookOperation.PATH)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON, MediaType.APPLICATION_PROBLEM_JSON)
-                .bodyValue(BookRequestV1.body("0201633612", "Design Patterns", 395, "hardcover"))
+                .bodyValue(BookRequestV1.body("0201633612", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover"))
                 .exchange()
                 .expectStatus().isEqualTo(CreateBookOperation.STATUS_400)
                 .expectBody()
@@ -104,8 +125,8 @@ class BooksDocumentationTest {
     // tag::get-book[]
     @Test
     void readingABook() {
-        ensureBookExists(REFACTORING_ID, REFACTORING, "Refactoring", "Improving the Design of Existing Code", 448,
-                "hardcover");
+        ensureBookExists(REFACTORING_ID, REFACTORING, "Refactoring", "Improving the Design of Existing Code",
+                "person", "Martin Fowler", 448, "hardcover");
 
         client.get().uri(GetBookOperation.PATH, REFACTORING_ID)
                 .accept(MediaType.APPLICATION_JSON)
@@ -134,10 +155,10 @@ class BooksDocumentationTest {
     // tag::list-books[]
     @Test
     void listingTheCatalogue() {
-        ensureBookExists(REFACTORING_ID, REFACTORING, "Refactoring", "Improving the Design of Existing Code", 448,
-                "hardcover");
-        ensureBookExists("7a8b9c0d-1e2f-4a3b-9c4d-5e6f7a8b9c0d", "9780132350884", "Clean Code", null, 464,
-                "paperback");
+        ensureBookExists(REFACTORING_ID, REFACTORING, "Refactoring", "Improving the Design of Existing Code",
+                "person", "Martin Fowler", 448, "hardcover");
+        ensureBookExists("7a8b9c0d-1e2f-4a3b-9c4d-5e6f7a8b9c0d", "9780132350884", "Clean Code", null,
+                "person", "Robert C. Martin", 464, "paperback");
 
         client.get().uri(ListBooksOperation.PATH + "?page=0&size=2")
                 .accept(MediaType.APPLICATION_JSON)
@@ -149,15 +170,18 @@ class BooksDocumentationTest {
     // end::list-books[]
 
     // tag::arrange[]
-    private void ensureBookExists(String id, String isbn, String title, String subtitle, int pages, String format) {
+    private void ensureBookExists(String id, String isbn, String title, String subtitle, String authorKind,
+                                  String authorName, int pages, String format) {
         deleteBook(id);
         deleteBookWithIsbn(isbn);
-        database.sql("INSERT INTO book (id, isbn, title, subtitle, pages, format)"
-                        + " VALUES (:id, :isbn, :title, :subtitle, :pages, :format)")
+        database.sql("INSERT INTO book (id, isbn, title, subtitle, author_kind, author_name, pages, format)"
+                        + " VALUES (:id, :isbn, :title, :subtitle, :authorKind, :authorName, :pages, :format)")
                 .param("id", UUID.fromString(id))
                 .param("isbn", isbn)
                 .param("title", title)
                 .param("subtitle", subtitle)
+                .param("authorKind", authorKind)
+                .param("authorName", authorName)
                 .param("pages", pages)
                 .param("format", format)
                 .update();

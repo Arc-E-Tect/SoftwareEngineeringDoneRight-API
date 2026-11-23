@@ -21,6 +21,14 @@ include::{snippets}/create-book/http-response.adoc[]
 
 include::{snippets}/create-book/response-fields.adoc[]
 
+=== When an organisation wrote the book
+
+The author is a person, with a `name`, or an organisation, with an `organisationName`; it has one of the two, never both.
+
+include::{snippets}/create-book-by-organisation/http-request.adoc[]
+
+include::{snippets}/create-book-by-organisation/http-response.adoc[]
+
 === When the request is invalid
 
 A request that does not match the contract is answered with `400` and a problem, which names each field that is wrong.

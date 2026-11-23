@@ -1,0 +1,6 @@
+description: >-
+  Who wrote the book: a person or an organisation. Each branch is closed, so a
+  value matches exactly one of them.
+oneOf:
+  - $ref: PersonAuthorV1.yaml
+  - $ref: OrganisationAuthorV1.yaml

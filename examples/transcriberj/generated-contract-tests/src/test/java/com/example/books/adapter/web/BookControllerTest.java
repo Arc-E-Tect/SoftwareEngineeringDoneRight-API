@@ -3,9 +3,12 @@ package com.example.books.adapter.web;
 import com.example.books.application.AddOutcome;
 import com.example.books.application.Catalogue;
 import com.example.books.contract.BookRequestV1;
+import com.example.books.contract.PersonAuthorV1;
 import com.example.books.contract.CreateBookOperation;
 import com.example.books.contract.GetBookOperation;
 import com.example.books.contract.ListBooksOperation;
+import com.example.books.contract.OrganisationAuthorV1;
+import com.example.books.domain.Author;
 import com.example.books.domain.Book;
 import com.example.books.domain.BookFormat;
 import com.example.books.domain.BookPage;
@@ -47,7 +50,7 @@ class BookControllerTest {
 
     private static final UUID ID = UUID.fromString("3f2b9c1e-8d4a-4b6e-9f10-2a7c5d8e1b34");
     private static final Book BOOK = new Book(ID, "9780201633610", "Design Patterns",
-            "Elements of Reusable Object-Oriented Software", 395, BookFormat.HARDCOVER);
+            "Elements of Reusable Object-Oriented Software", new Author.Person("Erich Gamma"), 395, BookFormat.HARDCOVER);
 
     // tag::standalone[]
     private final Catalogue catalogue = mock(Catalogue.class);
@@ -68,16 +71,82 @@ class BookControllerTest {
 
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover",
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover",
                                 "Elements of Reusable Object-Oriented Software")))
                 .andExpect(status().is(CreateBookOperation.STATUS_201))
                 .andExpect(content().contentType(CreateBookOperation.CONTENT_TYPE_201))
                 .andExpect(jsonPath("$.id").value(ID.toString()))
                 .andExpect(jsonPath("$.format").value("hardcover"))
-                .andExpect(jsonPath("$.subtitle").value("Elements of Reusable Object-Oriented Software"));
+                .andExpect(jsonPath("$.subtitle").value("Elements of Reusable Object-Oriented Software"))
+                .andExpect(jsonPath("$.author.name").value("Erich Gamma"))
+                .andExpect(jsonPath("$.author.organisationName").doesNotExist());
 
         verify(catalogue).add(new NewBook("9780201633610", "Design Patterns",
-                "Elements of Reusable Object-Oriented Software", 395, BookFormat.HARDCOVER));
+                "Elements of Reusable Object-Oriented Software", new Author.Person("Erich Gamma"), 395, BookFormat.HARDCOVER));
+    }
+
+    @Test
+    void aBookAnOrganisationWroteIsAddedAsOneAndAnsweredWithIt() throws Exception {
+        Book byOrganisation = new Book(ID, "9780226287058", "The Chicago Manual of Style", null,
+                new Author.Organisation("University of Chicago Press"), 1144, BookFormat.HARDCOVER);
+        when(catalogue.add(any())).thenReturn(new AddOutcome.Added(byOrganisation));
+
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780226287058", "The Chicago Manual of Style",
+                                OrganisationAuthorV1.body("University of Chicago Press"), 1144, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_201))
+                .andExpect(jsonPath("$.author.organisationName").value("University of Chicago Press"))
+                .andExpect(jsonPath("$.author.name").doesNotExist());
+
+        verify(catalogue).add(new NewBook("9780226287058", "The Chicago Manual of Style", null,
+                new Author.Organisation("University of Chicago Press"), 1144, BookFormat.HARDCOVER));
+    }
+
+    @Test
+    void aBookWithoutAnAuthorIsRefusedBeforeTheCatalogueIsCalled() throws Exception {
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content("{\"isbn\":\"9780201633610\",\"title\":\"Design Patterns\",\"pages\":395,\"format\":\"hardcover\"}"))
+                .andExpect(status().is(CreateBookOperation.STATUS_400))
+                .andExpect(jsonPath("$.errors[0].field").value("author"));
+
+        verifyNoInteractions(catalogue);
+    }
+
+    @Test
+    void anAuthorThatIsNeitherAPersonNorAnOrganisationIsRefusedBeforeTheCatalogueIsCalled() throws Exception {
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", "{}", 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_400))
+                .andExpect(jsonPath("$.errors[0].field").value("author"));
+
+        verifyNoInteractions(catalogue);
+    }
+
+    @Test
+    void aPersonsNameLongerThan120IsRefusedBeforeTheCatalogueIsCalled() throws Exception {
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns",
+                                PersonAuthorV1.body("a".repeat(121)), 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_400))
+                .andExpect(jsonPath("$.errors[0].field").value("author.name"));
+
+        verifyNoInteractions(catalogue);
+    }
+
+    @Test
+    void anEmptyOrganisationNameIsRefusedBeforeTheCatalogueIsCalled() throws Exception {
+        mockMvc.perform(post(CreateBookOperation.PATH)
+                        .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns",
+                                OrganisationAuthorV1.body(""), 395, "hardcover")))
+                .andExpect(status().is(CreateBookOperation.STATUS_400))
+                .andExpect(jsonPath("$.errors[0].field").value("author.organisationName"));
+
+        verifyNoInteractions(catalogue);
     }
 
     @Test
@@ -87,13 +156,13 @@ class BookControllerTest {
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .header("Prefer", "respond-async")
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_202))
                 .andExpect(header().string("Location", "http://localhost/books/" + ID))
                 .andExpect(header().string("Preference-Applied", "respond-async"))
                 .andExpect(content().string(""));
 
-        verify(catalogue).addLater(new NewBook("9780201633610", "Design Patterns", null, 395, BookFormat.HARDCOVER));
+        verify(catalogue).addLater(new NewBook("9780201633610", "Design Patterns", null, new Author.Person("Erich Gamma"), 395, BookFormat.HARDCOVER));
     }
 
     @Test
@@ -103,7 +172,7 @@ class BookControllerTest {
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .header("Prefer", "respond-async")
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_409));
     }
 
@@ -112,7 +181,7 @@ class BookControllerTest {
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .header("Prefer", "return=minimal")
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_201));
 
         verify(catalogue).add(any());
@@ -130,7 +199,7 @@ class BookControllerTest {
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .header("Prefer", "")
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_400))
                 .andExpect(jsonPath("$.errors[0].field").value("Prefer"));
 
@@ -139,12 +208,12 @@ class BookControllerTest {
 
     @Test
     void aBookWithoutASubtitleIsAnsweredWithoutOne() throws Exception {
-        Book withoutSubtitle = new Book(ID, "9780201633610", "Design Patterns", null, 395, BookFormat.HARDCOVER);
+        Book withoutSubtitle = new Book(ID, "9780201633610", "Design Patterns", null, new Author.Person("Erich Gamma"), 395, BookFormat.HARDCOVER);
         when(catalogue.add(any())).thenReturn(new AddOutcome.Added(withoutSubtitle));
 
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_201))
                 .andExpect(jsonPath("$.subtitle").doesNotExist());
     }
@@ -155,7 +224,7 @@ class BookControllerTest {
 
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 395, "hardcover")))
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 395, "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_409))
                 .andExpect(content().contentType(CreateBookOperation.CONTENT_TYPE_409))
                 .andExpect(jsonPath("$.status").value(409));
@@ -165,7 +234,7 @@ class BookControllerTest {
     void aTitleLongerThan120IsRefusedBeforeTheCatalogueIsCalled() throws Exception {
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "a".repeat(121), 395,
+                        .content(BookRequestV1.body("9780201633610", "a".repeat(121), PersonAuthorV1.body("Erich Gamma"), 395,
                                 "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_400))
                 .andExpect(content().contentType(CreateBookOperation.CONTENT_TYPE_400))
@@ -178,7 +247,7 @@ class BookControllerTest {
     void moreThan5000PagesAreRefusedBeforeTheCatalogueIsCalled() throws Exception {
         mockMvc.perform(post(CreateBookOperation.PATH)
                         .contentType(CreateBookOperation.REQUEST_CONTENT_TYPE)
-                        .content(BookRequestV1.body("9780201633610", "Design Patterns", 5001,
+                        .content(BookRequestV1.body("9780201633610", "Design Patterns", PersonAuthorV1.body("Erich Gamma"), 5001,
                                 "hardcover")))
                 .andExpect(status().is(CreateBookOperation.STATUS_400))
                 .andExpect(jsonPath("$.errors[0].field").value("pages"));

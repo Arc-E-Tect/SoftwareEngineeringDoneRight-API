@@ -31,6 +31,8 @@ post:
             value:
               isbn: '9780201633610'
               title: Design Patterns
+              author:
+                name: Erich Gamma
               pages: 395
               format: hardcover
           Refactoring:
@@ -39,6 +41,8 @@ post:
               isbn: '9780134757599'
               title: Refactoring
               subtitle: Improving the Design of Existing Code
+              author:
+                name: Martin Fowler
               pages: 448
               format: hardcover
         # The examples the generated contract cases send: the smallest valid request,

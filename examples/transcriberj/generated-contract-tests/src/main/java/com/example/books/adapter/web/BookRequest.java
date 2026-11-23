@@ -2,6 +2,7 @@ package com.example.books.adapter.web;
 
 import com.example.books.domain.BookFormat;
 import com.example.books.domain.NewBook;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -30,6 +31,10 @@ public class BookRequest {
     private String subtitle;
 
     @NotNull
+    @Valid
+    private AuthorRequest author;
+
+    @NotNull
     @Min(1)
     @Max(5000)
     private Integer pages;
@@ -44,7 +49,7 @@ public class BookRequest {
      * @return the book
      */
     NewBook toNewBook() {
-        return new NewBook(isbn, title, subtitle, pages, BookFormat.fromCode(format));
+        return new NewBook(isbn, title, subtitle, author.toAuthor(), pages, BookFormat.fromCode(format));
     }
 
 
@@ -60,6 +65,11 @@ public class BookRequest {
 
     public void setSubtitle(String subtitle) {
         this.subtitle = subtitle;
+    }
+
+
+    public void setAuthor(AuthorRequest author) {
+        this.author = author;
     }
 
 

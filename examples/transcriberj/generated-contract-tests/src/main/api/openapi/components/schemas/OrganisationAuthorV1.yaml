@@ -1,0 +1,8 @@
+type: object
+description: A book's author that is an organisation, such as a standards body or a publisher's editorial team.
+additionalProperties: false
+required:
+  - organisationName
+properties:
+  organisationName:
+    $ref: OrganisationNameV1.yaml
