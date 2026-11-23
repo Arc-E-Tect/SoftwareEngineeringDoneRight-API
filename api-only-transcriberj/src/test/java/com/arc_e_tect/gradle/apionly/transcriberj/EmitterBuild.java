@@ -163,7 +163,7 @@ final class EmitterBuild {
     GradleRunner runner(String... arguments) {
         List<String> args = new ArrayList<>(List.of(arguments));
         args.add("--stacktrace");
-        return GradleRunner.create().withProjectDir(dir.toFile()).withPluginClasspath()
+        return TestGradleHome.runner().withProjectDir(dir.toFile()).withPluginClasspath()
                 .withArguments(args).forwardOutput();
     }
 

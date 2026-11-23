@@ -5,7 +5,6 @@ import com.arc_e_tect.gradle.apionly.transcriberj.core.ModalEmitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.core.SecondModalEmitter;
 import com.arc_e_tect.gradle.apionly.transcriberj.core.TestEmitter;
 import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -293,13 +292,13 @@ class EmitterConfigurationFunctionalTest {
                 }
                 """);
 
-        BuildResult first = GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+        BuildResult first = TestGradleHome.runner().withProjectDir(projectDir.toFile()).withPluginClasspath()
                 .withArguments(":consumer:verifyFileArtifacts", "--stacktrace")
                 .forwardOutput().build();
-        BuildResult second = GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+        BuildResult second = TestGradleHome.runner().withProjectDir(projectDir.toFile()).withPluginClasspath()
                 .withArguments(":consumer:copyFileArtifacts", "--configuration-cache", "--stacktrace")
                 .forwardOutput().build();
-        BuildResult reused = GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+        BuildResult reused = TestGradleHome.runner().withProjectDir(projectDir.toFile()).withPluginClasspath()
                 .withArguments(":consumer:copyFileArtifacts", "--configuration-cache", "--stacktrace")
                 .forwardOutput().build();
 
@@ -548,7 +547,7 @@ class EmitterConfigurationFunctionalTest {
                     into layout.buildDirectory.dir('stubs')
                 }
                 """.formatted(build.file("repo").toUri()));
-        org.gradle.testkit.runner.GradleRunner.create().withProjectDir(consumer.toFile()).withArguments("stubs")
+        TestGradleHome.runner().withProjectDir(consumer.toFile()).withArguments("stubs")
                 .forwardOutput().build();
         assertThat(consumer.resolve("build/stubs/mappings/modal.json")).exists();
     }
