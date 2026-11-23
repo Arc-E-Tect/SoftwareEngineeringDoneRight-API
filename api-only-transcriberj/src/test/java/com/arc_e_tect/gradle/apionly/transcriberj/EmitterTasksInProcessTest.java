@@ -8,7 +8,6 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,7 +39,7 @@ class EmitterTasksInProcessTest {
     @BeforeEach
     void setUp() throws Exception {
         projectDir = projectDir.toRealPath();
-        project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        project = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
         jar = projectDir.resolve("emitters.jar");
         EmitterBuild.emittersJar(jar, TestEmitter.class, ModalEmitter.class);
     }

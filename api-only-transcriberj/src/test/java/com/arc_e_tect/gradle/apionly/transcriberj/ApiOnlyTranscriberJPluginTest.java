@@ -8,7 +8,6 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -35,7 +34,7 @@ class ApiOnlyTranscriberJPluginTest {
     @BeforeEach
     void setUp() throws java.io.IOException {
         projectDir = projectDir.toRealPath();
-        project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        project = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
     }
 
     private Path lockfile(String version, String sha256) {

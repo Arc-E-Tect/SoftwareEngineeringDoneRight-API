@@ -3,7 +3,6 @@ package com.arc_e_tect.gradle.apionly.transcriberj;
 import com.arc_e_tect.gradle.apionly.subscriber.ApiOnlySubscriberExtension;
 import com.arc_e_tect.gradle.apionly.subscriber.Lockfile;
 import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,7 @@ class ValidValueReportFileTest {
     @BeforeEach
     void setUp() throws java.io.IOException {
         projectDir = projectDir.toRealPath();
-        project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        project = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
     }
 
     @Test

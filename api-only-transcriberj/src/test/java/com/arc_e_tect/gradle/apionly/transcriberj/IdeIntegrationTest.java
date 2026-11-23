@@ -35,7 +35,7 @@ class IdeIntegrationTest {
     @BeforeEach
     void setUp() throws IOException {
         projectDir = projectDir.toRealPath();
-        project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        project = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
     }
 
     private void subscribe(String... contracts) {
@@ -143,7 +143,7 @@ class IdeIntegrationTest {
 
     @Test
     void inAMultiProjectBuildTheRootsSyncRunsEverySubprojectsGeneration() {
-        Project root = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        Project root = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
         root.getPluginManager().apply("idea");
         root.getPluginManager().apply("org.jetbrains.gradle.plugin.idea-ext");
         project = ProjectBuilder.builder().withName("service").withParent(root)
@@ -159,7 +159,7 @@ class IdeIntegrationTest {
 
     @Test
     void ideaExtOnTheSubprojectIsWiredIntoTheRootRatherThanFailing() {
-        Project root = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        Project root = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
         root.getPluginManager().apply("idea");
         root.getPluginManager().apply("org.jetbrains.gradle.plugin.idea-ext");
         project = ProjectBuilder.builder().withName("service").withParent(root)
