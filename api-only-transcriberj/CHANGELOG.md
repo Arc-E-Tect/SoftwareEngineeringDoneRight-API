@@ -1,3 +1,15 @@
+## [0.20.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.20.0...api-only-transcriberj-v0.20.1) (2026-11-23)
+
+
+### 🐛 Bug Fixes
+
+* **api-only-transcriberj:** make the branches of a oneOf/anyOf property of a public body public ([#141](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/141)) ([a29a21b](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/a29a21beaefdc5fe5355ad3f54b3441ae27a1dcc)), closes [#141](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/141) [#140](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/140)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.20.0 [skip ci] ([e0e1133](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e0e1133a82fda6c635b44ca14eb22502b840c869))
+
 # [0.20.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.19.0...api-only-transcriberj-v0.20.0) (2026-11-22)
 
 
