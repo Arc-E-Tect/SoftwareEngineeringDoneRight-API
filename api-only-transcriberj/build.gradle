@@ -127,6 +127,11 @@ tasks.withType(Test).configureEach {
     systemProperty 'transcriberj.referenceApi', layout.projectDirectory.dir('../reference-api/dist').asFile.absolutePath
     inputs.dir(layout.projectDirectory.dir('../reference-api/dist')).withPathSensitivity(PathSensitivity.RELATIVE)
             .withPropertyName('referenceApi')
+    // One Gradle user home for every build the tests start, TestKit's and ProjectBuilder's, so
+    // their dependencies are downloaded once and kept between runs; CI caches it. See
+    // TestGradleHome.
+    systemProperty 'transcriberj.testGradleHome',
+            new File(gradle.gradleUserHomeDir, 'test-homes/api-only-transcriberj').absolutePath
     testLogging {
         events 'passed', 'skipped', 'failed'
     }

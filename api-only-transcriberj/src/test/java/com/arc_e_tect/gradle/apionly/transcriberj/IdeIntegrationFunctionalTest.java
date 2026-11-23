@@ -1,7 +1,6 @@
 package com.arc_e_tect.gradle.apionly.transcriberj;
 
 import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -70,7 +69,7 @@ class IdeIntegrationFunctionalTest {
     }
 
     private BuildResult run(String... arguments) {
-        return GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+        return TestGradleHome.runner().withProjectDir(projectDir.toFile()).withPluginClasspath()
                 .withArguments(arguments).forwardOutput().build();
     }
 

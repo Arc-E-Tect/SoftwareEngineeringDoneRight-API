@@ -141,7 +141,7 @@ class ApiOnlyTranscriberJPluginFunctionalTest {
         List<String> args = new ArrayList<>(List.of(arguments));
         args.add("--configuration-cache");
         args.add("--stacktrace");
-        return GradleRunner.create().withProjectDir(projectDir.toFile()).withPluginClasspath()
+        return TestGradleHome.runner().withProjectDir(projectDir.toFile()).withPluginClasspath()
                 .withArguments(args).forwardOutput();
     }
 

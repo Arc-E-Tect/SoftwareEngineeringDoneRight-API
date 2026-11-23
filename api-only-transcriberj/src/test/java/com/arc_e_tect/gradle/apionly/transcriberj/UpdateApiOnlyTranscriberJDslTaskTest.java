@@ -2,7 +2,6 @@ package com.arc_e_tect.gradle.apionly.transcriberj;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,7 @@ class UpdateApiOnlyTranscriberJDslTaskTest {
 
     @BeforeEach
     void setUp() {
-        project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        project = TestGradleHome.projectBuilder().withProjectDir(projectDir.toFile()).build();
         project.getPluginManager().apply(ApiOnlyTranscriberJPlugin.class);
     }
 

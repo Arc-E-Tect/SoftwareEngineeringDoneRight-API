@@ -116,6 +116,20 @@ jobs:
           echo ===== After - ${{ env.GRADLE_PROPERTIES_FILE }} =====
           cat ${{ env.GRADLE_PROPERTIES_FILE }}
 
+      - name: Cache the dependencies of the builds the tests start
+        # TestKit and ProjectBuilder builds share one Gradle user home (see TestGradleHome);
+        # without this, every run downloads their dependencies from Maven Central again,
+        # and a burst of downloads gets rate-limited (HTTP 429).
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/test-homes/api-only-transcriberj/caches/modules-2
+            !~/.gradle/test-homes/api-only-transcriberj/caches/modules-2/*.lock
+            !~/.gradle/test-homes/api-only-transcriberj/caches/modules-2/gc.properties
+          key: ${{ runner.os }}-transcriberj-test-home-${{ hashFiles('api-only-transcriberj/gradle/libs.versions.toml', 'api-only-transcriberj/build.gradle', 'api-only-transcriberj/src/**/*.java') }}
+          restore-keys: |
+            ${{ runner.os }}-transcriberj-test-home-
+
       - name: Build and test API-Only TranscriberJ Plugin
         run: |
           cd api-only-transcriberj
