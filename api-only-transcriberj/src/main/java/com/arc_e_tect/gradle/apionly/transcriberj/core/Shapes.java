@@ -337,7 +337,9 @@ final class Shapes {
 
     /**
      * The components whose rendered JSON a body of this schema takes as an
-     * argument: those of its object and list-of-object properties.
+     * argument: those of its object and list-of-object properties, and the
+     * branches of a {@code oneOf} or {@code anyOf} a property or its items
+     * hold, referenced or inline, since a caller writes that JSON with them.
      */
     Set<String> renderedReferences(Schema schema) {
         Set<String> names = new LinkedHashSet<>();
@@ -360,6 +362,9 @@ final class Shapes {
             } else if (s.items() != null && s.items().ref() != null && isObject(s.items())) {
                 names.add(s.items().ref());
             }
+            names.addAll(branches(s));
+            Schema items = follow(s).items();
+            if (items != null) names.addAll(branches(items));
         }
         return names;
     }
