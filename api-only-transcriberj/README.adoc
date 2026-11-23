@@ -713,7 +713,7 @@ What the generated code does is checked where it is produced: by this plugin's o
 
 The plugin adds `sedr-library` to each configured source set the way it adds an emitter's dependencies: at a version it *prefers*, never forces, so a project already using the library keeps its own.
 
-A class is public when code outside the package needs it: it is a request or response body, a parameter's schema, a non-schema component, something a public `body(...)` takes as an argument, or a branch of a `oneOf` or `anyOf` that a public body is one of.
+A class is public when code outside the package needs it: it is a request or response body, a parameter's schema, a non-schema component, something a public `body(...)` takes as an argument, or a branch of a `oneOf` or `anyOf` that a public body is one of, or that a public body's property, or the items of its array property, holds.
 Otherwise it is package-private, like a base schema only ever composed with `allOf`.
 
 [#asyncapi]
@@ -895,6 +895,14 @@ Why it matters: a documentation or contract test that documents the response wit
 Without it, `delivery` would be one field of no single type, and Spring REST Docs would reject every response that carries it, because the members inside it are undocumented; the only way out would be to reshape the contract to suit the tool, for example by moving the `oneOf` to the root of the body.
 
 A `oneOf` or `anyOf` with a branch that is not an object, such as a string or an array, cannot be described member by member, and stays one field of type `varies`.
+
+`OrderV1.body(...)` takes `delivery` as JSON already written, and the branches are what a caller writes it with, so `HomeDeliveryV1` and `PickUpPointV1` are public, like `OrderV1`, whether the `oneOf` is on the property or on a component the property refers to:
+
+[source,java]
+----
+String delivery = PickUpPointV1.body("PUP-0042", "2026-11-23");
+String order = OrderV1.body("order-1", delivery);
+----
 
 [#manifest]
 === The manifest

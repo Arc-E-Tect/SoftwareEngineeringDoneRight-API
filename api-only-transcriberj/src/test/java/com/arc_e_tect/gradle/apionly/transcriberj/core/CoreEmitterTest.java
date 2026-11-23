@@ -648,6 +648,66 @@ class CoreEmitterTest {
     }
 
     @Test
+    void theBranchesOfAChoiceAPublicBodysPropertyRefersToArePublic() throws Throwable {
+        GeneratedSources g = generate(contract(requestBody("Order"), "schemas:\n" + (schema("Order", "openapi/Order.yaml", """
+                type: object
+                required: [refund]
+                properties:
+                  refund: {$ref: '#/components/schemas/Refund'}
+                """) + schema("Refund", "openapi/Refund.yaml", """
+                oneOf:
+                  - {$ref: '#/components/schemas/Card'}
+                  - {$ref: '#/components/schemas/Bank'}
+                """) + BRANCHES).indent(2)));
+
+        // The property takes JSON already written: the branches are what a caller writes it with.
+        assertThat(Modifier.isPublic(g.type("Card").getModifiers())).isTrue();
+        assertThat(Modifier.isPublic(g.type("Bank").getModifiers())).isTrue();
+        String card = (String) g.call("Card", "body", new Class<?>[]{String.class}, "4242");
+        assertThat(g.call("Order", "body", new Class<?>[]{String.class}, card))
+                .isEqualTo("{\"refund\":{\"destination\":\"card\",\"digits\":\"4242\"}}\n");
+    }
+
+    @Test
+    void theBranchesOfAnInlineChoiceOnAPublicBodysPropertyArePublic() {
+        GeneratedSources g = generate(contract(requestBody("Order"), "schemas:\n" + (schema("Order", "openapi/Order.yaml", """
+                type: object
+                properties:
+                  refund:
+                    anyOf:
+                      - {$ref: '#/components/schemas/Card'}
+                      - {$ref: '#/components/schemas/Bank'}
+                """) + BRANCHES).indent(2)));
+
+        assertThat(Modifier.isPublic(g.type("Card").getModifiers())).isTrue();
+        assertThat(Modifier.isPublic(g.type("Bank").getModifiers())).isTrue();
+    }
+
+    @Test
+    void theBranchesOfAChoiceThatAPublicBodysArrayPropertyHoldsArePublic() {
+        GeneratedSources g = generate(contract(requestBody("Order"), "schemas:\n" + (schema("Order", "openapi/Order.yaml", """
+                type: object
+                properties:
+                  refunds:
+                    type: array
+                    items: {$ref: '#/components/schemas/Refund'}
+                  laterRefunds: {$ref: '#/components/schemas/Refunds'}
+                """) + schema("Refunds", "openapi/Refunds.yaml", """
+                type: array
+                items: {$ref: '#/components/schemas/LaterRefund'}
+                """) + schema("Refund", "openapi/Refund.yaml", """
+                oneOf:
+                  - {$ref: '#/components/schemas/Card'}
+                """) + schema("LaterRefund", "openapi/LaterRefund.yaml", """
+                oneOf:
+                  - {$ref: '#/components/schemas/Bank'}
+                """) + BRANCHES).indent(2)));
+
+        assertThat(Modifier.isPublic(g.type("Card").getModifiers())).isTrue();
+        assertThat(Modifier.isPublic(g.type("Bank").getModifiers())).isTrue();
+    }
+
+    @Test
     void theBranchesOfAChoiceNothingPublicUsesStayPackagePrivate() {
         GeneratedSources g = generate(contract("{}", "schemas:\n" + (schema("Refund", "openapi/Refund.yaml", """
                 type: object
