@@ -1066,6 +1066,38 @@ The generation fails as well for a name in `x-transcriberj-examples` that the me
 An example that is valid where it is written, but does not fit a narrower place -- a problem type's `about:blank` where a subtype's `allOf` makes `type` a `const` -- does not apply there, and the next example, or a generated value, does.
 Only the examples a value takes are checked: an invalid second example of a value that needs one is not reported.
 
+*A named example per response.*
+A response's media type can declare named `examples` too, as the outcomes a reader should see; an emitter that writes a double can answer with them rather than with a body built value by value (<<response-examples,Response examples §>>).
+Its `x-transcriberj-examples` takes one key, `default`, naming the example a double answers with when no outcome is chosen; without it, the first named example is the default:
+
+[source,yaml]
+----
+responses:
+  '200':
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/OrderCheckV1'
+        examples:
+          Accepted:
+            value: {check: order-check, outcome: accepted, findings: []}
+          OutOfStock:
+            $ref: '#/components/examples/OutOfStockCheckV1'
+        x-transcriberj-examples:
+          default: Accepted
+----
+
+* Every named response example is checked against its schema, whether a double uses it or not; one that does not satisfy it fails the generation, naming the example and where it is written.
+* The generation fails, as for a request, for another key than `default`, for a name the media type does not declare, for an `externalValue`, and for a reference that names no example.
+* The report lists, under _Response examples_, the example a double answers with for each response with content, or that it answers with `fullBody()`:
++
+----
+Response examples -- the body a double answers with:
+  CheckOrderOperation 200: example Accepted, of Accepted, OutOfStock
+  ListOrdersOperation 200: fullBody(), no named example
+----
+* The examples do not change the generated classes: `requiredBody()` and `fullBody()` are built as before.
+
 *Where the values came from.*
 Each case in the machine-readable report has a `source`: the `namedExample` its body is, or `null`, and the `examples` -- where in the contract each example a value took is written.
 The text report lists the same under _Example data_:
@@ -1093,7 +1125,7 @@ It is compact, its members sorted by name, and its entries by class, so the same
 [source,json]
 ----
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "contract": "orders",
   "version": "1.4.0",
   "bodies": [
@@ -1127,7 +1159,8 @@ It is compact, its members sorted by name, and its entries by class, so the same
 Each variant holds either `value`, the value the method returns, or `unsatisfiable`, with the `location` and the `reason` the method throws.
 `noBodyRequest` is present only where the method is.
 The same file holds the contract cases and their coverage: `contractCases`, `responseCoverage`, `constraintCoverage`, `gaps` and `formatRecommendations`, described in <<contract-cases-report,The cases in the machine-readable report §>>.
-`schemaVersion` changes when the shape does: it is `3` since 0.16.0, which added each case's `source`, and was `2` since 0.12.0, which replaced `invalidRequests` with `contractCases` and added `responseCoverage`.
+`responseExamples` lists every response with content: its `class`, `status`, the `examples` it names, in declaration order, and the `default` a double answers with, `null` where it names none (<<example-data,Example data §>>).
+`schemaVersion` changes when the shape does: it is `4` since 0.21.0, which added `responseExamples`, was `3` since 0.16.0, which added each case's `source`, and was `2` since 0.12.0, which replaced `invalidRequests` with `contractCases` and added `responseCoverage`.
 
 [#contract-cases]
 === Contract cases
@@ -1469,6 +1502,13 @@ The order the kinds are written in does not matter, and a name that is not a kin
 In the machine-readable report, `contractCases` lists every operation, with its class, `location`, `method`, `pathTemplate`, whether it `declaresInvalidRequestStatus`, and its cases in canonical order, each with the fields of `ContractCase`, for an invalid request the valid `baseline` request it differs from in the one place the fault is, for a success case of a status a request header selects the `selectedBy` it is selected by -- `in`, `name`, `value`, `with` and `requires`, null for every other case -- and the `source` of the valid request it is built on, as <<example-data,Example data §>> describes.
 `responseCoverage` lists every declared response, as the text report does, with `cases` or `uncovered`, a `code`, a `label` and a `detail`.
 `constraintCoverage`, `gaps` and `formatRecommendations` are the invalid requests', in <<constraint-coverage,Constraint coverage and gaps §>>.
+
+[#upgrading-to-0-21]
+==== Upgrading from 0.20
+
+0.21.0 checks a response's named examples against its schema, as it checked a request's, so a contract with a response example that does not satisfy its schema no longer generates: correct the example, or the schema.
+`x-transcriberj-examples` on a response's media type takes `default` only.
+The machine-readable report is at `schemaVersion` 4, with `responseExamples`.
 
 [#upgrading-to-0-16]
 ==== Upgrading from 0.15
@@ -1862,6 +1902,21 @@ A stub written as a file cannot call a generated class's `requiredBody()` or `fu
 
 Where the core cannot build a body -- a construct no rule represents, or constraints no value satisfies -- that `Body` has no `text`, and gives instead the `location` and `reason` the generated method throws with, so that an emitter can leave the stub out and say why rather than answer with a body the contract does not allow.
 It is empty where the operation declares no such response, or the response has no content or no generated body class.
+
+[#response-examples]
+=== Response examples
+
+A double that answers with the bodies the contract's authors wrote reads as the contract does, and can answer with each outcome an operation documents.
+`EmitterContext.responseExamples(location, status)` gives the named examples of a response an operation declares, across its content types, in declaration order, each as a `spi.ResponseExample`:
+
+* `name`, as the media type's `examples` gives it;
+* `contentType`, the content type it is declared under;
+* `text`, its value as compact JSON followed by a newline, a reference to `#/components/examples` resolved;
+* `location`, the JSON pointer of the example where the media type declares it, in the component a response refers to where it does;
+* `isDefault`, true for exactly one of them: the one `x-transcriberj-examples` names as `default`, else the first (<<example-data,Example data §>>).
+
+Every example given satisfies its response's schema; the generation fails otherwise.
+The list is empty where the response declares no named example, or the operation declares no such response.
 
 [#emitter-options]
 === Emitter options

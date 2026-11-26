@@ -68,6 +68,7 @@ public final class GenerationReport {
     private final List<String> notes = new ArrayList<>();
     private final List<Map<String, Object>> contractCases = new ArrayList<>();
     private final List<Map<String, Object>> responseCoverage = new ArrayList<>();
+    private final List<Map<String, Object>> responseExamples = new ArrayList<>();
     private final List<Map<String, Object>> coverage = new ArrayList<>();
     private final List<Map<String, Object>> gaps = new ArrayList<>();
     private final Map<String, String> formatRecommendations = new java.util.LinkedHashMap<>();
@@ -96,6 +97,16 @@ public final class GenerationReport {
     /** Records the valid requests of one operation's class. */
     void validRequest(Map<String, Object> entry) {
         validRequests.add(entry);
+    }
+
+    /** A response with content: the named examples it declares, and the one a double answers with, or null. */
+    void responseExamples(String className, String status, String defaultExample, List<String> examples) {
+        Map<String, Object> e = new java.util.LinkedHashMap<>();
+        e.put("class", className);
+        e.put("status", status);
+        e.put("default", defaultExample);
+        e.put("examples", List.copyOf(examples));
+        responseExamples.add(e);
     }
 
     /**
@@ -472,6 +483,20 @@ public final class GenerationReport {
                 }
             }
         }
+        if (!responseExamples.isEmpty()) {
+            out.append("\nResponse examples -- the body a double answers with:\n");
+            for (Map<String, Object> e : responseExamples) {
+                out.append("  ").append(e.get("class")).append(' ').append(e.get("status")).append(": ");
+                List<?> names = (List<?>) e.get("examples");
+                if (e.get("default") == null) {
+                    out.append("fullBody(), no named example");
+                } else {
+                    out.append("example ").append(e.get("default")).append(", of ")
+                            .append(String.join(", ", names.stream().map(String::valueOf).toList()));
+                }
+                out.append('\n');
+            }
+        }
         return out.toString();
     }
 
@@ -486,7 +511,7 @@ public final class GenerationReport {
      */
     public String renderValidValues(String contract, String version) {
         Map<String, Object> out = new java.util.TreeMap<>();
-        out.put("schemaVersion", java.math.BigDecimal.valueOf(3));
+        out.put("schemaVersion", java.math.BigDecimal.valueOf(4));
         out.put("contract", contract);
         out.put("version", version);
         out.put("bodies", validBodies.stream().sorted(java.util.Comparator.comparing(e -> (String) e.get("class")))
@@ -506,6 +531,7 @@ public final class GenerationReport {
         out.put("contractCases", contractCases.stream()
                 .sorted(java.util.Comparator.comparing(e -> (String) e.get("class"))).toList());
         out.put("responseCoverage", responseCoverage);
+        out.put("responseExamples", responseExamples);
         out.put("constraintCoverage", coverage);
         out.put("gaps", gaps);
         List<Object> formats = new ArrayList<>();
@@ -575,6 +601,7 @@ public final class GenerationReport {
             return (Object) e;
         }).toList());
         out.put("responseCoverage", List.copyOf(responseCoverage));
+        out.put("responseExamples", List.copyOf(responseExamples));
         out.put("coverage", coverage.stream().map(c -> {
             Map<String, Object> e = new java.util.LinkedHashMap<>(c);
             if (e.get("cases") instanceof List<?> cases) e.put("cases", cases.stream().map(String::valueOf).toList());
@@ -632,6 +659,9 @@ public final class GenerationReport {
         }
         report.contractCases.addAll((List<Map<String, Object>>) in.get("contractCases"));
         report.responseCoverage.addAll((List<Map<String, Object>>) in.get("responseCoverage"));
+        if (in.get("responseExamples") instanceof List<?> examples) {
+            report.responseExamples.addAll((List<Map<String, Object>>) examples);
+        }
         report.coverage.addAll((List<Map<String, Object>>) in.get("coverage"));
         report.gaps.addAll((List<Map<String, Object>>) in.get("gaps"));
         for (Map<String, Object> e : (List<Map<String, Object>>) in.get("formatRecommendations")) {

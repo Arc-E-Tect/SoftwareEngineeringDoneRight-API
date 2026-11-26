@@ -110,7 +110,33 @@
       }
     }
   ],
-  "schemaVersion": 3,
+  "responseExamples": [
+    {
+      "class": "GetRootOperation",
+      "default": null,
+      "examples": [],
+      "status": "200"
+    },
+    {
+      "class": "GetRootOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    },
+    {
+      "class": "GetHealthOperation",
+      "default": null,
+      "examples": [],
+      "status": "200"
+    },
+    {
+      "class": "GetHealthOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    }
+  ],
+  "schemaVersion": 4,
   "unsupportedParameters": [],
   "version": "1.0.0"
 }

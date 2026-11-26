@@ -293,7 +293,7 @@ final class ValidRequests {
      * @throws ValidValues.InvalidExample when the reference names no example, or the example has
      *                                    no inline {@code value}
      */
-    private Object exampleValue(Object raw, String at) {
+    Object exampleValue(Object raw, String at) {
         Object example = raw;
         if (example instanceof Map<?, ?> m && m.get("$ref") instanceof String ref) {
             String prefix = "#/components/examples/";
