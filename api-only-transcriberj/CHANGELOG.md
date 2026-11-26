@@ -1,3 +1,20 @@
+# [0.21.0](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.20.1...api-only-transcriberj-v0.21.0) (2026-11-26)
+
+
+### ✨ New and updated features
+
+* **api-only-transcriberj:** give emitters a response's named examples ([#148](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/148)) ([e3f4cad](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e3f4cad5b8335ae6ee3b5a0daccfa1815d0dc234)), closes [#148](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/148) [#132](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/132) [#147](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/147)
+
+
+### 👷 CI/CD
+
+* **api-only-transcriberj:** cache the dependencies of the builds the tests start ([#143](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/143)) ([09e228a](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/09e228a3ad1f95d87b9da80dd4a9edb4b23645e0)), closes [#143](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/143) [#142](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/issues/142)
+
+
+### 🔧 Misc
+
+* **api-only-transcriberj:** update README version to 0.20.1 [skip ci] ([e048a2a](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/commit/e048a2a7cb1f790a700fad91045607362c4bc9d0))
+
 ## [0.20.1](https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/compare/api-only-transcriberj-v0.20.0...api-only-transcriberj-v0.20.1) (2026-11-23)
 
 
