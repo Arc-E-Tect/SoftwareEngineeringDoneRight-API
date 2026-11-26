@@ -8,7 +8,7 @@
 // updates its own line; do not change them by hand.
 :api-only-publisher-version: 0.19.2
 :api-only-subscriber-version: 0.4.6
-:api-only-transcriberj-version: 0.20.1
+:api-only-transcriberj-version: 0.21.0
 
 image:https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml/badge.svg[Vulnerability Scan,link=https://github.com/Arc-E-Tect/SoftwareEngineeringDoneRight-API/actions/workflows/nvd-cache-refresh.yml]
 image:https://img.shields.io/npm/v/@arc-e-tect/api-only-publisher?label=publisher[npm,link=https://www.npmjs.com/package/@arc-e-tect/api-only-publisher]
