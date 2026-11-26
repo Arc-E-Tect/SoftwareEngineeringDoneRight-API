@@ -777,7 +777,141 @@
       }
     }
   ],
-  "schemaVersion": 3,
+  "responseExamples": [
+    {
+      "class": "GetRootOperation",
+      "default": null,
+      "examples": [],
+      "status": "200"
+    },
+    {
+      "class": "GetRootOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    },
+    {
+      "class": "GetHealthOperation",
+      "default": null,
+      "examples": [],
+      "status": "200"
+    },
+    {
+      "class": "GetHealthOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    },
+    {
+      "class": "GetUserOperation",
+      "default": null,
+      "examples": [],
+      "status": "200"
+    },
+    {
+      "class": "GetUserOperation",
+      "default": null,
+      "examples": [],
+      "status": "404"
+    },
+    {
+      "class": "GetUserOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "202"
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "400"
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "409"
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "415"
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "422"
+    },
+    {
+      "class": "InitiateUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    },
+    {
+      "class": "ResendVerificationEmailOperation",
+      "default": null,
+      "examples": [],
+      "status": "202"
+    },
+    {
+      "class": "ResendVerificationEmailOperation",
+      "default": null,
+      "examples": [],
+      "status": "400"
+    },
+    {
+      "class": "ResendVerificationEmailOperation",
+      "default": null,
+      "examples": [],
+      "status": "404"
+    },
+    {
+      "class": "ResendVerificationEmailOperation",
+      "default": null,
+      "examples": [],
+      "status": "415"
+    },
+    {
+      "class": "ResendVerificationEmailOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    },
+    {
+      "class": "CompleteUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "200"
+    },
+    {
+      "class": "CompleteUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "410"
+    },
+    {
+      "class": "CompleteUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "422"
+    },
+    {
+      "class": "CompleteUserRegistrationOperation",
+      "default": null,
+      "examples": [],
+      "status": "500"
+    }
+  ],
+  "schemaVersion": 4,
   "unsupportedParameters": [],
   "version": "1.1.0"
 }

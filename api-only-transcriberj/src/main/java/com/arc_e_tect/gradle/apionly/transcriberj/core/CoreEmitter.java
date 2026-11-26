@@ -25,6 +25,7 @@ import com.arc_e_tect.gradle.apionly.transcriberj.spi.ContractCase;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ManagedDependency;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.Origin;
 import com.arc_e_tect.gradle.apionly.transcriberj.spi.ResponseBody;
+import com.arc_e_tect.gradle.apionly.transcriberj.spi.ResponseExample;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,6 +64,7 @@ final class CoreEmitter implements Emitter {
     /** Each operation's invalid-request cases, by the operation's JSON pointer, as emitters are given them. */
     private final Map<String, List<ContractCase>> contractCases = new LinkedHashMap<>();
     private final Map<String, ResponseBody> validBodies = new LinkedHashMap<>();
+    private final Map<String, List<ResponseExample>> responseExamples = new LinkedHashMap<>();
 
     /** Every key a bundle may carry, in the order the classes declare them. */
     private final java.util.Set<String> descriptionKeys = new java.util.LinkedHashSet<>();
@@ -107,6 +109,7 @@ final class CoreEmitter implements Emitter {
         context.writeJava(pkg, "ContractRequest", template("ContractRequest", header, pkg, Map.of()));
         values = new ValidValues(shapes, context.settings().recursionDepth());
         requests = new ValidRequests(context.model(), shapes, values);
+        responseExamples.putAll(new ResponseExamples(context.model(), values, requests).derive(names, report));
 
         // Written before the resolver, which is written from the keys they ask it for.
         Map<String, String> sources = new LinkedHashMap<>();
@@ -508,6 +511,14 @@ final class CoreEmitter implements Emitter {
      */
     Map<String, ResponseBody> validBodies() {
         return java.util.Collections.unmodifiableMap(validBodies);
+    }
+
+    /**
+     * The named examples of every response, by the operation's JSON pointer and the status: what
+     * every emitter after this one is given through {@link EmitterContext#responseExamples}.
+     */
+    Map<String, List<ResponseExample>> responseExamples() {
+        return java.util.Collections.unmodifiableMap(responseExamples);
     }
 
     /** A body as its method returns it: compact JSON followed by a newline. */

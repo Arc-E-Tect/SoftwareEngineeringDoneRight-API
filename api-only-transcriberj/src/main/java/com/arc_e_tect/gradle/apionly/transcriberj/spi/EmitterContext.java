@@ -125,6 +125,23 @@ public interface EmitterContext {
     }
 
     /**
+     * The named examples of a response an operation declares, in declaration order, across its
+     * content types: each with its name, content type, value as JSON text and location, and whether
+     * it is the one a double answers with by default -- the example the media type's
+     * {@code x-transcriberj-examples} names as {@code default}, else the first. Every one of them
+     * satisfies its schema; the core fails the generation otherwise. An emitter that answers with
+     * the contract's own examples, rather than with generated bodies, takes them from here.
+     *
+     * @param location the JSON pointer of the operation, such as {@code /paths/~1v1~1users/get}
+     * @param status   the response's key as the contract declares it, such as {@code 200}
+     * @return the examples; empty when the response declares none, or there is no such operation
+     *         or response
+     */
+    default List<ResponseExample> responseExamples(String location, String status) {
+        return List.of();
+    }
+
+    /**
      * The schema a request body of an operation must satisfy, as a self-contained JSON Schema
      * 2020-12 document: every {@code $ref} bundled into {@code $defs}, strict as the core's own
      * notion of validity is when {@code strictRequests} is on, and with {@code format} asserted

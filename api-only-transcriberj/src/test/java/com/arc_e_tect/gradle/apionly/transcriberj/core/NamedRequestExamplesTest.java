@@ -324,7 +324,7 @@ class NamedRequestExamplesTest {
     void theReportIsAtSchemaVersion3() {
         JsonNode report = report(generate(contract(examples(MINIMAL, EVERYTHING), POINTER)));
 
-        assertThat(report.get("schemaVersion").intValue()).isEqualTo(3);
+        assertThat(report.get("schemaVersion").intValue()).isEqualTo(4);
     }
 
     @Test
